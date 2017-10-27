@@ -1,0 +1,93 @@
+version: '3'
+
+networks:
+    nexus:
+        external:
+            name: infrastructure_nexus
+
+services:
+
+    mesos-master:
+        image: nexusjpl/spark-mesos-master
+        container_name: mesos-master
+        networks:
+            - nexus
+        ports:
+            - "5050:5050"
+        logging:
+            driver: "json-file"
+            options:
+                max-size: "10m"
+                max-file: "3"
+
+    mesos-agent1:
+        image: nexusjpl/spark-mesos-agent
+        container_name: mesos-agent1
+        depends_on:
+            - mesos-master
+        environment:
+            - CASSANDRA_CONTACT_POINTS=cassandra1,cassandra2,cassandra3
+            - SOLR_URL_PORT=solr1:8983
+        networks:
+            - nexus
+        logging:
+            driver: "json-file"
+            options:
+                max-size: "10m"
+                max-file: "3"
+            
+    mesos-agent2:
+        image: nexusjpl/spark-mesos-agent
+        container_name: mesos-agent2
+        depends_on:
+            - mesos-master
+        environment:
+            - CASSANDRA_CONTACT_POINTS=cassandra1,cassandra2,cassandra3
+            - SOLR_URL_PORT=solr1:8983
+        networks:
+            - nexus
+        logging:
+            driver: "json-file"
+            options:
+                max-size: "10m"
+                max-file: "3"
+            
+    mesos-agent3:
+        image: nexusjpl/spark-mesos-agent
+        container_name: mesos-agent3
+        depends_on:
+            - mesos-master
+        environment:
+            - CASSANDRA_CONTACT_POINTS=cassandra1,cassandra2,cassandra3
+            - SOLR_URL_PORT=solr1:8983
+        networks:
+            - nexus
+        logging:
+            driver: "json-file"
+            options:
+                max-size: "10m"
+                max-file: "3"
+
+    nexus-webapp:
+        image: nexusjpl/nexus-webapp
+        depends_on:
+            - mesos-master
+            - mesos-agent1
+            - mesos-agent2
+            - mesos-agent3
+        container_name: nexus-webapp
+        networks:
+            - nexus
+        ports:
+            - "8083:8083"
+            - "4040:4040"
+        environment:
+            - MASTER=mesos://mesos-master:5050
+            - CASSANDRA_CONTACT_POINTS=cassandra1,cassandra2,cassandra3
+            - SOLR_URL_PORT=solr1:8983
+            - SPARK_LOCAL_IP=nexus-webapp
+        logging:
+            driver: "json-file"
+            options:
+                max-size: "10m"
+                max-file: "3"

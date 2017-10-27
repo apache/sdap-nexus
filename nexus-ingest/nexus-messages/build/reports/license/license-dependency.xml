@@ -1,0 +1,5 @@
+<licenses>
+  <license name='New BSD license' url='http://www.opensource.org/licenses/bsd-license.php'>
+    <dependency>protobuf-java-2.6.1.jar</dependency>
+  </license>
+</licenses>

@@ -1,0 +1,35 @@
+.gradle/
+.idea/
+gradlew.bat
+
+distrobution/
+
+gen/
+
+build/*
+!build/reports
+
+build/reports/*
+!build/reports/license
+!build/reports/project
+
+nexusproto.egg-info/
+
+.DS_Store
+*.log
+
+#Idea files
+*.iml
+*.ipr
+*.iws
+
+*.class
+
+# Package Files #
+*.war
+*.ear
+
+# virtual machine crash logs, see http://www.java.com/en/download/help/error_hotspot.xml
+hs_err_pid*
+
+gradle.properties

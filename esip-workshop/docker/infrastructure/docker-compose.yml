@@ -1,0 +1,172 @@
+version: '3'
+
+networks:
+  nexus:
+
+services:
+
+    zk1:
+        image: zookeeper
+        container_name: zk1
+        volumes:
+            - ${HOST_DATA_DIR}/zk1/data:/data
+            - ${HOST_DATA_DIR}/zk1/datalog:/datalog
+        environment:
+            - ZOO_MY_ID=1
+            - ZOO_SERVERS=server.1=zk1:2888:3888 server.2=zk2:2888:3888 server.3=zk3:2888:3888
+        networks:
+            - nexus
+        logging:
+            driver: "json-file"
+            options:
+                max-size: "10m"
+                max-file: "3"
+
+    zk2:
+        image: zookeeper
+        container_name: zk2
+        volumes:
+            - ${HOST_DATA_DIR}/zk2/data:/data
+            - ${HOST_DATA_DIR}/zk2/datalog:/datalog
+        environment:
+            - ZOO_MY_ID=2
+            - ZOO_SERVERS=server.1=zk1:2888:3888 server.2=zk2:2888:3888 server.3=zk3:2888:3888
+        networks:
+            - nexus
+        logging:
+            driver: "json-file"
+            options:
+                max-size: "10m"
+                max-file: "3"
+
+    zk3:
+        image: zookeeper
+        container_name: zk3
+        volumes:
+            - ${HOST_DATA_DIR}/zk3/data:/data
+            - ${HOST_DATA_DIR}/zk3/datalog:/datalog
+        environment:
+            - ZOO_MY_ID=3
+            - ZOO_SERVERS=server.1=zk1:2888:3888 server.2=zk2:2888:3888 server.3=zk3:2888:3888
+        networks:
+            - nexus
+        logging:
+            driver: "json-file"
+            options:
+                max-size: "10m"
+                max-file: "3"
+
+    solr1:
+        image: nexusjpl/nexus-solr
+        depends_on:
+            - zk1
+            - zk2
+            - zk3
+        container_name: solr1
+        volumes:
+            - ${PWD}/solr-zk-custom-init.sh:/docker-entrypoint-initdb.d/solr-zk-custom-init.sh
+            - ${HOST_DATA_DIR}/solr1:/solr-home
+        environment:
+            - SOLR_HEAP=16g
+            - ZOO_SERVERS=server.1=zk1:2888:3888 server.2=zk2:2888:3888 server.3=zk3:2888:3888
+        networks:
+            - nexus
+        logging:
+          options:
+            max-size: "10m"
+            max-file: "3"
+        command: ["solr-foreground", "-c", "-z", "zk1:2181,zk2:2181,zk3:2181/solr", "-s", "/solr-home"]
+
+    solr2:
+        image: nexusjpl/nexus-solr
+        depends_on:
+            - zk1
+            - zk2
+            - zk3
+        container_name: solr2
+        volumes:
+            - ${PWD}/solr-zk-custom-init.sh:/docker-entrypoint-initdb.d/solr-zk-custom-init.sh
+            - ${HOST_DATA_DIR}/solr2:/solr-home
+        environment:
+            - SOLR_HEAP=16g
+            - ZOO_SERVERS=server.1=zk1:2888:3888 server.2=zk2:2888:3888 server.3=zk3:2888:3888
+        networks:
+            - nexus
+        logging:
+          options:
+            max-size: "10m"
+            max-file: "3"
+        command: ["solr-foreground", "-c", "-z", "zk1:2181,zk2:2181,zk3:2181/solr", "-s", "/solr-home"]
+
+    solr3:
+        image: nexusjpl/nexus-solr
+        depends_on:
+            - zk1
+            - zk2
+            - zk3
+        container_name: solr3
+        volumes:
+            - ${PWD}/solr-zk-custom-init.sh:/docker-entrypoint-initdb.d/solr-zk-custom-init.sh
+            - ${HOST_DATA_DIR}/solr3:/solr-home
+        environment:
+            - SOLR_HEAP=16g
+            - ZOO_SERVERS=server.1=zk1:2888:3888 server.2=zk2:2888:3888 server.3=zk3:2888:3888
+        networks:
+            - nexus
+        logging:
+          options:
+            max-size: "10m"
+            max-file: "3"
+        command: ["solr-foreground", "-c", "-z", "zk1:2181,zk2:2181,zk3:2181/solr", "-s", "/solr-home"]
+
+    cassandra1:
+        image: cassandra:2.2.8
+        container_name: cassandra1
+        volumes:
+            - ${HOST_DATA_DIR}/cassandra1:/var/lib/cassandra
+        environment:
+            - CASSANDRA_BROADCAST_ADDRESS=cassandra1
+        networks:
+            - nexus
+        logging:
+            driver: "json-file"
+            options:
+                max-size: "10m"
+                max-file: "3"
+
+    cassandra2:
+        image: cassandra:2.2.8
+        container_name: cassandra2
+        volumes:
+            - ${HOST_DATA_DIR}/cassandra2:/var/lib/cassandra
+        environment:
+            - CASSANDRA_BROADCAST_ADDRESS=cassandra2
+            - CASSANDRA_SEEDS=cassandra1
+        networks:
+            - nexus
+        depends_on:
+            - cassandra1
+        logging:
+            driver: "json-file"
+            options:
+                max-size: "10m"
+                max-file: "3"
+
+    cassandra3:
+        image: cassandra:2.2.8
+        container_name: cassandra3
+        volumes:
+            - ${HOST_DATA_DIR}/cassandra3:/var/lib/cassandra
+        environment:
+            - CASSANDRA_BROADCAST_ADDRESS=cassandra3
+            - CASSANDRA_SEEDS=cassandra1
+        networks:
+            - nexus
+        depends_on:
+            - cassandra1
+            - cassandra2
+        logging:
+            driver: "json-file"
+            options:
+                max-size: "10m"
+                max-file: "3"

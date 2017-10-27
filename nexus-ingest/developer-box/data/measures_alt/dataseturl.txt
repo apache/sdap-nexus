@@ -1,0 +1,1 @@
+ftp://podaac-ftp.jpl.nasa.gov/allData/merged_alt/L4/

@@ -1,0 +1,192 @@
+version: '3'
+
+networks:
+  ingestnetwork:
+  nexus:
+      external:
+          name: infrastructure_nexus
+
+services:
+
+    mysqldb:
+        image: mysql:8
+        container_name: mysqldb
+        command: ["--character-set-server=latin1", "--collation-server=latin1_swedish_ci"]
+        environment:
+            - MYSQL_RANDOM_ROOT_PASSWORD=yes
+            - MYSQL_DATABASE=xdjob
+            - MYSQL_USER=xd
+            - MYSQL_PASSWORD=changeit
+        networks:
+            - ingestnetwork
+            - nexus
+        logging:
+            driver: "json-file"
+            options:
+                max-size: "10m"
+                max-file: "3"
+    
+    redis:
+        image: redis:3
+        container_name: redis
+        networks:
+            - ingestnetwork
+            - nexus
+        logging:
+            driver: "json-file"
+            options:
+                max-size: "10m"
+                max-file: "3"
+            
+    kafka1:
+        image: nexusjpl/kafka
+        container_name: kafka1
+        command: ["/usr/local/kafka/current/config/server.properties", "--override", "zookeeper.connect=zk1:2181,zk2:2181,zk3:2181/kafka", "--override", "broker.id=1"]
+        networks:
+            - ingestnetwork
+            - nexus
+        logging:
+            driver: "json-file"
+            options:
+                max-size: "10m"
+                max-file: "3"
+            
+    kafka2:
+        image: nexusjpl/kafka
+        container_name: kafka2
+        command: ["/usr/local/kafka/current/config/server.properties", "--override", "zookeeper.connect=zk1:2181,zk2:2181,zk3:2181/kafka", "--override", "broker.id=2"]
+        networks:
+            - ingestnetwork
+            - nexus
+        logging:
+            driver: "json-file"
+            options:
+                max-size: "10m"
+                max-file: "3"
+            
+    kafka3:
+        image: nexusjpl/kafka
+        container_name: kafka3
+        command: ["/usr/local/kafka/current/config/server.properties", "--override", "zookeeper.connect=zk1:2181,zk2:2181,zk3:2181/kafka", "--override", "broker.id=3"]
+        networks:
+            - ingestnetwork
+            - nexus
+        logging:
+            driver: "json-file"
+            options:
+                max-size: "10m"
+                max-file: "3"
+            
+    xd-admin:
+        image: nexusjpl/ingest-admin
+        container_name: xd-admin
+        command: [-a]
+        environment:
+            - MYSQL_PORT_3306_TCP_ADDR=mysqldb
+            - MYSQL_PORT_3306_TCP_PORT=3306
+            - MYSQL_USER=xd
+            - MYSQL_PASSWORD=changeit
+            - REDIS_ADDR=redis
+            - REDIS_PORT=6379
+            - "ZOOKEEPER_CONNECT=zk1:2181,zk2:2181,zk3:2181"
+            - ZOOKEEPER_XD_CHROOT=springxd
+            - "KAFKA_BROKERS=kafka1:9092,kafka2:9092,kafka3:9092"
+            - "KAFKA_ZKADDRESS=zk1:2181,zk2:2181,zk3:2181/kafka"
+        depends_on:
+            - mysqldb
+            - redis
+            - kafka1
+            - kafka2
+            - kafka3
+        networks:
+            - ingestnetwork
+            - nexus
+        logging:
+            driver: "json-file"
+            options:
+                max-size: "10m"
+                max-file: "3"
+            
+    xd-container1:
+        image: nexusjpl/ingest-container
+        container_name: xd-container1
+        command: [-c]
+        environment:
+            - MYSQL_PORT_3306_TCP_ADDR=mysqldb
+            - MYSQL_PORT_3306_TCP_PORT=3306
+            - MYSQL_USER=xd
+            - MYSQL_PASSWORD=changeit
+            - REDIS_ADDR=redis
+            - REDIS_PORT=6379
+            - "ZOOKEEPER_CONNECT=zk1:2181,zk2:2181,zk3:2181"
+            - ZOOKEEPER_XD_CHROOT=springxd
+            - "KAFKA_BROKERS=kafka1:9092,kafka2:9092,kafka3:9092"
+            - "KAFKA_ZKADDRESS=zk1:2181,zk2:2181,zk3:2181/kafka"
+        depends_on:
+            - xd-admin
+        networks:
+            - ingestnetwork
+            - nexus
+        volumes:
+              - /home/ndeploy/ingest/data:/usr/local/data/nexus
+        logging:
+            driver: "json-file"
+            options:
+                max-size: "10m"
+                max-file: "3"
+              
+    xd-container2:
+        image: nexusjpl/ingest-container
+        container_name: xd-container2
+        command: [-c]
+        environment:
+            - MYSQL_PORT_3306_TCP_ADDR=mysqldb
+            - MYSQL_PORT_3306_TCP_PORT=3306
+            - MYSQL_USER=xd
+            - MYSQL_PASSWORD=changeit
+            - REDIS_ADDR=redis
+            - REDIS_PORT=6379
+            - "ZOOKEEPER_CONNECT=zk1:2181,zk2:2181,zk3:2181"
+            - ZOOKEEPER_XD_CHROOT=springxd
+            - "KAFKA_BROKERS=kafka1:9092,kafka2:9092,kafka3:9092"
+            - "KAFKA_ZKADDRESS=zk1:2181,zk2:2181,zk3:2181/kafka"
+        depends_on:
+            - xd-admin
+        networks:
+            - ingestnetwork
+            - nexus
+        volumes:
+              - /home/ndeploy/ingest/data:/usr/local/data/nexus
+        logging:
+            driver: "json-file"
+            options:
+                max-size: "10m"
+                max-file: "3"
+              
+    xd-container3:
+        image: nexusjpl/ingest-container
+        container_name: xd-container3
+        command: [-c]
+        environment:
+            - MYSQL_PORT_3306_TCP_ADDR=mysqldb
+            - MYSQL_PORT_3306_TCP_PORT=3306
+            - MYSQL_USER=xd
+            - MYSQL_PASSWORD=changeit
+            - REDIS_ADDR=redis
+            - REDIS_PORT=6379
+            - "ZOOKEEPER_CONNECT=zk1:2181,zk2:2181,zk3:2181"
+            - ZOOKEEPER_XD_CHROOT=springxd
+            - "KAFKA_BROKERS=kafka1:9092,kafka2:9092,kafka3:9092"
+            - "KAFKA_ZKADDRESS=zk1:2181,zk2:2181,zk3:2181/kafka"
+        depends_on:
+            - xd-admin
+        networks:
+            - ingestnetwork
+            - nexus
+        volumes:
+              - /home/ndeploy/ingest/data:/usr/local/data/nexus
+        logging:
+            driver: "json-file"
+            options:
+                max-size: "10m"
+                max-file: "3"

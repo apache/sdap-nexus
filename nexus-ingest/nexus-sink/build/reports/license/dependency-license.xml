@@ -1,0 +1,680 @@
+<dependencies>
+  <dependency name='commons-dbcp:commons-dbcp:1.4'>
+    <file>commons-dbcp-1.4.jar</file>
+    <license name='The Apache Software License, Version 2.0' url='http://www.apache.org/licenses/LICENSE-2.0.txt' />
+  </dependency>
+  <dependency name='org.springframework:spring-messaging:4.2.4.RELEASE'>
+    <file>spring-messaging-4.2.4.RELEASE.jar</file>
+    <license name='The Apache Software License, Version 2.0' url='http://www.apache.org/licenses/LICENSE-2.0.txt' />
+  </dependency>
+  <dependency name='commons-codec:commons-codec:1.9'>
+    <file>commons-codec-1.9.jar</file>
+    <license name='The Apache Software License, Version 2.0' url='http://www.apache.org/licenses/LICENSE-2.0.txt' />
+  </dependency>
+  <dependency name='org.codehaus.jackson:jackson-mapper-asl:1.9.13'>
+    <file>jackson-mapper-asl-1.9.13.jar</file>
+    <license name='The Apache Software License, Version 2.0' url='http://www.apache.org/licenses/LICENSE-2.0.txt' />
+  </dependency>
+  <dependency name='org.apache.httpcomponents:httpcore:4.4.1'>
+    <file>httpcore-4.4.1.jar</file>
+    <license name='Apache License, Version 2.0' url='http://www.apache.org/licenses/LICENSE-2.0.txt' />
+  </dependency>
+  <dependency name='io.netty:netty:3.9.0.Final'>
+    <file>netty-3.9.0.Final.jar</file>
+    <license name='Apache License, Version 2.0' url='http://www.apache.org/licenses/LICENSE-2.0' />
+  </dependency>
+  <dependency name='org.eclipse.jetty.orbit:javax.mail.glassfish:1.4.1.v201005082020'>
+    <file>javax.mail.glassfish-1.4.1.v201005082020.jar</file>
+    <license name='Apache Software License - Version 2.0' url='http://www.apache.org/licenses/LICENSE-2.0' />
+    <license name='Eclipse Public License - Version 1.0' url='http://www.eclipse.org/org/documents/epl-v10.php' />
+  </dependency>
+  <dependency name='org.springframework.data:spring-data-solr:2.0.2.RELEASE'>
+    <file>spring-data-solr-2.0.2.RELEASE.jar</file>
+    <license name='Apache License, Version 2.0' url='http://www.apache.org/licenses/LICENSE-2.0' />
+  </dependency>
+  <dependency name='org.springframework.integration:spring-integration-core:4.2.5.RELEASE'>
+    <file>spring-integration-core-4.2.5.RELEASE.jar</file>
+    <license name='The Apache Software License, Version 2.0' url='http://www.apache.org/licenses/LICENSE-2.0.txt' />
+  </dependency>
+  <dependency name='org.slf4j:slf4j-api:1.7.21'>
+    <file>slf4j-api-1.7.21.jar</file>
+    <license name='MIT License' url='http://www.opensource.org/licenses/mit-license.php' />
+  </dependency>
+  <dependency name='org.codehaus.woodstox:stax2-api:3.1.4'>
+    <file>stax2-api-3.1.4.jar</file>
+    <license name='The BSD License' url='http://www.opensource.org/licenses/bsd-license.php' />
+  </dependency>
+  <dependency name='com.google.code.findbugs:jsr305:2.0.0'>
+    <file>jsr305-2.0.0.jar</file>
+    <license name='The Apache Software License, Version 2.0' url='http://www.apache.org/licenses/LICENSE-2.0.txt' />
+  </dependency>
+  <dependency name='org.apache.tomcat:tomcat-juli:8.0.20'>
+    <file>tomcat-juli-8.0.20.jar</file>
+    <license name='Apache License, Version 2.0' url='http://www.apache.org/licenses/LICENSE-2.0.txt' />
+  </dependency>
+  <dependency name='org.springframework.data:spring-data-redis:1.6.0.RELEASE'>
+    <file>spring-data-redis-1.6.0.RELEASE.jar</file>
+    <license name='The Apache Software License, Version 2.0' url='http://www.apache.org/licenses/LICENSE-2.0.txt' />
+  </dependency>
+  <dependency name='org.codehaus.woodstox:woodstox-core-asl:4.4.1'>
+    <file>woodstox-core-asl-4.4.1.jar</file>
+    <license name='The Apache Software License, Version 2.0' url='http://www.apache.org/licenses/LICENSE-2.0.txt' />
+  </dependency>
+  <dependency name='org.eclipse.jetty:jetty-plus:8.1.14.v20131031'>
+    <file>jetty-plus-8.1.14.v20131031.jar</file>
+    <license name='Apache Software License - Version 2.0' url='http://www.apache.org/licenses/LICENSE-2.0' />
+    <license name='Eclipse Public License - Version 1.0' url='http://www.eclipse.org/org/documents/epl-v10.php' />
+  </dependency>
+  <dependency name='org.springframework.cloud:spring-cloud-spring-service-connector:1.2.0.RELEASE'>
+    <file>spring-cloud-spring-service-connector-1.2.0.RELEASE.jar</file>
+    <license name='The Apache Software License, Version 2.0' url='http://www.apache.org/licenses/LICENSE-2.0.txt' />
+  </dependency>
+  <dependency name='org.eclipse.jetty.orbit:javax.transaction:1.1.1.v201105210645'>
+    <file>javax.transaction-1.1.1.v201105210645.jar</file>
+    <license name='Apache Software License - Version 2.0' url='http://www.apache.org/licenses/LICENSE-2.0' />
+    <license name='Eclipse Public License - Version 1.0' url='http://www.eclipse.org/org/documents/epl-v10.php' />
+  </dependency>
+  <dependency name='org.springframework.xd:spring-xd-messagebus-local:1.3.1.RELEASE'>
+    <file>spring-xd-messagebus-local-1.3.1.RELEASE.jar</file>
+    <license name='The Apache Software License, Version 2.0' url='http://www.apache.org/licenses/LICENSE-2.0.txt' />
+  </dependency>
+  <dependency name='org.springframework.boot:spring-boot-starter-integration:1.2.3.RELEASE'>
+    <file>spring-boot-starter-integration-1.2.3.RELEASE.jar</file>
+    <license name='Apache License, Version 2.0' url='http://www.apache.org/licenses/LICENSE-2.0' />
+  </dependency>
+  <dependency name='org.springframework.security:spring-security-config:3.2.7.RELEASE'>
+    <file>spring-security-config-3.2.7.RELEASE.jar</file>
+    <license name='The Apache Software License, Version 2.0' url='http://www.apache.org/licenses/LICENSE-2.0.txt' />
+  </dependency>
+  <dependency name='org.eclipse.jetty:jetty-util:8.1.14.v20131031'>
+    <file>jetty-util-8.1.14.v20131031.jar</file>
+    <license name='Apache Software License - Version 2.0' url='http://www.apache.org/licenses/LICENSE-2.0' />
+    <license name='Eclipse Public License - Version 1.0' url='http://www.eclipse.org/org/documents/epl-v10.php' />
+  </dependency>
+  <dependency name='org.eclipse.jetty:jetty-continuation:8.1.14.v20131031'>
+    <file>jetty-continuation-8.1.14.v20131031.jar</file>
+    <license name='Apache Software License - Version 2.0' url='http://www.apache.org/licenses/LICENSE-2.0' />
+    <license name='Eclipse Public License - Version 1.0' url='http://www.eclipse.org/org/documents/epl-v10.php' />
+  </dependency>
+  <dependency name='org.springframework.batch:spring-batch-admin-manager:1.3.0.RELEASE'>
+    <file>spring-batch-admin-manager-1.3.0.RELEASE.jar</file>
+    <license name='Apache 2.0' url='http://www.apache.org/licenses/LICENSE-2.0.txt' />
+  </dependency>
+  <dependency name='org.nasa.jpl.nexus:nexus-messages:1.0.0.RELEASE'>
+    <file>nexus-messages-1.0.0.RELEASE.jar</file>
+    <license name='No license found' />
+  </dependency>
+  <dependency name='org.springframework.boot:spring-boot-loader:1.2.3.RELEASE'>
+    <file>spring-boot-loader-1.2.3.RELEASE.jar</file>
+    <license name='Apache License, Version 2.0' url='http://www.apache.org/licenses/LICENSE-2.0' />
+  </dependency>
+  <dependency name='commons-fileupload:commons-fileupload:1.3.1'>
+    <file>commons-fileupload-1.3.1.jar</file>
+    <license name='The Apache Software License, Version 2.0' url='http://www.apache.org/licenses/LICENSE-2.0.txt' />
+  </dependency>
+  <dependency name='org.apache.tomcat.embed:tomcat-embed-logging-juli:8.0.20'>
+    <file>tomcat-embed-logging-juli-8.0.20.jar</file>
+    <license name='Apache License, Version 2.0' url='http://www.apache.org/licenses/LICENSE-2.0.txt' />
+  </dependency>
+  <dependency name='net.minidev:asm:1.0.2'>
+    <file>asm-1.0.2.jar</file>
+    <license name='The Apache Software License, Version 2.0' url='http://www.apache.org/licenses/LICENSE-2.0.txt' />
+  </dependency>
+  <dependency name='asm:asm:3.3.1'>
+    <file>asm-3.3.1.jar</file>
+    <license name='BSD' url='http://asm.objectweb.org/license.html' />
+  </dependency>
+  <dependency name='org.eclipse.jetty:jetty-security:8.1.14.v20131031'>
+    <file>jetty-security-8.1.14.v20131031.jar</file>
+    <license name='Apache Software License - Version 2.0' url='http://www.apache.org/licenses/LICENSE-2.0' />
+    <license name='Eclipse Public License - Version 1.0' url='http://www.eclipse.org/org/documents/epl-v10.php' />
+  </dependency>
+  <dependency name='org.springframework.integration:spring-integration-file:4.1.2.RELEASE'>
+    <file>spring-integration-file-4.1.2.RELEASE.jar</file>
+    <license name='The Apache Software License, Version 2.0' url='http://www.apache.org/licenses/LICENSE-2.0.txt' />
+  </dependency>
+  <dependency name='org.apache.zookeeper:zookeeper:3.4.6'>
+    <file>zookeeper-3.4.6.jar</file>
+    <license name='No license found' />
+  </dependency>
+  <dependency name='args4j:args4j-site:2.0.16'>
+    <file>args4j-2.0.16.jar</file>
+    <license name='No license found' />
+  </dependency>
+  <dependency name='org.jboss.logging:jboss-logging:3.2.1.Final'>
+    <file>jboss-logging-3.2.1.Final.jar</file>
+    <license name='Apache License, version 2.0' url='http://www.apache.org/licenses/LICENSE-2.0.txt' />
+  </dependency>
+  <dependency name='org.codehaus.groovy:groovy:2.3.11'>
+    <file>groovy-2.3.11.jar</file>
+    <license name='The Apache Software License, Version 2.0' url='http://www.apache.org/licenses/LICENSE-2.0.txt' />
+  </dependency>
+  <dependency name='org.springframework.security:spring-security-ldap:4.0.2.RELEASE'>
+    <file>spring-security-ldap-4.0.2.RELEASE.jar</file>
+    <license name='The Apache Software License, Version 2.0' url='http://www.apache.org/licenses/LICENSE-2.0.txt' />
+  </dependency>
+  <dependency name='org.springframework.security:spring-security-web:3.2.7.RELEASE'>
+    <file>spring-security-web-3.2.7.RELEASE.jar</file>
+    <license name='The Apache Software License, Version 2.0' url='http://www.apache.org/licenses/LICENSE-2.0.txt' />
+  </dependency>
+  <dependency name='org.springframework.boot:spring-boot:1.2.3.RELEASE'>
+    <file>spring-boot-1.2.3.RELEASE.jar</file>
+    <license name='Apache License, Version 2.0' url='http://www.apache.org/licenses/LICENSE-2.0' />
+  </dependency>
+  <dependency name='org.springframework.data:spring-data-mongodb:1.8.0.RELEASE'>
+    <file>spring-data-mongodb-1.8.0.RELEASE.jar</file>
+    <license name='Apache License, Version 2.0' url='http://www.apache.org/licenses/LICENSE-2.0' />
+  </dependency>
+  <dependency name='commons-lang:commons-lang:2.6'>
+    <file>commons-lang-2.6.jar</file>
+    <license name='The Apache Software License, Version 2.0' url='http://www.apache.org/licenses/LICENSE-2.0.txt' />
+  </dependency>
+  <dependency name='com.esotericsoftware:kryo-shaded:3.0.3'>
+    <file>kryo-shaded-3.0.3.jar</file>
+    <license name='New BSD License' url='http://www.opensource.org/licenses/bsd-license.php' />
+  </dependency>
+  <dependency name='org.springframework.cloud:spring-cloud-core:1.2.0.RELEASE'>
+    <file>spring-cloud-core-1.2.0.RELEASE.jar</file>
+    <license name='The Apache Software License, Version 2.0' url='http://www.apache.org/licenses/LICENSE-2.0.txt' />
+  </dependency>
+  <dependency name='org.apache.tomcat:tomcat-jdbc:8.0.20'>
+    <file>tomcat-jdbc-8.0.20.jar</file>
+    <license name='Apache License, Version 2.0' url='http://www.apache.org/licenses/LICENSE-2.0.txt' />
+  </dependency>
+  <dependency name='org.slf4j:jul-to-slf4j:1.7.11'>
+    <file>jul-to-slf4j-1.7.11.jar</file>
+    <license name='MIT License' url='http://www.opensource.org/licenses/mit-license.php' />
+  </dependency>
+  <dependency name='org.hsqldb:hsqldb:2.3.3'>
+    <file>hsqldb-2.3.3.jar</file>
+    <license name='HSQLDB License, a BSD open source license' url='http://hsqldb.org/web/hsqlLicense.html' />
+  </dependency>
+  <dependency name='org.springframework.integration:spring-integration-cassandra:0.5.0.RELEASE'>
+    <file>spring-integration-cassandra-0.5.0.RELEASE.jar</file>
+    <license name='The Apache Software License, Version 2.0' url='http://www.apache.org/licenses/LICENSE-2.0.txt' />
+  </dependency>
+  <dependency name='org.apache.curator:curator-recipes:2.6.0'>
+    <file>curator-recipes-2.6.0.jar</file>
+    <license name='The Apache Software License, Version 2.0' url='file://${basedir}/LICENSE' />
+  </dependency>
+  <dependency name='org.springframework.boot:spring-boot-starter-security:1.2.3.RELEASE'>
+    <file>spring-boot-starter-security-1.2.3.RELEASE.jar</file>
+    <license name='Apache License, Version 2.0' url='http://www.apache.org/licenses/LICENSE-2.0' />
+  </dependency>
+  <dependency name='com.esotericsoftware:minlog:1.3.0'>
+    <file>minlog-1.3.0.jar</file>
+    <license name='New BSD License' url='http://www.opensource.org/licenses/bsd-license.php' />
+  </dependency>
+  <dependency name='org.springframework.hateoas:spring-hateoas:0.17.0.RELEASE'>
+    <file>spring-hateoas-0.17.0.RELEASE.jar</file>
+    <license name='Apache License, Version 2.0' url='http://www.apache.org/licenses/LICENSE-2.0' />
+  </dependency>
+  <dependency name='org.springframework:spring-beans:4.2.6.RELEASE'>
+    <file>spring-beans-4.2.6.RELEASE.jar</file>
+    <license name='The Apache Software License, Version 2.0' url='http://www.apache.org/licenses/LICENSE-2.0.txt' />
+  </dependency>
+  <dependency name='org.eclipse.jetty.orbit:javax.activation:1.1.0.v201105071233'>
+    <file>javax.activation-1.1.0.v201105071233.jar</file>
+    <license name='Apache Software License - Version 2.0' url='http://www.apache.org/licenses/LICENSE-2.0' />
+    <license name='Eclipse Public License - Version 1.0' url='http://www.eclipse.org/org/documents/epl-v10.php' />
+  </dependency>
+  <dependency name='org.springframework.batch:spring-batch-infrastructure:3.0.5.RELEASE'>
+    <file>spring-batch-infrastructure-3.0.5.RELEASE.jar</file>
+    <license name='The Apache Software License, Version 2.0' url='http://www.apache.org/licenses/LICENSE-2.0.txt' />
+  </dependency>
+  <dependency name='org.springframework.data:spring-data-cassandra:1.3.4.RELEASE'>
+    <file>spring-data-cassandra-1.3.4.RELEASE.jar</file>
+    <license name='Apache License, Version 2.0' url='http://www.apache.org/licenses/LICENSE-2.0' />
+  </dependency>
+  <dependency name='org.springframework.xd:spring-xd-module-spi:1.3.1.RELEASE'>
+    <file>spring-xd-module-spi-1.3.1.RELEASE.jar</file>
+    <license name='The Apache Software License, Version 2.0' url='http://www.apache.org/licenses/LICENSE-2.0.txt' />
+  </dependency>
+  <dependency name='joda-time:joda-time:2.8.2'>
+    <file>joda-time-2.8.2.jar</file>
+    <license name='Apache 2' url='http://www.apache.org/licenses/LICENSE-2.0.txt' />
+  </dependency>
+  <dependency name='org.codehaus.jettison:jettison:1.2'>
+    <file>jettison-1.2.jar</file>
+    <license name='No license found' />
+  </dependency>
+  <dependency name='org.mongodb:mongo-java-driver:2.13.0'>
+    <file>mongo-java-driver-2.13.0.jar</file>
+    <license name='The Apache Software License, Version 2.0' url='http://www.apache.org/licenses/LICENSE-2.0.txt' />
+  </dependency>
+  <dependency name='org.hibernate:hibernate-validator:5.2.1.Final'>
+    <file>hibernate-validator-5.2.1.Final.jar</file>
+    <license name='Apache License, Version 2.0' url='http://www.apache.org/licenses/LICENSE-2.0.txt' />
+  </dependency>
+  <dependency name='log4j:log4j:1.2.17'>
+    <file>log4j-1.2.17.jar</file>
+    <license name='The Apache Software License, Version 2.0' url='http://www.apache.org/licenses/LICENSE-2.0.txt' />
+  </dependency>
+  <dependency name='javax.activation:activation:1.1'>
+    <file>activation-1.1.jar</file>
+    <license name='Common Development and Distribution License (CDDL) v1.0' url='https://glassfish.dev.java.net/public/CDDLv1.0.html' />
+  </dependency>
+  <dependency name='org.eclipse.jetty:jetty-xml:8.1.14.v20131031'>
+    <file>jetty-xml-8.1.14.v20131031.jar</file>
+    <license name='Apache Software License - Version 2.0' url='http://www.apache.org/licenses/LICENSE-2.0' />
+    <license name='Eclipse Public License - Version 1.0' url='http://www.eclipse.org/org/documents/epl-v10.php' />
+  </dependency>
+  <dependency name='commons-collections:commons-collections:3.2.1'>
+    <file>commons-collections-3.2.1.jar</file>
+    <license name='The Apache Software License, Version 2.0' url='http://www.apache.org/licenses/LICENSE-2.0.txt' />
+  </dependency>
+  <dependency name='ch.qos.logback:logback-core:1.1.3'>
+    <file>logback-core-1.1.3.jar</file>
+    <license name='Eclipse Public License - v 1.0' url='http://www.eclipse.org/legal/epl-v10.html' />
+    <license name='GNU Lesser General Public License' url='http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html' />
+  </dependency>
+  <dependency name='org.apache.solr:solr-solrj:5.3.1'>
+    <file>solr-solrj-5.3.1.jar</file>
+    <license name='Apache 2' url='http://www.apache.org/licenses/LICENSE-2.0.txt' />
+  </dependency>
+  <dependency name='commons-io:commons-io:2.4'>
+    <file>commons-io-2.4.jar</file>
+    <license name='The Apache Software License, Version 2.0' url='http://www.apache.org/licenses/LICENSE-2.0.txt' />
+  </dependency>
+  <dependency name='org.eclipse.jetty.orbit:javax.servlet:3.0.0.v201112011016'>
+    <file>javax.servlet-3.0.0.v201112011016.jar</file>
+    <license name='Apache Software License - Version 2.0' url='http://www.apache.org/licenses/LICENSE-2.0' />
+    <license name='Eclipse Public License - Version 1.0' url='http://www.eclipse.org/org/documents/epl-v10.php' />
+  </dependency>
+  <dependency name='com.codahale.metrics:metrics-core:3.0.2'>
+    <file>metrics-core-3.0.2.jar</file>
+    <license name='Apache License 2.0' url='http://www.apache.org/licenses/LICENSE-2.0.html' />
+  </dependency>
+  <dependency name='org.springframework:spring-webmvc:4.2.4.RELEASE'>
+    <file>spring-webmvc-4.2.4.RELEASE.jar</file>
+    <license name='The Apache Software License, Version 2.0' url='http://www.apache.org/licenses/LICENSE-2.0.txt' />
+  </dependency>
+  <dependency name='com.jayway.jsonpath:json-path:2.0.0'>
+    <file>json-path-2.0.0.jar</file>
+    <license name='The Apache Software License, Version 2.0' url='http://www.apache.org/licenses/LICENSE-2.0.txt' />
+  </dependency>
+  <dependency name='org.springframework.ws:spring-xml:2.2.2.RELEASE'>
+    <file>spring-xml-2.2.2.RELEASE.jar</file>
+    <license name='The Apache Software License, Version 2.0' url='http://www.apache.org/licenses/LICENSE-2.0.txt' />
+  </dependency>
+  <dependency name='com.sun.mail:javax.mail:1.5.4'>
+    <file>javax.mail-1.5.4.jar</file>
+    <license name='CDDL/GPLv2+CE' url='https://glassfish.java.net/public/CDDL+GPL_1_1.html' />
+  </dependency>
+  <dependency name='org.springframework:spring-context:4.2.6.RELEASE'>
+    <file>spring-context-4.2.6.RELEASE.jar</file>
+    <license name='The Apache Software License, Version 2.0' url='http://www.apache.org/licenses/LICENSE-2.0.txt' />
+  </dependency>
+  <dependency name='org.springframework.plugin:spring-plugin-core:1.2.0.RELEASE'>
+    <file>spring-plugin-core-1.2.0.RELEASE.jar</file>
+    <license name='Apache License, Version 2.0' url='http://www.apache.org/licenses/LICENSE-2.0' />
+  </dependency>
+  <dependency name='org.springframework.boot:spring-boot-starter-tomcat:1.2.3.RELEASE'>
+    <file>spring-boot-starter-tomcat-1.2.3.RELEASE.jar</file>
+    <license name='Apache License, Version 2.0' url='http://www.apache.org/licenses/LICENSE-2.0' />
+  </dependency>
+  <dependency name='org.apache.tomcat.embed:tomcat-embed-el:8.0.20'>
+    <file>tomcat-embed-el-8.0.20.jar</file>
+    <license name='Apache License, Version 2.0' url='http://www.apache.org/licenses/LICENSE-2.0.txt' />
+  </dependency>
+  <dependency name='com.fasterxml:classmate:1.1.0'>
+    <file>classmate-1.1.0.jar</file>
+    <license name='The Apache Software License, Version 2.0' url='http://www.apache.org/licenses/LICENSE-2.0.txt' />
+  </dependency>
+  <dependency name='com.ibm.jbatch:com.ibm.jbatch-tck-spi:1.0'>
+    <file>com.ibm.jbatch-tck-spi-1.0.jar</file>
+    <license name='The Apache Software License, Version 2.0' url='http://www.apache.org/licenses/LICENSE-2.0.txt' />
+  </dependency>
+  <dependency name='org.aspectj:aspectjweaver:1.8.5'>
+    <file>aspectjweaver-1.8.5.jar</file>
+    <license name='Eclipse Public License - v 1.0' url='http://www.eclipse.org/legal/epl-v10.html' />
+  </dependency>
+  <dependency name='org.jolokia:jolokia-core:1.3.1'>
+    <file>jolokia-core-1.3.1.jar</file>
+    <license name='Apache 2' url='http://www.apache.org/licenses/LICENSE-2.0.txt' />
+  </dependency>
+  <dependency name='org.springframework.integration:spring-integration-java-dsl:1.1.2.RELEASE'>
+    <file>spring-integration-java-dsl-1.1.2.RELEASE.jar</file>
+    <license name='The Apache Software License, Version 2.0' url='http://www.apache.org/licenses/LICENSE-2.0.txt' />
+  </dependency>
+  <dependency name='org.springframework.boot:spring-boot-autoconfigure:1.2.3.RELEASE'>
+    <file>spring-boot-autoconfigure-1.2.3.RELEASE.jar</file>
+    <license name='Apache License, Version 2.0' url='http://www.apache.org/licenses/LICENSE-2.0' />
+  </dependency>
+  <dependency name='org.springframework.security:spring-security-core:4.0.2.RELEASE'>
+    <file>spring-security-core-4.0.2.RELEASE.jar</file>
+    <license name='The Apache Software License, Version 2.0' url='http://www.apache.org/licenses/LICENSE-2.0.txt' />
+  </dependency>
+  <dependency name='org.springframework.integration:spring-integration-stream:4.1.2.RELEASE'>
+    <file>spring-integration-stream-4.1.2.RELEASE.jar</file>
+    <license name='The Apache Software License, Version 2.0' url='http://www.apache.org/licenses/LICENSE-2.0.txt' />
+  </dependency>
+  <dependency name='org.springframework:spring-aop:4.2.6.RELEASE'>
+    <file>spring-aop-4.2.6.RELEASE.jar</file>
+    <license name='The Apache Software License, Version 2.0' url='http://www.apache.org/licenses/LICENSE-2.0.txt' />
+  </dependency>
+  <dependency name='org.aspectj:aspectjrt:1.8.5'>
+    <file>aspectjrt-1.8.5.jar</file>
+    <license name='Eclipse Public License - v 1.0' url='http://www.eclipse.org/legal/epl-v10.html' />
+  </dependency>
+  <dependency name='mysql:mysql-connector-java:5.1.36'>
+    <file>mysql-connector-java-5.1.36.jar</file>
+    <license name='The GNU General Public License, Version 2' url='http://www.gnu.org/licenses/old-licenses/gpl-2.0.html' />
+  </dependency>
+  <dependency name='org.eclipse.jetty:jetty-servlet:8.1.14.v20131031'>
+    <file>jetty-servlet-8.1.14.v20131031.jar</file>
+    <license name='Apache Software License - Version 2.0' url='http://www.apache.org/licenses/LICENSE-2.0' />
+    <license name='Eclipse Public License - Version 1.0' url='http://www.eclipse.org/org/documents/epl-v10.php' />
+  </dependency>
+  <dependency name='org.springframework.ldap:spring-ldap-core:2.0.2.RELEASE'>
+    <file>spring-ldap-core-2.0.2.RELEASE.jar</file>
+    <license name='The Apache Software License, Version 2.0' url='http://www.apache.org/licenses/LICENSE-2.0.txt' />
+  </dependency>
+  <dependency name='org.springframework.batch:spring-batch-integration:3.0.5.RELEASE'>
+    <file>spring-batch-integration-3.0.5.RELEASE.jar</file>
+    <license name='The Apache Software License, Version 2.0' url='http://www.apache.org/licenses/LICENSE-2.0.txt' />
+  </dependency>
+  <dependency name='org.springframework.xd:spring-xd-admin-ui-client:1.3.1.RELEASE'>
+    <file>spring-xd-admin-ui-client-1.3.1.RELEASE.jar</file>
+    <license name='No license found' />
+  </dependency>
+  <dependency name='com.thoughtworks.xstream:xstream:1.4.7'>
+    <file>xstream-1.4.7.jar</file>
+    <license name='BSD style' url='http://xstream.codehaus.org/license.html' />
+  </dependency>
+  <dependency name='xmlpull:xmlpull:1.1.3.1'>
+    <file>xmlpull-1.1.3.1.jar</file>
+    <license name='Public Domain' url='http://www.xmlpull.org/v1/download/unpacked/LICENSE.txt' />
+  </dependency>
+  <dependency name='org.apache.curator:curator-client:2.6.0'>
+    <file>curator-client-2.6.0.jar</file>
+    <license name='The Apache Software License, Version 2.0' url='file://${basedir}/LICENSE' />
+  </dependency>
+  <dependency name='org.eclipse.jetty:jetty-webapp:8.1.14.v20131031'>
+    <file>jetty-webapp-8.1.14.v20131031.jar</file>
+    <license name='Apache Software License - Version 2.0' url='http://www.apache.org/licenses/LICENSE-2.0' />
+    <license name='Eclipse Public License - Version 1.0' url='http://www.eclipse.org/org/documents/epl-v10.php' />
+  </dependency>
+  <dependency name='org.springframework.cloud:spring-cloud-cloudfoundry-connector:1.2.0.RELEASE'>
+    <file>spring-cloud-cloudfoundry-connector-1.2.0.RELEASE.jar</file>
+    <license name='The Apache Software License, Version 2.0' url='http://www.apache.org/licenses/LICENSE-2.0.txt' />
+  </dependency>
+  <dependency name='org.objenesis:objenesis:2.1'>
+    <file>objenesis-2.1.jar</file>
+    <license name='Apache 2' url='http://www.apache.org/licenses/LICENSE-2.0.txt' />
+  </dependency>
+  <dependency name='org.eclipse.jetty:jetty-io:8.1.14.v20131031'>
+    <file>jetty-io-8.1.14.v20131031.jar</file>
+    <license name='Apache Software License - Version 2.0' url='http://www.apache.org/licenses/LICENSE-2.0' />
+    <license name='Eclipse Public License - Version 1.0' url='http://www.eclipse.org/org/documents/epl-v10.php' />
+  </dependency>
+  <dependency name='org.springframework.xd:spring-xd-rest-domain:1.3.1.RELEASE'>
+    <file>spring-xd-rest-domain-1.3.1.RELEASE.jar</file>
+    <license name='The Apache Software License, Version 2.0' url='http://www.apache.org/licenses/LICENSE-2.0.txt' />
+  </dependency>
+  <dependency name='org.springframework.boot:spring-boot-starter-web:1.2.3.RELEASE'>
+    <file>spring-boot-starter-web-1.2.3.RELEASE.jar</file>
+    <license name='Apache License, Version 2.0' url='http://www.apache.org/licenses/LICENSE-2.0' />
+  </dependency>
+  <dependency name='org.codehaus.jackson:jackson-core-asl:1.9.13'>
+    <file>jackson-core-asl-1.9.13.jar</file>
+    <license name='The Apache Software License, Version 2.0' url='http://www.apache.org/licenses/LICENSE-2.0.txt' />
+  </dependency>
+  <dependency name='org.eclipse.jetty:jetty-http:8.1.14.v20131031'>
+    <file>jetty-http-8.1.14.v20131031.jar</file>
+    <license name='Apache Software License - Version 2.0' url='http://www.apache.org/licenses/LICENSE-2.0' />
+    <license name='Eclipse Public License - Version 1.0' url='http://www.eclipse.org/org/documents/epl-v10.php' />
+  </dependency>
+  <dependency name='org.springframework.xd:spring-xd-dirt:1.3.1.RELEASE'>
+    <file>spring-xd-dirt-1.3.1.RELEASE.jar</file>
+    <license name='The Apache Software License, Version 2.0' url='http://www.apache.org/licenses/LICENSE-2.0.txt' />
+  </dependency>
+  <dependency name='org.springframework.retry:spring-retry:1.1.2.RELEASE'>
+    <file>spring-retry-1.1.2.RELEASE.jar</file>
+    <license name='Apache 2.0' url='http://www.apache.org/licenses/LICENSE-2.0.txt' />
+  </dependency>
+  <dependency name='org.eclipse.jetty:jetty-jndi:8.1.14.v20131031'>
+    <file>jetty-jndi-8.1.14.v20131031.jar</file>
+    <license name='Apache Software License - Version 2.0' url='http://www.apache.org/licenses/LICENSE-2.0' />
+    <license name='Eclipse Public License - Version 1.0' url='http://www.eclipse.org/org/documents/epl-v10.php' />
+  </dependency>
+  <dependency name='org.springframework.xd:spring-xd-messagebus-spi:1.3.1.RELEASE'>
+    <file>spring-xd-messagebus-spi-1.3.1.RELEASE.jar</file>
+    <license name='The Apache Software License, Version 2.0' url='http://www.apache.org/licenses/LICENSE-2.0.txt' />
+  </dependency>
+  <dependency name='org.springframework.integration:spring-integration-ip:4.1.2.RELEASE'>
+    <file>spring-integration-ip-4.1.2.RELEASE.jar</file>
+    <license name='The Apache Software License, Version 2.0' url='http://www.apache.org/licenses/LICENSE-2.0.txt' />
+  </dependency>
+  <dependency name='org.springframework.xd:spring-xd-tuple:1.3.1.RELEASE'>
+    <file>spring-xd-tuple-1.3.1.RELEASE.jar</file>
+    <license name='The Apache Software License, Version 2.0' url='http://www.apache.org/licenses/LICENSE-2.0.txt' />
+  </dependency>
+  <dependency name='org.springframework.integration:spring-integration-jmx:4.2.5.RELEASE'>
+    <file>spring-integration-jmx-4.2.5.RELEASE.jar</file>
+    <license name='The Apache Software License, Version 2.0' url='http://www.apache.org/licenses/LICENSE-2.0.txt' />
+  </dependency>
+  <dependency name='com.fasterxml.jackson.core:jackson-annotations:2.6.0'>
+    <file>jackson-annotations-2.6.0.jar</file>
+    <license name='The Apache Software License, Version 2.0' url='http://www.apache.org/licenses/LICENSE-2.0.txt' />
+  </dependency>
+  <dependency name='org.springframework.boot:spring-boot-starter-logging:1.2.3.RELEASE'>
+    <file>spring-boot-starter-logging-1.2.3.RELEASE.jar</file>
+    <license name='Apache License, Version 2.0' url='http://www.apache.org/licenses/LICENSE-2.0' />
+  </dependency>
+  <dependency name='commons-logging:commons-logging:1.2'>
+    <file>commons-logging-1.2.jar</file>
+    <license name='The Apache Software License, Version 2.0' url='http://www.apache.org/licenses/LICENSE-2.0.txt' />
+  </dependency>
+  <dependency name='org.springframework.session:spring-session:1.0.2.RELEASE'>
+    <file>spring-session-1.0.2.RELEASE.jar</file>
+    <license name='The Apache Software License, Version 2.0' url='http://www.apache.org/licenses/LICENSE-2.0.txt' />
+  </dependency>
+  <dependency name='org.springframework:spring-web:4.2.4.RELEASE'>
+    <file>spring-web-4.2.4.RELEASE.jar</file>
+    <license name='The Apache Software License, Version 2.0' url='http://www.apache.org/licenses/LICENSE-2.0.txt' />
+  </dependency>
+  <dependency name='org.springframework.integration:spring-integration-event:4.2.5.RELEASE'>
+    <file>spring-integration-event-4.2.5.RELEASE.jar</file>
+    <license name='The Apache Software License, Version 2.0' url='http://www.apache.org/licenses/LICENSE-2.0.txt' />
+  </dependency>
+  <dependency name='org.codehaus.groovy:groovy-all:2.4.4'>
+    <file>groovy-all-2.4.4.jar</file>
+    <license name='The Apache Software License, Version 2.0' url='http://www.apache.org/licenses/LICENSE-2.0.txt' />
+  </dependency>
+  <dependency name='org.apache.curator:curator-framework:2.6.0'>
+    <file>curator-framework-2.6.0.jar</file>
+    <license name='The Apache Software License, Version 2.0' url='file://${basedir}/LICENSE' />
+  </dependency>
+  <dependency name='org.springframework.xd:spring-xd-analytics:1.3.1.RELEASE'>
+    <file>spring-xd-analytics-1.3.1.RELEASE.jar</file>
+    <license name='The Apache Software License, Version 2.0' url='http://www.apache.org/licenses/LICENSE-2.0.txt' />
+  </dependency>
+  <dependency name='aopalliance:aopalliance:1.0'>
+    <file>aopalliance-1.0.jar</file>
+    <license name='Public Domain' />
+  </dependency>
+  <dependency name='org.springframework.batch:spring-batch-admin-resources:1.3.0.RELEASE'>
+    <file>spring-batch-admin-resources-1.3.0.RELEASE.jar</file>
+    <license name='Apache 2.0' url='http://www.apache.org/licenses/LICENSE-2.0.txt' />
+  </dependency>
+  <dependency name='com.google.protobuf:protobuf-java:2.6.1'>
+    <file>protobuf-java-2.6.1.jar</file>
+    <license name='New BSD license' url='http://www.opensource.org/licenses/bsd-license.php' />
+  </dependency>
+  <dependency name='org.apache.tomcat.embed:tomcat-embed-core:8.0.20'>
+    <file>tomcat-embed-core-8.0.20.jar</file>
+    <license name='Apache License, Version 2.0' url='http://www.apache.org/licenses/LICENSE-2.0.txt' />
+  </dependency>
+  <dependency name='org.apache.commons:commons-lang3:3.1'>
+    <file>commons-lang3-3.1.jar</file>
+    <license name='The Apache Software License, Version 2.0' url='http://www.apache.org/licenses/LICENSE-2.0.txt' />
+  </dependency>
+  <dependency name='org.springframework.data:spring-data-commons:1.12.2.RELEASE'>
+    <file>spring-data-commons-1.12.2.RELEASE.jar</file>
+    <license name='Apache License, Version 2.0' url='http://www.apache.org/licenses/LICENSE-2.0' />
+  </dependency>
+  <dependency name='javax.batch:javax.batch-api:1.0'>
+    <file>javax.batch-api-1.0.jar</file>
+    <license name='The Apache Software License, Version 2.0' url='http://www.apache.org/licenses/LICENSE-2.0.txt' />
+  </dependency>
+  <dependency name='org.springframework:spring-jdbc:4.2.4.RELEASE'>
+    <file>spring-jdbc-4.2.4.RELEASE.jar</file>
+    <license name='The Apache Software License, Version 2.0' url='http://www.apache.org/licenses/LICENSE-2.0.txt' />
+  </dependency>
+  <dependency name='commons-pool:commons-pool:1.5.4'>
+    <file>commons-pool-1.5.4.jar</file>
+    <license name='The Apache Software License, Version 2.0' url='http://www.apache.org/licenses/LICENSE-2.0.txt' />
+  </dependency>
+  <dependency name='org.springframework.boot:spring-boot-starter-aop:1.2.3.RELEASE'>
+    <file>spring-boot-starter-aop-1.2.3.RELEASE.jar</file>
+    <license name='Apache License, Version 2.0' url='http://www.apache.org/licenses/LICENSE-2.0' />
+  </dependency>
+  <dependency name='org.slf4j:jcl-over-slf4j:1.7.21'>
+    <file>jcl-over-slf4j-1.7.21.jar</file>
+    <license name='MIT License' url='http://www.opensource.org/licenses/mit-license.php' />
+  </dependency>
+  <dependency name='com.fasterxml.jackson.core:jackson-databind:2.6.6'>
+    <file>jackson-databind-2.6.6.jar</file>
+    <license name='The Apache Software License, Version 2.0' url='http://www.apache.org/licenses/LICENSE-2.0.txt' />
+  </dependency>
+  <dependency name='org.springframework:spring-oxm:4.2.4.RELEASE'>
+    <file>spring-oxm-4.2.4.RELEASE.jar</file>
+    <license name='The Apache Software License, Version 2.0' url='http://www.apache.org/licenses/LICENSE-2.0.txt' />
+  </dependency>
+  <dependency name='org.reactivestreams:reactive-streams:1.0.0'>
+    <file>reactive-streams-1.0.0.jar</file>
+    <license name='CC0' url='http://creativecommons.org/publicdomain/zero/1.0/' />
+  </dependency>
+  <dependency name='javax.validation:validation-api:1.1.0.Final'>
+    <file>validation-api-1.1.0.Final.jar</file>
+    <license name='The Apache Software License, Version 2.0' url='http://www.apache.org/licenses/LICENSE-2.0.txt' />
+  </dependency>
+  <dependency name='org.springframework.boot:spring-boot-starter:1.2.3.RELEASE'>
+    <file>spring-boot-starter-1.2.3.RELEASE.jar</file>
+    <license name='Apache License, Version 2.0' url='http://www.apache.org/licenses/LICENSE-2.0' />
+  </dependency>
+  <dependency name='com.googlecode.json-simple:json-simple:1.1.1'>
+    <file>json-simple-1.1.1.jar</file>
+    <license name='The Apache Software License, Version 2.0' url='http://www.apache.org/licenses/LICENSE-2.0.txt' />
+  </dependency>
+  <dependency name='com.datastax.cassandra:cassandra-driver-dse:2.1.5'>
+    <file>cassandra-driver-dse-2.1.5.jar</file>
+    <license name='Apache 2' url='http://www.apache.org/licenses/LICENSE-2.0.txt' />
+  </dependency>
+  <dependency name='org.springframework.batch:spring-batch-core:3.0.5.RELEASE'>
+    <file>spring-batch-core-3.0.5.RELEASE.jar</file>
+    <license name='The Apache Software License, Version 2.0' url='http://www.apache.org/licenses/LICENSE-2.0.txt' />
+  </dependency>
+  <dependency name='org.springframework:spring-tx:4.2.6.RELEASE'>
+    <file>spring-tx-4.2.6.RELEASE.jar</file>
+    <license name='The Apache Software License, Version 2.0' url='http://www.apache.org/licenses/LICENSE-2.0.txt' />
+  </dependency>
+  <dependency name='net.minidev:json-smart:2.1.1'>
+    <file>json-smart-2.1.1.jar</file>
+    <license name='The Apache Software License, Version 2.0' url='http://www.apache.org/licenses/LICENSE-2.0.txt' />
+  </dependency>
+  <dependency name='org.apache.httpcomponents:httpclient:4.5'>
+    <file>httpclient-4.5.jar</file>
+    <license name='Apache License, Version 2.0' url='http://www.apache.org/licenses/LICENSE-2.0.txt' />
+  </dependency>
+  <dependency name='org.apache.commons:commons-pool2:2.4.2'>
+    <file>commons-pool2-2.4.2.jar</file>
+    <license name='The Apache Software License, Version 2.0' url='http://www.apache.org/licenses/LICENSE-2.0.txt' />
+  </dependency>
+  <dependency name='org.eclipse.jetty:jetty-server:8.1.14.v20131031'>
+    <file>jetty-server-8.1.14.v20131031.jar</file>
+    <license name='Apache Software License - Version 2.0' url='http://www.apache.org/licenses/LICENSE-2.0' />
+    <license name='Eclipse Public License - Version 1.0' url='http://www.eclipse.org/org/documents/epl-v10.php' />
+  </dependency>
+  <dependency name='org.springframework.xd:spring-xd-ui:1.3.1.RELEASE'>
+    <file>spring-xd-ui-1.3.1.RELEASE.jar</file>
+    <license name='The Apache Software License, Version 2.0' url='http://www.apache.org/licenses/LICENSE-2.0.txt' />
+  </dependency>
+  <dependency name='org.springframework.integration:spring-integration-http:4.1.2.RELEASE'>
+    <file>spring-integration-http-4.1.2.RELEASE.jar</file>
+    <license name='The Apache Software License, Version 2.0' url='http://www.apache.org/licenses/LICENSE-2.0.txt' />
+  </dependency>
+  <dependency name='org.springframework.integration:spring-integration-xml:4.2.5.RELEASE'>
+    <file>spring-integration-xml-4.2.5.RELEASE.jar</file>
+    <license name='The Apache Software License, Version 2.0' url='http://www.apache.org/licenses/LICENSE-2.0.txt' />
+  </dependency>
+  <dependency name='org.slf4j:log4j-over-slf4j:1.7.11'>
+    <file>log4j-over-slf4j-1.7.11.jar</file>
+    <license name='Apache Software Licenses' url='http://www.apache.org/licenses/LICENSE-2.0.txt' />
+  </dependency>
+  <dependency name='com.datastax.cassandra:cassandra-driver-core:2.1.5'>
+    <file>cassandra-driver-core-2.1.5.jar</file>
+    <license name='Apache 2' url='http://www.apache.org/licenses/LICENSE-2.0.txt' />
+  </dependency>
+  <dependency name='org.springframework:spring-context-support:4.1.7.RELEASE'>
+    <file>spring-context-support-4.1.7.RELEASE.jar</file>
+    <license name='The Apache Software License, Version 2.0' url='http://www.apache.org/licenses/LICENSE-2.0.txt' />
+  </dependency>
+  <dependency name='xpp3:xpp3_min:1.1.4c'>
+    <file>xpp3_min-1.1.4c.jar</file>
+    <license name='Indiana University Extreme! Lab Software License, vesion 1.1.1' url='http://www.extreme.indiana.edu/viewcvs/~checkout~/XPP3/java/LICENSE.txt' />
+    <license name='Public Domain' url='http://creativecommons.org/licenses/publicdomain' />
+  </dependency>
+  <dependency name='org.springframework.xd:spring-xd-module:1.3.1.RELEASE'>
+    <file>spring-xd-module-1.3.1.RELEASE.jar</file>
+    <license name='The Apache Software License, Version 2.0' url='http://www.apache.org/licenses/LICENSE-2.0.txt' />
+  </dependency>
+  <dependency name='org.apache.httpcomponents:httpmime:4.4.1'>
+    <file>httpmime-4.4.1.jar</file>
+    <license name='Apache License, Version 2.0' url='http://www.apache.org/licenses/LICENSE-2.0.txt' />
+  </dependency>
+  <dependency name='ch.qos.logback:logback-classic:1.1.3'>
+    <file>logback-classic-1.1.3.jar</file>
+    <license name='Eclipse Public License - v 1.0' url='http://www.eclipse.org/legal/epl-v10.html' />
+    <license name='GNU Lesser General Public License' url='http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html' />
+  </dependency>
+  <dependency name='org.springframework.boot:spring-boot-actuator:1.2.3.RELEASE'>
+    <file>spring-boot-actuator-1.2.3.RELEASE.jar</file>
+    <license name='Apache License, Version 2.0' url='http://www.apache.org/licenses/LICENSE-2.0' />
+  </dependency>
+  <dependency name='org.springframework:spring-core:4.2.6.RELEASE'>
+    <file>spring-core-4.2.6.RELEASE.jar</file>
+    <license name='The Apache Software License, Version 2.0' url='http://www.apache.org/licenses/LICENSE-2.0.txt' />
+  </dependency>
+  <dependency name='org.noggit:noggit:0.6'>
+    <file>noggit-0.6.jar</file>
+    <license name='Apache License, Version 2.0' url='http://www.apache.org/licenses/LICENSE-2.0.txt' />
+  </dependency>
+  <dependency name='redis.clients:jedis:2.7.3'>
+    <file>jedis-2.7.3.jar</file>
+    <license name='MIT' url='http://github.com/xetorthio/jedis/raw/master/LICENSE.txt' />
+  </dependency>
+  <dependency name='org.springframework:spring-expression:4.2.6.RELEASE'>
+    <file>spring-expression-4.2.6.RELEASE.jar</file>
+    <license name='The Apache Software License, Version 2.0' url='http://www.apache.org/licenses/LICENSE-2.0.txt' />
+  </dependency>
+  <dependency name='com.fasterxml.jackson.core:jackson-core:2.6.6'>
+    <file>jackson-core-2.6.6.jar</file>
+    <license name='The Apache Software License, Version 2.0' url='http://www.apache.org/licenses/LICENSE-2.0.txt' />
+  </dependency>
+  <dependency name='org.springframework.xd:spring-xd-batch:1.3.1.RELEASE'>
+    <file>spring-xd-batch-1.3.1.RELEASE.jar</file>
+    <license name='The Apache Software License, Version 2.0' url='http://www.apache.org/licenses/LICENSE-2.0.txt' />
+  </dependency>
+  <dependency name='com.google.guava:guava:18.0'>
+    <file>guava-18.0.jar</file>
+    <license name='The Apache Software License, Version 2.0' url='http://www.apache.org/licenses/LICENSE-2.0.txt' />
+  </dependency>
+  <dependency name='org.springframework.data:spring-cql:1.3.4.RELEASE'>
+    <file>spring-cql-1.3.4.RELEASE.jar</file>
+    <license name='Apache License, Version 2.0' url='http://www.apache.org/licenses/LICENSE-2.0' />
+  </dependency>
+  <dependency name='org.yaml:snakeyaml:1.14'>
+    <file>snakeyaml-1.14.jar</file>
+    <license name='Apache License Version 2.0' url='LICENSE.txt' />
+  </dependency>
+  <dependency name='org.apache.tomcat.embed:tomcat-embed-websocket:8.0.20'>
+    <file>tomcat-embed-websocket-8.0.20.jar</file>
+    <license name='Apache License, Version 2.0' url='http://www.apache.org/licenses/LICENSE-2.0.txt' />
+  </dependency>
+  <dependency name='org.postgresql:postgresql:9.4-1201-jdbc41'>
+    <file>postgresql-9.4-1201-jdbc41.jar</file>
+    <license name='The PostgreSQL License' url='http://www.postgresql.org/about/licence/' />
+  </dependency>
+</dependencies>

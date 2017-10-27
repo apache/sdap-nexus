@@ -1,0 +1,43 @@
+
+------------------------------------------------------------
+Root project
+------------------------------------------------------------
+
+archives - Configuration for archive artifacts.
+No dependencies
+
+compile - Dependencies for source set 'main'.
+\--- com.google.protobuf:protobuf-java:2.6.1
+
+compileClasspath - Compile classpath for source set 'main'.
+\--- com.google.protobuf:protobuf-java:2.6.1
+
+compileOnly - Compile dependencies for source set 'main'.
+\--- com.google.protobuf:protobuf-java:2.6.1
+
+default - Configuration for default artifacts.
+\--- com.google.protobuf:protobuf-java:2.6.1
+
+protobuf
+No dependencies
+
+protobufToolsLocator_protoc
+\--- com.google.protobuf:protoc:2.6.1
+
+runtime - Runtime dependencies for source set 'main'.
+\--- com.google.protobuf:protobuf-java:2.6.1
+
+testCompile - Dependencies for source set 'test'.
+\--- com.google.protobuf:protobuf-java:2.6.1
+
+testCompileClasspath - Compile classpath for source set 'test'.
+\--- com.google.protobuf:protobuf-java:2.6.1
+
+testCompileOnly - Compile dependencies for source set 'test'.
+\--- com.google.protobuf:protobuf-java:2.6.1
+
+testProtobuf
+No dependencies
+
+testRuntime - Runtime dependencies for source set 'test'.
+\--- com.google.protobuf:protobuf-java:2.6.1

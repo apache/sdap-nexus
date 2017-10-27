@@ -1,0 +1,1 @@
+ftp://podaac-ftp.jpl.nasa.gov/allData/smap/L3/RSS/V2/monthly/SCI

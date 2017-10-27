@@ -1,0 +1,1 @@
+ftp://podaac-ftp.jpl.nasa.gov/allData/ghrsst/data/GDS2/L4/GLOB/NCEI/AVHRR_OI/v2/
