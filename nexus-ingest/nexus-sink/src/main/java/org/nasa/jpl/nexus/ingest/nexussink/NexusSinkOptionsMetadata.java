@@ -28,6 +28,15 @@ public class NexusSinkOptionsMetadata implements ProfileNamesProvider{
 
     public static final String PROPERTY_NAME_INSERT_BUFFER = "insertBuffer";
 
+    public static final String PROPERTY_NAME_S3_BUCKET = "s3BucketName";
+    public static final String PROPERTY_NAME_AWS_REGION = "awsRegion";
+    public static final String PROPERTY_NAME_DYNAMO_TABLE_NAME = "dynamoTableName";
+
+    private String s3BucketName = "";
+    private String awsRegion = "";
+    private String dynamoTableName = "";
+    private String dataStore = "";
+
     private String cassandraContactPoints = null;
     private String cassandraKeyspace = null;
     private Integer cassandraPort = 9042;
@@ -42,7 +51,6 @@ public class NexusSinkOptionsMetadata implements ProfileNamesProvider{
      * Cassandra settings
      */
 
-    @NotNull
     public String getCassandraContactPoints(){
         return this.cassandraContactPoints;
     }
@@ -52,7 +60,6 @@ public class NexusSinkOptionsMetadata implements ProfileNamesProvider{
         this.cassandraContactPoints = cassandraContactPoints;
     }
 
-    @NotNull
     public String getCassandraKeyspace(){
         return this.cassandraKeyspace;
     }
@@ -114,22 +121,105 @@ public class NexusSinkOptionsMetadata implements ProfileNamesProvider{
     @ModuleOption(value = "number of messages to buffer before inserting into Nexus", defaultValue = "0")
     public void setInsertBuffer(Integer insertBuffer){ this.insertBuffer = insertBuffer; }
 
+    @ModuleOption(value = "The name of the S3 bucket", defaultValue = "nexus-jpl")
+    public void setS3BucketName(String s3BucketName) {
+        this.s3BucketName = s3BucketName;
+    }
+
+    public String getS3BucketName() {
+        return this.s3BucketName;
+    }
+
+    @ModuleOption(value = "The AWS region", defaultValue = "us-west-2")
+    public void setAwsRegion(String awsRegion) {
+        this.awsRegion = awsRegion;
+    }
+
+    public String getAwsRegion() {
+        return this.awsRegion;
+    }
+
+    @ModuleOption(value = "The name of the dynamoDB table", defaultValue = "nexus-jpl-table")
+    public void setDynamoTableName(String dynamoTableName) {
+        this.dynamoTableName = dynamoTableName;
+    }
+
+    public String getDynamoTableName() {
+        return this.dynamoTableName;
+    }
+
+    @AssertTrue(message = "Either "+PROPERTY_NAME_CASSANDRA_KEYSPACE+", "+PROPERTY_NAME_S3_BUCKET+", or "
+            +PROPERTY_NAME_DYNAMO_TABLE_NAME+" is allowed but not more than 1.")
+    public boolean isOptionMutuallyExclusiveDataStore() {
+        return Exclusives.atMostOneOf(StringUtils.isNotEmpty(getCassandraKeyspace()), StringUtils.isNotEmpty(getS3BucketName()),
+                StringUtils.isNotEmpty(getDynamoTableName()));
+    }
+
+    @AssertTrue(message = "Both "+PROPERTY_NAME_CASSANDRA_KEYSPACE+" and "+PROPERTY_NAME_CASSANDRA_CONTACT_POINTS+
+            " are required if using Cassandra.")
+    public boolean isCassandraConfigured() {
+        if (StringUtils.isEmpty(getCassandraKeyspace())) {
+            return true; //If Cassandra isn't used, return true to avoid test failures
+        }
+
+        return StringUtils.isNotEmpty(getCassandraContactPoints());
+    }
+
+    @AssertTrue(message = "Both "+PROPERTY_NAME_S3_BUCKET+" and "+PROPERTY_NAME_AWS_REGION+" are required if using S3.")
+    public boolean isS3Configured() {
+        if (StringUtils.isEmpty(getS3BucketName())) {
+            return true; //If S3 isn't used, return true to avoid test failures
+        }
+
+        return StringUtils.isNotEmpty(getAwsRegion());
+    }
+
+    @AssertTrue(message = "Both "+PROPERTY_NAME_DYNAMO_TABLE_NAME+" and "+PROPERTY_NAME_AWS_REGION+" are required if using DynamoDB.")
+    public boolean isDynamoConfigured() {
+        if (StringUtils.isEmpty(getDynamoTableName())) {
+            return true; //If DynamoDB isn't used, return true to avoid test failures
+        }
+
+        return StringUtils.isNotEmpty(getAwsRegion());
+    }
 
     @AssertTrue(message = "Either "+PROPERTY_NAME_SOLR_SERVER_URL+" or "+PROPERTY_NAME_SOLR_CLOUD_ZK_URL+" is allowed but not both.")
-    public boolean isOptionMutuallyExclusive(){
+    public boolean isOptionMutuallyExclusiveMetadataStore() {
         return Exclusives.atMostOneOf(StringUtils.isNotEmpty(getSolrCloudZkHost()), StringUtils.isNotEmpty(getSolrUrl()));
     }
 
     @Override
     public String[] profilesToActivate() {
-        if(StringUtils.isNotEmpty(getSolrCloudZkHost())){
-            return new String[]{"solr-cloud"};
-        }else{
-            if("http://embedded/".equals(getSolrUrl())){
-                return new String[]{"solr-embedded"};
-            }else {
-                return new String[]{"solr-standalone"};
+        String[] profiles = new String[2];
+
+        if (StringUtils.isNotEmpty(getSolrCloudZkHost())) {
+            profiles[0] = "solr-cloud";
+        }
+        else {
+            if ("http://embedded/".equals(getSolrUrl())) {
+                profiles[0] = "solr-embedded";
+            }
+            else {
+                profiles[0] = "solr-standalone";
             }
         }
+        if (StringUtils.isNotEmpty(getCassandraKeyspace())) {
+            profiles[1] = "cassandra";
+        }
+        else {
+            if (StringUtils.isNotEmpty(getS3BucketName())) {
+                if (StringUtils.isNotEmpty(getAwsRegion())) {
+                    profiles[1] = "s3";
+                }
+                else {
+                    profiles[1] = "s3local";
+                }
+            }
+            else {
+                profiles[1] = "dynamo";
+            }
+        }
+
+        return profiles;
     }
 }
