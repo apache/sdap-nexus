@@ -4,8 +4,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1" />
 
     <title>nexuscli API documentation</title>
-    <meta name="description" content="Copyright (c) 2017 Jet Propulsion Laboratory,
-California Institute of Technology.  All rights reserv..." />
+    <meta name="description" content="" />
 
   <link href='http://fonts.googleapis.com/css?family=Source+Sans+Pro:400,300' rel='stylesheet' type='text/css'>
   
@@ -1062,20 +1061,15 @@ table {
 
   <header id="section-intro">
   <h1 class="title"><span class="name">nexuscli</span> module</h1>
-  <p>Copyright (c) 2017 Jet Propulsion Laboratory,
-California Institute of Technology.  All rights reserved</p>
+  
   
   <p class="source_link"><a href="javascript:void(0);" onclick="toggle('source-nexuscli', this);">Show source &equiv;</a></p>
   <div id="source-nexuscli" class="source">
-    <div class="codehilite"><pre><span></span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">Copyright (c) 2017 Jet Propulsion Laboratory,</span>
-<span class="sd">California Institute of Technology.  All rights reserved</span>
-<span class="sd">&quot;&quot;&quot;</span>
-<span class="kn">from</span> <span class="nn">nexuscli.nexuscli</span> <span class="kn">import</span> <span class="n">TimeSeries</span>
-<span class="kn">from</span> <span class="nn">nexuscli.nexuscli</span> <span class="kn">import</span> <span class="n">set_target</span>
-<span class="kn">from</span> <span class="nn">nexuscli.nexuscli</span> <span class="kn">import</span> <span class="n">time_series</span>
-<span class="kn">from</span> <span class="nn">nexuscli.nexuscli</span> <span class="kn">import</span> <span class="n">dataset_list</span>
-<span class="kn">from</span> <span class="nn">nexuscli.nexuscli</span> <span class="kn">import</span> <span class="n">daily_difference_average</span>
+    <div class="codehilite"><pre><span></span><span class="n">rom</span> <span class="n">nexuscli</span><span class="o">.</span><span class="n">nexuscli</span> <span class="kn">import</span> <span class="nn">TimeSeries</span>
+<span class="n">rom</span> <span class="n">nexuscli</span><span class="o">.</span><span class="n">nexuscli</span> <span class="kn">import</span> <span class="nn">set_target</span>
+<span class="n">rom</span> <span class="n">nexuscli</span><span class="o">.</span><span class="n">nexuscli</span> <span class="kn">import</span> <span class="nn">time_series</span>
+<span class="n">rom</span> <span class="n">nexuscli</span><span class="o">.</span><span class="n">nexuscli</span> <span class="kn">import</span> <span class="nn">dataset_list</span>
+<span class="n">rom</span> <span class="n">nexuscli</span><span class="o">.</span><span class="n">nexuscli</span> <span class="kn">import</span> <span class="nn">daily_difference_average</span>
 </pre></div>
 
   </div>
@@ -1091,14 +1085,13 @@ California Institute of Technology.  All rights reserved</p>
       <p class="name"><a href="nexuscli.m.html">nexuscli.nexuscli</a></p>
       
   
-    <div class="desc"><p>Copyright (c) 2017 Jet Propulsion Laboratory,
-California Institute of Technology.  All rights reserved</p>
-<p>This module provides a native python client interface to the NEXUS (https://github.com/dataplumber/nexus) 
+    <div class="desc"><p>This module provides a native python client interface to the NEXUS (https://github.com/dataplumber/nexus) 
 webservice API.</p>
 <p>Usage:</p>
 <div class="codehilite"><pre><span></span><span class="kn">import</span> <span class="nn">nexuscli</span>
 
-<span class="n">nexuscli</span><span class="o">.</span><span class="n">set_target</span><span class="p">(</span><span class="s2">&quot;http://nexus-w...</span>
+<span class="n">nexuscli</span><span class="o">.</span><span class="n">set_target</span><span class="p">(</span><span class="s2">&quot;http://nexus-webapp:8083&quot;</span><span class="p">)</span>
+<span class="n">nexuscli</span><span class="o">.</span><span class="n">dataset_list</span><span class="p">()</span>
 </pre></div></div>
 
       </div>
@@ -1106,8 +1099,6 @@ webservice API.</p>
       <p class="name"><a href="test/index.html">nexuscli.test</a></p>
       
   
-    <div class="desc"><p>Copyright (c) 2017 Jet Propulsion Laboratory,
-California Institute of Technology.  All rights reserved</p></div>
 
       </div>
   </section>

@@ -6,8 +6,6 @@
 # Author:      Brian Wilson
 #
 # Created:     Mon Apr 10 11:01:06 2006
-# Copyright:   (c) 2006, California Institute of Technology.
-#              U.S. Government Sponsorship acknowledged.
 #-----------------------------------------------------------------------------
 #
 USAGE = """

@@ -1,7 +1,4 @@
-"""
-Copyright (c) 2016 Jet Propulsion Laboratory,
-California Institute of Technology.  All rights reserved
-"""
+
 import importlib
 import unittest
 from os import environ, path

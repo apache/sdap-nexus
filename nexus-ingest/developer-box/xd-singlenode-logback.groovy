@@ -1,7 +1,4 @@
-/*****************************************************************************
-* Copyright (c) 2016 Jet Propulsion Laboratory,
-* California Institute of Technology.  All rights reserved
-*****************************************************************************/
+
 import org.springframework.xd.dirt.util.logging.CustomLoggerConverter
 import org.springframework.xd.dirt.util.logging.VersionPatternConverter
 import ch.qos.logback.classic.encoder.PatternLayoutEncoder

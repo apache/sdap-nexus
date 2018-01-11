@@ -1,7 +1,4 @@
 """
-Copyright (c) 2017 Jet Propulsion Laboratory,
-California Institute of Technology.  All rights reserved
-
 This module provides a native python client interface to the NEXUS (https://github.com/dataplumber/nexus) 
 webservice API.
 

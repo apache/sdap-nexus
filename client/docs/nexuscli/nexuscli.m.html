@@ -4,8 +4,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1" />
 
     <title>nexuscli.nexuscli API documentation</title>
-    <meta name="description" content="Copyright (c) 2017 Jet Propulsion Laboratory,
-California Institute of Technology.  All rights reserv..." />
+    <meta name="description" content="This module provides a native python client interface to the NEXUS (https://github.com/dataplumber/n..." />
 
   <link href='http://fonts.googleapis.com/css?family=Source+Sans+Pro:400,300' rel='stylesheet' type='text/css'>
   
@@ -1083,9 +1082,7 @@ table {
 
   <header id="section-intro">
   <h1 class="title"><span class="name">nexuscli.nexuscli</span> module</h1>
-  <p>Copyright (c) 2017 Jet Propulsion Laboratory,
-California Institute of Technology.  All rights reserved</p>
-<p>This module provides a native python client interface to the NEXUS (https://github.com/dataplumber/nexus) 
+  <p>This module provides a native python client interface to the NEXUS (https://github.com/dataplumber/nexus) 
 webservice API.</p>
 <p>Usage:</p>
 <div class="codehilite"><pre><span></span><span class="kn">import</span> <span class="nn">nexuscli</span>
@@ -1097,9 +1094,6 @@ webservice API.</p>
   <p class="source_link"><a href="javascript:void(0);" onclick="toggle('source-nexuscli.nexuscli', this);">Show source &equiv;</a></p>
   <div id="source-nexuscli.nexuscli" class="source">
     <div class="codehilite"><pre><span></span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">Copyright (c) 2017 Jet Propulsion Laboratory,</span>
-<span class="sd">California Institute of Technology.  All rights reserved</span>
-
 <span class="sd">This module provides a native python client interface to the NEXUS (https://github.com/dataplumber/nexus) </span>
 <span class="sd">webservice API.</span>
 
@@ -1241,20 +1235,23 @@ webservice API.</p>
 <span class="sd">    __return__ List of `nexuscli.nexuscli.TimeSeries` namedtuples</span>
 <span class="sd">    &quot;&quot;&quot;</span>
 
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">datasets</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
+        <span class="n">datasets</span> <span class="o">=</span> <span class="p">[</span><span class="n">datasets</span><span class="p">]</span>
+
     <span class="k">assert</span> <span class="mi">0</span> <span class="o">&lt;</span> <span class="nb">len</span><span class="p">(</span><span class="n">datasets</span><span class="p">)</span> <span class="o">&lt;=</span> <span class="mi">2</span><span class="p">,</span> <span class="s2">&quot;datasets must be a sequence of 1 or 2 items&quot;</span>
-    <span class="k">if</span> <span class="n">spark</span><span class="p">:</span>
-        <span class="n">url</span> <span class="o">=</span> <span class="s2">&quot;{}/timeSeriesSpark?&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">target</span><span class="p">)</span>
-    <span class="k">else</span><span class="p">:</span>
-        <span class="n">url</span> <span class="o">=</span> <span class="s2">&quot;{}/stats?&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">target</span><span class="p">)</span>
 
     <span class="n">params</span> <span class="o">=</span> <span class="p">{</span>
         <span class="s1">&#39;ds&#39;</span><span class="p">:</span> <span class="s1">&#39;,&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">datasets</span><span class="p">),</span>
         <span class="s1">&#39;b&#39;</span><span class="p">:</span> <span class="s1">&#39;,&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">b</span><span class="p">)</span> <span class="k">for</span> <span class="n">b</span> <span class="ow">in</span> <span class="n">bounding_box</span><span class="o">.</span><span class="n">bounds</span><span class="p">),</span>
         <span class="s1">&#39;startTime&#39;</span><span class="p">:</span> <span class="n">start_datetime</span><span class="o">.</span><span class="n">strftime</span><span class="p">(</span><span class="n">ISO_FORMAT</span><span class="p">),</span>
         <span class="s1">&#39;endTime&#39;</span><span class="p">:</span> <span class="n">end_datetime</span><span class="o">.</span><span class="n">strftime</span><span class="p">(</span><span class="n">ISO_FORMAT</span><span class="p">),</span>
-        <span class="s1">&#39;seasonalFilter&#39;</span><span class="p">:</span> <span class="n">seasonal_filter</span><span class="p">,</span>
-        <span class="s1">&#39;lowPassFilter&#39;</span><span class="p">:</span> <span class="n">lowpass_filter</span>
     <span class="p">}</span>
+
+    <span class="k">if</span> <span class="n">spark</span><span class="p">:</span>
+        <span class="n">url</span> <span class="o">=</span> <span class="s2">&quot;{}/timeSeriesSpark?&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">target</span><span class="p">)</span>
+        <span class="n">params</span><span class="p">[</span><span class="s1">&#39;spark&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;mesos,16,32&quot;</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">url</span> <span class="o">=</span> <span class="s2">&quot;{}/stats?&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">target</span><span class="p">)</span>
 
     <span class="n">response</span> <span class="o">=</span> <span class="n">session</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">url</span><span class="p">,</span> <span class="n">params</span><span class="o">=</span><span class="n">params</span><span class="p">)</span>
     <span class="n">response</span><span class="o">.</span><span class="n">raise_for_status</span><span class="p">()</span>
@@ -1510,20 +1507,23 @@ webservice API.</p>
 <span class="sd">    __return__ List of `nexuscli.nexuscli.TimeSeries` namedtuples</span>
 <span class="sd">    &quot;&quot;&quot;</span>
 
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">datasets</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
+        <span class="n">datasets</span> <span class="o">=</span> <span class="p">[</span><span class="n">datasets</span><span class="p">]</span>
+
     <span class="k">assert</span> <span class="mi">0</span> <span class="o">&lt;</span> <span class="nb">len</span><span class="p">(</span><span class="n">datasets</span><span class="p">)</span> <span class="o">&lt;=</span> <span class="mi">2</span><span class="p">,</span> <span class="s2">&quot;datasets must be a sequence of 1 or 2 items&quot;</span>
-    <span class="k">if</span> <span class="n">spark</span><span class="p">:</span>
-        <span class="n">url</span> <span class="o">=</span> <span class="s2">&quot;{}/timeSeriesSpark?&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">target</span><span class="p">)</span>
-    <span class="k">else</span><span class="p">:</span>
-        <span class="n">url</span> <span class="o">=</span> <span class="s2">&quot;{}/stats?&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">target</span><span class="p">)</span>
 
     <span class="n">params</span> <span class="o">=</span> <span class="p">{</span>
         <span class="s1">&#39;ds&#39;</span><span class="p">:</span> <span class="s1">&#39;,&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">datasets</span><span class="p">),</span>
         <span class="s1">&#39;b&#39;</span><span class="p">:</span> <span class="s1">&#39;,&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">b</span><span class="p">)</span> <span class="k">for</span> <span class="n">b</span> <span class="ow">in</span> <span class="n">bounding_box</span><span class="o">.</span><span class="n">bounds</span><span class="p">),</span>
         <span class="s1">&#39;startTime&#39;</span><span class="p">:</span> <span class="n">start_datetime</span><span class="o">.</span><span class="n">strftime</span><span class="p">(</span><span class="n">ISO_FORMAT</span><span class="p">),</span>
         <span class="s1">&#39;endTime&#39;</span><span class="p">:</span> <span class="n">end_datetime</span><span class="o">.</span><span class="n">strftime</span><span class="p">(</span><span class="n">ISO_FORMAT</span><span class="p">),</span>
-        <span class="s1">&#39;seasonalFilter&#39;</span><span class="p">:</span> <span class="n">seasonal_filter</span><span class="p">,</span>
-        <span class="s1">&#39;lowPassFilter&#39;</span><span class="p">:</span> <span class="n">lowpass_filter</span>
     <span class="p">}</span>
+
+    <span class="k">if</span> <span class="n">spark</span><span class="p">:</span>
+        <span class="n">url</span> <span class="o">=</span> <span class="s2">&quot;{}/timeSeriesSpark?&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">target</span><span class="p">)</span>
+        <span class="n">params</span><span class="p">[</span><span class="s1">&#39;spark&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;mesos,16,32&quot;</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">url</span> <span class="o">=</span> <span class="s2">&quot;{}/stats?&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">target</span><span class="p">)</span>
 
     <span class="n">response</span> <span class="o">=</span> <span class="n">session</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">url</span><span class="p">,</span> <span class="n">params</span><span class="o">=</span><span class="n">params</span><span class="p">)</span>
     <span class="n">response</span><span class="o">.</span><span class="n">raise_for_status</span><span class="p">()</span>

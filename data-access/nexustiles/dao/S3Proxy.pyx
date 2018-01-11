@@ -1,7 +1,4 @@
-"""
-Copyright (c) 2017 Jet Propulsion Laboratory,
-California Institute of Technology.  All rights reserved
-"""
+
 import uuid
 import nexusproto.NexusContent_pb2 as nexusproto
 from nexusproto.serialization import from_shaped_array

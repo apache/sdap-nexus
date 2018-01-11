@@ -1,7 +1,4 @@
-"""
-Copyright (c) 2016 Jet Propulsion Laboratory,
-California Institute of Technology.  All rights reserved
-"""
+
 import unittest
 import importlib
 import nexusproto.NexusContent_pb2 as nexusproto

@@ -1,7 +1,4 @@
-"""
-Copyright (c) 2016 Jet Propulsion Laboratory,
-California Institute of Technology.  All rights reserved
-"""
+
 from math import atan2, degrees, sqrt
 
 import nexusproto.NexusContent_pb2 as nexusproto

@@ -1,7 +1,4 @@
-/*****************************************************************************
-* Copyright (c) 2016 Jet Propulsion Laboratory,
-* California Institute of Technology.  All rights reserved
-*****************************************************************************/
+
 /**
  * Created by greguska on 3/29/16.
  */

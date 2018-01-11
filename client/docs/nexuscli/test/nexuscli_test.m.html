@@ -4,8 +4,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1" />
 
     <title>nexuscli.test.nexuscli_test API documentation</title>
-    <meta name="description" content="Copyright (c) 2017 Jet Propulsion Laboratory,
-California Institute of Technology.  All rights reserv..." />
+    <meta name="description" content="" />
 
   <link href='http://fonts.googleapis.com/css?family=Source+Sans+Pro:400,300' rel='stylesheet' type='text/css'>
   
@@ -1135,41 +1134,27 @@ table {
 
   <header id="section-intro">
   <h1 class="title"><span class="name">nexuscli.test.nexuscli_test</span> module</h1>
-  <p>Copyright (c) 2017 Jet Propulsion Laboratory,
-California Institute of Technology.  All rights reserved</p>
+  
   
   <p class="source_link"><a href="javascript:void(0);" onclick="toggle('source-nexuscli.test.nexuscli_test', this);">Show source &equiv;</a></p>
   <div id="source-nexuscli.test.nexuscli_test" class="source">
-    <div class="codehilite"><pre><span></span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">Copyright (c) 2017 Jet Propulsion Laboratory,</span>
-<span class="sd">California Institute of Technology.  All rights reserved</span>
-<span class="sd">&quot;&quot;&quot;</span>
-<span class="kn">import</span> <span class="nn">unittest</span>
-<span class="kn">from</span> <span class="nn">datetime</span> <span class="kn">import</span> <span class="n">datetime</span>
-
-<span class="kn">from</span> <span class="nn">shapely.geometry</span> <span class="kn">import</span> <span class="n">box</span>
-
-<span class="kn">import</span> <span class="nn">nexuscli</span>
-
-
-<span class="k">class</span> <span class="nc">TestCli</span><span class="p">(</span><span class="n">unittest</span><span class="o">.</span><span class="n">TestCase</span><span class="p">):</span>
-    <span class="k">def</span> <span class="nf">test_time_series</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="n">ts</span> <span class="o">=</span> <span class="n">nexuscli</span><span class="o">.</span><span class="n">time_series</span><span class="p">((</span><span class="s2">&quot;AVHRR_OI_L4_GHRSST_NCEI&quot;</span><span class="p">,</span> <span class="s2">&quot;MEASURES_SLA_JPL_1603&quot;</span><span class="p">),</span> <span class="n">box</span><span class="p">(</span><span class="o">-</span><span class="mi">150</span><span class="p">,</span> <span class="mi">45</span><span class="p">,</span> <span class="o">-</span><span class="mi">120</span><span class="p">,</span> <span class="mi">60</span><span class="p">),</span>
-                                  <span class="n">datetime</span><span class="p">(</span><span class="mi">2016</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span> <span class="n">datetime</span><span class="p">(</span><span class="mi">2016</span><span class="p">,</span> <span class="mi">12</span><span class="p">,</span> <span class="mi">31</span><span class="p">))</span>
-
-        <span class="bp">self</span><span class="o">.</span><span class="n">assertEqual</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">ts</span><span class="p">))</span>
-
-    <span class="k">def</span> <span class="nf">test_list</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="n">ds_list</span> <span class="o">=</span> <span class="n">nexuscli</span><span class="o">.</span><span class="n">dataset_list</span><span class="p">()</span>
-
-        <span class="k">print</span><span class="p">(</span><span class="n">ds_list</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">assertTrue</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">ds_list</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">)</span>
-
-    <span class="k">def</span> <span class="nf">test_daily_difference_average</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="n">ts</span> <span class="o">=</span> <span class="n">nexuscli</span><span class="o">.</span><span class="n">daily_difference_average</span><span class="p">(</span><span class="s2">&quot;AVHRR_OI_L4_GHRSST_NCEI&quot;</span><span class="p">,</span> <span class="n">box</span><span class="p">(</span><span class="o">-</span><span class="mi">150</span><span class="p">,</span> <span class="mi">45</span><span class="p">,</span> <span class="o">-</span><span class="mi">120</span><span class="p">,</span> <span class="mi">60</span><span class="p">),</span>
-                                               <span class="n">datetime</span><span class="p">(</span><span class="mi">2013</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span> <span class="n">datetime</span><span class="p">(</span><span class="mi">2014</span><span class="p">,</span> <span class="mi">12</span><span class="p">,</span> <span class="mi">31</span><span class="p">),</span> <span class="n">spark</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
-
-        <span class="bp">self</span><span class="o">.</span><span class="n">assertEqual</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">ts</span><span class="p">))</span>
+    <div class="codehilite"><pre><span></span><span class="n">mport</span> <span class="n">unittest</span>
+<span class="n">rom</span> <span class="n">datetime</span> <span class="kn">import</span> <span class="nn">datetime</span>
+<span class="n">rom</span> <span class="n">shapely</span><span class="o">.</span><span class="n">geometry</span> <span class="kn">import</span> <span class="nn">box</span>
+<span class="n">mport</span> <span class="n">nexuscli</span>
+<span class="n">lass</span> <span class="n">TestCli</span><span class="p">(</span><span class="n">unittest</span><span class="o">.</span><span class="n">TestCase</span><span class="p">):</span>
+   <span class="k">def</span> <span class="nf">test_time_series</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+       <span class="n">ts</span> <span class="o">=</span> <span class="n">nexuscli</span><span class="o">.</span><span class="n">time_series</span><span class="p">((</span><span class="s2">&quot;AVHRR_OI_L4_GHRSST_NCEI&quot;</span><span class="p">,</span> <span class="s2">&quot;MEASURES_SLA_JPL_1603&quot;</span><span class="p">),</span> <span class="n">box</span><span class="p">(</span><span class="o">-</span><span class="mi">150</span><span class="p">,</span> <span class="mi">45</span><span class="p">,</span> <span class="o">-</span><span class="mi">120</span><span class="p">,</span> <span class="mi">60</span><span class="p">),</span>
+                                 <span class="n">datetime</span><span class="p">(</span><span class="mi">2016</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span> <span class="n">datetime</span><span class="p">(</span><span class="mi">2016</span><span class="p">,</span> <span class="mi">12</span><span class="p">,</span> <span class="mi">31</span><span class="p">))</span>
+       <span class="bp">self</span><span class="o">.</span><span class="n">assertEqual</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">ts</span><span class="p">))</span>
+   <span class="k">def</span> <span class="nf">test_list</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+       <span class="n">ds_list</span> <span class="o">=</span> <span class="n">nexuscli</span><span class="o">.</span><span class="n">dataset_list</span><span class="p">()</span>
+       <span class="k">print</span><span class="p">(</span><span class="n">ds_list</span><span class="p">)</span>
+       <span class="bp">self</span><span class="o">.</span><span class="n">assertTrue</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">ds_list</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">)</span>
+   <span class="k">def</span> <span class="nf">test_daily_difference_average</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+       <span class="n">ts</span> <span class="o">=</span> <span class="n">nexuscli</span><span class="o">.</span><span class="n">daily_difference_average</span><span class="p">(</span><span class="s2">&quot;AVHRR_OI_L4_GHRSST_NCEI&quot;</span><span class="p">,</span> <span class="n">box</span><span class="p">(</span><span class="o">-</span><span class="mi">150</span><span class="p">,</span> <span class="mi">45</span><span class="p">,</span> <span class="o">-</span><span class="mi">120</span><span class="p">,</span> <span class="mi">60</span><span class="p">),</span>
+                                              <span class="n">datetime</span><span class="p">(</span><span class="mi">2013</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span> <span class="n">datetime</span><span class="p">(</span><span class="mi">2014</span><span class="p">,</span> <span class="mi">12</span><span class="p">,</span> <span class="mi">31</span><span class="p">))</span>
+       <span class="bp">self</span><span class="o">.</span><span class="n">assertEqual</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">ts</span><span class="p">))</span>
 </pre></div>
 
   </div>
@@ -1228,7 +1213,7 @@ in order to be run.</p>
 
     <span class="k">def</span> <span class="nf">test_daily_difference_average</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="n">ts</span> <span class="o">=</span> <span class="n">nexuscli</span><span class="o">.</span><span class="n">daily_difference_average</span><span class="p">(</span><span class="s2">&quot;AVHRR_OI_L4_GHRSST_NCEI&quot;</span><span class="p">,</span> <span class="n">box</span><span class="p">(</span><span class="o">-</span><span class="mi">150</span><span class="p">,</span> <span class="mi">45</span><span class="p">,</span> <span class="o">-</span><span class="mi">120</span><span class="p">,</span> <span class="mi">60</span><span class="p">),</span>
-                                               <span class="n">datetime</span><span class="p">(</span><span class="mi">2013</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span> <span class="n">datetime</span><span class="p">(</span><span class="mi">2014</span><span class="p">,</span> <span class="mi">12</span><span class="p">,</span> <span class="mi">31</span><span class="p">),</span> <span class="n">spark</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+                                               <span class="n">datetime</span><span class="p">(</span><span class="mi">2013</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span> <span class="n">datetime</span><span class="p">(</span><span class="mi">2014</span><span class="p">,</span> <span class="mi">12</span><span class="p">,</span> <span class="mi">31</span><span class="p">))</span>
 
         <span class="bp">self</span><span class="o">.</span><span class="n">assertEqual</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">ts</span><span class="p">))</span>
 </pre></div>
@@ -3404,7 +3389,7 @@ block, allowing further test code to be executed.</p></div>
   <div id="source-nexuscli.test.nexuscli_test.TestCli.test_daily_difference_average" class="source">
     <div class="codehilite"><pre><span></span><span class="k">def</span> <span class="nf">test_daily_difference_average</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
     <span class="n">ts</span> <span class="o">=</span> <span class="n">nexuscli</span><span class="o">.</span><span class="n">daily_difference_average</span><span class="p">(</span><span class="s2">&quot;AVHRR_OI_L4_GHRSST_NCEI&quot;</span><span class="p">,</span> <span class="n">box</span><span class="p">(</span><span class="o">-</span><span class="mi">150</span><span class="p">,</span> <span class="mi">45</span><span class="p">,</span> <span class="o">-</span><span class="mi">120</span><span class="p">,</span> <span class="mi">60</span><span class="p">),</span>
-                                           <span class="n">datetime</span><span class="p">(</span><span class="mi">2013</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span> <span class="n">datetime</span><span class="p">(</span><span class="mi">2014</span><span class="p">,</span> <span class="mi">12</span><span class="p">,</span> <span class="mi">31</span><span class="p">),</span> <span class="n">spark</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+                                           <span class="n">datetime</span><span class="p">(</span><span class="mi">2013</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span> <span class="n">datetime</span><span class="p">(</span><span class="mi">2014</span><span class="p">,</span> <span class="mi">12</span><span class="p">,</span> <span class="mi">31</span><span class="p">))</span>
     <span class="bp">self</span><span class="o">.</span><span class="n">assertEqual</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">ts</span><span class="p">))</span>
 </pre></div>
 
