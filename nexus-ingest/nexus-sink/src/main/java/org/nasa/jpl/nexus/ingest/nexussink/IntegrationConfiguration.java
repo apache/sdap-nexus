@@ -6,37 +6,26 @@ package org.nasa.jpl.nexus.ingest.nexussink;
 
 
 import com.google.protobuf.InvalidProtocolBufferException;
-import org.apache.commons.lang.ArrayUtils;
 import org.nasa.jpl.nexus.ingest.wiretypes.NexusContent;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Import;
-import org.springframework.context.annotation.Profile;
 import org.springframework.core.convert.converter.Converter;
 import org.springframework.core.env.Environment;
-import org.springframework.data.cassandra.core.CassandraOperations;
-import org.springframework.data.solr.core.SolrOperations;
-import org.springframework.integration.channel.DirectChannel;
-import org.springframework.integration.channel.interceptor.WireTap;
 import org.springframework.integration.config.EnableIntegration;
 import org.springframework.integration.config.IntegrationConverter;
 import org.springframework.integration.dsl.IntegrationFlow;
 import org.springframework.integration.dsl.IntegrationFlows;
 import org.springframework.integration.dsl.channel.MessageChannels;
-import org.springframework.integration.handler.LoggingHandler;
-import org.springframework.messaging.Message;
 import org.springframework.messaging.MessageChannel;
 import org.springframework.scheduling.TaskScheduler;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler;
 
 import javax.annotation.Resource;
-import java.lang.reflect.Array;
 import java.util.Arrays;
 import java.util.Collection;
-import java.util.Collections;
-import java.util.Map;
 
 /**
  * Created by greguska on 3/1/16.
@@ -55,10 +44,10 @@ public class IntegrationConfiguration {
     private static final Integer GROUP_TIMEOUT_MS = 2000;
 
     @Autowired
-    private SolrOperations solr;
+    private MetadataStore metadataStore;
 
     @Autowired
-    private CassandraOperations cassandraTemplate;
+    private DataStore dataStore;
 
     @Bean
     public MessageChannel input() {
@@ -91,7 +80,7 @@ public class IntegrationConfiguration {
 
     @Bean
     public NexusService nexus() {
-        return new NexusService(solr, cassandraTemplate);
+        return new NexusService(metadataStore, dataStore);
     }
 
     @Bean
@@ -110,27 +99,12 @@ public class IntegrationConfiguration {
         };
     }
 
-//    @Bean
-//    @IntegrationConverter
-//    public Converter byteObjectArrayToNexusTileConverter() {
-//        return new Converter<Byte[], NexusContent.NexusTile>() {
-//            @Override
-//            public NexusContent.NexusTile convert(Byte[] source) {
-//
-//                try {
-//                    return NexusContent.NexusTile.newBuilder().mergeFrom(ArrayUtils.toPrimitive(source)).build();
-//                } catch (InvalidProtocolBufferException e) {
-//                    throw new RuntimeException("Could not convert message.", e);
-//                }
-//            }
-//        };
-//    }
-
     @Bean
     public TaskScheduler taskScheduler(){
         ThreadPoolTaskScheduler tpts = new ThreadPoolTaskScheduler();
         tpts.setPoolSize(5);
         return tpts;
     }
+
 
 }

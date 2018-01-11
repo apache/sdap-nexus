@@ -3,18 +3,20 @@ Copyright (c) 2016 Jet Propulsion Laboratory,
 California Institute of Technology.  All rights reserved
 """
 import ConfigParser
+import sys
 from datetime import datetime
 from functools import wraps
 
 import numpy as np
 import numpy.ma as ma
 import pkg_resources
-import sys
+from dao.CassandraProxy import CassandraProxy
+from dao.S3Proxy import S3Proxy
+from dao.DynamoProxy import DynamoProxy
+from dao.SolrProxy import SolrProxy
 from pytz import timezone
 from shapely.geometry import MultiPolygon, box
 
-from dao.CassandraProxy import CassandraProxy
-from dao.SolrProxy import SolrProxy
 from model.nexusmodel import Tile, BBox, TileStats
 
 EPOCH = timezone('UTC').localize(datetime(1970, 1, 1))
@@ -46,7 +48,10 @@ class NexusTileServiceException(Exception):
 
 
 class NexusTileService(object):
-    def __init__(self, skipCassandra=False, skipSolr=False, config=None):
+    def __init__(self, skipDatastore=False, skipMetadatastore=False, config=None):
+        self._datastore = None
+        self._metadatastore = None
+
         if config is None:
             self._config = ConfigParser.RawConfigParser()
             self._config.readfp(pkg_resources.resource_stream(__name__, "config/datastores.ini"),
@@ -54,28 +59,36 @@ class NexusTileService(object):
         else:
             self._config = config
 
-        if not skipCassandra:
-            self._cass = CassandraProxy(self._config)
+        if not skipDatastore:
+            datastore = self._config.get("datastore", "store")
+            if datastore == "cassandra":
+                self._datastore = CassandraProxy(self._config)
+            elif datastore == "s3":
+                self._datastore = S3Proxy(self._config)
+            elif datastore == "dynamo":
+                self._datastore = DynamoProxy(self._config)
+            else:
+                raise ValueError("Error reading datastore from config file")
 
-        if not skipSolr:
-            self._solr = SolrProxy(self._config)
+        if not skipMetadatastore:
+            self._metadatastore = SolrProxy(self._config)
 
     def get_dataseries_list(self, simple=False):
         if simple:
-            return self._solr.get_data_series_list_simple()
+            return self._metadatastore.get_data_series_list_simple()
         else:
-            return self._solr.get_data_series_list()
+            return self._metadatastore.get_data_series_list()
 
     @tile_data()
     def find_tile_by_id(self, tile_id, **kwargs):
-        return self._solr.find_tile_by_id(tile_id)
+        return self._metadatastore.find_tile_by_id(tile_id)
 
     @tile_data()
     def find_tiles_by_id(self, tile_ids, ds=None, **kwargs):
-        return self._solr.find_tiles_by_id(tile_ids, ds=ds, **kwargs)
+        return self._metadatastore.find_tiles_by_id(tile_ids, ds=ds, **kwargs)
 
     def find_days_in_range_asc(self, min_lat, max_lat, min_lon, max_lon, dataset, start_time, end_time, **kwargs):
-        return self._solr.find_days_in_range_asc(min_lat, max_lat, min_lon, max_lon, dataset, start_time, end_time,
+        return self._metadatastore.find_days_in_range_asc(min_lat, max_lat, min_lon, max_lon, dataset, start_time, end_time,
                                                  **kwargs)
 
     @tile_data()
@@ -103,7 +116,7 @@ class NexusTileService(object):
         :return: List of one tile from ds with bounding_polygon on or before day_of_year or raise NexusTileServiceException if no tile found
         """
         try:
-            tile = self._solr.find_tile_by_polygon_and_most_recent_day_of_year(bounding_polygon, ds, day_of_year)
+            tile = self._metadatastore.find_tile_by_polygon_and_most_recent_day_of_year(bounding_polygon, ds, day_of_year)
         except IndexError:
             raise NexusTileServiceException("No tile found."), None, sys.exc_info()[2]
 
@@ -111,12 +124,12 @@ class NexusTileService(object):
 
     @tile_data()
     def find_all_tiles_in_box_at_time(self, min_lat, max_lat, min_lon, max_lon, dataset, time, **kwargs):
-        return self._solr.find_all_tiles_in_box_at_time(min_lat, max_lat, min_lon, max_lon, dataset, time, rows=5000,
+        return self._metadatastore.find_all_tiles_in_box_at_time(min_lat, max_lat, min_lon, max_lon, dataset, time, rows=5000,
                                                         **kwargs)
 
     @tile_data()
     def find_all_tiles_in_polygon_at_time(self, bounding_polygon, dataset, time, **kwargs):
-        return self._solr.find_all_tiles_in_polygon_at_time(bounding_polygon, dataset, time, rows=5000,
+        return self._metadatastore.find_all_tiles_in_polygon_at_time(bounding_polygon, dataset, time, rows=5000,
                                                             **kwargs)
 
     @tile_data()
@@ -133,9 +146,9 @@ class NexusTileService(object):
     def find_tiles_in_polygon(self, bounding_polygon, ds=None, start_time=0, end_time=-1, **kwargs):
         # Find tiles that fall within the polygon in the Solr index
         if 'sort' in kwargs.keys():
-            tiles = self._solr.find_all_tiles_in_polygon(bounding_polygon, ds, start_time, end_time, **kwargs)
+            tiles = self._metadatastore.find_all_tiles_in_polygon(bounding_polygon, ds, start_time, end_time, **kwargs)
         else:
-            tiles = self._solr.find_all_tiles_in_polygon_sorttimeasc(bounding_polygon, ds, start_time, end_time,
+            tiles = self._metadatastore.find_all_tiles_in_polygon_sorttimeasc(bounding_polygon, ds, start_time, end_time,
                                                                      **kwargs)
         return tiles
 
@@ -153,13 +166,13 @@ class NexusTileService(object):
         :param kwargs: fetch_data: True/False = whether or not to retrieve tile data
         :return:
         """
-        tiles = self._solr.find_tiles_by_exact_bounds(bounds[0], bounds[1], bounds[2], bounds[3], ds, start_time,
+        tiles = self._metadatastore.find_tiles_by_exact_bounds(bounds[0], bounds[1], bounds[2], bounds[3], ds, start_time,
                                                       end_time)
         return tiles
 
     @tile_data()
     def find_all_boundary_tiles_at_time(self, min_lat, max_lat, min_lon, max_lon, dataset, time, **kwargs):
-        return self._solr.find_all_boundary_tiles_at_time(min_lat, max_lat, min_lon, max_lon, dataset, time, rows=5000,
+        return self._metadatastore.find_all_boundary_tiles_at_time(min_lat, max_lat, min_lon, max_lon, dataset, time, rows=5000,
                                                           **kwargs)
 
     def get_tiles_bounded_by_box(self, min_lat, max_lat, min_lon, max_lon, ds=None, start_time=0, end_time=-1,
@@ -202,7 +215,7 @@ class NexusTileService(object):
         return tiles
 
     def get_stats_within_box_at_time(self, min_lat, max_lat, min_lon, max_lon, dataset, time, **kwargs):
-        tiles = self._solr.find_all_tiles_within_box_at_time(min_lat, max_lat, min_lon, max_lon, dataset, time,
+        tiles = self._metadatastore.find_all_tiles_within_box_at_time(min_lat, max_lat, min_lon, max_lon, dataset, time,
                                                              **kwargs)
 
         return tiles
@@ -227,7 +240,7 @@ class NexusTileService(object):
         :param ds: Filter by a specific dataset. Defaults to None (queries all datasets)
         :return: long time in seconds since epoch
         """
-        min_time = self._solr.find_min_date_from_tiles(tile_ids, ds=ds)
+        min_time = self._metadatastore.find_min_date_from_tiles(tile_ids, ds=ds)
         return long((min_time - EPOCH).total_seconds())
 
     def get_max_time(self, tile_ids, ds=None):
@@ -237,7 +250,7 @@ class NexusTileService(object):
         :param ds: Filter by a specific dataset. Defaults to None (queries all datasets)
         :return: long time in seconds since epoch
         """
-        max_time = self._solr.find_max_date_from_tiles(tile_ids, ds=ds)
+        max_time = self._metadatastore.find_max_date_from_tiles(tile_ids, ds=ds)
         return long((max_time - EPOCH).total_seconds())
 
     def get_distinct_bounding_boxes_in_polygon(self, bounding_polygon, ds, start_time, end_time):
@@ -249,7 +262,7 @@ class NexusTileService(object):
         :param end_time: The end time to search for tiles
         :return: A list of distinct bounding boxes (as shapely polygons) for tiles in the search polygon
         """
-        bounds = self._solr.find_distinct_bounding_boxes_in_polygon(bounding_polygon, ds, start_time, end_time)
+        bounds = self._metadatastore.find_distinct_bounding_boxes_in_polygon(bounding_polygon, ds, start_time, end_time)
         return [box(*b) for b in bounds]
 
     def mask_tiles_to_bbox(self, min_lat, max_lat, min_lon, max_lon, tiles):
@@ -291,7 +304,8 @@ class NexusTileService(object):
     def fetch_data_for_tiles(self, *tiles):
 
         nexus_tile_ids = set([tile.tile_id for tile in tiles])
-        matched_tile_data = self._cass.fetch_nexus_tiles(*nexus_tile_ids)
+        matched_tile_data = self._datastore.fetch_nexus_tiles(*nexus_tile_ids)
+
         tile_data_by_id = {str(a_tile_data.tile_id): a_tile_data for a_tile_data in matched_tile_data}
 
         missing_data = nexus_tile_ids.difference(tile_data_by_id.keys())
@@ -371,7 +385,7 @@ class NexusTileService(object):
         return tiles
 
     def pingSolr(self):
-        status = self._solr.ping()
+        status = self._metadatastore.ping()
         if status and status["status"] == "OK":
             return True
         else:

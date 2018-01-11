@@ -4,6 +4,8 @@
  *****************************************************************************/
 package org.nasa.jpl.nexus.ingest.nexussink;
 
+import com.amazonaws.services.s3.AmazonS3Client;
+import com.amazonaws.services.s3.S3ClientOptions;
 import org.apache.solr.client.solrj.SolrClient;
 import org.apache.solr.client.solrj.embedded.EmbeddedSolrServer;
 import org.springframework.beans.factory.annotation.Value;
@@ -46,6 +48,35 @@ public class TestInfrastructureConfiguration {
         @Bean
         public SolrOperations solrTemplate(SolrClient solrClient) {
             return new SolrTemplate(solrClient);
+        }
+
+        @Bean
+        public MetadataStore metadataStore(SolrOperations solrTemplate) {
+            MetadataStore metadataStore = new SolrStore(solrTemplate);
+            return metadataStore;
+        }
+
+    }
+
+    @Configuration
+    @Profile("s3local")
+    static class S3LocalConfiguration {
+        @Value("#{environment[T(org.nasa.jpl.nexus.ingest.nexussink.NexusSinkOptionsMetadata).PROPERTY_NAME_S3_BUCKET]}")
+        private String s3BucketName;
+
+        @Bean
+        public AmazonS3Client s3client() {
+            AmazonS3Client s3Client = new AmazonS3Client();
+            S3ClientOptions s3ClientOptions = S3ClientOptions.builder().setPathStyleAccess(true).build();
+            s3Client.setS3ClientOptions(s3ClientOptions);
+            s3Client.setEndpoint("http://localhost:8080");
+            return s3Client;
+        }
+
+        @Bean
+        public DataStore dataStore(AmazonS3Client s3Client) {
+            S3Store s3Store = new S3Store(s3Client, s3BucketName);
+            return s3Store;
         }
     }
 
