@@ -1,1 +1,1 @@
-https://podaac.jpl.nasa.gov/dataset/TELLUS_GRACE_MASCON_GRID_RL05_V2
+https://podaac.jpl.nasa.gov/dataset/TELLUS_GRACE_MASCON_GRID_RL05_V1
