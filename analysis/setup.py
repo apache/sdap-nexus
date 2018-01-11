@@ -37,7 +37,8 @@ setuptools.setup(
         'backports.functools-lru-cache==1.3',
         'netcdf4',
         'boto3',
-        'pyproj==1.9.5.1'
+        'pyproj==1.9.5.1',
+        'pillow==5.0.0'
     ],
 
     classifiers=[

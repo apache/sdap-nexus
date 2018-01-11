@@ -1,9 +1,10 @@
-awscli==1.11.141
+awscli==1.14.22
 backports-abc==0.4
 backports.functools-lru-cache==1.3
 backports.ssl-match-hostname==3.5.0.1
 basemap==1.0.7
-botocore==1.6.8
+botocore==1.8.26
+boto3==1.5.12
 Cartopy==0.14.2
 cassandra-driver==3.7.1
 certifi==2016.2.28
@@ -27,6 +28,7 @@ nexus-data-access==0.32
 nexusproto==0.3
 numpy==1.11.2
 pbr==1.10.0
+pillow==5.0.0
 protobuf==2.6.1
 pyasn1==0.3.3
 pyface==4.5.2

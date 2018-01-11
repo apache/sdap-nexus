@@ -181,10 +181,10 @@ class MapFetchHandler(BaseHandler):
             img = Image.new("RGBA", (width, height), (0, 0, 0, 0))
             draw = ImageDraw.Draw(img)
 
-            fnt = ImageFont.truetype('webservice/algorithms/imaging/Roboto/Roboto-Bold.ttf', 40)
+            fnt = ImageFont.load_default()
 
-            for x in range(0, width, 500):
-                for y in range(0, height, 500):
+            for x in range(10, width, 100):
+                for y in range(10, height, 100):
                     draw.text((x, y), "NO DATA", (180, 180, 180), font=fnt)
             MapFetchHandler.NO_DATA_IMAGE = img
 
