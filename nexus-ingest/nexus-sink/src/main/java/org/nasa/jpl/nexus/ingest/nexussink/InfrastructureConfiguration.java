@@ -4,6 +4,11 @@
 *****************************************************************************/
 package org.nasa.jpl.nexus.ingest.nexussink;
 
+import com.amazonaws.regions.Region;
+import com.amazonaws.regions.Regions;
+import com.amazonaws.services.dynamodbv2.AmazonDynamoDB;
+import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClient;
+import com.amazonaws.services.s3.AmazonS3Client;
 import org.apache.solr.client.solrj.SolrClient;
 import org.apache.solr.client.solrj.impl.CloudSolrClient;
 import org.apache.solr.client.solrj.impl.HttpSolrClient;
@@ -34,44 +39,54 @@ import static org.nasa.jpl.nexus.ingest.nexussink.NexusSinkOptionsMetadata.*;
 @Configuration
 public class InfrastructureConfiguration {
 
-    @Resource
-    private Environment environment;
+    @Configuration
+    @Profile("cassandra")
+    static class CassandraConfiguration {
+        @Resource
+        private Environment environment;
 
-    @Bean
-    public CassandraClusterFactoryBean cluster() {
+        @Bean
+        public CassandraClusterFactoryBean cluster() {
 
-        CassandraClusterFactoryBean cluster = new CassandraClusterFactoryBean();
-        cluster.setContactPoints(environment.getRequiredProperty(PROPERTY_NAME_CASSANDRA_CONTACT_POINTS));
-        cluster.setPort(Integer.parseInt(environment.getProperty(PROPERTY_NAME_CASSANDRA_PORT)));
+            CassandraClusterFactoryBean cluster = new CassandraClusterFactoryBean();
+            cluster.setContactPoints(environment.getRequiredProperty(PROPERTY_NAME_CASSANDRA_CONTACT_POINTS));
+            cluster.setPort(Integer.parseInt(environment.getProperty(PROPERTY_NAME_CASSANDRA_PORT)));
 
-        return cluster;
-    }
+            return cluster;
+        }
 
-    @Bean
-    public CassandraMappingContext mappingContext() {
-        return new BasicCassandraMappingContext();
-    }
+        @Bean
+        public CassandraMappingContext mappingContext() {
+            return new BasicCassandraMappingContext();
+        }
 
-    @Bean
-    public CassandraConverter converter() {
-        return new MappingCassandraConverter(mappingContext());
-    }
+        @Bean
+        public CassandraConverter converter() {
+            return new MappingCassandraConverter(mappingContext());
+        }
 
-    @Bean
-    public CassandraSessionFactoryBean session() throws Exception {
+        @Bean
+        public CassandraSessionFactoryBean session() throws Exception {
 
-        CassandraSessionFactoryBean session = new CassandraSessionFactoryBean();
-        session.setCluster(cluster().getObject());
-        session.setKeyspaceName(environment.getRequiredProperty(PROPERTY_NAME_CASSANDRA_KEYSPACE));
-        session.setConverter(converter());
-        session.setSchemaAction(SchemaAction.NONE);
+            CassandraSessionFactoryBean session = new CassandraSessionFactoryBean();
+            session.setCluster(cluster().getObject());
+            session.setKeyspaceName(environment.getRequiredProperty(PROPERTY_NAME_CASSANDRA_KEYSPACE));
+            session.setConverter(converter());
+            session.setSchemaAction(SchemaAction.NONE);
 
-        return session;
-    }
+            return session;
+        }
 
-    @Bean
-    public CassandraOperations cassandraTemplate() throws Exception {
-        return new CassandraTemplate(session().getObject());
+        @Bean
+        public CassandraOperations cassandraTemplate() throws Exception {
+            return new CassandraTemplate(session().getObject());
+        }
+
+        @Bean
+        public DataStore dataStore(CassandraOperations cassandraTemplate) {
+            DataStore dataStore = new CassandraStore(cassandraTemplate);
+            return dataStore;
+        }
     }
 
     @Configuration
@@ -93,12 +108,18 @@ public class InfrastructureConfiguration {
         public SolrOperations solrTemplate(SolrClient solrClient) {
             return new SolrTemplate(solrClient);
         }
+
+        @Bean
+        public MetadataStore metadataStore(SolrOperations solrTemplate) {
+            MetadataStore metadataStore = new SolrStore(solrTemplate);
+            return metadataStore;
+        }
     }
+
 
     @Configuration
     @Profile("solr-cloud")
     static class SolrCloudConfiguration {
-
         @Resource
         private Environment environment;
 
@@ -111,7 +132,7 @@ public class InfrastructureConfiguration {
         @Bean
         public SolrClient solrClient(){
             CloudSolrClient client = new CloudSolrClient(solrCloudZkHost);
-//            client.setIdField("dataset_s");
+            //client.setIdField("dataset_s");
             client.setDefaultCollection(solrCollection);
 
             return client;
@@ -121,7 +142,57 @@ public class InfrastructureConfiguration {
         public SolrOperations solrTemplate(SolrClient solrClient) {
             return new SolrTemplate(solrClient);
         }
+
+        @Bean
+        public MetadataStore metadataStore(SolrOperations solrTemplate) {
+            MetadataStore metadataStore = new SolrStore(solrTemplate);
+            return metadataStore;
+        }
     }
 
+    @Configuration
+    @Profile("s3")
+    static class S3Configuration {
+        @Value("#{environment[T(org.nasa.jpl.nexus.ingest.nexussink.NexusSinkOptionsMetadata).PROPERTY_NAME_S3_BUCKET]}")
+        private String s3BucketName;
 
+        @Value("#{environment[T(org.nasa.jpl.nexus.ingest.nexussink.NexusSinkOptionsMetadata).PROPERTY_NAME_AWS_REGION]}")
+        private String s3Region;
+
+        @Bean
+        public AmazonS3Client s3client() {
+            AmazonS3Client s3Client = new AmazonS3Client();
+            s3Client.setRegion(Region.getRegion(Regions.fromName(s3Region)));
+            return s3Client;
+        }
+
+        @Bean
+        public DataStore dataStore(AmazonS3Client s3Client) {
+            S3Store s3Store = new S3Store(s3Client, s3BucketName);
+            return s3Store;
+        }
+    }
+
+    @Configuration
+    @Profile("dynamo")
+    static class DynamoConfiguration {
+        @Value("#{environment[T(org.nasa.jpl.nexus.ingest.nexussink.NexusSinkOptionsMetadata).PROPERTY_NAME_DYNAMO_TABLE_NAME]}")
+        private String dynamoTableName;
+
+        @Value("#{environment[T(org.nasa.jpl.nexus.ingest.nexussink.NexusSinkOptionsMetadata).PROPERTY_NAME_AWS_REGION]}")
+        private String dynamoRegion;
+
+        @Bean
+        public AmazonDynamoDB dynamoClient() {
+            AmazonDynamoDB dynamoClient = new AmazonDynamoDBClient();
+            dynamoClient.setRegion(Region.getRegion(Regions.fromName(dynamoRegion)));
+            return dynamoClient;
+        }
+
+        @Bean
+        public DataStore dataStore(AmazonDynamoDB dynamoClient) {
+            DynamoStore dynamoStore = new DynamoStore(dynamoClient, dynamoTableName);
+            return dynamoStore;
+        }
+    }
 }

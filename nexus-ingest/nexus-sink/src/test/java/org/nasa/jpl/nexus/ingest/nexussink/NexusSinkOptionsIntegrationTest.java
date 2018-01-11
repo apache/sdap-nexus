@@ -13,9 +13,7 @@ import org.springframework.xd.module.options.ModuleOption;
 import org.springframework.xd.module.options.ModuleOptionsMetadata;
 import org.springframework.xd.module.options.ModuleOptionsMetadataResolver;
 
-import static org.hamcrest.Matchers.containsInAnyOrder;
-import static org.hamcrest.Matchers.equalTo;
-import static org.hamcrest.Matchers.hasProperty;
+import static org.hamcrest.Matchers.*;
 import static org.junit.Assert.assertThat;
 import static org.nasa.jpl.nexus.ingest.nexussink.NexusSinkOptionsMetadata.*;
 import static org.springframework.xd.module.ModuleType.processor;
@@ -41,7 +39,10 @@ public class NexusSinkOptionsIntegrationTest {
                 moduleOptionNamed(PROPERTY_NAME_CASSANDRA_CONTACT_POINTS),
                 moduleOptionNamed(PROPERTY_NAME_CASSANDRA_KEYSPACE),
                 moduleOptionNamed(PROPERTY_NAME_CASSANDRA_PORT),
-                moduleOptionNamed(PROPERTY_NAME_INSERT_BUFFER)));
+                moduleOptionNamed(PROPERTY_NAME_INSERT_BUFFER),
+                moduleOptionNamed(PROPERTY_NAME_S3_BUCKET),
+                moduleOptionNamed(PROPERTY_NAME_AWS_REGION),
+                moduleOptionNamed(PROPERTY_NAME_DYNAMO_TABLE_NAME)));
     }
 
     public static Matcher<ModuleOption> moduleOptionNamed(String name) {

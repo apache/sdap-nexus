@@ -4,8 +4,10 @@
  *****************************************************************************/
 package org.nasa.jpl.nexus.ingest.nexussink
 
+import com.amazonaws.regions.Region
+import com.amazonaws.regions.Regions
+import com.amazonaws.services.s3.AmazonS3Client
 import com.datastax.driver.core.Cluster
-import io.findify.s3mock.S3Mock
 import org.apache.solr.client.solrj.SolrClient
 import org.apache.solr.common.params.ModifiableSolrParams
 import org.cassandraunit.utils.EmbeddedCassandraServerHelper
@@ -41,7 +43,6 @@ public class NexusSinkIntegrationTest {
 
     private static SingleNodeApplication application
 
-
     private static final String CASSANDRA_CONFIG = "spring-cassandra.yaml"
 
     private static final String CASSANDRA_KEYSPACE = "testNexusSink"
@@ -50,9 +51,14 @@ public class NexusSinkIntegrationTest {
 
     private static final String CONTACT = "127.0.0.1"
 
+    private static final String S3_BUCKET_NAME = "nexus-jpl"
+    private static final String AWS_REGION = "us-west-2"
+    private static final String DYNAMO_TABLE_NAME = "nexus-jpl-table"
+
     private static Cluster cluster
 
     private static CassandraOperations cassandraTemplate
+    private static AmazonS3Client s3Client
 
     private static String SOLR_URL = "http://embedded"
     private static String SOLR_CORE = "nexustiles"
@@ -62,19 +68,14 @@ public class NexusSinkIntegrationTest {
     @BeforeClass
     public static void setUpXd() {
 
-        S3Mock api = new S3Mock.Builder().withPort(8001).withInMemoryBackend().build();
-
         initCassandra()
+        initS3()
 
-        new RandomConfigurationSupport()
-
-        RandomConfigurationSupport randomConfigSupport = new RandomConfigurationSupport();
+        RandomConfigurationSupport randomConfigSupport = new RandomConfigurationSupport()
         application = new SingleNodeApplication().run()
 
-        singleNodeIntegrationTestSupport = new SingleNodeIntegrationTestSupport
-                (application);
-        singleNodeIntegrationTestSupport.addModuleRegistry(new SingletonModuleRegistry(ModuleType.sink,
-                MODULE_NAME));
+        singleNodeIntegrationTestSupport = new SingleNodeIntegrationTestSupport(application)
+        singleNodeIntegrationTestSupport.addModuleRegistry(new SingletonModuleRegistry(ModuleType.sink, MODULE_NAME))
 
     }
 
@@ -99,6 +100,11 @@ public class NexusSinkIntegrationTest {
         }
     }
 
+    private static void initS3() {
+        s3Client = new AmazonS3Client()
+        s3Client.setRegion(Region.getRegion(Regions.fromName(AWS_REGION)))
+    }
+
     @AfterClass
     public static void cleanup() {
 
@@ -120,6 +126,80 @@ public class NexusSinkIntegrationTest {
                 //Ignore it.
             }
         }
+    }
+
+    @Test
+    public void testS3() {
+
+        def streamName = "testNexusSink"
+
+        NexusContent.NexusTile tile = NexusContent.NexusTile.newBuilder()
+                .setTile(NexusContent.TileData.newBuilder()
+                .setTileId(UUID.randomUUID().toString())
+                .setGridTile(
+                NexusContent.GridTile.newBuilder()
+                        .build())
+                .build())
+                .setSummary(NexusContent.TileSummary.newBuilder()
+                .setTileId("1")
+                .setBbox(NexusContent.TileSummary.BBox.newBuilder()
+                .setLatMin(51)
+                .setLatMax(55)
+                .setLonMin(22)
+                .setLonMax(30)
+                .build())
+                .setDatasetName("test")
+                .setDatasetUuid("4")
+                .setDataVarName("sst")
+                .setGranule("test.nc")
+                .setSectionSpec("0:1,0:1")
+                .setStats(NexusContent.TileSummary.DataStats.newBuilder()
+                .setCount(10)
+                .setMax(50)
+                .setMin(50)
+                .setMean(50)
+                .setMaxTime(500000)
+                .setMinTime(500000)
+                .build())
+                .addGlobalAttributes(NexusContent.Attribute.newBuilder()
+                .setName("day_of_year_i")
+                .addValues("006")
+                .build())
+                .addGlobalAttributes(NexusContent.Attribute.newBuilder()
+                .setName("attr_multi_value_test")
+                .addValues("006")
+                .addValues("multi")
+                .build())
+                .build())
+                .build()
+
+        def processingChainUnderTest = "$MODULE_NAME --$PROPERTY_NAME_SOLR_SERVER_URL=$SOLR_URL --$PROPERTY_NAME_SOLR_COLLECTION=$SOLR_CORE --$PROPERTY_NAME_S3_BUCKET=$S3_BUCKET_NAME --$PROPERTY_NAME_AWS_REGION=$AWS_REGION"
+
+        SingleNodeProcessingChainProducer chain = chainProducer(application, streamName, processingChainUnderTest)
+        SolrClient solrClient = singleNodeIntegrationTestSupport.getModule(streamName, MODULE_NAME, 0).applicationContext.getBean("solrClient", SolrClient)
+
+        chain.sendPayload(tile)
+
+        assertEqualsEventually 1, new Supplier<Integer>() {
+            @Override
+            Integer get() {
+                solrClient.commit()
+                def q = solrClient.query(new ModifiableSolrParams().add("q", "*:*"))
+                println "query: $q"
+                return q.results.numFound
+            }
+        }
+
+        /*
+        assertEqualsEventually 1, new Supplier<Integer>() {
+            @Override
+            Integer get() {
+                ObjectListing objectListing = s3Client.listObjects(new ListObjectsRequest().withBucketName(S3_BUCKET_NAME))
+                return objectListing.getObjectSummaries().size()
+            }
+        }*/
+
+        chain.destroy()
     }
 
     /**
@@ -651,12 +731,42 @@ public class NexusSinkIntegrationTest {
     }
 
     @Test(expected = ModuleConfigurationException.class)
-    public void testSolrZkAndSolrURLMutalExclusive() throws Exception {
+    public void testCassandraAndS3MutualExclusive() throws Exception {
 
-        def streamName = "testSolrZkAndSolrURLMutalExclusive"
+        def streamName = "testCassandraAndS3MutualExclusive"
+        def processingChainUnderTest = "$MODULE_NAME --$PROPERTY_NAME_CASSANDRA_CONTACT_POINTS=$CONTACT --$PROPERTY_NAME_CASSANDRA_KEYSPACE=$CASSANDRA_KEYSPACE --$PROPERTY_NAME_CASSANDRA_PORT=$PORT --$PROPERTY_NAME_SOLR_SERVER_URL=$SOLR_URL --$PROPERTY_NAME_SOLR_COLLECTION=$SOLR_CORE --$PROPERTY_NAME_S3_BUCKET=$S3_BUCKET_NAME"
+        assertNull(chainProducer(application, streamName, processingChainUnderTest))
+    }
 
+    @Test(expected = ModuleConfigurationException.class)
+    public void testCassandraConfigured() throws Exception {
+
+        def streamName = "testCassandraConfigured"
+        def processingChainUnderTest = "$MODULE_NAME --$PROPERTY_NAME_CASSANDRA_KEYSPACE=$CASSANDRA_KEYSPACE --$PROPERTY_NAME_CASSANDRA_PORT=$PORT --$PROPERTY_NAME_SOLR_SERVER_URL=$SOLR_URL --$PROPERTY_NAME_SOLR_COLLECTION=$SOLR_CORE"
+        assertNull(chainProducer(application, streamName, processingChainUnderTest))
+    }
+
+    @Test(expected = ModuleConfigurationException.class)
+    public void testS3Configured() throws Exception {
+
+        def streamName = "testS3Configured"
+        def processingChainUnderTest = "$MODULE_NAME --$PROPERTY_NAME_SOLR_SERVER_URL=$SOLR_URL --$PROPERTY_NAME_SOLR_COLLECTION=$SOLR_CORE --$PROPERTY_NAME_S3_BUCKET=$S3_BUCKET_NAME"
+        assertNull(chainProducer(application, streamName, processingChainUnderTest))
+    }
+
+    @Test(expected = ModuleConfigurationException.class)
+    public void testDynamoConfigured() throws Exception {
+
+        def streamName = "testDynamoConfigured"
+        def processingChainUnderTest = "$MODULE_NAME --$PROPERTY_NAME_SOLR_SERVER_URL=$SOLR_URL --$PROPERTY_NAME_SOLR_COLLECTION=$SOLR_CORE --$PROPERTY_NAME_DYNAMO_TABLE_NAME=$DYNAMO_TABLE_NAME"
+        assertNull(chainProducer(application, streamName, processingChainUnderTest))
+    }
+
+    @Test(expected = ModuleConfigurationException.class)
+    public void testSolrZkAndSolrURLMutualExclusive() throws Exception {
+
+        def streamName = "testSolrZkAndSolrURLMutualExclusive"
         def processingChainUnderTest = "$MODULE_NAME --$PROPERTY_NAME_SOLR_SERVER_URL=$SOLR_URL --$PROPERTY_NAME_SOLR_CLOUD_ZK_URL=zk1 --$PROPERTY_NAME_CASSANDRA_CONTACT_POINTS=$CONTACT --$PROPERTY_NAME_CASSANDRA_KEYSPACE=$CASSANDRA_KEYSPACE --$PROPERTY_NAME_CASSANDRA_PORT=$PORT --$PROPERTY_NAME_SOLR_COLLECTION=$SOLR_CORE"
-
         assertNull(chainProducer(application, streamName, processingChainUnderTest))
     }
 

@@ -3,29 +3,25 @@ Copyright (c) 2017 Jet Propulsion Laboratory,
 California Institute of Technology.  All rights reserved
 """
 import uuid
-from ConfigParser import NoOptionError
-from multiprocessing.synchronize import Lock
-
 import nexusproto.NexusContent_pb2 as nexusproto
-import numpy as np
-from cassandra.cqlengine import columns, connection, CQLEngineException
-from cassandra.cqlengine.models import Model
-from cassandra.policies import TokenAwarePolicy, DCAwareRoundRobinPolicy
 from nexusproto.serialization import from_shaped_array
+import numpy as np
+import boto3
 
-INIT_LOCK = Lock()
-
-
-class NexusTileData(Model):
-    __table_name__ = 'sea_surface_temp'
-    tile_id = columns.UUID(primary_key=True)
-    tile_blob = columns.Blob()
-
+class NexusTileData(object):
     __nexus_tile = None
+    __data = None
+    tile_id = None
+
+    def __init__(self, data, _tile_id):
+        if self.__data is None:
+            self.__data = data
+        if self.tile_id is None:
+            self.tile_id = _tile_id
 
     def _get_nexus_tile(self):
         if self.__nexus_tile is None:
-            self.__nexus_tile = nexusproto.TileData.FromString(self.tile_blob)
+            self.__nexus_tile = nexusproto.TileData.FromString(self.__data)
 
         return self.__nexus_tile
 
@@ -111,40 +107,29 @@ class NexusTileData(Model):
         return reshaped_array
 
 
-class CassandraProxy(object):
+class DynamoProxy(object):
     def __init__(self, config):
         self.config = config
-        self.__cass_url = config.get("cassandra", "host")
-        self.__cass_keyspace = config.get("cassandra", "keyspace")
-        self.__cass_local_DC = config.get("cassandra", "local_datacenter")
-        self.__cass_protocol_version = config.getint("cassandra", "protocol_version")
-        try:
-            self.__cass_port = config.getint("cassandra", "port")
-        except NoOptionError:
-            self.__cass_port = 9042
-
-        with INIT_LOCK:
-            try:
-                connection.get_cluster()
-            except CQLEngineException:
-                self.__open()
-
-    def __open(self):
-
-        dc_policy = DCAwareRoundRobinPolicy(self.__cass_local_DC)
-        token_policy = TokenAwarePolicy(dc_policy)
-        connection.setup([host for host in self.__cass_url.split(',')], self.__cass_keyspace,
-                         protocol_version=self.__cass_protocol_version, load_balancing_policy=token_policy,
-                         port=self.__cass_port)
+        self.__dynamo_tablename = config.get("dynamo", "table")
+        self.__dynamo_region = config.get("dynamo", "region")
+        self.__dynamo = boto3.resource('dynamodb', region_name=self.__dynamo_region)
+        self.__dynamo_table = self.__dynamo.Table(self.__dynamo_tablename)
+        self.__nexus_tile = None
 
     def fetch_nexus_tiles(self, *tile_ids):
+
         tile_ids = [uuid.UUID(str(tile_id)) for tile_id in tile_ids if
                     (isinstance(tile_id, str) or isinstance(tile_id, unicode))]
-
         res = []
         for tile_id in tile_ids:
-            filterResults = NexusTileData.objects.filter(tile_id=tile_id)
-            if len(filterResults) > 0:
-                res.append(filterResults[0])
+            response = self.__dynamo_table.get_item(
+                Key = {
+                    'tile_id': str(tile_id)
+                }
+            )
+            item = response['Item']
+            data = item['data'].__str__()
+            nexus_tile = NexusTileData(data, str(tile_id))
+            res.append(nexus_tile)
 
         return res
