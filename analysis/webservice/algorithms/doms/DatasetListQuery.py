@@ -1,19 +1,18 @@
-from webservice.NexusHandler import NexusHandler as BaseHandler
-from webservice.webmodel import StatsComputeOptions
-from webservice.NexusHandler import nexus_handler
-from webservice.NexusHandler import DEFAULT_PARAMETERS_SPEC
-from webservice.webmodel import NexusResults, NexusProcessingException, DatasetNotFoundException, cached
-import BaseDomsHandler
-import datafetch
-import config
-import requests
 import json
-import values
 import traceback
+
+import requests
+
+import BaseDomsHandler
+import config
+import values
+from webservice.NexusHandler import NexusHandler as BaseHandler
+from webservice.NexusHandler import nexus_handler
+from webservice.webmodel import cached
+
 
 @nexus_handler
 class DomsDatasetListQueryHandler(BaseDomsHandler.BaseDomsQueryHandler):
-
     name = "DOMS Dataset Listing"
     path = "/domslist"
     description = ""
@@ -22,7 +21,6 @@ class DomsDatasetListQueryHandler(BaseDomsHandler.BaseDomsQueryHandler):
 
     def __init__(self):
         BaseHandler.__init__(self)
-
 
     def getFacetsForInsituSource(self, source):
         url = source["url"]
@@ -47,10 +45,9 @@ class DomsDatasetListQueryHandler(BaseDomsHandler.BaseDomsQueryHandler):
                     value["value"] = values.getDescByListNameAndId(field, int(value["value"]))
 
             return depths, results["facets"]
-        except: # KMG: Don't eat the exception. Add better handling...
+        except:  # KMG: Don't eat the exception. Add better handling...
             traceback.print_exc()
             return None, None
-
 
     def getMetadataUrlForDataset(self, dataset):
         datasetSpec = config.getEndpointByName(dataset)
@@ -66,7 +63,7 @@ class DomsDatasetListQueryHandler(BaseDomsHandler.BaseDomsQueryHandler):
             elif dataset == "AVHRR_OI_L4_GHRSST_NCEI" or dataset == "AVHRR_OI_L4_GHRSST_NCEI_CLIM":
                 dataset = "AVHRR_OI-NCEI-L4-GLOB-v2.0"
 
-            return "http://doms.jpl.nasa.gov/ws/metadata/dataset?shortName=%s&format=umm-json"%dataset
+            return "http://doms.jpl.nasa.gov/ws/metadata/dataset?shortName=%s&format=umm-json" % dataset
 
     def getMetadataForSource(self, dataset):
         try:
@@ -86,21 +83,19 @@ class DomsDatasetListQueryHandler(BaseDomsHandler.BaseDomsQueryHandler):
         for satellite in satellitesList:
             satellite["metadata"] = self.getMetadataForSource(satellite["shortName"])
 
-
         for insitu in config.ENDPOINTS:
             depths, facets = self.getFacetsForInsituSource(insitu)
             insituList.append({
-                "name" : insitu["name"],
-                "endpoint" : insitu["url"],
+                "name": insitu["name"],
+                "endpoint": insitu["url"],
                 "metadata": self.getMetadataForSource(insitu["name"]),
                 "depths": depths,
                 "facets": facets
             })
 
-
         values = {
-            "satellite" : satellitesList,
-            "insitu" : insituList
+            "satellite": satellitesList,
+            "insitu": insituList
         }
 
         return BaseDomsHandler.DomsQueryResults(results=values)

@@ -4,8 +4,7 @@ California Institute of Technology.  All rights reserved
 """
 import json
 
-from webservice.NexusHandler import NexusHandler, nexus_handler, AVAILABLE_HANDLERS
-from webservice.webmodel import NexusResults
+from webservice.NexusHandler import NexusHandler, nexus_handler
 
 
 @nexus_handler

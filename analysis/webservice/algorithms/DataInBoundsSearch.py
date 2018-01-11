@@ -4,9 +4,10 @@ California Institute of Technology.  All rights reserved
 """
 import logging
 from datetime import datetime
+
 from pytz import timezone
 
-from webservice.NexusHandler import NexusHandler, nexus_handler, DEFAULT_PARAMETERS_SPEC
+from webservice.NexusHandler import NexusHandler, nexus_handler
 from webservice.webmodel import NexusResults, NexusProcessingException
 
 EPOCH = timezone('UTC').localize(datetime(1970, 1, 1))

@@ -1,19 +1,16 @@
+import string
+from cStringIO import StringIO
+from multiprocessing import Process, Manager
+
+import matplotlib
+import matplotlib.mlab as mlab
+import matplotlib.pyplot as plt
+import numpy as np
 
 import BaseDomsHandler
 import ResultsStorage
-import string
-from cStringIO import StringIO
-import matplotlib.mlab as mlab
 
-from multiprocessing import Process, Manager
-
-import numpy as np
-import matplotlib.pyplot as plt
-import matplotlib
 matplotlib.use('Agg')
-
-
-
 
 PARAMETER_TO_FIELD = {
     "sst": "sea_water_temperature",
@@ -25,10 +22,13 @@ PARAMETER_TO_UNITS = {
     "sss": "(g/L)"
 }
 
+
 class DomsHistogramPlotQueryResults(BaseDomsHandler.DomsQueryResults):
 
-    def __init__(self,  x, parameter, primary, secondary, args=None, bounds=None, count=None, details=None, computeOptions=None, executionId=None, plot=None):
-        BaseDomsHandler.DomsQueryResults.__init__(self, results=x, args=args, details=details, bounds=bounds, count=count, computeOptions=computeOptions, executionId=executionId)
+    def __init__(self, x, parameter, primary, secondary, args=None, bounds=None, count=None, details=None,
+                 computeOptions=None, executionId=None, plot=None):
+        BaseDomsHandler.DomsQueryResults.__init__(self, results=x, args=args, details=details, bounds=bounds,
+                                                  count=count, computeOptions=computeOptions, executionId=executionId)
         self.__primary = primary
         self.__secondary = secondary
         self.__x = x
@@ -40,14 +40,10 @@ class DomsHistogramPlotQueryResults(BaseDomsHandler.DomsQueryResults):
 
 
 def render(d, x, primary, secondary, parameter, norm_and_curve=False):
-
     fig, ax = plt.subplots()
     fig.suptitle(string.upper("%s vs. %s" % (primary, secondary)), fontsize=14, fontweight='bold')
 
-
-
     n, bins, patches = plt.hist(x, 50, normed=norm_and_curve, facecolor='green', alpha=0.75)
-
 
     if norm_and_curve:
         mean = np.mean(x)
@@ -83,7 +79,6 @@ def renderAsync(x, primary, secondary, parameter, norm_and_curve):
 
 
 def createHistogramPlot(id, parameter, norm_and_curve=False):
-
     with ResultsStorage.ResultsRetrieval() as storage:
         params, stats, data = storage.retrieveResults(id)
 
@@ -95,13 +90,12 @@ def createHistogramPlot(id, parameter, norm_and_curve=False):
     plot = renderAsync(x, primary, secondary, parameter, norm_and_curve)
 
     r = DomsHistogramPlotQueryResults(x=x, parameter=parameter, primary=primary, secondary=secondary,
-                                    args=params, details=stats,
-                                    bounds=None, count=None, computeOptions=None, executionId=id, plot=plot)
+                                      args=params, details=stats,
+                                      bounds=None, count=None, computeOptions=None, executionId=id, plot=plot)
     return r
 
 
 def createHistTable(results, secondary, parameter):
-
     x = []
 
     field = PARAMETER_TO_FIELD[parameter] if parameter in PARAMETER_TO_FIELD else PARAMETER_TO_FIELD["sst"]

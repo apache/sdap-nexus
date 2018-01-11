@@ -4,13 +4,15 @@ California Institute of Technology.  All rights reserved
 """
 import json
 import math
-import numpy as np
-from shapely.geometry import box
-from scipy.stats import linregress
 from itertools import groupby
+
+import numpy as np
+from nexustiles.model.nexusmodel import get_approximate_value_for_lat_lon
+from scipy.stats import linregress
+from shapely.geometry import box
+
 from webservice.NexusHandler import NexusHandler, nexus_handler, DEFAULT_PARAMETERS_SPEC
 from webservice.webmodel import NexusProcessingException, NexusResults
-from nexustiles.model.nexusmodel import get_approximate_value_for_lat_lon
 
 
 @nexus_handler
@@ -53,16 +55,16 @@ class LongitudeLatitudeMapHandlerImpl(NexusHandler):
             raise NexusProcessingException(reason="Could not find any data temporally co-located")
 
         results = [[{
-                        'cnt': 0,
-                        'slope': 0,
-                        'intercept': 0,
-                        'r': 0,
-                        'p': 0,
-                        'stderr': 0,
-                        'lat': float(lat),
-                        'lon': float(lon)
-                    } for lon in np.arange(minLon, maxLon, resolution)] for lat in
-                   np.arange(minLat, maxLat, resolution)]
+            'cnt': 0,
+            'slope': 0,
+            'intercept': 0,
+            'r': 0,
+            'p': 0,
+            'stderr': 0,
+            'lat': float(lat),
+            'lon': float(lon)
+        } for lon in np.arange(minLon, maxLon, resolution)] for lat in
+            np.arange(minLat, maxLat, resolution)]
 
         for stats in results:
             for stat in stats:

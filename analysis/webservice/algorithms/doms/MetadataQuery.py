@@ -1,17 +1,16 @@
-from webservice.NexusHandler import NexusHandler as BaseHandler
-from webservice.webmodel import StatsComputeOptions
-from webservice.NexusHandler import nexus_handler
-from webservice.NexusHandler import DEFAULT_PARAMETERS_SPEC
-from webservice.webmodel import NexusResults, NexusProcessingException, DatasetNotFoundException
-import BaseDomsHandler
-import datafetch
-import config
-import requests
 import json
+
+import requests
+
+import BaseDomsHandler
+import config
+from webservice.NexusHandler import NexusHandler as BaseHandler
+from webservice.NexusHandler import nexus_handler
+from webservice.webmodel import DatasetNotFoundException
+
 
 @nexus_handler
 class DomsMetadataQueryHandler(BaseDomsHandler.BaseDomsQueryHandler):
-
     name = "DOMS Metadata Listing"
     path = "/domsmetadata"
     description = ""
@@ -48,4 +47,4 @@ class DomsMetadataQueryHandler(BaseDomsHandler.BaseDomsQueryHandler):
             elif dataset == "SMAP_L2B_SSS":
                 dataset = "JPL_SMAP-SSS_L2_EVAL-V2"
 
-            return "http://doms.jpl.nasa.gov/ws/metadata/dataset?shortName=%s&format=umm-json"%dataset
+            return "http://doms.jpl.nasa.gov/ws/metadata/dataset?shortName=%s&format=umm-json" % dataset

@@ -85,7 +85,8 @@ class CombinedDomsMatchupQueryHandler(BaseDomsHandler.BaseDomsQueryHandler):
             matchupSpec = self.getDataSourceByName(matchupId)
 
             if matchupSpec is not None:  # Then it's in the in-situ configuration
-                proc = InsituDatasetProcessor(primaryContext, matchupSpec, startTime, endTime, bbox, depth_min, depth_max,
+                proc = InsituDatasetProcessor(primaryContext, matchupSpec, startTime, endTime, bbox, depth_min,
+                                              depth_max,
                                               platforms, timeTolerance, radiusTolerance)
                 proc.start()
             else:  # We assume it to be a Nexus tiled dataset

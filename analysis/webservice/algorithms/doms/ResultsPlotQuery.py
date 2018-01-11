@@ -1,7 +1,7 @@
 import BaseDomsHandler
+import histogramplot
 import mapplot
 import scatterplot
-import histogramplot
 from webservice.NexusHandler import nexus_handler
 
 

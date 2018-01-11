@@ -270,11 +270,11 @@ class TimeSeriesHandlerImpl(NexusHandler):
         if apply_seasonal_cycle_filter and apply_low_pass_filter:
             try:
                 filtering.applyFiltersOnField(results, 'meanSeasonal', applySeasonal=False, applyLowPass=True,
-                                         append="LowPass")
+                                              append="LowPass")
                 filtering.applyFiltersOnField(results, 'minSeasonal', applySeasonal=False, applyLowPass=True,
-                                         append="LowPass")
+                                              append="LowPass")
                 filtering.applyFiltersOnField(results, 'maxSeasonal', applySeasonal=False, applyLowPass=True,
-                                         append="LowPass")
+                                              append="LowPass")
             except Exception as e:
                 # If it doesn't work log the error but ignore it
                 tb = traceback.format_exc()
@@ -325,7 +325,7 @@ class TimeSeriesHandlerImpl(NexusHandler):
 
             # Border tiles need have the data loaded, masked, and stats recalculated
             border_tiles = list(self._tile_service.fetch_data_for_tiles(*border_tiles))
-            border_tiles = self._tile_service.mask_tiles_to_polygon(bounding_polygon,  border_tiles)
+            border_tiles = self._tile_service.mask_tiles_to_polygon(bounding_polygon, border_tiles)
             for tile in border_tiles:
                 tile.update_stats()
                 tile_means.append(tile.tile_stats.mean)

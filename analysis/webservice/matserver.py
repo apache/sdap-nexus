@@ -3,9 +3,8 @@ Copyright (c) 2016 Jet Propulsion Laboratory,
 California Institute of Technology.  All rights reserved
 """
 import matplotlib.pyplot as plt
-import numpy as np
-
 import mpld3
+import numpy as np
 from mpld3 import plugins
 
 fig, ax = plt.subplots()

@@ -2,22 +2,19 @@
 Copyright (c) 2016 Jet Propulsion Laboratory,
 California Institute of Technology.  All rights reserved
 """
-import json
 import time
 import unittest
-import urllib
 from multiprocessing.pool import ThreadPool
-from unittest import skip
 
+from NexusHandler import AlgorithmModuleWrapper
 from mock import MagicMock
 from nexustiles.nexustiles import NexusTileService
 from shapely.geometry import box
-from tornado.testing import AsyncHTTPTestCase, bind_unused_port
+from tornado.testing import bind_unused_port
 from tornado.web import Application
-
-from NexusHandler import AlgorithmModuleWrapper
 from webapp import ModularNexusHandlerWrapper
 from webmodel import NexusRequestObject
+
 from webservice.algorithms import LongitudeLatitudeMap
 
 
@@ -73,6 +70,7 @@ class HttpIntegrationTest(unittest.TestCase):
                 "endTime": "2016-12-01T00:00:00Z"
             }
             return params[args[0]]
+
         request_handler_mock = MagicMock()
         request_handler_mock.get_argument.side_effect = get_argument
         request = NexusRequestObject(request_handler_mock)

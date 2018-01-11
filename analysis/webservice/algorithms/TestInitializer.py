@@ -3,8 +3,8 @@ Copyright (c) 2016 Jet Propulsion Laboratory,
 California Institute of Technology.  All rights reserved
 """
 
-from webservice.NexusHandler import NexusHandler, nexus_initializer
-from nexustiles.nexustiles import NexusTileService
+from webservice.NexusHandler import nexus_initializer
+
 
 @nexus_initializer
 class TestInitializer:

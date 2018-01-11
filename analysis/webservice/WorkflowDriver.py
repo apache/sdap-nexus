@@ -1,5 +1,7 @@
 import argparse
+
 from algorithms.MapFetchHandler import MapFetchHandler
+
 
 def start(args):
     dataset_shortname = args.ds
@@ -15,6 +17,7 @@ def start(args):
 
     map = MapFetchHandler()
     map.generate(dataset_shortname, granule_name, prefix, ct, interp, _min, _max, width, height, time_interval)
+
 
 def parse_args():
     parser = argparse.ArgumentParser(description='Automate NEXUS ingestion workflow',
@@ -61,6 +64,7 @@ def parse_args():
                         required=False)
 
     return parser.parse_args()
+
 
 if __name__ == "__main__":
     the_args = parse_args()

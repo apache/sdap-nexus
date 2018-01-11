@@ -2,9 +2,8 @@
 Copyright (c) 2016 Jet Propulsion Laboratory,
 California Institute of Technology.  All rights reserved
 """
-import sys
-import traceback
 import logging
+import traceback
 from cStringIO import StringIO
 from datetime import datetime
 from multiprocessing.dummy import Pool, Manager
@@ -12,11 +11,11 @@ from multiprocessing.dummy import Pool, Manager
 import matplotlib.dates as mdates
 import matplotlib.pyplot as plt
 import numpy as np
-from webservice.NexusHandler import NexusHandler, nexus_handler, DEFAULT_PARAMETERS_SPEC
 from nexustiles.nexustiles import NexusTileService
 from scipy import stats
 
 from webservice import Filtering as filt
+from webservice.NexusHandler import NexusHandler, nexus_handler, DEFAULT_PARAMETERS_SPEC
 from webservice.webmodel import NexusResults, NexusProcessingException, NoDataException
 
 SENTINEL = 'STOP'
@@ -288,8 +287,8 @@ class TimeSeriesCalculator(object):
     def calc_average_on_day(self, min_lat, max_lat, min_lon, max_lon, dataset, timeinseconds):
         # Get stats using solr only
         ds1_nexus_tiles_stats = self.__tile_service.get_stats_within_box_at_time(min_lat, max_lat, min_lon, max_lon,
-                                                                               dataset,
-                                                                               timeinseconds)
+                                                                                 dataset,
+                                                                                 timeinseconds)
 
         data_min_within = min([tile["tile_min_val_d"] for tile in ds1_nexus_tiles_stats])
         data_max_within = max([tile["tile_max_val_d"] for tile in ds1_nexus_tiles_stats])
@@ -298,16 +297,16 @@ class TimeSeriesCalculator(object):
 
         # Get boundary tiles and calculate stats
         ds1_nexus_tiles = self.__tile_service.get_boundary_tiles_at_time(min_lat, max_lat, min_lon, max_lon,
-                                                                               dataset,
-                                                                               timeinseconds)
+                                                                         dataset,
+                                                                         timeinseconds)
 
         tile_data_agg = np.ma.array([tile.data for tile in ds1_nexus_tiles])
         data_min_boundary = np.ma.min(tile_data_agg)
         data_max_boundary = np.ma.max(tile_data_agg)
-        #daily_mean = np.ma.mean(tile_data_agg).item()
+        # daily_mean = np.ma.mean(tile_data_agg).item()
         data_sum_boundary = np.ma.sum(tile_data_agg)
         data_count_boundary = np.ma.count(tile_data_agg).item()
-        #data_std = np.ma.std(tile_data_agg)
+        # data_std = np.ma.std(tile_data_agg)
 
         # Combine stats
         data_min = min(data_min_within, data_min_boundary)

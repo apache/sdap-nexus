@@ -1,18 +1,16 @@
+import string
+from cStringIO import StringIO
+from multiprocessing import Process, Manager
 
+import matplotlib
+import matplotlib.pyplot as plt
+import numpy as np
 from mpl_toolkits.basemap import Basemap
 
 import BaseDomsHandler
 import ResultsStorage
-import numpy as np
-import string
-from cStringIO import StringIO
 
-from multiprocessing import Process, Manager
-
-import matplotlib.pyplot as plt
-import matplotlib
 matplotlib.use('Agg')
-
 
 PARAMETER_TO_FIELD = {
     "sst": "sea_water_temperature",
@@ -42,7 +40,6 @@ def render(d, lats, lons, z, primary, secondary, parameter):
     fig = plt.figure()
     ax = fig.add_axes([0.1, 0.1, 0.8, 0.8])
 
-
     ax.set_title(string.upper("%s vs. %s" % (primary, secondary)))
     # ax.set_ylabel('Latitude')
     # ax.set_xlabel('Longitude')
@@ -60,11 +57,9 @@ def render(d, lats, lons, z, primary, secondary, parameter):
 
     minLon, maxLon, minLat, maxLat = __square(minLon, maxLon, minLat, maxLat)
 
-
     # m = Basemap(projection='mill', llcrnrlon=-180,llcrnrlat=-80,urcrnrlon=180,urcrnrlat=80,resolution='l')
     m = Basemap(projection='mill', llcrnrlon=minLon, llcrnrlat=minLat, urcrnrlon=maxLon, urcrnrlat=maxLat,
                 resolution='l')
-
 
     m.drawparallels(np.arange(minLat, maxLat, (maxLat - minLat) / 5.0), labels=[1, 0, 0, 0], fontsize=10)
     m.drawmeridians(np.arange(minLon, maxLon, (maxLon - minLon) / 5.0), labels=[0, 0, 0, 1], fontsize=10)
@@ -73,11 +68,10 @@ def render(d, lats, lons, z, primary, secondary, parameter):
     m.drawmapboundary(fill_color='#99ffff')
     m.fillcontinents(color='#cc9966', lake_color='#99ffff')
 
-    #lats, lons = np.meshgrid(lats, lons)
+    # lats, lons = np.meshgrid(lats, lons)
 
     masked_array = np.ma.array(z, mask=np.isnan(z))
     z = masked_array
-
 
     values = np.zeros(len(z))
     for i in range(0, len(z)):
@@ -86,7 +80,6 @@ def render(d, lats, lons, z, primary, secondary, parameter):
     x, y = m(lons, lats)
 
     im1 = m.scatter(x, y, values)
-
 
     im1.set_array(z)
     cb = m.colorbar(im1)
@@ -102,10 +95,12 @@ def render(d, lats, lons, z, primary, secondary, parameter):
     return plot
 
 
-
 class DomsMapPlotQueryResults(BaseDomsHandler.DomsQueryResults):
-    def __init__(self, lats, lons, z, parameter, primary, secondary, args=None, bounds=None, count=None, details=None, computeOptions=None, executionId=None, plot=None):
-        BaseDomsHandler.DomsQueryResults.__init__(self, results={"lats": lats, "lons": lons, "values": z}, args=args, details=details, bounds=bounds, count=count, computeOptions=computeOptions, executionId=executionId)
+    def __init__(self, lats, lons, z, parameter, primary, secondary, args=None, bounds=None, count=None, details=None,
+                 computeOptions=None, executionId=None, plot=None):
+        BaseDomsHandler.DomsQueryResults.__init__(self, results={"lats": lats, "lons": lons, "values": z}, args=args,
+                                                  details=details, bounds=bounds, count=count,
+                                                  computeOptions=computeOptions, executionId=executionId)
         self.__lats = lats
         self.__lons = lons
         self.__z = np.array(z)
@@ -114,13 +109,8 @@ class DomsMapPlotQueryResults(BaseDomsHandler.DomsQueryResults):
         self.__secondary = secondary
         self.__plot = plot
 
-
-
     def toImage(self):
         return self.__plot
-
-
-
 
 
 def renderAsync(x, y, z, primary, secondary, parameter):
@@ -132,9 +122,7 @@ def renderAsync(x, y, z, primary, secondary, parameter):
     return d['plot']
 
 
-
 def createMapPlot(id, parameter):
-
     with ResultsStorage.ResultsRetrieval() as storage:
         params, stats, data = storage.retrieveResults(id)
 

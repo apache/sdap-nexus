@@ -5,11 +5,11 @@ California Institute of Technology.  All rights reserved
 
 import ConfigParser
 import logging
-import pkg_resources
 
-from cassandra import InvalidRequest
+import pkg_resources
 from cassandra.cluster import Cluster
 from cassandra.policies import TokenAwarePolicy, DCAwareRoundRobinPolicy
+
 from webservice.NexusHandler import nexus_initializer
 
 

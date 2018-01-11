@@ -3,18 +3,11 @@ Copyright (c) 2016 Jet Propulsion Laboratory,
 California Institute of Technology.  All rights reserved
 """
 
-import math
-
 import logging
 import traceback
 
 import numpy as np
-from scipy import stats
-from scipy.fftpack import fft
-from scipy.ndimage.interpolation import zoom
-from scipy.interpolate import UnivariateSpline
-from scipy.signal import wiener, filtfilt, butter, gaussian, freqz
-from scipy.ndimage import filters
+from scipy.signal import filtfilt, butter
 
 log = logging.getLogger('Filtering')
 

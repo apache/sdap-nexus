@@ -2,13 +2,11 @@
 Copyright (c) 2016 Jet Propulsion Laboratory,
 California Institute of Technology.  All rights reserved
 """
+import pickle
 import random
 import timeit
 import unittest
-import pickle
-import json
 
-import numpy as np
 from webservice.algorithms_spark.Matchup import *
 
 
@@ -308,4 +306,4 @@ class TestMatchup(unittest.TestCase):
                 "lon: %s, lat: %s, time: %s, wind u,v: %s,%s" % (k.longitude, k.latitude, k.time, k.wind_u, k.wind_v),
                 '\n\t\t'.join(
                     ["lon: %s, lat: %s, time: %s, wind u,v: %s,%s" % (
-                    i.longitude, i.latitude, i.time, i.wind_u, i.wind_v) for i in v]))
+                        i.longitude, i.latitude, i.time, i.wind_u, i.wind_v) for i in v]))

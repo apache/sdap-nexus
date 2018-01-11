@@ -6,7 +6,6 @@ California Institute of Technology.  All rights reserved
 import json
 import logging
 import threading
-import time
 from datetime import datetime
 from itertools import chain
 from math import cos, radians

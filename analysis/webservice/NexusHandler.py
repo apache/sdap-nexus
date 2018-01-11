@@ -2,14 +2,14 @@
 Copyright (c) 2016 Jet Propulsion Laboratory,
 California Institute of Technology.  All rights reserved
 """
-import sys
-import numpy as np
 import logging
 import time
 import types
-from datetime import datetime
+
+import numpy as np
 from netCDF4 import Dataset
 from nexustiles.nexustiles import NexusTileService
+
 from webservice.webmodel import NexusProcessingException
 
 AVAILABLE_HANDLERS = []
@@ -216,7 +216,7 @@ class NexusHandler(CalcHandler):
 
         for entry in resultsData:
 
-            #frmtdTime = datetime.fromtimestamp(entry["time"] ).strftime("%Y-%m")
+            # frmtdTime = datetime.fromtimestamp(entry["time"] ).strftime("%Y-%m")
             frmtdTime = entry["time"]
 
             if not frmtdTime in resultsMap:
@@ -323,7 +323,7 @@ class SparkHandler(NexusHandler):
         self._spark_nparts = spark_nparts
 
     def _find_global_tile_set(self):
-        if type(self._ds) in (list,tuple):
+        if type(self._ds) in (list, tuple):
             ds = self._ds[0]
         else:
             ds = self._ds
@@ -332,15 +332,17 @@ class SparkHandler(NexusHandler):
         # Temporary workaround until we have dataset metadata to indicate
         # temporal resolution.
         if "monthly" in ds.lower():
-            t_incr = 2592000 # 30 days
+            t_incr = 2592000  # 30 days
         else:
-            t_incr = 86400 # 1 day
+            t_incr = 86400  # 1 day
         ##################################################################
         t = self._endTime
         self._latRes = None
         self._lonRes = None
         while ntiles == 0:
-            nexus_tiles = self._tile_service.get_tiles_bounded_by_box(self._minLat, self._maxLat, self._minLon, self._maxLon, ds=ds, start_time=t-t_incr, end_time=t)
+            nexus_tiles = self._tile_service.get_tiles_bounded_by_box(self._minLat, self._maxLat, self._minLon,
+                                                                      self._maxLon, ds=ds, start_time=t - t_incr,
+                                                                      end_time=t)
             ntiles = len(nexus_tiles)
             self.log.debug('find_global_tile_set got {0} tiles'.format(ntiles))
             if ntiles > 0:
@@ -351,13 +353,13 @@ class SparkHandler(NexusHandler):
                     if self._latRes is None:
                         lats = tile.latitudes.data
                         if (len(lats) > 1):
-                            self._latRes = abs(lats[1]-lats[0])
+                            self._latRes = abs(lats[1] - lats[0])
                     if self._lonRes is None:
                         lons = tile.longitudes.data
                         if (len(lons) > 1):
-                            self._lonRes = abs(lons[1]-lons[0])
-                    if ((self._latRes is not None) and 
-                        (self._lonRes is not None)):
+                            self._lonRes = abs(lons[1] - lons[0])
+                    if ((self._latRes is not None) and
+                            (self._lonRes is not None)):
                         break
                 if (self._latRes is None) or (self._lonRes is None):
                     ntiles = 0
@@ -393,96 +395,96 @@ class SparkHandler(NexusHandler):
             self.log.warn('Nothing in this tile!')
             bounds = None
         return bounds
-        
+
     @staticmethod
-    def query_by_parts(tile_service, min_lat, max_lat, min_lon, max_lon, 
+    def query_by_parts(tile_service, min_lat, max_lat, min_lon, max_lon,
                        dataset, start_time, end_time, part_dim=0):
         nexus_max_tiles_per_query = 100
-        #print 'trying query: ',min_lat, max_lat, min_lon, max_lon, \
+        # print 'trying query: ',min_lat, max_lat, min_lon, max_lon, \
         #    dataset, start_time, end_time
         try:
             tiles = \
-                tile_service.find_tiles_in_box(min_lat, max_lat, 
-                                               min_lon, max_lon, 
-                                               dataset, 
-                                               start_time=start_time, 
+                tile_service.find_tiles_in_box(min_lat, max_lat,
+                                               min_lon, max_lon,
+                                               dataset,
+                                               start_time=start_time,
                                                end_time=end_time,
                                                fetch_data=False)
-            assert(len(tiles) <= nexus_max_tiles_per_query)
+            assert (len(tiles) <= nexus_max_tiles_per_query)
         except:
-            #print 'failed query: ',min_lat, max_lat, min_lon, max_lon, \
+            # print 'failed query: ',min_lat, max_lat, min_lon, max_lon, \
             #    dataset, start_time, end_time
-            if part_dim == 0: 
+            if part_dim == 0:
                 # Partition by latitude.
                 mid_lat = (min_lat + max_lat) / 2
-                nexus_tiles = SparkHandler.query_by_parts(tile_service, 
-                                                          min_lat, mid_lat, 
-                                                          min_lon, max_lon, 
-                                                          dataset, 
+                nexus_tiles = SparkHandler.query_by_parts(tile_service,
+                                                          min_lat, mid_lat,
+                                                          min_lon, max_lon,
+                                                          dataset,
                                                           start_time, end_time,
                                                           part_dim=part_dim)
-                nexus_tiles.extend(SparkHandler.query_by_parts(tile_service, 
-                                                               mid_lat, 
-                                                               max_lat, 
-                                                               min_lon, 
-                                                               max_lon, 
-                                                               dataset, 
-                                                               start_time, 
+                nexus_tiles.extend(SparkHandler.query_by_parts(tile_service,
+                                                               mid_lat,
+                                                               max_lat,
+                                                               min_lon,
+                                                               max_lon,
+                                                               dataset,
+                                                               start_time,
                                                                end_time,
                                                                part_dim=part_dim))
-            elif part_dim == 1: 
+            elif part_dim == 1:
                 # Partition by longitude.
                 mid_lon = (min_lon + max_lon) / 2
-                nexus_tiles = SparkHandler.query_by_parts(tile_service, 
-                                                          min_lat, max_lat, 
-                                                          min_lon, mid_lon, 
-                                                          dataset, 
+                nexus_tiles = SparkHandler.query_by_parts(tile_service,
+                                                          min_lat, max_lat,
+                                                          min_lon, mid_lon,
+                                                          dataset,
                                                           start_time, end_time,
                                                           part_dim=part_dim)
-                nexus_tiles.extend(SparkHandler.query_by_parts(tile_service, 
-                                                               min_lat, 
-                                                               max_lat, 
-                                                               mid_lon, 
-                                                               max_lon, 
-                                                               dataset, 
-                                                               start_time, 
+                nexus_tiles.extend(SparkHandler.query_by_parts(tile_service,
+                                                               min_lat,
+                                                               max_lat,
+                                                               mid_lon,
+                                                               max_lon,
+                                                               dataset,
+                                                               start_time,
                                                                end_time,
                                                                part_dim=part_dim))
             elif part_dim == 2:
                 # Partition by time.
                 mid_time = (start_time + end_time) / 2
-                nexus_tiles = SparkHandler.query_by_parts(tile_service, 
-                                                          min_lat, max_lat, 
-                                                          min_lon, max_lon, 
-                                                          dataset, 
+                nexus_tiles = SparkHandler.query_by_parts(tile_service,
+                                                          min_lat, max_lat,
+                                                          min_lon, max_lon,
+                                                          dataset,
                                                           start_time, mid_time,
                                                           part_dim=part_dim)
-                nexus_tiles.extend(SparkHandler.query_by_parts(tile_service, 
-                                                               min_lat, 
-                                                               max_lat, 
-                                                               min_lon, 
-                                                               max_lon, 
-                                                               dataset, 
-                                                               mid_time, 
+                nexus_tiles.extend(SparkHandler.query_by_parts(tile_service,
+                                                               min_lat,
+                                                               max_lat,
+                                                               min_lon,
+                                                               max_lon,
+                                                               dataset,
+                                                               mid_time,
                                                                end_time,
                                                                part_dim=part_dim))
         else:
             # No exception, so query Cassandra for the tile data.
-            #print 'Making NEXUS query to Cassandra for %d tiles...' % \
+            # print 'Making NEXUS query to Cassandra for %d tiles...' % \
             #    len(tiles)
-            #t1 = time.time()
-            #print 'NEXUS call start at time %f' % t1
-            #sys.stdout.flush()
+            # t1 = time.time()
+            # print 'NEXUS call start at time %f' % t1
+            # sys.stdout.flush()
             nexus_tiles = list(tile_service.fetch_data_for_tiles(*tiles))
             nexus_tiles = list(tile_service.mask_tiles_to_bbox(min_lat, max_lat,
                                                                min_lon, max_lon,
                                                                nexus_tiles))
-            #t2 = time.time()
-            #print 'NEXUS call end at time %f' % t2
-            #print 'Seconds in NEXUS call: ', t2-t1
-            #sys.stdout.flush()
+            # t2 = time.time()
+            # print 'NEXUS call end at time %f' % t2
+            # print 'Seconds in NEXUS call: ', t2-t1
+            # sys.stdout.flush()
 
-        #print 'Returning %d tiles' % len(nexus_tiles)
+        # print 'Returning %d tiles' % len(nexus_tiles)
         return nexus_tiles
 
     @staticmethod
@@ -491,17 +493,17 @@ class SparkHandler(NexusHandler):
         for i in np.flipud(del_ind):
             del nexus_tiles[i]
 
-    def _lat2ind(self,lat):
-        return int((lat-self._minLatCent)/self._latRes)
+    def _lat2ind(self, lat):
+        return int((lat - self._minLatCent) / self._latRes)
 
-    def _lon2ind(self,lon):
-        return int((lon-self._minLonCent)/self._lonRes)
+    def _lon2ind(self, lon):
+        return int((lon - self._minLonCent) / self._lonRes)
 
-    def _ind2lat(self,y):
-        return self._minLatCent+y*self._latRes
+    def _ind2lat(self, y):
+        return self._minLatCent + y * self._latRes
 
-    def _ind2lon(self,x):
-        return self._minLonCent+x*self._lonRes
+    def _ind2lon(self, x):
+        return self._minLonCent + x * self._lonRes
 
     def _create_nc_file_time1d(self, a, fname, varname, varunits=None,
                                fill=None):
@@ -531,12 +533,12 @@ class SparkHandler(NexusHandler):
         rootgrp.createDimension("lat", lat_dim)
         rootgrp.createDimension("lon", lon_dim)
         vals = rootgrp.createVariable(varname, "f4",
-                                      dimensions=("lat","lon",),
+                                      dimensions=("lat", "lon",),
                                       fill_value=fill)
         lats = rootgrp.createVariable("lat", "f4", dimensions=("lat",))
         lons = rootgrp.createVariable("lon", "f4", dimensions=("lon",))
-        vals[:,:] = a
-        lats[:] = np.linspace(self._minLatCent, 
+        vals[:, :] = a
+        lats[:] = np.linspace(self._minLatCent,
                               self._maxLatCent, lat_dim)
         lons[:] = np.linspace(self._minLonCent,
                               self._maxLonCent, lon_dim)

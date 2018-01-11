@@ -12,9 +12,9 @@ import ErrorTosserTest
 import Heartbeat
 import HofMoeller
 import LongitudeLatitudeMap
+import StandardDeviationSearch
 import TestInitializer
 import TileSearch
 import TimeAvgMap
 import TimeSeries
 import TimeSeriesSolr
-import StandardDeviationSearch

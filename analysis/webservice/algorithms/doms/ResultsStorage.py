@@ -8,7 +8,6 @@ import logging
 import uuid
 from datetime import datetime
 
-import numpy as np
 import pkg_resources
 from cassandra.cluster import Cluster
 from cassandra.policies import TokenAwarePolicy, DCAwareRoundRobinPolicy

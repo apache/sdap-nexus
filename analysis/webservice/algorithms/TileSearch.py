@@ -2,7 +2,7 @@
 Copyright (c) 2016 Jet Propulsion Laboratory,
 California Institute of Technology.  All rights reserved
 """
-from webservice.NexusHandler import NexusHandler, nexus_handler
+from webservice.NexusHandler import NexusHandler
 from webservice.webmodel import NexusResults
 
 

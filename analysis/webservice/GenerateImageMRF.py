@@ -2,8 +2,8 @@
 Copyright (c) 2017 Jet Propulsion Laboratory,
 California Institute of Technology.  All rights reserved
 """
-import os
 import errno
+import os
 from shutil import copyfile
 from subprocess import call
 
@@ -27,6 +27,7 @@ ANTARCTIC_PROJECTION = 'EPSG:3031'
 
 ARCTIC_TILEMATRIXSET = 'EPSG3413_1km'
 ARCTIC_PROJECTION = 'EPSG:3413'
+
 
 def create_geo_mrf_header(shortname):
     header = """<MRF_META>
@@ -52,6 +53,7 @@ def create_geo_mrf_header(shortname):
     create_path(path)
     filename = path + shortname + '-geo.mrf'
     write_to_file(filename, header)
+
 
 def create_geo_xml_config(shortname, prefix):
     config = """<?xml version="1.0" encoding="UTF-8"?>
@@ -82,6 +84,7 @@ def create_geo_xml_config(shortname, prefix):
     filename = path + shortname + '-geo.xml'
     write_to_file(filename, config)
 
+
 def create_arctic_mrf_header(shortname):
     header = """<MRF_META>
   <Raster>
@@ -106,6 +109,7 @@ def create_arctic_mrf_header(shortname):
     create_path(path)
     filename = path + shortname + '-arctic.mrf'
     write_to_file(filename, header)
+
 
 def create_arctic_xml_config(shortname, prefix):
     config = """<?xml version="1.0" encoding="UTF-8"?>
@@ -136,6 +140,7 @@ def create_arctic_xml_config(shortname, prefix):
     filename = path + shortname + '-arctic.xml'
     write_to_file(filename, config)
 
+
 def create_antarctic_mrf_header(shortname):
     header = """<MRF_META>
   <Raster>
@@ -160,6 +165,7 @@ def create_antarctic_mrf_header(shortname):
     create_path(path)
     filename = path + shortname + '-antarctic.mrf'
     write_to_file(filename, header)
+
 
 def create_antarctic_xml_config(shortname, prefix):
     config = """<?xml version="1.0" encoding="UTF-8"?>
@@ -190,6 +196,7 @@ def create_antarctic_xml_config(shortname, prefix):
     filename = path + shortname + '-antarctic.xml'
     write_to_file(filename, config)
 
+
 def geo_to_mrf(intiff, prefix, year, dt, shortname):
     path = shortname + '/MRF-GEO/' + str(year)
     create_path(path)
@@ -210,6 +217,7 @@ def geo_to_mrf(intiff, prefix, year, dt, shortname):
 
     return retcode
 
+
 def geo_to_arctic_mrf(intiff, prefix, year, dt, shortname):
     path = shortname + '/MRF-ARCTIC/' + str(year)
     create_path(path)
@@ -227,7 +235,8 @@ def geo_to_arctic_mrf(intiff, prefix, year, dt, shortname):
     if retcode == 0:
         print('Reprojecting to Arctic...')
         retcode = call([gdal_dir + gdalwarp, "-s_srs", geo_wkt_file, "-t_srs", tgt_proj4_north, "-wo",
-                    "SOURCE_EXTRA=125", "-dstnodata", "0", "-of", "GTiff", "-overwrite", subsetnorthtiff, outputnorthtiff])
+                        "SOURCE_EXTRA=125", "-dstnodata", "0", "-of", "GTiff", "-overwrite", subsetnorthtiff,
+                        outputnorthtiff])
 
     if retcode == 0:
         print("Creating Arctic MRF...")
@@ -235,7 +244,8 @@ def geo_to_arctic_mrf(intiff, prefix, year, dt, shortname):
         dst = path + '/' + prefix + '_' + str(dt) + "_.ppg"
         copyfile(src, dst)
 
-        retcode = call([gdal_dir + gdal_translate, "-of", "MRF", "-co", "COMPRESS=" + COMPRESSION, "-co", "BLOCKSIZE=512",
+        retcode = call(
+            [gdal_dir + gdal_translate, "-of", "MRF", "-co", "COMPRESS=" + COMPRESSION, "-co", "BLOCKSIZE=512",
              "-outsize", str(OUTWIDTHPOLAR), str(OUTHEIGHTPOLAR), outputnorthtiff, output])
 
     if retcode == 0:
@@ -243,6 +253,7 @@ def geo_to_arctic_mrf(intiff, prefix, year, dt, shortname):
         retcode = call([gdal_dir + gdaladdo, output, "-r", "nearest", "2", "4", "8", "16"])
 
     return retcode
+
 
 def geo_to_antarctic_mrf(intiff, prefix, year, dt, shortname, interp):
     if (interp == "") or (interp is None):
@@ -264,7 +275,8 @@ def geo_to_antarctic_mrf(intiff, prefix, year, dt, shortname, interp):
     if retcode == 0:
         print("Reprojecting to Antarctic...")
         retcode = call([gdal_dir + gdalwarp, "-s_srs", geo_wkt_file, "-t_srs", tgt_proj4_south, "-wo",
-                        "SOURCE_EXTRA=125", "-r", interp, "-dstnodata", "0", "-of", "GTiff", "-overwrite", subsetsouthtiff,
+                        "SOURCE_EXTRA=125", "-r", interp, "-dstnodata", "0", "-of", "GTiff", "-overwrite",
+                        subsetsouthtiff,
                         outputsouthtiff])
 
     if retcode == 0:
@@ -273,14 +285,16 @@ def geo_to_antarctic_mrf(intiff, prefix, year, dt, shortname, interp):
         dst = path + '/' + prefix + '_' + str(dt) + "_.ppg"
         copyfile(src, dst)
 
-        retcode = call([gdal_dir + gdal_translate, "-of", "MRF", "-co", "COMPRESS=" + COMPRESSION, "-co", "BLOCKSIZE=512",
-                        "-r", interp, "-outsize", str(OUTWIDTHPOLAR), str(OUTHEIGHTPOLAR), outputsouthtiff, output])
+        retcode = call(
+            [gdal_dir + gdal_translate, "-of", "MRF", "-co", "COMPRESS=" + COMPRESSION, "-co", "BLOCKSIZE=512",
+             "-r", interp, "-outsize", str(OUTWIDTHPOLAR), str(OUTHEIGHTPOLAR), outputsouthtiff, output])
 
     if retcode == 0:
         print("Creating Antarctic Tiles...")
         retcode = call([gdal_dir + gdaladdo, output, "-r", interp, "2", "4", "8", "16"])
 
     return retcode
+
 
 def write_to_file(filename, data):
     try:
@@ -290,12 +304,14 @@ def write_to_file(filename, data):
     except Exception as e:
         print("Error creating " + filename + ":\n" + str(e))
 
+
 def create_path(path):
     try:
         os.makedirs(path)
     except OSError as e:
         if e.errno != errno.EEXIST:
             raise
+
 
 def create_all(shortname, prefix):
     create_geo_mrf_header(shortname)
@@ -304,6 +320,7 @@ def create_all(shortname, prefix):
     create_arctic_xml_config(shortname, prefix)
     create_antarctic_mrf_header(shortname)
     create_antarctic_xml_config(shortname, prefix)
+
 
 def png_to_tif(input, output):
     retcode = call([gdal_dir + gdal_translate, "-of", "GTiff", "-ot", "byte", "-a_ullr", "-180", "90", "180", "-90",

@@ -127,19 +127,19 @@ class LongitudeLatitudeMapHandlerImpl(NexusHandler):
 
         # ((lon, lat), (slope, intercept, r_value, p_value, std_err, mean, pmax, pmin, pstd, pcnt))
         return [{
-                    'lon': result[0][0],
-                    'lat': result[0][1],
-                    'slope': result[1][0] if not math.isnan(result[1][0]) else 'NaN',
-                    'intercept': result[1][1] if not math.isnan(result[1][1]) else 'NaN',
-                    'r': result[1][2],
-                    'p': result[1][3],
-                    'stderr': result[1][4] if not math.isinf(result[1][4]) else 'Inf',
-                    'avg': result[1][5],
-                    'max': result[1][6],
-                    'min': result[1][7],
-                    'std': result[1][8],
-                    'cnt': result[1][9],
-                } for result in results]
+            'lon': result[0][0],
+            'lat': result[0][1],
+            'slope': result[1][0] if not math.isnan(result[1][0]) else 'NaN',
+            'intercept': result[1][1] if not math.isnan(result[1][1]) else 'NaN',
+            'r': result[1][2],
+            'p': result[1][3],
+            'stderr': result[1][4] if not math.isinf(result[1][4]) else 'Inf',
+            'avg': result[1][5],
+            'max': result[1][6],
+            'min': result[1][7],
+            'std': result[1][8],
+            'cnt': result[1][9],
+        } for result in results]
 
 
 def pool_initializer():

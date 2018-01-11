@@ -1,17 +1,14 @@
+import string
+from cStringIO import StringIO
+from multiprocessing import Process, Manager
+
+import matplotlib
+import matplotlib.pyplot as plt
 
 import BaseDomsHandler
 import ResultsStorage
-import string
-from cStringIO import StringIO
 
-from multiprocessing import Process, Manager
-
-import matplotlib.pyplot as plt
-import matplotlib
 matplotlib.use('Agg')
-
-
-
 
 PARAMETER_TO_FIELD = {
     "sst": "sea_water_temperature",
@@ -22,7 +19,6 @@ PARAMETER_TO_UNITS = {
     "sst": "($^\circ$ C)",
     "sss": "(g/L)"
 }
-
 
 
 def render(d, x, y, z, primary, secondary, parameter):
@@ -41,10 +37,13 @@ def render(d, x, y, z, primary, secondary, parameter):
     plt.savefig(sio, format='png')
     d['plot'] = sio.getvalue()
 
+
 class DomsScatterPlotQueryResults(BaseDomsHandler.DomsQueryResults):
 
-    def __init__(self,  x, y, z, parameter, primary, secondary, args=None, bounds=None, count=None, details=None, computeOptions=None, executionId=None, plot=None):
-        BaseDomsHandler.DomsQueryResults.__init__(self, results=[x, y], args=args, details=details, bounds=bounds, count=count, computeOptions=computeOptions, executionId=executionId)
+    def __init__(self, x, y, z, parameter, primary, secondary, args=None, bounds=None, count=None, details=None,
+                 computeOptions=None, executionId=None, plot=None):
+        BaseDomsHandler.DomsQueryResults.__init__(self, results=[x, y], args=args, details=details, bounds=bounds,
+                                                  count=count, computeOptions=computeOptions, executionId=executionId)
         self.__primary = primary
         self.__secondary = secondary
         self.__x = x
@@ -57,8 +56,6 @@ class DomsScatterPlotQueryResults(BaseDomsHandler.DomsQueryResults):
         return self.__plot
 
 
-
-
 def renderAsync(x, y, z, primary, secondary, parameter):
     manager = Manager()
     d = manager.dict()
@@ -68,9 +65,7 @@ def renderAsync(x, y, z, primary, secondary, parameter):
     return d['plot']
 
 
-
 def createScatterPlot(id, parameter):
-
     with ResultsStorage.ResultsRetrieval() as storage:
         params, stats, data = storage.retrieveResults(id)
 
@@ -105,8 +100,3 @@ def createScatterTable(results, secondary, parameter):
                     z.append(a - b)
 
     return x, y, z
-
-
-
-
-

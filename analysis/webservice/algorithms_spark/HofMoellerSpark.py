@@ -7,14 +7,13 @@ import logging
 import traceback
 from cStringIO import StringIO
 from datetime import datetime
-from multiprocessing.dummy import Pool, Manager
 
 import matplotlib.pyplot as plt
 import mpld3
 import numpy as np
-from nexustiles.nexustiles import NexusTileService
 from matplotlib import cm
 from matplotlib.ticker import FuncFormatter
+from nexustiles.nexustiles import NexusTileService
 
 from webservice.NexusHandler import SparkHandler, nexus_handler, DEFAULT_PARAMETERS_SPEC
 from webservice.webmodel import NexusProcessingException, NexusResults
@@ -129,6 +128,7 @@ class BaseHoffMoellerHandlerImpl(SparkHandler):
         results = self.applyDeseasonToHofMoellerByField(results, pivot, field="max", append=append)
         return results
 
+
 def determine_parllelism(num_tiles):
     """
     Try to stay at a maximum of 1500 tiles per partition; But don't go over 128 partitions.
@@ -136,6 +136,7 @@ def determine_parllelism(num_tiles):
     """
     num_partitions = max(min(num_tiles // 1500, 128), 8)
     return num_partitions
+
 
 @nexus_handler
 class LatitudeTimeHoffMoellerSparkHandlerImpl(BaseHoffMoellerHandlerImpl):
@@ -149,11 +150,13 @@ class LatitudeTimeHoffMoellerSparkHandlerImpl(BaseHoffMoellerHandlerImpl):
         BaseHoffMoellerHandlerImpl.__init__(self)
 
     def calc(self, computeOptions, **args):
-        nexus_tiles_spark = [(tile.tile_id, x, computeOptions.get_min_lat(), computeOptions.get_max_lat(), computeOptions.get_min_lon(), computeOptions.get_max_lon()) for x, tile in enumerate(self._tile_service.find_tiles_in_box(computeOptions.get_min_lat(), computeOptions.get_max_lat(),
-                                                            computeOptions.get_min_lon(), computeOptions.get_max_lon(),
-                                                            computeOptions.get_dataset()[0],
-                                                            computeOptions.get_start_time(),
-                                                            computeOptions.get_end_time(), fetch_data=False))]
+        nexus_tiles_spark = [(tile.tile_id, x, computeOptions.get_min_lat(), computeOptions.get_max_lat(),
+                              computeOptions.get_min_lon(), computeOptions.get_max_lon()) for x, tile in enumerate(
+            self._tile_service.find_tiles_in_box(computeOptions.get_min_lat(), computeOptions.get_max_lat(),
+                                                 computeOptions.get_min_lon(), computeOptions.get_max_lon(),
+                                                 computeOptions.get_dataset()[0],
+                                                 computeOptions.get_start_time(),
+                                                 computeOptions.get_end_time(), fetch_data=False))]
 
         if len(nexus_tiles_spark) == 0:
             raise NexusProcessingException.NoDataException(reason="No data found for selected timeframe")
@@ -183,11 +186,13 @@ class LongitudeTimeHoffMoellerSparkHandlerImpl(BaseHoffMoellerHandlerImpl):
         BaseHoffMoellerHandlerImpl.__init__(self)
 
     def calc(self, computeOptions, **args):
-        nexus_tiles_spark = [(tile.tile_id, x, computeOptions.get_min_lat(), computeOptions.get_max_lat(), computeOptions.get_min_lon(), computeOptions.get_max_lon()) for x, tile in enumerate(self._tile_service.find_tiles_in_box(computeOptions.get_min_lat(), computeOptions.get_max_lat(),
-                                                            computeOptions.get_min_lon(), computeOptions.get_max_lon(),
-                                                            computeOptions.get_dataset()[0],
-                                                            computeOptions.get_start_time(),
-                                                            computeOptions.get_end_time(), fetch_data=False))]
+        nexus_tiles_spark = [(tile.tile_id, x, computeOptions.get_min_lat(), computeOptions.get_max_lat(),
+                              computeOptions.get_min_lon(), computeOptions.get_max_lon()) for x, tile in enumerate(
+            self._tile_service.find_tiles_in_box(computeOptions.get_min_lat(), computeOptions.get_max_lat(),
+                                                 computeOptions.get_min_lon(), computeOptions.get_max_lon(),
+                                                 computeOptions.get_dataset()[0],
+                                                 computeOptions.get_start_time(),
+                                                 computeOptions.get_end_time(), fetch_data=False))]
 
         if len(nexus_tiles_spark) == 0:
             raise NexusProcessingException.NoDataException(reason="No data found for selected timeframe")

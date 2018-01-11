@@ -6,7 +6,7 @@ import ConfigParser
 import importlib
 import json
 import logging
-import sys, os
+import sys
 import traceback
 from multiprocessing.pool import ThreadPool
 

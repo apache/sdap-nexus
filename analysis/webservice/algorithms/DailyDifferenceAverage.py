@@ -6,11 +6,11 @@ import sys
 import traceback
 from datetime import datetime, timedelta
 from multiprocessing.dummy import Pool, Manager
-from shapely.geometry import box
 
 import numpy as np
 import pytz
 from nexustiles.nexustiles import NexusTileService, NexusTileServiceException
+from shapely.geometry import box
 
 from webservice.NexusHandler import NexusHandler, nexus_handler
 from webservice.webmodel import NexusResults, NexusProcessingException

@@ -3,10 +3,10 @@ import math
 import time
 
 import numpy as np
-from webservice.NexusHandler import NexusHandler as BaseHandler
-from webservice.NexusHandler import nexus_handler
 
 import colortables
+from webservice.NexusHandler import NexusHandler as BaseHandler
+from webservice.NexusHandler import nexus_handler
 
 
 @nexus_handler
@@ -45,7 +45,6 @@ class ColorBarHandler(BaseHandler):
 
     def __init__(self):
         BaseHandler.__init__(self)
-
 
     def __get_dataset_minmax(self, ds, dataTime):
         dataTimeStart = dataTime - 86400.0  # computeOptions.get_datetime_arg("t", None)
@@ -137,4 +136,3 @@ class ColorBarHandler(BaseHandler):
                 return json.dumps(obj, indent=4)
 
         return SimpleResult()
-

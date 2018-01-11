@@ -1,22 +1,24 @@
+import calendar
+import errno
 import io
 import json
 import math
+import os
 import time
-import errno
-import calendar
 from subprocess import call
-import webservice.GenerateImageMRF as MRF
+
+import boto3
 import numpy as np
 from PIL import Image
 from PIL import ImageDraw
 from PIL import ImageFont
 from dateutil.relativedelta import *
-import os
-import boto3
-import colortables
 
+import colortables
+import webservice.GenerateImageMRF as MRF
 from webservice.NexusHandler import NexusHandler as BaseHandler
 from webservice.NexusHandler import nexus_handler
+
 
 @nexus_handler
 class MapFetchHandler(BaseHandler):
@@ -88,7 +90,6 @@ class MapFetchHandler(BaseHandler):
             for x in range(0, width):
                 value = d[y][x]
                 if not np.isnan(value) and value != 0:
-
                     lat = tile.latitudes[y]
                     lon = tile.longitudes[x]
 
@@ -126,7 +127,8 @@ class MapFetchHandler(BaseHandler):
         return x_res, y_res
 
     @staticmethod
-    def __create_global(nexus_tiles, stats, width=2048, height=1024, force_min=np.nan, force_max=np.nan, table=colortables.grayscale, interpolation="nearest"):
+    def __create_global(nexus_tiles, stats, width=2048, height=1024, force_min=np.nan, force_max=np.nan,
+                        table=colortables.grayscale, interpolation="nearest"):
 
         data_min = stats["minValue"] if np.isnan(force_min) else force_min
         data_max = stats["maxValue"] if np.isnan(force_max) else force_max
@@ -289,7 +291,8 @@ class MapFetchHandler(BaseHandler):
         while start_time <= end_time:
             one_interval_later = start_time + time_interval
             temp_end_time = one_interval_later - relativedelta(minutes=+1)  # prevent getting tiles for 2 intervals
-            ds1_nexus_tiles = self._tile_service.find_tiles_in_box(-90.0, 90.0, -180.0, 180.0, ds, start_time, temp_end_time)
+            ds1_nexus_tiles = self._tile_service.find_tiles_in_box(-90.0, 90.0, -180.0, 180.0, ds, start_time,
+                                                                   temp_end_time)
 
             if ds1_nexus_tiles is not None:
                 img = self.__create_global(ds1_nexus_tiles, stats, width, height, force_min, force_max, color_table,

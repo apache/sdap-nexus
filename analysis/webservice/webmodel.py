@@ -2,18 +2,20 @@
 Copyright (c) 2016 Jet Propulsion Laboratory,
 California Institute of Technology.  All rights reserved
 """
-import re
+import hashlib
+import inspect
 import json
-import numpy as np
-from shapely.geometry import Polygon
+import re
+import time
 from datetime import datetime
 from decimal import Decimal
-import time
-import inspect
-import hashlib
+
+import numpy as np
 from pytz import UTC, timezone
+from shapely.geometry import Polygon
 
 EPOCH = timezone('UTC').localize(datetime(1970, 1, 1))
+
 
 class RequestParameters(object):
     SEASONAL_CYCLE_FILTER = "seasonalFilter"
@@ -37,6 +39,7 @@ class RequestParameters(object):
     PLOT_SERIES = "plotSeries"
     PLOT_TYPE = "plotType"
     SPARK_CFG = "spark"
+
 
 class StandardNexusErrors:
     UNKNOWN = 1000
@@ -66,6 +69,7 @@ class SparkConfig(object):
     MAX_NUM_EXECS = 64
     MAX_NUM_PARTS = 8192
     DEFAULT = "local,1,1"
+
 
 class StatsComputeOptions(object):
     def __init__(self):
@@ -131,7 +135,7 @@ class StatsComputeOptions(object):
     def get_plot_type(self, default="default"):
         raise Exception("Please implement")
 
-    def get_spark_cfg (self, default=SparkConfig.DEFAULT):
+    def get_spark_cfg(self, default=SparkConfig.DEFAULT):
         raise Exception("Please implement")
 
 
@@ -284,7 +288,7 @@ class NexusRequestObject(StatsComputeOptions):
         try:
             dt = datetime.strptime(time_str, "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=UTC)
         except ValueError:
-            dt = datetime.utcfromtimestamp(int(time_str)/1000).replace(tzinfo=UTC)
+            dt = datetime.utcfromtimestamp(int(time_str) / 1000).replace(tzinfo=UTC)
         return dt
 
     def get_end_datetime_ms(self):
@@ -292,7 +296,7 @@ class NexusRequestObject(StatsComputeOptions):
         try:
             dt = datetime.strptime(time_str, "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=UTC)
         except ValueError:
-            dt = datetime.utcfromtimestamp(int(time_str)/1000).replace(tzinfo=UTC)
+            dt = datetime.utcfromtimestamp(int(time_str) / 1000).replace(tzinfo=UTC)
         return dt
 
     def get_start_row(self):
@@ -325,20 +329,23 @@ class NexusRequestObject(StatsComputeOptions):
     def get_spark_cfg(self, default=SparkConfig.DEFAULT):
         arg = self.get_argument(RequestParameters.SPARK_CFG, default)
         try:
-            master,nexecs,nparts = arg.split(',')
+            master, nexecs, nparts = arg.split(',')
         except:
             raise ValueError('Invalid spark configuration: %s' % arg)
         if master not in ("local", "yarn", "mesos"):
             raise ValueError('Invalid spark master: %s' % master)
         nexecs = int(nexecs)
         if (nexecs < 1) or (nexecs > SparkConfig.MAX_NUM_EXECS):
-            raise ValueError('Invalid number of Spark executors: %d (must be between 1 and %d)' % (nexecs, SparkConfig.MAX_NUM_EXECS))
+            raise ValueError('Invalid number of Spark executors: %d (must be between 1 and %d)' % (
+            nexecs, SparkConfig.MAX_NUM_EXECS))
         nparts = int(nparts)
         if (nparts < 1) or (nparts > SparkConfig.MAX_NUM_PARTS):
-            raise ValueError('Invalid number of Spark data partitions: %d (must be between 1 and %d)' % (nparts,SparkConfig.MAX_NUM_PARTS))
+            raise ValueError('Invalid number of Spark data partitions: %d (must be between 1 and %d)' % (
+            nparts, SparkConfig.MAX_NUM_PARTS))
         if master == "local":
             master = "local[%d]" % nexecs
-        return master,nexecs,nparts
+        return master, nexecs, nparts
+
 
 class NexusResults:
     def __init__(self, results=None, meta=None, stats=None, computeOptions=None, status_code=200, **args):
@@ -480,8 +487,8 @@ class CustomEncoder(json.JSONEncoder):
 
 __CACHE = {}
 
-def cached(ttl=60000):
 
+def cached(ttl=60000):
     def _hash_function_signature(func):
         hash_object = hashlib.md5(str(inspect.getargspec(func)) + str(func))
         return hash_object.hexdigest()
@@ -509,11 +516,7 @@ def cached(ttl=60000):
                 }
 
             return __CACHE[hash]["result"]
+
         return func_wrapper
 
     return _cached_decorator
-
-
-
-
-

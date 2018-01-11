@@ -1,14 +1,11 @@
-from webservice.NexusHandler import NexusHandler as BaseHandler
-from webservice.webmodel import StatsComputeOptions
-from webservice.NexusHandler import nexus_handler
-from webservice.NexusHandler import DEFAULT_PARAMETERS_SPEC
-from webservice.webmodel import NexusResults, NexusProcessingException
 import BaseDomsHandler
 import datafetch
+from webservice.NexusHandler import NexusHandler as BaseHandler
+from webservice.NexusHandler import nexus_handler
+
 
 @nexus_handler
 class DomsStatsQueryHandler(BaseDomsHandler.BaseDomsQueryHandler):
-
     name = "DOMS In-Situ Stats Lookup"
     path = "/domsstats"
     description = ""
@@ -19,7 +16,6 @@ class DomsStatsQueryHandler(BaseDomsHandler.BaseDomsQueryHandler):
         BaseHandler.__init__(self)
 
     def calc(self, computeOptions, **args):
-
         source = computeOptions.get_argument("source", None)
         startTime = computeOptions.get_argument("s", None)
         endTime = computeOptions.get_argument("e", None)
@@ -32,7 +28,7 @@ class DomsStatsQueryHandler(BaseDomsHandler.BaseDomsQueryHandler):
 
         source1 = self.getDataSourceByName(source)
         if source1 is None:
-            raise Exception("Source '%s' not found"%source)
+            raise Exception("Source '%s' not found" % source)
 
         count, bounds = datafetch.getCount(source1, startTime, endTime, bbox, depth_min, depth_max, platforms)
 
@@ -48,5 +44,5 @@ class DomsStatsQueryHandler(BaseDomsHandler.BaseDomsQueryHandler):
             "platforms": platforms
         }
 
-
-        return BaseDomsHandler.DomsQueryResults(results={}, args=args, details={}, bounds=bounds, count=count, computeOptions=None)
+        return BaseDomsHandler.DomsQueryResults(results={}, args=args, details={}, bounds=bounds, count=count,
+                                                computeOptions=None)

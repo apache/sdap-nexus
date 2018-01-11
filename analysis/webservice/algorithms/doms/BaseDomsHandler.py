@@ -2,9 +2,9 @@ import StringIO
 import csv
 import json
 from datetime import datetime
+from decimal import Decimal
 
 import numpy as np
-from decimal import Decimal
 from pytz import timezone, UTC
 
 import config

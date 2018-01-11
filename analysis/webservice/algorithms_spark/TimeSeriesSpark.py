@@ -187,7 +187,8 @@ class TimeSeriesHandlerImpl(SparkHandler):
             the_time = datetime.now()
             results, meta = spark_driver(daysinrange, bounding_polygon, shortName,
                                          spark_nparts_needed=spark_nparts_needed, sc=self._sc)
-            self.log.info("Time series calculation took %s for dataset %s" % (str(datetime.now() - the_time), shortName))
+            self.log.info(
+                "Time series calculation took %s for dataset %s" % (str(datetime.now() - the_time), shortName))
 
             if apply_seasonal_cycle_filter:
                 the_time = datetime.now()

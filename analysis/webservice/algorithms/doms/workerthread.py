@@ -1,6 +1,5 @@
-import os
-import sys
 import threading
+
 
 class WorkerThread(threading.Thread):
 
@@ -11,24 +10,20 @@ class WorkerThread(threading.Thread):
         self.completed = False
         self.results = None
 
-
     def run(self):
-
-
         self.results = self.method(*self.params)
         self.completed = True
 
 
 def __areAllComplete(threads):
-
     for thread in threads:
         if not thread.completed:
             return False
 
     return True
 
-def wait(threads, startFirst=False, poll=0.5):
 
+def wait(threads, startFirst=False, poll=0.5):
     if startFirst:
         for thread in threads:
             thread.start()
@@ -37,10 +32,10 @@ def wait(threads, startFirst=False, poll=0.5):
         threading._sleep(poll)
 
 
-
 def foo(param1, param2):
     print param1, param2
     return "c"
+
 
 if __name__ == "__main__":
 

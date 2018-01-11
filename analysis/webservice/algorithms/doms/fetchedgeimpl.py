@@ -77,7 +77,8 @@ def __fetchJson(url, params, trycount=1, maxtries=5):
         return __fetchJson(url, params, trycount + 1, maxtries)
 
 
-def __doQuery(endpoint, startTime, endTime, bbox, depth_min=None, depth_max=None, itemsPerPage=10, startIndex=0, platforms=None,
+def __doQuery(endpoint, startTime, endTime, bbox, depth_min=None, depth_max=None, itemsPerPage=10, startIndex=0,
+              platforms=None,
               pageCallback=None):
     params = {"startTime": startTime, "endTime": endTime, "bbox": bbox, "itemsPerPage": itemsPerPage,
               "startIndex": startIndex, "stats": "true"}
