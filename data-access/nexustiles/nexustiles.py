@@ -122,7 +122,11 @@ class NexusTileService(object):
     @tile_data()
     def find_tiles_in_box(self, min_lat, max_lat, min_lon, max_lon, ds=None, start_time=0, end_time=-1, **kwargs):
         # Find tiles that fall in the given box in the Solr index
-        return self._solr.find_all_tiles_in_box_sorttimeasc(min_lat, max_lat, min_lon, max_lon, ds, start_time,
+        if type(start_time) is datetime:
+            start_time = (start_time - EPOCH).total_seconds()
+        if type(end_time) is datetime:
+            end_time = (end_time - EPOCH).total_seconds()
+        return self._metadatastore.find_all_tiles_in_box_sorttimeasc(min_lat, max_lat, min_lon, max_lon, ds, start_time,
                                                             end_time, **kwargs)
 
     @tile_data()
@@ -170,6 +174,14 @@ class NexusTileService(object):
         tiles = self.mask_tiles_to_polygon(polygon, tiles)
 
         return tiles
+
+    def get_min_max_time_by_granule(self, ds, granule_name):
+        start_time, end_time = self._solr.find_min_max_date_from_granule(ds, granule_name)
+
+        return start_time, end_time
+
+    def get_dataset_overall_stats(self, ds):
+        return self._solr.get_data_series_stats(ds)
 
     def get_tiles_bounded_by_box_at_time(self, min_lat, max_lat, min_lon, max_lon, dataset, time, **kwargs):
         tiles = self.find_all_tiles_in_box_at_time(min_lat, max_lat, min_lon, max_lon, dataset, time, **kwargs)

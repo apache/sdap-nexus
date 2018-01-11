@@ -1,6 +1,0 @@
-<dependencies>
-  <dependency name='com.google.protobuf:protobuf-java:2.6.1'>
-    <file>protobuf-java-2.6.1.jar</file>
-    <license name='New BSD license' url='http://www.opensource.org/licenses/bsd-license.php' />
-  </dependency>
-</dependencies>

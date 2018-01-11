@@ -103,6 +103,36 @@ class SolrProxy(object):
 
         return results[0]['tile_max_time_dt']
 
+    def find_min_max_date_from_granule(self, ds, granule_name, **kwargs):
+        search = 'dataset_s:%s' % ds
+
+        kwargs['rows'] = 1
+        kwargs['fl'] = 'tile_min_time_dt'
+        kwargs['sort'] = ['tile_min_time_dt asc']
+        additionalparams = {
+            'fq': [
+                "granule_s:%s" % granule_name
+            ]
+        }
+
+        self._merge_kwargs(additionalparams, **kwargs)
+        results, start, found = self.do_query(*(search, None, None, False, None), **additionalparams)
+        start_time = results[0]['tile_min_time_dt']
+
+        kwargs['fl'] = 'tile_max_time_dt'
+        kwargs['sort'] = ['tile_max_time_dt desc']
+        additionalparams = {
+            'fq': [
+                "granule_s:%s" % granule_name
+            ]
+        }
+
+        self._merge_kwargs(additionalparams, **kwargs)
+        results, start, found = self.do_query(*(search, None, None, False, None), **additionalparams)
+        end_time = results[0]['tile_max_time_dt']
+
+        return start_time, end_time
+
     def get_data_series_list(self):
 
         datasets = self.get_data_series_list_simple()
@@ -132,6 +162,38 @@ class SolrProxy(object):
             })
         l = sorted(l, key=lambda entry: entry["title"])
         return l
+
+    def get_data_series_stats(self, ds):
+        search = "dataset_s:%s" % ds
+        params = {
+            "facet": "true",
+            "facet.field": ["dataset_s", "tile_max_time_dt"],
+            "facet.limit": "-1",
+            "facet.mincount": "1",
+            "facet.pivot": "{!stats=piv1}dataset_s",
+            "stats": "on",
+            "stats.field": ["{!tag=piv1 min=true max=true sum=false}tile_max_time_dt","{!tag=piv1 min=true max=false sum=false}tile_min_val_d","{!tag=piv1 min=false max=true sum=false}tile_max_val_d"]
+        }
+
+        response = self.do_query_raw(*(search, None, None, False, None), **params)
+
+        stats = {}
+
+        for g in response.facet_counts["facet_pivot"]["dataset_s"]:
+            if g["value"] == ds:
+                stats["start"] = time.mktime(g["stats"]["stats_fields"]["tile_max_time_dt"]["min"].timetuple()) * 1000
+                stats["end"] = time.mktime(g["stats"]["stats_fields"]["tile_max_time_dt"]["max"].timetuple()) * 1000
+                stats["minValue"] = g["stats"]["stats_fields"]["tile_min_val_d"]["min"]
+                stats["maxValue"] = g["stats"]["stats_fields"]["tile_max_val_d"]["max"]
+
+
+        stats["availableDates"] = []
+        for dt in response.facet_counts["facet_fields"]["tile_max_time_dt"]:
+            stats["availableDates"].append(time.mktime(datetime.strptime(dt, "%Y-%m-%dT%H:%M:%SZ").timetuple()) * 1000)
+
+        stats["availableDates"] = sorted(stats["availableDates"])
+
+        return stats
 
     def find_tile_by_polygon_and_most_recent_day_of_year(self, bounding_polygon, ds, day_of_year):
 
