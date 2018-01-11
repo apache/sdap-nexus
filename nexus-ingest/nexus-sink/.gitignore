@@ -3,6 +3,8 @@ gradlew.bat
 .gradle/
 
 .idea/
+*.ipr
+*.iws
 
 .DS_Store
 
