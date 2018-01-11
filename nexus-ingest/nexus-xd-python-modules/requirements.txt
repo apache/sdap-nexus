@@ -6,7 +6,7 @@ docutils==0.14
 futures==3.1.1
 jmespath==0.9.3
 netCDF4==1.2.7
-nexusproto==0.3
+nexusproto==0.4
 -e git+https://github.com/dataplumber/nexus.git@979d63734017714fc0f2d4a9f378b773625996c4#egg=nexusxd&subdirectory=nexus-ingest/nexus-xd-python-modules
 numpy==1.12.1
 protobuf==3.2.0

@@ -101,7 +101,7 @@ ext {
     springDataCassandraVersion = '1.3.4.RELEASE'
     springDataSolrVersion = '2.0.2.RELEASE'
 
-    nexusMessagesVersion = '1.0.0.RELEASE'
+    nexusMessagesVersion = '1.1.0.RELEASE'
 
     testversions = [
         cassandraUnitVersion: '2.1.3.1',
