@@ -23,6 +23,8 @@ latitude = environ['LATITUDE']
 longitude = environ['LONGITUDE']
 reader_type = environ['READER']
 
+str(numpy.square(int('2')))
+
 # Optional variables for all reader types
 try:
     temp_dir = environ['TEMP_DIR']
@@ -45,6 +47,7 @@ try:
     time_offset = long(environ['TIME_OFFSET'])
 except KeyError:
     time_offset = None
+
 
 @contextmanager
 def closing(thing):
@@ -159,7 +162,8 @@ def read_grid_data(self, section_spec_dataset):
             if time is not None:
                 timevar = ds[time]
                 # Note assumption is that index of time is start value in dimtoslice
-                tile.time = to_seconds_from_epoch(timevar[dimtoslice[time].start], timeunits=timevar.getncattr('units'), timeoffset=time_offset)
+                tile.time = to_seconds_from_epoch(timevar[dimtoslice[time].start], timeunits=timevar.getncattr('units'),
+                                                  timeoffset=time_offset)
 
             nexus_tile = new_nexus_tile(file_path, section_spec)
             nexus_tile.tile.grid_tile.CopyFrom(tile)
@@ -220,10 +224,52 @@ def read_swath_data(self, section_spec_dataset):
         remove(file_path)
 
 
+def read_time_series_data(self, section_spec_dataset):
+    tile_specifications, file_path = parse_input(section_spec_dataset)
+
+    time = environ['TIME']
+
+    with Dataset(file_path) as ds:
+        for section_spec, dimtoslice in tile_specifications:
+            tile = nexusproto.TimeSeriesTile()
+
+            instance_dimension = next(iter([dim for dim in ds[variable_to_read].dimensions if dim != time]))
+
+            tile.latitude.CopyFrom(to_shaped_array(numpy.ma.filled(ds[latitude][dimtoslice[instance_dimension]], numpy.NaN)))
+
+            tile.longitude.CopyFrom(to_shaped_array(numpy.ma.filled(ds[longitude][dimtoslice[instance_dimension]], numpy.NaN)))
+
+            # Before we read the data we need to make sure the dimensions are in the proper order so we don't have any
+            #  indexing issues
+            ordered_slices = get_ordered_slices(ds, variable_to_read, dimtoslice)
+            # Read data using the ordered slices, replacing masked values with NaN
+            data_array = numpy.ma.filled(ds[variable_to_read][tuple(ordered_slices.itervalues())], numpy.NaN)
+
+            tile.variable_data.CopyFrom(to_shaped_array(data_array))
+
+            if metadata is not None:
+                tile.meta_data.add().CopyFrom(to_metadata(metadata, ds[metadata][tuple(ordered_slices.itervalues())]))
+
+            timevar = ds[time]
+            # Note assumption is that index of time is start value in dimtoslice
+            tile.time = to_seconds_from_epoch(timevar[dimtoslice[time].start], timeunits=timevar.getncattr('units'),
+                                              timeoffset=time_offset)
+
+            nexus_tile = new_nexus_tile(file_path, section_spec)
+            nexus_tile.tile.time_series_tile.CopyFrom(tile)
+
+            yield nexus_tile.SerializeToString()
+
+    # If temp dir is defined, delete the temporary file
+    if temp_dir is not None:
+        remove(file_path)
+
+
 def start():
     reader_types = {
         'GRIDTILE': read_grid_data,
-        'SWATHTILE': read_swath_data
+        'SWATHTILE': read_swath_data,
+        'TIMESERIES': read_time_series_data
     }
 
     try:

@@ -27,6 +27,19 @@ message SwathTile{
 
 }
 
+message TimeSeriesTile{
+
+    optional ShapedArray latitude = 1;
+    optional ShapedArray longitude = 2;
+
+    optional int64 time = 3;
+
+    optional ShapedArray variable_data = 4;
+
+    repeated MetaData meta_data = 5;
+
+}
+
 message MetaData{
     required string name = 1;
     required ShapedArray meta_data = 2;
@@ -84,6 +97,7 @@ message TileData{
     oneof tile_type{
         GridTile grid_tile = 2;
         SwathTile swath_tile = 3;
+        TimeSeriesTile time_series_tile = 4;
     }
 }
 

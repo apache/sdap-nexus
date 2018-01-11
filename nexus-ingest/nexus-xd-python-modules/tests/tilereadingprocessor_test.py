@@ -426,6 +426,61 @@ class TestReadAvhrrData(unittest.TestCase):
                                 np.ma.masked_invalid(from_shaped_array(results[0].tile.grid_tile.variable_data))[0, 0, 0],
                                 places=3)
 
+class TestReadWSWMData(unittest.TestCase):
+    def setUp(self):
+        environ['READER'] = 'TIMESERIES'
+        environ['INBOUND_PORT'] = '7890'
+        environ['OUTBOUND_PORT'] = '7891'
+        environ['VARIABLE'] = 'Qout'
+        environ['LONGITUDE'] = 'lon'
+        environ['TIME'] = 'time'
+        environ['LATITUDE'] = 'lat'
+
+        self.module = importlib.import_module('nexusxd.tilereadingprocessor')
+        reload(self.module)
+
+    def tearDown(self):
+        del environ['READER']
+        del environ['INBOUND_PORT']
+        del environ['OUTBOUND_PORT']
+        del environ['VARIABLE']
+        del environ['LONGITUDE']
+        del environ['TIME']
+        del environ['LATITUDE']
+
+    def test_read_not_empty_wswm(self):
+        test_file = path.join(path.dirname(__file__), 'datafiles', 'not_empty_wswm.nc')
+
+        results = list(self.module.read_time_series_data(None,
+                                                  "time:0:1,rivid:0:500;time:0:1,rivid:500:1000;file://%s" % test_file))
+
+        self.assertEquals(2, len(results))
+
+        results = [nexusproto.NexusTile.FromString(nexus_tile_data) for nexus_tile_data in results]
+
+        for nexus_tile in results:
+            self.assertTrue(nexus_tile.HasField('tile'))
+            self.assertTrue(nexus_tile.tile.HasField('time_series_tile'))
+
+            tile = nexus_tile.tile.time_series_tile
+            self.assertEquals(500, from_shaped_array(tile.latitude).size)
+            self.assertEquals(500, from_shaped_array(tile.longitude).size)
+            self.assertEquals((1, 500), from_shaped_array(tile.variable_data).shape)
+
+        tile1_data = np.ma.masked_invalid(from_shaped_array(results[0].tile.time_series_tile.variable_data))
+        self.assertEquals(500, np.ma.count(tile1_data))
+        self.assertAlmostEquals(41.390,
+                                np.ma.min(np.ma.masked_invalid(from_shaped_array(results[0].tile.time_series_tile.latitude))),
+                                places=3)
+        self.assertAlmostEquals(42.071,
+                                np.ma.max(np.ma.masked_invalid(from_shaped_array(results[0].tile.time_series_tile.latitude))),
+                                places=3)
+
+        self.assertEquals(852098400L, results[0].tile.time_series_tile.time)
+        self.assertAlmostEquals(0.009,
+                                np.ma.masked_invalid(from_shaped_array(results[0].tile.time_series_tile.variable_data))[0, 0],
+                                places=3)
+
 
 if __name__ == '__main__':
     unittest.main()

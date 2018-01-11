@@ -8,7 +8,7 @@
 
 
 @Grapes([
-        @Grab(group = 'org.nasa.jpl.nexus', module = 'nexus-messages', version = '1.0.0.RELEASE')
+        @Grab(group = 'org.nasa.jpl.nexus', module = 'nexus-messages', version = '1.1.0.RELEASE')
 ])
 
 import org.nasa.jpl.nexus.ingest.wiretypes.NexusContent
