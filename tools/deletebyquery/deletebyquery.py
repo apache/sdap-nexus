@@ -29,6 +29,7 @@ from six.moves import input
 
 solr_connection = None
 solr_collection = None
+SOLR_UNIQUE_KEY = None
 
 cassandra_cluster = None
 cassandra_session = None
@@ -45,6 +46,8 @@ def init(args):
     solr_connection = SolrConnection(args.solr)
     global solr_collection
     solr_collection = solr_connection[args.collection]
+    global SOLR_UNIQUE_KEY
+    SOLR_UNIQUE_KEY = args.solrIdField
 
     dc_policy = RoundRobinPolicy()
     token_policy = TokenAwarePolicy(dc_policy)
@@ -64,6 +67,7 @@ def delete_by_query(args):
     if args.query:
         se = SearchOptions()
         se.commonparams.q(args.query) \
+            .fl(SOLR_UNIQUE_KEY) \
             .fl('id')
 
         for fq in args.filterquery if args.filterquery is not None else []:
@@ -72,7 +76,8 @@ def delete_by_query(args):
         query = se
     elif args.jsonparams:
         se = SearchOptions(**json.loads(args.jsonparams))
-        se.commonparams.fl('id')
+        se.commonparams.fl(SOLR_UNIQUE_KEY) \
+            .fl('id')
         query = se
     else:
         raise RuntimeError("either query or jsonparams is required")
@@ -82,7 +87,7 @@ def delete_by_query(args):
         solr_docs = do_solr_query(query)
 
         if confirm_delete(len(solr_docs)):
-            deleted_ids = do_delete(solr_docs)
+            deleted_ids = do_delete(solr_docs, query)
             logging.info("Deleted tile IDs %s" % json.dumps([str(doc_id) for doc_id in deleted_ids], indent=2))
         else:
             logging.info("Exiting")
@@ -123,7 +128,7 @@ def check_query(query):
         return False
     else:
         se = SearchOptions()
-        se.commonparams.q('id:%s' % sample(solr_response.result.response.docs, 1)[0]['id'])
+        se.commonparams.q('%s:%s' % (SOLR_UNIQUE_KEY, sample(solr_response.result.response.docs, 1)[0][SOLR_UNIQUE_KEY]))
         logging.info(json.dumps(solr_collection.search(se).result.response.docs[0], indent=2))
         return check_query(query)
 
@@ -132,7 +137,7 @@ def do_solr_query(query):
     doc_ids = []
 
     next_cursor_mark = "*"
-    query.commonparams.sort('id asc')
+    query.commonparams.sort('%s asc' % SOLR_UNIQUE_KEY)
     while True:
         query.commonparams.remove_param('cursorMark')
         query.commonparams.add_params(cursorMark=next_cursor_mark)
@@ -154,11 +159,11 @@ def do_solr_query(query):
     return doc_ids
 
 
-def do_delete(doc_ids):
+def do_delete(doc_ids, query):
     logging.info("Executing Cassandra delete...")
     delete_from_cassandra(doc_ids)
     logging.info("Executing Solr delete...")
-    delete_from_solr(doc_ids)
+    delete_from_solr(query)
     return doc_ids
 
 
@@ -170,12 +175,11 @@ def delete_from_cassandra(doc_ids):
 
     for (success, result) in results:
         if not success:
-            logging.warn("Could not delete tile %s" % result)
+            logging.warning("Could not delete tile %s" % result)
 
 
-def delete_from_solr(doc_ids):
-    for doc_id in doc_ids:
-        solr_collection.delete({'q': "id:%s" % doc_id}, commit=False)
+def delete_from_solr(query):
+    solr_collection.delete(query, commit=False)
     solr_collection.commit()
 
 
@@ -192,6 +196,12 @@ def parse_args():
                         help='The name of the SOLR collection.',
                         required=True,
                         metavar='nexustiles')
+
+    parser.add_argument('--solrIdField',
+                        help='The name of the unique ID field for this collection.',
+                        required=False,
+                        default='solr_id_s',
+                        metavar='solr_id_s')
 
     parser.add_argument('--cassandra',
                         help='The hostname(s) or IP(s) of the Cassandra server(s).',
