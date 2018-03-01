@@ -17,7 +17,7 @@ import uuid
 from ConfigParser import NoOptionError
 from multiprocessing.synchronize import Lock
 
-import nexusproto.NexusContent_pb2 as nexusproto
+import nexusproto.DataTile_pb2 as nexusproto
 import numpy as np
 from cassandra.cqlengine import columns, connection, CQLEngineException
 from cassandra.cqlengine.models import Model

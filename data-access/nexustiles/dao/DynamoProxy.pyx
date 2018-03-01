@@ -14,7 +14,7 @@
 # limitations under the License.
 
 import uuid
-import nexusproto.NexusContent_pb2 as nexusproto
+import nexusproto.DataTile_pb2 as nexusproto
 from nexusproto.serialization import from_shaped_array
 import numpy as np
 import boto3
