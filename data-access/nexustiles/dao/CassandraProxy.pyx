@@ -103,9 +103,6 @@ class NexusTileData(Model):
             latitude_data = np.ma.masked_invalid(from_shaped_array(time_series_tile.latitude))
             longitude_data = np.ma.masked_invalid(from_shaped_array(time_series_tile.longitude))
 
-            # tile_data = self._to_standard_index(time_series_tile_data,
-            #                                     (len(time_data), len(latitude_data), len(longitude_data)))
-
             reshaped_array = np.ma.masked_all((len(time_data), len(latitude_data), len(longitude_data)))
             idx = np.arange(len(latitude_data))
             reshaped_array[:, idx, idx] = time_series_tile_data
@@ -115,7 +112,6 @@ class NexusTileData(Model):
             for meta_data_obj in time_series_tile.meta_data:
                 name = meta_data_obj.name
                 meta_array = np.ma.masked_invalid(from_shaped_array(meta_data_obj.meta_data))
-                # reshaped_meta_array = self._to_standard_index(meta_array, tile_data.shape)
 
                 reshaped_meta_array = np.ma.masked_all((len(time_data), len(latitude_data), len(longitude_data)))
                 idx = np.arange(len(latitude_data))

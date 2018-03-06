@@ -29,11 +29,14 @@ host=127.0.0.1
 keyspace=nexustiles
 local_datacenter=datacenter1
 protocol_version=3
-port=32769
+port=9042
 
 [solr]
-host=localhost:8986
-core=nexustiles""")
+host=localhost:8983
+core=nexustiles
+
+[datastore]
+store=cassandra""")
         cp = ConfigParser.RawConfigParser()
         cp.readfp(config)
 
@@ -69,9 +72,7 @@ core=nexustiles""")
             print tile.min_time
 
     def test_time_series_tile(self):
-        tiles = self.tile_service.find_tiles_by_exact_bounds((-122.789, 45.837, -122.789, 45.837),
-                                                             "RAPID_WSWM_SWOT",
-                                                             1, time.time(), fetch_data=True)
+        tiles = self.tile_service.find_tile_by_id("055c0b51-d0fb-3f39-b48a-4f762bf0c994")
         for tile in tiles:
             print tile.get_summary()
 

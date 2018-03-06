@@ -21,10 +21,10 @@ from functools import wraps
 import numpy as np
 import numpy.ma as ma
 import pkg_resources
-from dao.CassandraProxy import CassandraProxy
-from dao.S3Proxy import S3Proxy
-from dao.DynamoProxy import DynamoProxy
-from dao.SolrProxy import SolrProxy
+import dao.CassandraProxy
+import dao.S3Proxy
+import dao.DynamoProxy
+import dao.SolrProxy
 from pytz import timezone
 from shapely.geometry import MultiPolygon, box
 
@@ -73,16 +73,16 @@ class NexusTileService(object):
         if not skipDatastore:
             datastore = self._config.get("datastore", "store")
             if datastore == "cassandra":
-                self._datastore = CassandraProxy(self._config)
+                self._datastore = dao.CassandraProxy.CassandraProxy(self._config)
             elif datastore == "s3":
-                self._datastore = S3Proxy(self._config)
+                self._datastore = dao.S3Proxy.S3Proxy(self._config)
             elif datastore == "dynamo":
-                self._datastore = DynamoProxy(self._config)
+                self._datastore = dao.DynamoProxy.DynamoProxy(self._config)
             else:
                 raise ValueError("Error reading datastore from config file")
 
         if not skipMetadatastore:
-            self._metadatastore = SolrProxy(self._config)
+            self._metadatastore = dao.SolrProxy.SolrProxy(self._config)
 
     def get_dataseries_list(self, simple=False):
         if simple:
