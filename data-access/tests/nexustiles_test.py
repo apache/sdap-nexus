@@ -68,6 +68,13 @@ core=nexustiles""")
         for tile in tiles:
             print tile.min_time
 
+    def test_time_series_tile(self):
+        tiles = self.tile_service.find_tiles_by_exact_bounds((-122.789, 45.837, -122.789, 45.837),
+                                                             "RAPID_WSWM_SWOT",
+                                                             1, time.time(), fetch_data=True)
+        for tile in tiles:
+            print tile.get_summary()
+
 
 # from nexustiles.model.nexusmodel import get_approximate_value_for_lat_lon
 # import numpy as np
