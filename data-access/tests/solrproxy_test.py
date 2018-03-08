@@ -71,3 +71,8 @@ class TestQuery(unittest.TestCase):
         result = self.proxy.get_data_series_list()
 
         print len(result)
+
+    def test_find_all_tiles_by_metadata(self):
+        result = self.proxy.find_all_tiles_by_metadata(['granule_s:19811114120000-NCEI-L4_GHRSST-SSTblend-AVHRR_OI-GLOB-v02.0-fv02.0.nc'], ds="AVHRR_OI_L4_GHRSST_NCEI")
+
+        print len(result)

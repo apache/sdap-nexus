@@ -526,6 +526,45 @@ class SolrProxy(object):
 
         return self.do_query_all(*(search, None, None, False, None), **additionalparams)
 
+    def find_all_tiles_by_metadata(self, metadata, ds, start_time=0, end_time=-1, **kwargs):
+        """
+        Get a list of tile metadata that matches the specified metadata, start_time, end_time.
+        :param metadata: List of metadata values to search for tiles e.g ["river_id_i:1", "granule_s:granule_name"]
+        :param ds: The dataset name to search
+        :param start_time: The start time to search for tiles
+        :param end_time: The end time to search for tiles
+        :return: A list of tile metadata
+        """
+        search = 'dataset_s:%s' % ds
+
+        additionalparams = {
+            'fq': metadata
+        }
+
+        if 0 < start_time <= end_time:
+            additionalparams['fq'].append(self.get_formatted_time_clause(start_time, end_time))
+
+        self._merge_kwargs(additionalparams, **kwargs)
+
+        return self.do_query_all(
+            *(search, None, None, False, None),
+            **additionalparams)
+
+    def get_formatted_time_clause(self, start_time, end_time):
+        search_start_s = datetime.utcfromtimestamp(start_time).strftime('%Y-%m-%dT%H:%M:%SZ')
+        search_end_s = datetime.utcfromtimestamp(end_time).strftime('%Y-%m-%dT%H:%M:%SZ')
+
+        time_clause = "(" \
+                      "tile_min_time_dt:[%s TO %s] " \
+                      "OR tile_max_time_dt:[%s TO %s] " \
+                      "OR (tile_min_time_dt:[* TO %s] AND tile_max_time_dt:[%s TO *])" \
+                      ")" % (
+                          search_start_s, search_end_s,
+                          search_start_s, search_end_s,
+                          search_start_s, search_end_s
+                          )
+        return time_clause
+
     def do_query(self, *args, **params):
 
         response = self.do_query_raw(*args, **params)
