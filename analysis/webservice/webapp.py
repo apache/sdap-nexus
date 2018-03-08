@@ -26,8 +26,9 @@ import matplotlib
 import pkg_resources
 import tornado.web
 from tornado.options import define, options, parse_command_line
-
+from tornado.httpserver import HTTPServer
 from webservice import NexusHandler
+from tornado.ioloop import IOLoop
 from webservice.webmodel import NexusRequestObject, NexusProcessingException
 
 matplotlib.use('Agg')
@@ -45,15 +46,12 @@ class ContentTypes(object):
 class BaseHandler(tornado.web.RequestHandler):
     path = r"/"
 
-    def initialize(self, thread_pool):
+    def initialize(self):
         self.logger = logging.getLogger('nexus')
-        self.request_thread_pool = thread_pool
 
     @tornado.web.asynchronous
     def get(self):
-
-        self.logger.info("Received request %s" % self._request_summary())
-        self.request_thread_pool.apply_async(self.run)
+        self.run()
 
     def run(self):
         self.set_header("Access-Control-Allow-Origin", "*")
@@ -96,8 +94,8 @@ class BaseHandler(tornado.web.RequestHandler):
 
 
 class ModularNexusHandlerWrapper(BaseHandler):
-    def initialize(self, thread_pool, clazz=None, algorithm_config=None, sc=None):
-        BaseHandler.initialize(self, thread_pool)
+    def initialize(self, clazz=None, algorithm_config=None, sc=None):
+        BaseHandler.initialize(self)
         self.__algorithm_config = algorithm_config
         self.__clazz = clazz
         self.__sc = sc
@@ -176,6 +174,7 @@ if __name__ == "__main__":
     define("debug", default=False, help="run in debug mode")
     define("port", default=webconfig.get("global", "server.socket_port"), help="run on the given port", type=int)
     define("address", default=webconfig.get("global", "server.socket_host"), help="Bind to the given address")
+    define("subprocesses", default=webconfig.get("global", "server.num_sub_processes"), help="Number of http server subprocesses", type=int)
     parse_command_line()
 
     moduleDirs = webconfig.get("modules", "module_dirs").split(",")
@@ -199,10 +198,6 @@ if __name__ == "__main__":
     log.info("Running Nexus Initializers")
     NexusHandler.executeInitializers(algorithm_config)
 
-    max_request_threads = webconfig.getint("global", "server.max_simultaneous_requests")
-    log.info("Initializing request ThreadPool to %s" % max_request_threads)
-    request_thread_pool = ThreadPool(processes=max_request_threads)
-
     spark_context = None
     for clazzWrapper in NexusHandler.AVAILABLE_HANDLERS:
         if issubclass(clazzWrapper.clazz(), NexusHandler.SparkHandler):
@@ -218,12 +213,11 @@ if __name__ == "__main__":
 
             handlers.append(
                 (clazzWrapper.path(), ModularNexusHandlerWrapper,
-                 dict(clazz=clazzWrapper, algorithm_config=algorithm_config, sc=spark_context,
-                      thread_pool=request_thread_pool)))
+                 dict(clazz=clazzWrapper, algorithm_config=algorithm_config, sc=spark_context)))
         else:
             handlers.append(
                 (clazzWrapper.path(), ModularNexusHandlerWrapper,
-                 dict(clazz=clazzWrapper, algorithm_config=algorithm_config, thread_pool=request_thread_pool)))
+                 dict(clazz=clazzWrapper, algorithm_config=algorithm_config)))
 
 
     class VersionHandler(tornado.web.RequestHandler):
@@ -239,10 +233,11 @@ if __name__ == "__main__":
 
     app = tornado.web.Application(
         handlers,
-        default_host=options.address,
         debug=options.debug
     )
-    app.listen(options.port)
-
     log.info("Starting HTTP listener...")
-    tornado.ioloop.IOLoop.current().start()
+
+    server = HTTPServer(app)
+    server.bind(options.port, address=options.address)
+    server.start(int(options.subprocesses))  # Forks multiple sub-processes
+    IOLoop.current().start()
