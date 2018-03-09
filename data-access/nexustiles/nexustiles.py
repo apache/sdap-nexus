@@ -174,6 +174,7 @@ class NexusTileService(object):
         :return: A list of tiles
         """
         tiles = self._metadatastore.find_all_tiles_by_metadata(metadata, ds, start_time, end_time, **kwargs)
+        tiles = self.mask_tiles_to_time_range(start_time, end_time, tiles)
 
         return tiles
 
@@ -323,6 +324,29 @@ class NexusTileService(object):
             tile.data = ma.masked_where(data_mask, tile.data)
 
         tiles[:] = [tile for tile in tiles if not tile.data.mask.all()]
+
+        return tiles
+
+    def mask_tiles_to_time_range(self, start_time, end_time, tiles):
+        """
+        Masks data in tiles to specified time range.
+        :param start_time: The start time to search for tiles
+        :param end_time: The end time to search for tiles
+        :param tiles: List of tiles
+        :return: A list tiles with data masked to specified time range
+        """
+        if 0 < start_time <= end_time:
+            for tile in tiles:
+                tile.times = ma.masked_outside(tile.times, start_time, end_time)
+
+                # Or together the masks of the individual arrays to create the new mask
+                data_mask = ma.getmaskarray(tile.times)[:, np.newaxis, np.newaxis] \
+                            | ma.getmaskarray(tile.latitudes)[np.newaxis, :, np.newaxis] \
+                            | ma.getmaskarray(tile.longitudes)[np.newaxis, np.newaxis, :]
+
+                tile.data = ma.masked_where(data_mask, tile.data)
+
+            tiles[:] = [tile for tile in tiles if not tile.data.mask.all()]
 
         return tiles
 
