@@ -520,29 +520,32 @@ def calc_average_on_day(tile_in_spark):
     for timeinseconds in timestamps:
         tile_dict[timeinseconds] = []
 
+    # Create a dictionary mapping each time stamp to a list of tuples.
+    # Each tuple has 2 elements, the index of a tile that contains the 
+    # time stamp, and the index of the time stamp among all the time stamps
+    # contained in that tile.
     for i in range(len(ds1_nexus_tiles)):
         tile = ds1_nexus_tiles[i]
-        tile_dict[tile.times[0]].append(i)
-
+        for j in range(len(tile.times)):
+            tile_dict[tile.times[j]].append((i,j))
+                      
+    # Create an aggregate array with all the data and associated mask for 
+    # each time stamp and an aggregate array with the latitude corresponding
+    # to each data element.  Then compute the statistics, weighting each
+    # data element by cos(latitude).
     stats_arr = []
     for timeinseconds in timestamps:
         cur_tile_list = tile_dict[timeinseconds]
         if len(cur_tile_list) == 0:
             continue
         tile_data_agg = \
-            np.ma.array(data=np.hstack([ds1_nexus_tiles[i].data.data.flatten()
-                                        for i in cur_tile_list
-                                        if (ds1_nexus_tiles[i].times[0] ==
-                                            timeinseconds)]),
-                        mask=np.hstack([ds1_nexus_tiles[i].data.mask.flatten()
-                                        for i in cur_tile_list
-                                        if (ds1_nexus_tiles[i].times[0] ==
-                                            timeinseconds)]))
+            np.ma.array(data=np.hstack([ds1_nexus_tiles[i].data[j].data.flatten()
+                                        for i,j in cur_tile_list]),
+                        mask=np.hstack([ds1_nexus_tiles[i].data[j].mask.flatten()
+                                        for i,j in cur_tile_list]))
         lats_agg = np.hstack([np.repeat(ds1_nexus_tiles[i].latitudes,
                                         len(ds1_nexus_tiles[i].longitudes))
-                              for i in cur_tile_list
-                              if (ds1_nexus_tiles[i].times[0] ==
-                                  timeinseconds)])
+                              for i,j in cur_tile_list])
         if (len(tile_data_agg) == 0) or tile_data_agg.mask.all():
             continue
         else:
