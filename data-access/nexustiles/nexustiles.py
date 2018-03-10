@@ -164,6 +164,21 @@ class NexusTileService(object):
         return tiles
 
     @tile_data()
+    def find_tiles_by_metadata(self, metadata, ds=None, start_time=0, end_time=-1, **kwargs):
+        """
+        Return list of tiles that matches the specified metadata, start_time, end_time.
+        :param metadata: List of metadata values to search for tiles e.g ["river_id_i:1", "granule_s:granule_name"]
+        :param ds: The dataset name to search
+        :param start_time: The start time to search for tiles
+        :param end_time: The end time to search for tiles
+        :return: A list of tiles
+        """
+        tiles = self._metadatastore.find_all_tiles_by_metadata(metadata, ds, start_time, end_time, **kwargs)
+        tiles = self.mask_tiles_to_time_range(start_time, end_time, tiles)
+
+        return tiles
+
+    @tile_data()
     def find_tiles_by_exact_bounds(self, bounds, ds, start_time, end_time, **kwargs):
         """
         The method will return tiles with the exact given bounds within the time range. It differs from
@@ -309,6 +324,29 @@ class NexusTileService(object):
             tile.data = ma.masked_where(data_mask, tile.data)
 
         tiles[:] = [tile for tile in tiles if not tile.data.mask.all()]
+
+        return tiles
+
+    def mask_tiles_to_time_range(self, start_time, end_time, tiles):
+        """
+        Masks data in tiles to specified time range.
+        :param start_time: The start time to search for tiles
+        :param end_time: The end time to search for tiles
+        :param tiles: List of tiles
+        :return: A list tiles with data masked to specified time range
+        """
+        if 0 < start_time <= end_time:
+            for tile in tiles:
+                tile.times = ma.masked_outside(tile.times, start_time, end_time)
+
+                # Or together the masks of the individual arrays to create the new mask
+                data_mask = ma.getmaskarray(tile.times)[:, np.newaxis, np.newaxis] \
+                            | ma.getmaskarray(tile.latitudes)[np.newaxis, :, np.newaxis] \
+                            | ma.getmaskarray(tile.longitudes)[np.newaxis, np.newaxis, :]
+
+                tile.data = ma.masked_where(data_mask, tile.data)
+
+            tiles[:] = [tile for tile in tiles if not tile.data.mask.all()]
 
         return tiles
 
