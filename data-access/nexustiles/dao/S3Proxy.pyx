@@ -14,10 +14,12 @@
 # limitations under the License.
 
 import uuid
-import nexusproto.NexusContent_pb2 as nexusproto
-from nexusproto.serialization import from_shaped_array
-import numpy as np
+
 import boto3
+import nexusproto.DataTile_pb2 as nexusproto
+import numpy as np
+from nexusproto.serialization import from_shaped_array
+
 
 class NexusTileData(object):
     __nexus_tile = None
@@ -127,7 +129,6 @@ class S3Proxy(object):
         self.__nexus_tile = None
 
     def fetch_nexus_tiles(self, *tile_ids):
-
         tile_ids = [uuid.UUID(str(tile_id)) for tile_id in tile_ids if
                     (isinstance(tile_id, str) or isinstance(tile_id, unicode))]
         res = []

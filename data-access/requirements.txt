@@ -14,7 +14,7 @@ futures==3.1.1
 ipython==5.3.0
 ipython-genutils==0.2.0
 jmespath==0.9.3
-nexusproto==0.4
+nexusproto==1.0.0-SNAPSHOT
 numpy==1.11.1
 pathlib2==2.2.1
 pexpect==4.2.1
