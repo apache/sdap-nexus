@@ -21,10 +21,10 @@ from functools import wraps
 import numpy as np
 import numpy.ma as ma
 import pkg_resources
-from dao.CassandraProxy import CassandraProxy
-from dao.S3Proxy import S3Proxy
-from dao.DynamoProxy import DynamoProxy
-from dao.SolrProxy import SolrProxy
+import dao.CassandraProxy
+import dao.S3Proxy
+import dao.DynamoProxy
+import dao.SolrProxy
 from pytz import timezone
 from shapely.geometry import MultiPolygon, box
 
@@ -73,16 +73,16 @@ class NexusTileService(object):
         if not skipDatastore:
             datastore = self._config.get("datastore", "store")
             if datastore == "cassandra":
-                self._datastore = CassandraProxy(self._config)
+                self._datastore = dao.CassandraProxy.CassandraProxy(self._config)
             elif datastore == "s3":
-                self._datastore = S3Proxy(self._config)
+                self._datastore = dao.S3Proxy.S3Proxy(self._config)
             elif datastore == "dynamo":
-                self._datastore = DynamoProxy(self._config)
+                self._datastore = dao.DynamoProxy.DynamoProxy(self._config)
             else:
                 raise ValueError("Error reading datastore from config file")
 
         if not skipMetadatastore:
-            self._metadatastore = SolrProxy(self._config)
+            self._metadatastore = dao.SolrProxy.SolrProxy(self._config)
 
     def get_dataseries_list(self, simple=False):
         if simple:
@@ -161,6 +161,21 @@ class NexusTileService(object):
         else:
             tiles = self._metadatastore.find_all_tiles_in_polygon_sorttimeasc(bounding_polygon, ds, start_time, end_time,
                                                                      **kwargs)
+        return tiles
+
+    @tile_data()
+    def find_tiles_by_metadata(self, metadata, ds=None, start_time=0, end_time=-1, **kwargs):
+        """
+        Return list of tiles that matches the specified metadata, start_time, end_time.
+        :param metadata: List of metadata values to search for tiles e.g ["river_id_i:1", "granule_s:granule_name"]
+        :param ds: The dataset name to search
+        :param start_time: The start time to search for tiles
+        :param end_time: The end time to search for tiles
+        :return: A list of tiles
+        """
+        tiles = self._metadatastore.find_all_tiles_by_metadata(metadata, ds, start_time, end_time, **kwargs)
+        tiles = self.mask_tiles_to_time_range(start_time, end_time, tiles)
+
         return tiles
 
     @tile_data()
@@ -309,6 +324,29 @@ class NexusTileService(object):
             tile.data = ma.masked_where(data_mask, tile.data)
 
         tiles[:] = [tile for tile in tiles if not tile.data.mask.all()]
+
+        return tiles
+
+    def mask_tiles_to_time_range(self, start_time, end_time, tiles):
+        """
+        Masks data in tiles to specified time range.
+        :param start_time: The start time to search for tiles
+        :param end_time: The end time to search for tiles
+        :param tiles: List of tiles
+        :return: A list tiles with data masked to specified time range
+        """
+        if 0 < start_time <= end_time:
+            for tile in tiles:
+                tile.times = ma.masked_outside(tile.times, start_time, end_time)
+
+                # Or together the masks of the individual arrays to create the new mask
+                data_mask = ma.getmaskarray(tile.times)[:, np.newaxis, np.newaxis] \
+                            | ma.getmaskarray(tile.latitudes)[np.newaxis, :, np.newaxis] \
+                            | ma.getmaskarray(tile.longitudes)[np.newaxis, np.newaxis, :]
+
+                tile.data = ma.masked_where(data_mask, tile.data)
+
+            tiles[:] = [tile for tile in tiles if not tile.data.mask.all()]
 
         return tiles
 

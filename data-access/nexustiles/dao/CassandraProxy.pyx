@@ -17,7 +17,7 @@ import uuid
 from ConfigParser import NoOptionError
 from multiprocessing.synchronize import Lock
 
-import nexusproto.NexusContent_pb2 as nexusproto
+import nexusproto.DataTile_pb2 as nexusproto
 import numpy as np
 from cassandra.cqlengine import columns, connection, CQLEngineException
 from cassandra.cqlengine.models import Model
@@ -99,19 +99,24 @@ class NexusTileData(Model):
             time_series_tile = self._get_nexus_tile().time_series_tile
 
             time_series_tile_data = np.ma.masked_invalid(from_shaped_array(time_series_tile.variable_data))
-            time_data = np.array([time_series_tile.time])
+            time_data = np.ma.masked_invalid(from_shaped_array(time_series_tile.time)).reshape(-1)
             latitude_data = np.ma.masked_invalid(from_shaped_array(time_series_tile.latitude))
             longitude_data = np.ma.masked_invalid(from_shaped_array(time_series_tile.longitude))
 
-            tile_data = self._to_standard_index(time_series_tile_data,
-                                                (len(time_data), len(latitude_data), len(longitude_data)))
-
+            reshaped_array = np.ma.masked_all((len(time_data), len(latitude_data), len(longitude_data)))
+            idx = np.arange(len(latitude_data))
+            reshaped_array[:, idx, idx] = time_series_tile_data
+            tile_data = reshaped_array
             # Extract the meta data
             meta_data = {}
             for meta_data_obj in time_series_tile.meta_data:
                 name = meta_data_obj.name
                 meta_array = np.ma.masked_invalid(from_shaped_array(meta_data_obj.meta_data))
-                reshaped_meta_array = self._to_standard_index(meta_array, tile_data.shape)
+
+                reshaped_meta_array = np.ma.masked_all((len(time_data), len(latitude_data), len(longitude_data)))
+                idx = np.arange(len(latitude_data))
+                reshaped_meta_array[:, idx, idx] = meta_array
+
                 meta_data[name] = reshaped_meta_array
 
             return latitude_data, longitude_data, time_data, tile_data, meta_data
