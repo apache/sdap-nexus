@@ -51,6 +51,7 @@ class RequestParameters(object):
     PLOT_SERIES = "plotSeries"
     PLOT_TYPE = "plotType"
     SPARK_CFG = "spark"
+    METADATA_FILTER = "metadataFilter"
 
 
 class StandardNexusErrors:
@@ -245,6 +246,9 @@ class NexusRequestObject(StatsComputeOptions):
             raise Exception("Invalid shortname")
         else:
             return ds.split(",")
+
+    def get_metadata_filter(self):
+        return self.requestHandler.get_arguments(RequestParameters.METADATA_FILTER)
 
     def get_environment(self):
         env = self.get_argument(RequestParameters.ENVIRONMENT, None)

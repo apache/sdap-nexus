@@ -46,7 +46,7 @@ class DataInBoundsSearchHandlerImpl(NexusHandler):
             "name": "Bounding box",
             "type": "comma-delimited float",
             "description": "Minimum (Western) Longitude, Minimum (Southern) Latitude, "
-                           "Maximum (Eastern) Longitude, Maximum (Northern) Latitude. Required"
+                           "Maximum (Eastern) Longitude, Maximum (Northern) Latitude. Required if 'metadataFilter' not provided"
         },
         "startTime": {
             "name": "Start Time",
@@ -57,6 +57,11 @@ class DataInBoundsSearchHandlerImpl(NexusHandler):
             "name": "End Time",
             "type": "string",
             "description": "Ending time in format YYYY-MM-DDTHH:mm:ssZ or seconds since EPOCH. Required"
+        },
+        "metadataFilter": {
+            "name": "Metadata Filter",
+            "type": "string",
+            "description": "Filter in format key:value. Required if 'b' not provided"
         }
     }
     singleton = True
@@ -100,27 +105,36 @@ class DataInBoundsSearchHandlerImpl(NexusHandler):
                     request.get_start_datetime().strftime(ISO_8601), request.get_end_datetime().strftime(ISO_8601)),
                 code=400)
 
+        bounding_polygon = metadata_filter = None
         try:
             bounding_polygon = request.get_bounding_polygon()
         except:
-            raise NexusProcessingException(
-                reason="'b' argument is required. Must be comma-delimited float formatted as Minimum (Western) Longitude, Minimum (Southern) Latitude, Maximum (Eastern) Longitude, Maximum (Northern) Latitude",
-                code=400)
+            metadata_filter = request.get_metadata_filter()
+            if 0 == len(metadata_filter):
+                raise NexusProcessingException(
+                    reason="'b' or 'metadataFilter' argument is required. 'b' must be comma-delimited float formatted "
+                           "as Minimum (Western) Longitude, Minimum (Southern) Latitude, Maximum (Eastern) Longitude, "
+                           "Maximum (Northern) Latitude. 'metadataFilter' must be in the form key:value",
+                    code=400)
 
-        return ds, parameter_s, start_time, end_time, bounding_polygon
+        return ds, parameter_s, start_time, end_time, bounding_polygon, metadata_filter
 
     def calc(self, computeOptions, **args):
-        ds, parameter, start_time, end_time, bounding_polygon = self.parse_arguments(computeOptions)
+        ds, parameter, start_time, end_time, bounding_polygon, metadata_filter = self.parse_arguments(computeOptions)
 
         includemeta = computeOptions.get_include_meta()
 
-        min_lat = bounding_polygon.bounds[1]
-        max_lat = bounding_polygon.bounds[3]
-        min_lon = bounding_polygon.bounds[0]
-        max_lon = bounding_polygon.bounds[2]
+        min_lat = max_lat = min_lon = max_lon = None
+        if bounding_polygon:
+            min_lat = bounding_polygon.bounds[1]
+            max_lat = bounding_polygon.bounds[3]
+            min_lon = bounding_polygon.bounds[0]
+            max_lon = bounding_polygon.bounds[2]
 
-        tiles = self._tile_service.get_tiles_bounded_by_box(min_lat, max_lat, min_lon, max_lon, ds, start_time,
-                                                            end_time)
+            tiles = self._tile_service.get_tiles_bounded_by_box(min_lat, max_lat, min_lon, max_lon, ds, start_time,
+                                                                end_time)
+        else:
+            tiles = self._tile_service.get_tiles_by_metadata(metadata_filter, ds, start_time, end_time)
 
         data = []
         for tile in tiles:
@@ -148,7 +162,7 @@ class DataInBoundsSearchHandlerImpl(NexusHandler):
                     except (KeyError, IndexError):
                         pass
                 else:
-                    pass
+                    point['variable'] = nexus_point.data_val
 
                 data.append({
                     'latitude': nexus_point.latitude,
