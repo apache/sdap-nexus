@@ -174,7 +174,6 @@ class NexusTileService(object):
         :return: A list of tiles
         """
         tiles = self._metadatastore.find_all_tiles_by_metadata(metadata, ds, start_time, end_time, **kwargs)
-        tiles = self.mask_tiles_to_time_range(start_time, end_time, tiles)
 
         return tiles
 
