@@ -565,6 +565,41 @@ class SolrProxy(object):
                           )
         return time_clause
 
+    def get_tile_count(self, ds, bounding_polygon=None, start_time=0, end_time=-1, metadata=None, **kwargs):
+        """
+        Return number of tiles that match search criteria.
+        :param ds: The dataset name to search
+        :param bounding_polygon: The polygon to search for tiles
+        :param start_time: The start time to search for tiles
+        :param end_time: The end time to search for tiles
+        :param metadata: List of metadata values to search for tiles e.g ["river_id_i:1", "granule_s:granule_name"]
+        :return: number of tiles that match search criteria
+        """
+        search = 'dataset_s:%s' % ds
+
+        additionalparams = {
+            'fq': [
+                "tile_count_i:[1 TO *]"
+            ],
+            'rows': 0
+        }
+
+        if bounding_polygon:
+            min_lon, min_lat, max_lon, max_lat = bounding_polygon.bounds
+            additionalparams['fq'].append("geo:[%s,%s TO %s,%s]" % (min_lat, min_lon, max_lat, max_lon))
+
+        if 0 < start_time <= end_time:
+            additionalparams['fq'].append(self.get_formatted_time_clause(start_time, end_time))
+
+        if metadata:
+            additionalparams['fq'].extend(metadata)
+
+        self._merge_kwargs(additionalparams, **kwargs)
+
+        results, start, found = self.do_query(*(search, None, None, True, None), **additionalparams)
+
+        return found
+
     def do_query(self, *args, **params):
 
         response = self.do_query_raw(*args, **params)
