@@ -364,6 +364,18 @@ class NexusTileService(object):
 
         return tiles
 
+    def get_tile_count(self, ds, bounding_polygon=None, start_time=0, end_time=-1, metadata=None, **kwargs):
+        """
+        Return number of tiles that match search criteria.
+        :param ds: The dataset name to search
+        :param bounding_polygon: The polygon to search for tiles
+        :param start_time: The start time to search for tiles
+        :param end_time: The end time to search for tiles
+        :param metadata: List of metadata values to search for tiles e.g ["river_id_i:1", "granule_s:granule_name"]
+        :return: number of tiles that match search criteria
+        """
+        return self._metadatastore.get_tile_count(ds, bounding_polygon, start_time, end_time, metadata, **kwargs)
+
     def fetch_data_for_tiles(self, *tiles):
 
         nexus_tile_ids = set([tile.tile_id for tile in tiles])
