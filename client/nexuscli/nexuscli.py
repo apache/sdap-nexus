@@ -43,6 +43,16 @@ __pdoc__['TimeSeries.count'] = "`numpy` array containing counts"
 __pdoc__['TimeSeries.minimum'] = "`numpy` array containing minimums"
 __pdoc__['TimeSeries.maximum'] = "`numpy` array containing maximums"
 
+Subset = namedtuple('Subset', ('dataset', 'time', 'latitude', 'longitude', 'variable'))
+Subset.__doc__ = '''\
+An object containing Subset arrays.
+'''
+__pdoc__['Subset.dataset'] = "Name of the Dataset"
+__pdoc__['Subset.time'] = "`numpy` array containing times as `datetime` objects"
+__pdoc__['Subset.latitude'] = "`numpy` array containing latitudes"
+__pdoc__['Subset.longitude'] = "`numpy` array containing longitudes"
+__pdoc__['Subset.variable'] = "dictionary of `numpy` array containing variable values"
+
 ISO_FORMAT = "%Y-%m-%dT%H:%M:%SZ"
 
 target = 'http://localhost:8083'
@@ -207,3 +217,59 @@ def time_series(datasets, bounding_box, start_datetime, end_datetime, spark=Fals
             )
 
     return time_series_result
+
+
+def data_in_bounds(dataset, bounding_box, start_datetime, end_datetime, parameter, metadata_filter):
+    """
+    Fetches point values for a given dataset and geographical area or metadata criteria and time range.
+
+    __dataset__ Name of the dataset as a String  
+    __bounding_box__ Bounding box for area of interest as a `shapely.geometry.polygon.Polygon`  
+    __start_datetime__ Start time as a `datetime.datetime`  
+    __end_datetime__ End time as a `datetime.datetime`  
+    __parameter__ Name of the dataset as a String  
+    __metadata_filter__ List of key:value String metadata criteria  
+
+    __return__ List of `nexuscli.nexuscli.TimeSeries` namedtuples
+    """
+    url = "{}/datainbounds?".format(target)
+
+    params = {
+        'ds': dataset,
+        'startTime': start_datetime.strftime(ISO_FORMAT),
+        'endTime': end_datetime.strftime(ISO_FORMAT),
+        'parameter': parameter,
+        'metadataFilter': metadata_filter,
+    }
+    if bounding_box:
+        params['b'] = ','.join(str(b) for b in bounding_box.bounds)
+
+    response = session.get(url, params=params)
+    response.raise_for_status()
+    response = response.json()
+
+    data = np.array(response['data']).flatten()
+
+    assert len(data) > 0, "No data found in {} between {} and {} for Datasets {}.".format(bounding_box.wkt if bounding_box is not None else metadata_filter,
+                                                                                          start_datetime.strftime(
+                                                                                              ISO_FORMAT),
+                                                                                          end_datetime.strftime(
+                                                                                              ISO_FORMAT),
+                                                                                          dataset)
+
+    variable_values = {}
+    for variable in data[0]['data'][0].keys():
+        variable_values[variable] = np.array([d['data'][0][variable] for d in data])
+
+    subset_result = []
+    subset_result.append(
+        Subset(
+            dataset=dataset,
+            time=np.array([datetime.utcfromtimestamp(d['time']).replace(tzinfo=UTC) for d in data]),
+            longitude=np.array([d['longitude'] for d in data]),
+            latitude=np.array([d['latitude'] for d in data]),
+            variable=variable_values
+        )
+    )
+
+    return subset_result
