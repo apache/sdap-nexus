@@ -76,6 +76,11 @@ store=cassandra""")
         for tile in tiles:
             print tile.get_summary()
 
+    def test_get_tiles_by_metadata(self):
+        tiles = self.tile_service.get_tiles_by_metadata(['id:60758e00-5721-3a6e-bf57-78448bb0aeeb'],
+                                                        "MUR-JPL-L4-GLOB-v4.1", 1514764800, 1514764800)
+        for tile in tiles:
+            print tile.get_summary()
 
 # from nexustiles.model.nexusmodel import get_approximate_value_for_lat_lon
 # import numpy as np
