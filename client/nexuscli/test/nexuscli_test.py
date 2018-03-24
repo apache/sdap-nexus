@@ -39,3 +39,13 @@ class TestCli(unittest.TestCase):
                                                datetime(2013, 1, 1), datetime(2014, 12, 31))
 
         self.assertEqual(1, len(ts))
+
+    def test_data_in_bounds_with_metadata_filter(self):
+        subset = nexuscli.subset("MUR-JPL-L4-GLOB-v4.1", None, datetime(2018, 1, 1), datetime(2018, 1, 2),
+                                         None, ["id:60758e00-5721-3a6e-bf57-78448bb0aeeb"])
+        print(subset)
+
+    def test_data_in_bounds_with_bounding_box(self):
+        subset = nexuscli.subset("MUR-JPL-L4-GLOB-v4.1", box(-150, 45, -149, 46), datetime(2018, 1, 1),
+                                         datetime(2018, 1, 1), None, None)
+        print(subset)
