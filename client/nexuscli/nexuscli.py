@@ -226,7 +226,7 @@ def subset(dataset, bounding_box, start_datetime, end_datetime, parameter, metad
     __bounding_box__ Bounding box for area of interest as a `shapely.geometry.polygon.Polygon`  
     __start_datetime__ Start time as a `datetime.datetime`  
     __end_datetime__ End time as a `datetime.datetime`  
-    __parameter__ Name of the dataset as a String  
+    __parameter__ The parameter of interest. One of 'sst', 'sss', 'wind' or None  
     __metadata_filter__ List of key:value String metadata criteria  
 
     __return__ List of `nexuscli.nexuscli.Point` namedtuples
