@@ -31,6 +31,10 @@ from webservice import NexusHandler
 from tornado.ioloop import IOLoop
 from webservice.webmodel import NexusRequestObject, NexusProcessingException
 
+import signal
+from functools import partial
+import psutil
+
 matplotlib.use('Agg')
 
 
@@ -157,6 +161,29 @@ class ModularNexusHandlerWrapper(BaseHandler):
             result.cleanup()
 
 
+def sig_handler(server, sig, frame):
+    """
+    Will attempt to identify subprocesses and shut them down before exiting.
+
+    TODO: Expand with graceful shutdowns of the server and IOLoop thread
+
+    :param server:
+    :param sig:
+    :param frame:
+    :return:
+    """
+    logging.warning('Caught signal: %s', sig)
+
+    logging.info('Stopping child processes')
+    current_process = psutil.Process()
+    children = current_process.children(recursive=True)
+    logging.warning("Stopping %s subprocesses", len(children))
+    for child in children:
+        logging.warning("Stopping subprocess with PID %s", child.pid)
+        os.kill(child.pid, signal.SIGTERM)
+
+    sys.exit(0)
+
 if __name__ == "__main__":
     logging.basicConfig(
         level=logging.DEBUG,
@@ -239,5 +266,9 @@ if __name__ == "__main__":
 
     server = HTTPServer(app)
     server.bind(options.port, address=options.address)
+
+    signal.signal(signal.SIGTERM, partial(sig_handler, server))
+    signal.signal(signal.SIGINT, partial(sig_handler, server))
+
     server.start(int(options.subprocesses))  # Forks multiple sub-processes
     IOLoop.current().start()
