@@ -1,4 +1,5 @@
-FROM nexusjpl/nexusbase
+ARG tag_version=latest
+FROM sdap/nexusbase:${tag_version}
 
 MAINTAINER Joseph Jacob "Joseph.Jacob@jpl.nasa.gov"
 
@@ -7,13 +8,13 @@ MAINTAINER Joseph Jacob "Joseph.Jacob@jpl.nasa.gov"
 RUN yum install -y gcc python-devel
 
 # Set environment variables.  For Mesos, I used MESOS_VER because MESOS_VERSION
-# is expected to be a logical TRUE/FALSE flag that tells Mesos whether or not 
+# is expected to be a logical TRUE/FALSE flag that tells Mesos whether or not
 # to simply print the version number and exit.
 
 ENV INSTALL_LOC=/usr/local \
     HADOOP_VERSION=2.7.3 \
     SPARK_VERSION=2.1.0 \
-    MESOS_VER=1.2.0 \
+    MESOS_VER=1.5.0 \
     MESOS_MASTER_PORT=5050 \
     MESOS_AGENT_PORT=5051 \
     MESOS_WORKDIR=/var/lib/mesos \
@@ -32,12 +33,11 @@ ENV SPARK_HOME=${INSTALL_LOC}/${SPARK_DIR} \
     PYSPARK_DRIVER_PYTHON=${CONDA_HOME}/bin/python \
     PYSPARK_PYTHON=${CONDA_HOME}/bin/python \
     PYSPARK_SUBMIT_ARGS="--driver-memory=4g pyspark-shell"
-    
+
 ENV PYTHONPATH=${PYTHONPATH}:${SPARK_HOME}/python:${SPARK_HOME}/python/lib/py4j-0.10.4-src.zip:${SPARK_HOME}/python/lib/pyspark.zip \
     MESOS_NATIVE_JAVA_LIBRARY=${INSTALL_LOC}/lib/libmesos.so \
-    
     SPARK_EXECUTOR_URI=${INSTALL_LOC}/${SPARK_PACKAGE}.tgz
-    
+
 WORKDIR ${INSTALL_LOC}
 
 # Set up Spark
@@ -55,7 +55,7 @@ RUN source ./install_mesos.sh && \
     mkdir ${MESOS_WORKDIR}
 
 # Set up Anaconda environment
-    
+
 ENV PATH=${CONDA_HOME}/bin:${PATH}:${HADOOP_HOME}/bin:${SPARK_HOME}/bin
 
 RUN conda install -c conda-forge -y netCDF4 && \
@@ -77,24 +77,22 @@ RUN cd ${CONDA_HOME}/lib && \
 
 RUN yum install -y mesa-libGL.x86_64
 
+# Install nexusproto
+ARG APACHE_NEXUSPROTO=https://github.com/apache/incubator-sdap-nexusproto.git
+ARG APACHE_NEXUSPROTO_BRANCH=master
+COPY --chown=ningester:ningester install_nexusproto.sh ./install_nexusproto.sh
+RUN ./install_nexusproto.sh $APACHE_NEXUSPROTO $APACHE_NEXUSPROTO_BRANCH
+
 # Retrieve NEXUS code and build it.
 
 WORKDIR /
 
-RUN git clone https://github.com/dataplumber/nexus.git
+RUN git clone https://github.com/apache/incubator-sdap-nexus.git
 
 RUN sed -i 's/,webservice.algorithms.doms//g' /nexus/analysis/webservice/config/web.ini && \
     sed -i 's/127.0.0.1/nexus-webapp/g' /nexus/analysis/webservice/config/web.ini && \
     sed -i 's/127.0.0.1/cassandra1,cassandra2,cassandra3,cassandra4,cassandra5,cassandra6/g' /nexus/data-access/nexustiles/config/datastores.ini && \
     sed -i 's/localhost:8983/solr1:8983/g' /nexus/data-access/nexustiles/config/datastores.ini
-
-WORKDIR /nexus/nexus-ingest/nexus-messages
-
-RUN ./gradlew clean build install
-
-WORKDIR /nexus/nexus-ingest/nexus-messages/build/python/nexusproto
-
-RUN python setup.py install
 
 WORKDIR /nexus/data-access
 
