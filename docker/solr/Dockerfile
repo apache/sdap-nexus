@@ -7,7 +7,7 @@ RUN cd / && wget https://downloads.sourceforge.net/project/jts-topo-suite/jts/1.
 
 RUN apt-get update && apt-get -y install git && rm -rf /var/lib/apt/lists/*
 
-RUN cd / && git clone https://github.com/dataplumber/nexus.git && cp -r /nexus/data-access/config/schemas/solr/nexustiles /tmp/nexustiles && rm -rf /nexus
+RUN cd / && git clone https://github.com/apache/incubator-sdap-nexus.git && cp -r /incubator-sdap-nexus/data-access/config/schemas/solr/nexustiles /tmp/nexustiles && rm -rf /incubator-sdap-nexus
 
 RUN mkdir /solr-home
 
