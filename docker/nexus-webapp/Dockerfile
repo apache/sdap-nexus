@@ -7,7 +7,8 @@ MAINTAINER Joseph Jacob "Joseph.Jacob@jpl.nasa.gov"
 # Set environment variables.
 
 ENV MASTER=local[1] \
-    SPARK_LOCAL_IP=nexus-webapp
+    SPARK_LOCAL_IP=nexus-webapp \
+    CASSANDRA_LOCAL_DATACENTER=datacenter1
 
 # Run NEXUS webapp.
 
