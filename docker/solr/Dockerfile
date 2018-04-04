@@ -15,6 +15,9 @@ RUN chown -R $SOLR_USER:$SOLR_USER /solr-home
 
 VOLUME /solr-home
 
+VOLUME /opt/solr/server/solr/
+RUN chown -R $SOLR_USER:$SOLR_USER /opt/solr/server/solr/
+
 RUN cp /jts-1.14/lib/jts-1.14.jar /opt/solr/server/lib/jts-1.14.jar
 
 RUN cp /jts-1.14/lib/jtsio-1.14.jar /opt/solr/server/lib/jtsio-1.14.jar

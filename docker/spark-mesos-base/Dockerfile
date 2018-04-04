@@ -80,7 +80,7 @@ RUN yum install -y mesa-libGL.x86_64
 # Install nexusproto
 ARG APACHE_NEXUSPROTO=https://github.com/apache/incubator-sdap-nexusproto.git
 ARG APACHE_NEXUSPROTO_BRANCH=master
-COPY --chown=ningester:ningester install_nexusproto.sh ./install_nexusproto.sh
+COPY install_nexusproto.sh ./install_nexusproto.sh
 RUN ./install_nexusproto.sh $APACHE_NEXUSPROTO $APACHE_NEXUSPROTO_BRANCH
 
 # Retrieve NEXUS code and build it.
@@ -89,16 +89,16 @@ WORKDIR /
 
 RUN git clone https://github.com/apache/incubator-sdap-nexus.git
 
-RUN sed -i 's/,webservice.algorithms.doms//g' /nexus/analysis/webservice/config/web.ini && \
-    sed -i 's/127.0.0.1/nexus-webapp/g' /nexus/analysis/webservice/config/web.ini && \
-    sed -i 's/127.0.0.1/cassandra1,cassandra2,cassandra3,cassandra4,cassandra5,cassandra6/g' /nexus/data-access/nexustiles/config/datastores.ini && \
-    sed -i 's/localhost:8983/solr1:8983/g' /nexus/data-access/nexustiles/config/datastores.ini
+RUN sed -i 's/,webservice.algorithms.doms//g' /incubator-sdap-nexus/analysis/webservice/config/web.ini && \
+    sed -i 's/127.0.0.1/nexus-webapp/g' /incubator-sdap-nexus/analysis/webservice/config/web.ini && \
+    sed -i 's/127.0.0.1/cassandra1,cassandra2,cassandra3,cassandra4,cassandra5,cassandra6/g' /incubator-sdap-nexus/data-access/nexustiles/config/datastores.ini && \
+    sed -i 's/localhost:8983/solr1:8983/g' /incubator-sdap-nexus/data-access/nexustiles/config/datastores.ini
 
-WORKDIR /nexus/data-access
+WORKDIR /incubator-sdap-nexus/data-access
 
 RUN python setup.py install
 
-WORKDIR /nexus/analysis
+WORKDIR /incubator-sdap-nexus/analysis
 
 RUN python setup.py install
 
