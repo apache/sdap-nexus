@@ -25,7 +25,7 @@ import dao.CassandraProxy
 import dao.S3Proxy
 import dao.DynamoProxy
 import dao.SolrProxy
-from pytz import timezone
+from pytz import timezone, UTC
 from shapely.geometry import MultiPolygon, box
 
 from model.nexusmodel import Tile, BBox, TileStats
@@ -446,12 +446,12 @@ class NexusTileService(object):
                 pass
 
             try:
-                tile.min_time = solr_doc['tile_min_time_dt']
+                tile.min_time = datetime.strptime(solr_doc['tile_min_time_dt'], "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=UTC)
             except KeyError:
                 pass
 
             try:
-                tile.max_time = solr_doc['tile_max_time_dt']
+                tile.max_time = datetime.strptime(solr_doc['tile_max_time_dt'], "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=UTC)
             except KeyError:
                 pass
 

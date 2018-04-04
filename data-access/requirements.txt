@@ -36,6 +36,6 @@ Shapely==1.5.17
 simplegeneric==0.8.1
 six==1.10.0
 solrcloudpy==2.4.1
-solrpy==0.9.7
+pysolr==3.7.0
 traitlets==4.3.2
 wcwidth==0.1.7
