@@ -1,1 +1,9 @@
-# Welcome to NEXUS
+.. _index:
+
+======
+NEXUS
+======
+
+Welcome to NEXUS.
+
+Check out the :ref:`quickstart`.
