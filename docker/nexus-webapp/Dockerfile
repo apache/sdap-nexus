@@ -13,7 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# Run example: docker run -it --net=host -p 8083:8083 -e MASTER=mesos://127.0.0.1:5050 nexus-webapp
 FROM centos:7
 
 MAINTAINER Apache SDAP "dev@sdap.apache.org"
@@ -46,7 +45,6 @@ ENV SPARK_LOCAL_IP=127.0.0.1 \
     PYSPARK_PYTHON=/usr/local/anaconda2/bin/python \
     PYSPARK_SUBMIT_ARGS="--driver-memory=4g pyspark-shell" \
     PYTHONPATH=${PYTHONPATH}:/usr/local/spark-${SPARK_VERSION}/python:/usr/local/spark-${SPARK_VERSION}/python/lib/py4j-0.10.4-src.zip:/usr/local/spark-${SPARK_VERSION}/python/lib/pyspark.zip \
-    MESOS_NATIVE_JAVA_LIBRARY=/usr/local/lib/libmesos.so \
     SPARK_EXECUTOR_URI=/usr/local/spark-${SPARK_VERSION}-bin-hadoop2.7.tgz \
     NEXUS_SRC=/tmp/incubator-sdap-nexus
 
