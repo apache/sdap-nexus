@@ -1,4 +1,0 @@
-shapely
-requests
-numpy
-cassandra-driver==3.9.0
