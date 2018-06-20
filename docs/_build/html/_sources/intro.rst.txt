@@ -1,9 +1,9 @@
 .. _intro:
 
 
-========================
-NEXUS Introduction
-========================
+*******************
+About NEXUS
+*******************
 
 NEXUS is a data-intensive analysis solution using a new approach for handling science data to enable large-scale data analysis.
 
