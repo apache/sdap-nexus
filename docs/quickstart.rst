@@ -20,38 +20,48 @@ Prerequisites
 * Internet Connection
 * bash
 * cURL
+* ??? of disk space
+
+Prepare
+========
+
+Start downloading the Docker images and data files.
 
 .. _quickstart-step1:
 
 Pull Docker Images
-===================
+-------------------
 
 Pull the necessary Docker images from the `SDAP repository <https://hub.docker.com/u/sdap>`_ on Docker Hub. Please check the repository for the latest version tag.
 
-.. code-block:: console
+.. code-block:: bash
 
-  docker pull sdap/ningester
-  docker pull sdap/solr-singlenode
-  docker pull sdap/cassandra
-  docker pull sdap/nexus-webapp
+  export VERSION=1.0.0-SNAPSHOT
+
+.. code-block:: bash
+
+  docker pull sdap/ningester:${VERSION}
+  docker pull sdap/solr-singlenode:${VERSION}
+  docker pull sdap/cassandra:${VERSION}
+  docker pull sdap/nexus-webapp:${VERSION}
 
 .. _quickstart-step2:
 
 Download Sample Data
-=====================
+---------------------
 
 The data we will be downloading is part of the `AVHRR OI dataset <https://podaac.jpl.nasa.gov/dataset/AVHRR_OI-NCEI-L4-GLOB-v2.0>`_ which measures sea surface temperature. We will download 1 month of data and ingest it into a local Solr and Cassandra instance.
 
 Choose a location that is mountable by Docker (typically needs to be under the User's home directory) to download the data files to.
 
-.. code-block:: console
+.. code-block:: bash
 
   export DATA_DIRECTORY=~/nexus-quickstart/data/avhrr-granules
-  mkdir -p $DATA_DIRECTORY
+  mkdir -p ${DATA_DIRECTORY}
 
 Then go ahead and download 1 month worth of AVHRR netCDF files.
 
-.. code-block:: console
+.. code-block:: bash
 
   cd $DATA_DIRECTORY
 
@@ -63,7 +73,166 @@ Then go ahead and download 1 month worth of AVHRR netCDF files.
 
 You should now have 30 files downloaded to your data directory, one for each day in November 2015.
 
+Start Data Storage Containers
+==============================
+
+We will use Solr and Cassandra to store the tile metadata and data respectively.
+
 .. _quickstart-step3:
+
+Start Solr
+-----------
+
+SDAP is tested with Solr version 7.x with the JTS topology suite add-on installed. The SDAP docker image is based off of the official Solr image and simply adds the JTS topology suite and the nexustiles core.
+
+.. note:: Mounting a volume is optional but if you choose to do it, you can start and stop the Solr container without having to reingest your data every time. If you do not mount a volume, every time you stop your Solr container the data will be lost.
+
+To start Solr using a volume mount and expose the admin webapp on port 8983:
+
+.. code-block:: bash
+
+  export SOLR_DATA=~/nexus-quickstart/solr
+  docker run --name solr -v ${SOLR_DATA}:/opt/solr/server/solr/nexustiles/data -p 8983:8983 -d sdap/solr-singlenode:${VERSION}
+
+If you don't want to use a volume, leave off the ``-v`` option.
+
+
+.. _quickstart-step4:
+
+Start Cassandra
+----------------
+
+SDAP is tested with Cassandra version 2.2.x. The SDAP docker image is based off of the official Cassandra image and simply mounts the schema DDL script into the container for easy initialization.
+
+.. note:: Similar to the Solr container, using a volume is recommended but not required.
+
+To start cassandra using a volume mount and expose the connection port 9042:
+
+.. code-block:: bash
+
+  export CASSANDRA_DATA=~/nexus-quickstart/cassandra
+  docker run --name cassandra -p 9042:9042 -v ${CASSANDRA_DATA}:/var/lib/cassandra -d sdap/cassandra:${VERSION}
+
+If this is your first time starting the cassandra container, you need to initialize the database by running the DDL script included in the image. Execute the following command to create the needed keyspace and table:
+
+.. code-block:: bash
+
+  docker exec -it cassandra cqlsh -f /tmp/nexustiles.cql
+
+.. _quickstart-step5:
 
 Ingest Data
 ============
+
+Now that Solr and Cassandra have both been started and configured, we can ingest some data. NEXUS ingests data using the ningester docker image. This image is designed to read configuration and data from volume mounts and then tile the data and save it to the datastores. More information can be found in the :ref:`ningester` section.
+
+Ningester needs 3 things to run:
+
+#. Tiling configuration. How should the dataset be tiled? What is the dataset called? Are there any transformations that need to happen (e.g. kelvin to celsius conversion)? etc...
+#. Connection configuration. What should be used for metadata storage and where can it be found? What should be used for data storage and where can it be found?
+#. Data files. The data that will be ingested.
+
+Tiling configuration
+---------------------
+
+For this quickstart we will use the AVHRR tiling configuration from the test job in the Apache project. It can be found here: `AvhrrJobTest.yml <https://github.com/apache/incubator-sdap-ningester/blob/bc596c2749a7a2b44a01558b60428f6d008f4f45/src/testJobs/resources/testjobs/AvhrrJobTest.yml>`_. Download that file into a temporary location on your laptop that can be mounted by Docker.
+
+.. code-block:: bash
+
+  export NINGESTER_CONFIG=~/nexus-quickstart/ningester/config
+  mkdir -p ${NINGESTER_CONFIG}
+  cd ${NINGESTER_CONFIG}
+  curl -O https://github.com/apache/incubator-sdap-ningester/blob/bc596c2749a7a2b44a01558b60428f6d008f4f45/src/testJobs/resources/testjobs/AvhrrJobTest.yml
+
+Connection configuration
+-------------------------
+
+We want ningester to use Solr for its metadata store and Cassandra for its data store. We also want it to connect to the Solr and Cassandra instances we started earlier. In order to do this we need a connection configuration file that specifies how the application should connect to Solr and Cassandra. It looks like this:
+
+.. code-block:: yaml
+
+  # Tile writer configuration
+  ningester:
+    tile_writer:
+      data_store: cassandraStore
+      metadata_store: solrStore
+  ---
+  # Connection settings for the docker profile
+  spring:
+      profiles:
+        - docker
+      data:
+        cassandra:
+          keyspaceName: nexustiles
+          contactPoints: cassandra
+        solr:
+          host: http://solr:8983/solr/
+
+  datasource:
+    solrStore:
+      collection: nexustiles
+
+Save this configuration to a file on your local laptop that can be mounted into a Docker container:
+
+.. code-block:: bash
+
+  touch ${NINGESTER_CONFIG}/connectionsettings.yml
+  cat << EOF >> ${NINGESTER_CONFIG}/connectionsettings.yml
+  # Tile writer configuration
+  ningester:
+    tile_writer:
+      data_store: cassandraStore
+      metadata_store: solrStore
+  ---
+  # Connection settings for the docker profile
+  spring:
+      profiles:
+        - docker
+      data:
+        cassandra:
+          keyspaceName: nexustiles
+          contactPoints: cassandra
+        solr:
+          host: http://solr:8983/solr/
+
+  datasource:
+    solrStore:
+      collection: nexustiles
+  EOF
+
+Data files
+-----------
+
+We already downloaded the datafiles to ``${DATA_DIRECTORY}`` in :ref:`quickstart-step2` so we are ready to start ingesting.
+
+Launch Ningester
+-------------------
+
+The ningester docker image runs a batch job that will ingest one granule. Here, we do a quick for loop to cycle through each data file and run ingestion on it. This will take about 5 minutes to ingest all of the data. Each container will be launched with a name of ``avhrr_<date>`` where ``<date>`` is the date from the filename of the granule being ingested. You can use ``docker logs`` to view the logs as the data is ingested.
+
+.. code-block:: bash
+
+  for g in `ls ${DATA_DIRECTORY} | awk "{print $1}"`
+  do
+    docker run -d --name $(echo avhrr_$g | cut -d'-' -f 1) -v ${NINGESTER_CONFIG}:/config/ -v ${DATA_DIRECTORY}/${g}:/data/${g} sdap/ningester:${VERSION} docker,solr,cassandra
+    sleep 10
+  done
+
+You can move on to the next section while the data ingests.
+
+
+.. _quickstart-step6:
+
+Start the Webapp
+=================
+
+Now that the data is being (has been) ingested, we need to start the webapp that provides the HTTP interface to the analysis capabilities. This is currently a python webapp running Tornado and is contained in the nexus-webapp Docker image. To start the webapp and expose port 8083 use the following command:
+
+.. code-block:: bash
+
+  docker run -d --name nexus-webapp -p 8083:8083 -e SPARK_LOCAL_IP=127.0.0.1 -e MASTER=local[4] -e CASSANDRA_CONTACT_POINTS=cassandra -e SOLR_URL_PORT=solr:8983 sdap/nexus-webapp:${VERSION}
+
+.. _quickstart-step7:
+
+Launch Jupyter
+================

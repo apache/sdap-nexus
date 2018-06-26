@@ -7,6 +7,7 @@ Welcome to incubator-sdap-nexus's documentation!
 
    intro
    quickstart
+   ningester
 
 
 Check out the :ref:`quickstart`.
