@@ -234,7 +234,48 @@ Now that the data is being (has been) ingested, we need to start the webapp that
 
 This command starts the nexus webservice and connects it to the Solr and Cassandra containers. It also sets the configuration for Spark to use local mode with 4 executors.
 
+After running this command you should be able to access the NEXUS webservice by sending requests to http://localhost:8083. A good test is to query the ``/list`` endpoint which lists all of the datasets currently available to that instance of NEXUS. For example:
+
+.. code-block:: bash
+
+  curl -X GET http://localhost:8083/list
+
+
 .. _quickstart-step7:
 
 Launch Jupyter
 ================
+
+At this point NEXUS is running and you can interact with the different API endpoints. However, there is a python client library called ``nexuscli`` which facilitates interacting with the webservice through the Python programming language. The easiest way to use this library is to start the `Jupyter notebook <http://jupyter.org/>`_ docker image from the SDAP repository. This image is based off of the ``jupyter/scipy-notebook`` docker image but comes pre-installed with the ``nexuscli`` module and an example notebook.
+
+To launch the Jupyter notebook use the following command:
+
+.. code-block:: bash
+
+  docker run -it --rm --name jupyter -p 8888:8888 sdap/jupyter:${VERSION} start-notebook.sh --NotebookApp.password='sha1:a0d7f85e5fc4:0c173bb35c7dc0445b13865a38d25263db592938'
+
+This command launches a Juypter container and exposes it on port 8888.
+
+.. note:: The password for the Jupyter instance is ``quickstart``
+
+Once the container starts, navigate to http://localhost:8888/. You will be prompted for a password, use ``quickstart``. After entering the password, you will be presented with a directory structure that looks something like this:
+
+.. image:: images/Jupyter_Home.png
+
+Click on the ``Quickstart`` directory to open it. You should see a notebook called ``Time Series Example``:
+
+.. image:: images/Jupyter_Quickstart.png
+
+Click on the ``Time Series Example`` notebook to start it. This will open the notebook and allow you to run the two cells and execute a Time Series command against your local instance of NEXUS.
+
+.. _quickstart-step8:
+
+Finished!
+================
+
+Congratulations you have completed the quickstart! In this example you:
+
+#. Learned how to ingest data into NEXUS datastores
+#. Learned how to start the NEXUS webservice
+#. Learned how to start a Jupyter Notebook
+#. Ran a time series analysis on 1 month of AVHRR OI data and plotted the result
