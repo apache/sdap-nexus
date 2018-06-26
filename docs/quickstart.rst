@@ -47,6 +47,21 @@ Pull the necessary Docker images from the `SDAP repository <https://hub.docker.c
 
 .. _quickstart-step2:
 
+Create a new Docker Bridge Network
+------------------------------------
+
+This quickstart constsists of launching several Docker containers that need to communicate with one another. To facilitate this communication, we want to be able to reference containers via hostname instead of IP address. The default bridge network used by Docker only supports this by using the ``--link`` option wich is now considered to be `deprecated <https://docs.docker.com/network/links/>`_.
+
+The currently recommended way to acheive what we want is to use a `user defined bridge network <https://docs.docker.com/network/bridge/##differences-between-user-defined-bridges-and-the-default-bridge>`_ and launch all of the containers into that network.
+
+The network we will be using for this quickstart will be called ``sdap-net``. Create it using the following command:
+
+.. code-block:: bash
+
+  docker network create sdap-net
+
+.. _quickstart-step3:
+
 Download Sample Data
 ---------------------
 
@@ -78,7 +93,7 @@ Start Data Storage Containers
 
 We will use Solr and Cassandra to store the tile metadata and data respectively.
 
-.. _quickstart-step3:
+.. _quickstart-step4:
 
 Start Solr
 -----------
@@ -92,12 +107,12 @@ To start Solr using a volume mount and expose the admin webapp on port 8983:
 .. code-block:: bash
 
   export SOLR_DATA=~/nexus-quickstart/solr
-  docker run --name solr -v ${SOLR_DATA}:/opt/solr/server/solr/nexustiles/data -p 8983:8983 -d sdap/solr-singlenode:${VERSION}
+  docker run --name solr --network sdap-net -v ${SOLR_DATA}:/opt/solr/server/solr/nexustiles/data -p 8983:8983 -d sdap/solr-singlenode:${VERSION}
 
 If you don't want to use a volume, leave off the ``-v`` option.
 
 
-.. _quickstart-step4:
+.. _quickstart-step5:
 
 Start Cassandra
 ----------------
@@ -111,7 +126,7 @@ To start cassandra using a volume mount and expose the connection port 9042:
 .. code-block:: bash
 
   export CASSANDRA_DATA=~/nexus-quickstart/cassandra
-  docker run --name cassandra -p 9042:9042 -v ${CASSANDRA_DATA}:/var/lib/cassandra -d sdap/cassandra:${VERSION}
+  docker run --name cassandra --network sdap-net -p 9042:9042 -v ${CASSANDRA_DATA}:/var/lib/cassandra -d sdap/cassandra:${VERSION}
 
 If this is your first time starting the cassandra container, you need to initialize the database by running the DDL script included in the image. Execute the following command to create the needed keyspace and table:
 
@@ -119,7 +134,7 @@ If this is your first time starting the cassandra container, you need to initial
 
   docker exec -it cassandra cqlsh -f /tmp/nexustiles.cql
 
-.. _quickstart-step5:
+.. _quickstart-step6:
 
 Ingest Data
 ============
@@ -142,7 +157,7 @@ For this quickstart we will use the AVHRR tiling configuration from the test job
   export NINGESTER_CONFIG=~/nexus-quickstart/ningester/config
   mkdir -p ${NINGESTER_CONFIG}
   cd ${NINGESTER_CONFIG}
-  curl -O https://github.com/apache/incubator-sdap-ningester/blob/bc596c2749a7a2b44a01558b60428f6d008f4f45/src/testJobs/resources/testjobs/AvhrrJobTest.yml
+  curl -O https://raw.githubusercontent.com/apache/incubator-sdap-ningester/bc596c2749a7a2b44a01558b60428f6d008f4f45/src/testJobs/resources/testjobs/AvhrrJobTest.yml
 
 Connection configuration
 -------------------------
@@ -208,20 +223,26 @@ We already downloaded the datafiles to ``${DATA_DIRECTORY}`` in :ref:`quickstart
 Launch Ningester
 -------------------
 
-The ningester docker image runs a batch job that will ingest one granule. Here, we do a quick for loop to cycle through each data file and run ingestion on it. This will take about 5 minutes to ingest all of the data. Each container will be launched with a name of ``avhrr_<date>`` where ``<date>`` is the date from the filename of the granule being ingested. You can use ``docker logs`` to view the logs as the data is ingested.
+The ningester docker image runs a batch job that will ingest one granule. Here, we do a quick for loop to cycle through each data file and run ingestion on it.
+
+.. note:: Ingestion takes about 60 seconds per file. Depending on how powerful your laptop is and what other programs you have running, you can choose to ingest more than one file at a time. If you use this example, we will be ingesting 1 file at a time. So, for 30 files this will take roughly 30 minutes. You can speed this up by reducing the time spent sleeping by changing ``sleep 60`` to something like ``sleep 30``.
 
 .. code-block:: bash
 
   for g in `ls ${DATA_DIRECTORY} | awk "{print $1}"`
   do
-    docker run -d --name $(echo avhrr_$g | cut -d'-' -f 1) -v ${NINGESTER_CONFIG}:/config/ -v ${DATA_DIRECTORY}/${g}:/data/${g} sdap/ningester:${VERSION} docker,solr,cassandra
-    sleep 10
+    docker run -d --name $(echo avhrr_$g | cut -d'-' -f 1) --network sdap-net -v ${NINGESTER_CONFIG}:/config/ -v ${DATA_DIRECTORY}/${g}:/data/${g} sdap/ningester:${VERSION} docker,solr,cassandra
+    sleep 60
   done
+
+Each container will be launched with a name of ``avhrr_<date>`` where ``<date>`` is the date from the filename of the granule being ingested. You can use ``docker ps`` to watch the containers launch and you can use ``docker logs <container name>`` to view the logs for any one container as the data is ingested.
 
 You can move on to the next section while the data ingests.
 
+.. note:: After the container finishes ingesting the file, the container will exit (with a ``0`` exit code) indicating completion. However, the containers will **not** automatically be removed for you. This is simply to allow you to inspect the containers even after they have exited if you want to. A useful command to clean up all of the stopped containers that we started is ``docker rm $(docker ps -a | grep avhrr | awk '{print $1}')``.
 
-.. _quickstart-step6:
+
+.. _quickstart-step7:
 
 Start the Webapp
 =================
@@ -230,7 +251,7 @@ Now that the data is being (has been) ingested, we need to start the webapp that
 
 .. code-block:: bash
 
-  docker run -d --name nexus-webapp -p 8083:8083 -e SPARK_LOCAL_IP=127.0.0.1 -e MASTER=local[4] -e CASSANDRA_CONTACT_POINTS=cassandra -e SOLR_URL_PORT=solr:8983 sdap/nexus-webapp:${VERSION}
+  docker run -d --name nexus-webapp --network sdap-net -p 8083:8083 -e SPARK_LOCAL_IP=127.0.0.1 -e MASTER=local[4] -e CASSANDRA_CONTACT_POINTS=cassandra -e SOLR_URL_PORT=solr:8983 sdap/nexus-webapp:${VERSION}
 
 This command starts the nexus webservice and connects it to the Solr and Cassandra containers. It also sets the configuration for Spark to use local mode with 4 executors.
 
@@ -241,7 +262,7 @@ After running this command you should be able to access the NEXUS webservice by 
   curl -X GET http://localhost:8083/list
 
 
-.. _quickstart-step7:
+.. _quickstart-step8:
 
 Launch Jupyter
 ================
@@ -252,7 +273,7 @@ To launch the Jupyter notebook use the following command:
 
 .. code-block:: bash
 
-  docker run -it --rm --name jupyter -p 8888:8888 sdap/jupyter:${VERSION} start-notebook.sh --NotebookApp.password='sha1:a0d7f85e5fc4:0c173bb35c7dc0445b13865a38d25263db592938'
+  docker run -it --rm --name jupyter --network sdap-net -p 8888:8888 sdap/jupyter:${VERSION} start-notebook.sh --NotebookApp.password='sha1:a0d7f85e5fc4:0c173bb35c7dc0445b13865a38d25263db592938'
 
 This command launches a Juypter container and exposes it on port 8888.
 
