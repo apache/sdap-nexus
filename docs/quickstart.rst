@@ -232,6 +232,8 @@ Now that the data is being (has been) ingested, we need to start the webapp that
 
   docker run -d --name nexus-webapp -p 8083:8083 -e SPARK_LOCAL_IP=127.0.0.1 -e MASTER=local[4] -e CASSANDRA_CONTACT_POINTS=cassandra -e SOLR_URL_PORT=solr:8983 sdap/nexus-webapp:${VERSION}
 
+This command starts the nexus webservice and connects it to the Solr and Cassandra containers. It also sets the configuration for Spark to use local mode with 4 executors.
+
 .. _quickstart-step7:
 
 Launch Jupyter
