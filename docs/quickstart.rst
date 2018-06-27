@@ -291,7 +291,7 @@ Click on the ``Quickstart`` directory to open it. You should see a notebook call
 
 Click on the ``Time Series Example`` notebook to start it. This will open the notebook and allow you to run the two cells and execute a Time Series command against your local instance of NEXUS.
 
-.. _quickstart-step8:
+.. _quickstart-step9:
 
 Finished!
 ================
