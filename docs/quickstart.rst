@@ -16,11 +16,11 @@ This quickstart guide will walk you through how to install and run NEXUS on your
 Prerequisites
 ==============
 
-* Docker
+* Docker (tested on v18.03.1-ce)
 * Internet Connection
 * bash
 * cURL
-* ??? of disk space
+* 500 MB of disk space
 
 Prepare
 ========
