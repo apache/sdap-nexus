@@ -12,26 +12,30 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-FROM solr:6.4.2
+FROM jupyter/scipy-notebook
+
 MAINTAINER Apache SDAP "dev@sdap.apache.org"
 
 USER root
+RUN apt-get update && \
+    apt-get install -y git libgeos-dev
+USER jovyan
 
-RUN cd / && wget https://downloads.sourceforge.net/project/jts-topo-suite/jts/1.14/jts-1.14.zip && unzip jts-1.14.zip -d /jts-1.14 && rm jts-1.14.zip
+COPY requirements.txt /tmp
+RUN pip install -r /tmp/requirements.txt && \
+    conda install -y basemap
 
-RUN apt-get update && apt-get -y install git && rm -rf /var/lib/apt/lists/*
+ENV CHOWN_HOME_OPTS='-R'
+ENV REBUILD_CODE=true
+RUN mkdir -p /home/jovyan/Quickstart && \
+    mkdir -p /home/jovyan/nexuscli && \
+    cd /home/jovyan/nexuscli && \
+    git init && \
+    git remote add -f origin https://github.com/apache/incubator-sdap-nexus && \
+    git config core.sparseCheckout true && \
+    echo "client" >> .git/info/sparse-checkout && \
+    git pull origin master && \
+    cd client && \
+    python setup.py install
 
-RUN cd / && git clone https://github.com/apache/incubator-sdap-nexus.git && cp -r /incubator-sdap-nexus/data-access/config/schemas/solr/nexustiles /tmp/nexustiles && rm -rf /incubator-sdap-nexus
-
-RUN mkdir /solr-home
-
-RUN chown -R $SOLR_USER:$SOLR_USER /solr-home
-
-VOLUME /solr-home
-
-VOLUME /opt/solr/server/solr/
-RUN chown -R $SOLR_USER:$SOLR_USER /opt/solr/server/solr/
-
-RUN cp /jts-1.14/lib/jts-1.14.jar /opt/solr/server/lib/jts-1.14.jar
-
-RUN cp /jts-1.14/lib/jtsio-1.14.jar /opt/solr/server/lib/jtsio-1.14.jar
+COPY ["Time Series Example.ipynb", "/home/jovyan/Quickstart/Time Series Example.ipynb"]

@@ -1,3 +1,4 @@
+#!/usr/bin/env bash
 # Licensed to the Apache Software Foundation (ASF) under one or more
 # contributor license agreements.  See the NOTICE file distributed with
 # this work for additional information regarding copyright ownership.
@@ -12,16 +13,23 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+set -e
 
-ARG tag_version=1.0.0-SNAPSHOT
-FROM sdap/spark-mesos-base:${tag_version}
+APACHE_NEXUSPROTO="https://github.com/apache/incubator-sdap-nexusproto.git"
+MASTER="master"
 
-MAINTAINER Apache SDAP "dev@sdap.apache.org"
+GIT_REPO=${1:-$APACHE_NEXUSPROTO}
+GIT_BRANCH=${2:-$MASTER}
 
-# Run a Mesos slave.
+mkdir nexusproto
+pushd nexusproto
+git init
+git pull ${GIT_REPO} ${GIT_BRANCH}
 
-WORKDIR ${MESOS_HOME}/build
+./gradlew pythonInstall --info
 
-COPY docker-entrypoint.sh /tmp/docker-entrypoint.sh
+./gradlew install --info
 
-ENTRYPOINT ["/tmp/docker-entrypoint.sh"]
+rm -rf /root/.gradle
+popd
+rm -rf nexusproto
