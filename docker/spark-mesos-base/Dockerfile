@@ -1,11 +1,56 @@
-ARG tag_version=latest
-FROM sdap/nexusbase:${tag_version}
+# Licensed to the Apache Software Foundation (ASF) under one or more
+# contributor license agreements.  See the NOTICE file distributed with
+# this work for additional information regarding copyright ownership.
+# The ASF licenses this file to You under the Apache License, Version 2.0
+# (the "License"); you may not use this file except in compliance with
+# the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+FROM centos:7
 
-MAINTAINER Joseph Jacob "Joseph.Jacob@jpl.nasa.gov"
+MAINTAINER Apache SDAP "dev@sdap.apache.org"
 
-# Install packages needed for builds
+WORKDIR /tmp
 
-RUN yum install -y gcc python-devel
+RUN yum -y update && \
+    yum -y install wget \
+    git \
+    which \
+    bzip2 \
+    gcc \
+    python-devel
+
+# Install Oracle JDK 1.8u121-b13
+RUN wget -q --no-cookies --no-check-certificate --header "Cookie: gpw_e24=http%3A%2F%2Fwww.oracle.com%2F; oraclelicense=accept-securebackup-cookie" "http://download.oracle.com/otn-pub/java/jdk/8u121-b13/e9e7ea248e2c4826b92b3f075a80e441/jdk-8u121-linux-x64.rpm" && \
+    yum -y install jdk-8u121-linux-x64.rpm && \
+    rm jdk-8u121-linux-x64.rpm
+ENV JAVA_HOME /usr/java/default
+
+# ########################
+# # Apache Maven   #
+# ########################
+ENV M2_HOME /usr/local/apache-maven
+ENV M2 $M2_HOME/bin
+ENV PATH $PATH:$M2
+
+RUN mkdir $M2_HOME && \
+    wget -q http://mirror.stjschools.org/public/apache/maven/maven-3/3.3.9/binaries/apache-maven-3.3.9-bin.tar.gz && \
+    tar -xvzf apache-maven-3.3.9-bin.tar.gz -C $M2_HOME --strip-components=1 && \
+    rm -f apache-maven-3.3.9-bin.tar.gz
+
+# ########################
+# # Anaconda   #
+# ########################
+RUN wget -q https://repo.continuum.io/archive/Anaconda2-4.3.0-Linux-x86_64.sh -O install_anaconda.sh && \
+    /bin/bash install_anaconda.sh -b -p /usr/local/anaconda2 && \
+    rm install_anaconda.sh
+ENV PATH $PATH:/usr/local/anaconda2/bin
 
 # Set environment variables.  For Mesos, I used MESOS_VER because MESOS_VERSION
 # is expected to be a logical TRUE/FALSE flag that tells Mesos whether or not

@@ -29,4 +29,7 @@ git pull ${GIT_REPO} ${GIT_BRANCH}
 ./gradlew pythonInstall --info
 
 ./gradlew install --info
+
+rm -rf /root/.gradle
 popd
+rm -rf nexusproto
