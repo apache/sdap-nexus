@@ -198,9 +198,7 @@ class CorrMapSparkHandlerImpl(SparkHandler):
 
         self.log.debug('Found {0} tiles'.format(len(nexus_tiles)))
         self.log.debug('Using Native resolution: lat_res={0}, lon_res={1}'.format(self._latRes, self._lonRes))
-        nlats = int((self._maxLat - self._minLatCent) / self._latRes) + 1
-        nlons = int((self._maxLon - self._minLonCent) / self._lonRes) + 1
-        self.log.debug('nlats={0}, nlons={1}'.format(nlats, nlons))
+        self.log.debug('nlats={0}, nlons={1}'.format(self._nlats, self._nlons))
 
         # Create array of tuples to pass to Spark map function
         nexus_tiles_spark = [[self._find_tile_bounds(t),
@@ -282,8 +280,8 @@ class CorrMapSparkHandlerImpl(SparkHandler):
                                        mask=~(n.astype(bool))),
                            n)).collect()
 
-        r = np.zeros((nlats, nlons), dtype=np.float64, order='C')
-        n = np.zeros((nlats, nlons), dtype=np.uint32, order='C')
+        r = np.zeros((self._nlats, self._nlons), dtype=np.float64, order='C')
+        n = np.zeros((self._nlats, self._nlons), dtype=np.uint32, order='C')
 
         # The tiles below are NOT Nexus objects.  They are tuples
         # with the following for each correlation map subset:
