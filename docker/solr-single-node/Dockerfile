@@ -17,6 +17,12 @@ ARG tag_version=latest
 FROM sdap/solr:${tag_version}
 MAINTAINER Apache SDAP "dev@sdap.apache.org"
 
+USER root
 
-ENTRYPOINT ["solr-precreate"]
-CMD ["nexustiles",  "/tmp/nexustiles"]
+COPY create-core.sh /docker-entrypoint-initdb.d/create-core.sh
+RUN chown ${SOLR_USER}:${SOLR_GROUP} /docker-entrypoint-initdb.d/create-core.sh
+
+USER ${SOLR_USER}
+VOLUME ${SOLR_HOME}/nexustiles
+
+ENTRYPOINT ["solr-foreground"]
