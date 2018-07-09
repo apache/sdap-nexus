@@ -384,6 +384,10 @@ class SparkHandler(NexusHandler):
                     self._maxLatCent = np.max(lats_agg)
                     self._minLonCent = np.min(lons_agg)
                     self._maxLonCent = np.max(lons_agg)
+                    self._nlats = int((self._maxLatCent - self._minLatCent) /
+                                      self._latRes + 0.5) + 1
+                    self._nlons = int((self._maxLonCent - self._minLonCent) /
+                                      self._lonRes + 0.5) + 1
             t -= t_incr
         return nexus_tiles
 
@@ -506,10 +510,10 @@ class SparkHandler(NexusHandler):
             del nexus_tiles[i]
 
     def _lat2ind(self, lat):
-        return int((lat - self._minLatCent) / self._latRes)
+        return int((lat - self._minLatCent) / self._latRes + 0.5)
 
     def _lon2ind(self, lon):
-        return int((lon - self._minLonCent) / self._lonRes)
+        return int((lon - self._minLonCent) / self._lonRes + 0.5)
 
     def _ind2lat(self, y):
         return self._minLatCent + y * self._latRes

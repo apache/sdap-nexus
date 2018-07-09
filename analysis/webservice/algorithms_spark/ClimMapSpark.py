@@ -156,9 +156,7 @@ class ClimMapSparkHandlerImpl(SparkHandler):
         #    print 'lats: ', tile.latitudes.compressed()
         #    print 'lons: ', tile.longitudes.compressed()
         self.log.debug('Using Native resolution: lat_res={0}, lon_res={1}'.format(self._latRes, self._lonRes))
-        nlats = int((self._maxLat - self._minLatCent) / self._latRes) + 1
-        nlons = int((self._maxLon - self._minLonCent) / self._lonRes) + 1
-        self.log.debug('nlats={0}, nlons={1}'.format(nlats, nlons))
+        self.log.debug('nlats={0}, nlons={1}'.format(self._nlats, self._nlons))
         self.log.debug('center lat range = {0} to {1}'.format(self._minLatCent,
                                                               self._maxLatCent))
         self.log.debug('center lon range = {0} to {1}'.format(self._minLonCent,
@@ -222,8 +220,8 @@ class ClimMapSparkHandlerImpl(SparkHandler):
         #
         # The tiles below are NOT Nexus objects.  They are tuples
         # with the time avg map data and lat-lon bounding box.
-        a = np.zeros((nlats, nlons), dtype=np.float64, order='C')
-        n = np.zeros((nlats, nlons), dtype=np.uint32, order='C')
+        a = np.zeros((self._nlats, self._nlons), dtype=np.float64, order='C')
+        n = np.zeros((self._nlats, self._nlons), dtype=np.uint32, order='C')
         for tile in avg_tiles:
             if tile is not None:
                 ((tile_min_lat, tile_max_lat, tile_min_lon, tile_max_lon),
