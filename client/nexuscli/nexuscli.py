@@ -59,7 +59,7 @@ target = 'http://localhost:8083'
 session = requests.session()
 
 
-def set_target(url):
+def set_target(url, use_session=True):
     """
     Set the URL for the NEXUS webapp endpoint.  
     
@@ -68,6 +68,10 @@ def set_target(url):
     """
     global target
     target = url
+
+    if not use_session:
+        global session
+        session = requests
 
 
 def dataset_list():
