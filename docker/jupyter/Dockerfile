@@ -27,14 +27,18 @@ RUN pip install -r /tmp/requirements.txt && \
 
 ENV CHOWN_HOME_OPTS='-R'
 ENV REBUILD_CODE=true
+
+ARG APACHE_NEXUS=https://github.com/apache/incubator-sdap-nexus.git
+ARG APACHE_NEXUS_BRANCH=master
+
 RUN mkdir -p /home/jovyan/Quickstart && \
     mkdir -p /home/jovyan/nexuscli && \
     cd /home/jovyan/nexuscli && \
     git init && \
-    git remote add -f origin https://github.com/apache/incubator-sdap-nexus && \
+    git remote add -f origin ${APACHE_NEXUS} && \
     git config core.sparseCheckout true && \
     echo "client" >> .git/info/sparse-checkout && \
-    git pull origin master && \
+    git pull origin ${APACHE_NEXUS_BRANCH} && \
     cd client && \
     python setup.py install
 
