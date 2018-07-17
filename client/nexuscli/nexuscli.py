@@ -27,6 +27,7 @@ Usage:
 import requests
 import numpy as np
 import logging
+import sys
 from datetime import datetime
 from collections import namedtuple, OrderedDict
 from pytz import UTC
@@ -55,7 +56,7 @@ __pdoc__['Point.variable'] = "dictionary of variable values"
 
 ISO_FORMAT = "%Y-%m-%dT%H:%M:%SZ"
 
-logging.basicConfig()
+logging.basicConfig(stream=sys.stdout)
 
 target = 'http://localhost:8083'
 
