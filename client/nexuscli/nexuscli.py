@@ -56,7 +56,7 @@ __pdoc__['Point.variable'] = "dictionary of variable values"
 
 ISO_FORMAT = "%Y-%m-%dT%H:%M:%SZ"
 
-logging.basicConfig(stream=sys.stdout)
+logging.basicConfig(stream=sys.stdout, level=logging.INFO)
 
 target = 'http://localhost:8083'
 
