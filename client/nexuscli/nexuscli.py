@@ -26,6 +26,7 @@ Usage:
 """
 import requests
 import numpy as np
+import logging
 from datetime import datetime
 from collections import namedtuple, OrderedDict
 from pytz import UTC
@@ -54,6 +55,8 @@ __pdoc__['Point.variable'] = "dictionary of variable values"
 
 ISO_FORMAT = "%Y-%m-%dT%H:%M:%SZ"
 
+logging.basicConfig()
+
 target = 'http://localhost:8083'
 
 session = requests.session()
@@ -68,6 +71,7 @@ def set_target(url, use_session=True):
     """
     global target
     target = url
+    logging.info("Target set to {}".format(target))
 
     if not use_session:
         global session
