@@ -83,8 +83,7 @@ if __name__ == "__main__":
     livy_host = webconfig.get("livy", "livy_host")
     livy_port = webconfig.get("livy", "livy_port")
     livy_url = 'http://' + livy_host + ':' + livy_port
-    lh = LivyHandler()
-    #lh = LivyHandler(host=livy_url)
+    lh = LivyHandler(host=livy_url)
 
     # Define tornado job handlers
     handlers = []
