@@ -12,13 +12,19 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+FROM nexus-jupyter
 
-from nexuscli.nexuscli import TimeSeries
-from nexuscli.nexuscli import set_target
-from nexuscli.nexuscli import time_series
-from nexuscli.nexuscli import dataset_list
-from nexuscli.nexuscli import daily_difference_average
-from nexuscli.nexuscli import subset
-from nexuscli.nexuscli_ow import set_target
-from nexuscli.nexuscli_ow import run_file
-from nexuscli.nexuscli_ow import run_str
+MAINTAINER Apache SDAP "dev@sdap.apache.org"
+
+USER jovyan
+
+ARG APACHE_NEXUS=https://github.com/apache/incubator-sdap-nexus.git
+ARG APACHE_NEXUS_BRANCH=master
+
+RUN cd /home/jovyan/nexuscli && \
+    git remote set-url origin ${APACHE_NEXUS} && \
+    git pull origin ${APACHE_NEXUS_BRANCH} && \
+    cd client && \
+    python setup.py install
+
+VOLUME /code
