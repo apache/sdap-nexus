@@ -38,40 +38,27 @@ Usage:
     valid pyspark code.  For pyspark code the variable sc may be used to 
     access the SparkContext,  but it should not create the SparkContext.
 """
-import requests
 import ast
 
-target = 'http://localhost:8084'
+import requests
+
+from nexuscli import nexuscli
 
 session = requests.session()
 
-
-def set_target(url, use_session=True):
-    """
-    Set the URL for the NEXUS webapp endpoint.  
-    
-    __url__ URL for NEXUS webapp endpoint   
-    __return__ None
-    """
-    global target
-    target = url
-
-    if not use_session:
-        global session
-        session = requests
+set_target = nexuscli.set_target
 
 
 def run_file(fname):
     files = {'file': open(fname, 'rb')}
-    response = session.post(target+'/run_file', files=files)
+    response = session.post(nexuscli.target + '/run_file', files=files)
     print(response.text)
     return response.text
-    
+
 
 def run_str(code):
-    response = requests.post(target+'/run_str', data=code)
+    response = requests.post(nexuscli.target + '/run_str', data=code)
     ans = ast.literal_eval(response.text)['text/plain']
     for line in ans:
         print(line, end=" ")
     return ans
-
