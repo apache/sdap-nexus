@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 """
-This module provides a native python client interface to the NEXUS (https://github.com/dataplumber/nexus) 
+This module provides a native python client interface to the NEXUS (https://github.com/apache/incubator-sdap-nexus)
 webservice API.
 
 Usage:
