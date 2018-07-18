@@ -3,8 +3,13 @@
   <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1" />
 
-    <title>nexuscli API documentation</title>
-    <meta name="description" content="" />
+    <title>nexuscli.nexuscli_ow API documentation</title>
+    <meta name="description" content="This module provides a native python client interface to the NEXUS Livy
+webservice API.
+
+Usage:
+
+   ..." />
 
   <link href='http://fonts.googleapis.com/css?family=Source+Sans+Pro:400,300' rel='stylesheet' type='text/css'>
   
@@ -1040,16 +1045,26 @@ table {
   <div id="sidebar">
     <h1>Index</h1>
     <ul id="index">
+    <li class="set"><h3><a href="#header-variables">Module variables</a></h3>
+      
+  <ul>
+    <li class="mono"><a href="#nexuscli.nexuscli_ow.session">session</a></li>
+    <li class="mono"><a href="#nexuscli.nexuscli_ow.target">target</a></li>
+  </ul>
 
-
-
-    <li class="set"><h3><a href="#header-submodules">Sub-modules</a></h3>
-      <ul>
-        <li class="mono"><a href="nexuscli.m.html">nexuscli.nexuscli</a></li>
-        <li class="mono"><a href="nexuscli_ow.m.html">nexuscli.nexuscli_ow</a></li>
-        <li class="mono"><a href="test/index.html">nexuscli.test</a></li>
-      </ul>
     </li>
+
+    <li class="set"><h3><a href="#header-functions">Functions</a></h3>
+      
+  <ul>
+    <li class="mono"><a href="#nexuscli.nexuscli_ow.run_file">run_file</a></li>
+    <li class="mono"><a href="#nexuscli.nexuscli_ow.run_str">run_str</a></li>
+    <li class="mono"><a href="#nexuscli.nexuscli_ow.set_target">set_target</a></li>
+  </ul>
+
+    </li>
+
+
     </ul>
   </div>
 
@@ -1061,11 +1076,33 @@ table {
 
 
   <header id="section-intro">
-  <h1 class="title"><span class="name">nexuscli</span> module</h1>
+  <h1 class="title"><span class="name">nexuscli.nexuscli_ow</span> module</h1>
+  <p>This module provides a native python client interface to the NEXUS Livy
+webservice API.</p>
+<p>Usage:</p>
+<div class="codehilite"><pre><span></span><span class="kn">from</span> <span class="nn">nexuscli</span> <span class="kn">import</span> <span class="n">nexuscli_ow</span>
+
+<span class="n">nexuscli_ow</span><span class="o">.</span><span class="n">set_target</span><span class="p">(</span><span class="s2">&quot;http://host:port&quot;</span><span class="p">)</span>
+
+<span class="n">filename</span> <span class="o">=</span> <span class="s2">&quot;mycode.py&quot;</span>
+<span class="n">nexuscli_ow</span><span class="o">.</span><span class="n">run_file</span><span class="p">(</span><span class="n">filename</span><span class="p">)</span>
+
+<span class="n">The</span> <span class="n">code</span> <span class="ow">in</span> <span class="n">the</span> <span class="nb">file</span> <span class="n">passed</span> <span class="n">to</span> <span class="n">run_file</span> <span class="n">must</span> <span class="n">be</span> <span class="n">valid</span> <span class="n">pyspark</span> <span class="n">code</span><span class="o">.</span>
+<span class="n">Furthermore</span><span class="p">,</span> <span class="n">it</span> <span class="n">must</span> <span class="n">have</span> <span class="n">a</span> <span class="n">main</span> <span class="n">function</span> <span class="n">that</span> <span class="n">takes</span> <span class="n">exactly</span> <span class="n">one</span>
+<span class="n">argument</span><span class="p">,</span> <span class="n">the</span> <span class="n">SparkContext</span><span class="o">.</span>  <span class="n">The</span> <span class="n">code</span> <span class="n">can</span> <span class="n">make</span> <span class="n">use</span> <span class="n">of</span> <span class="n">that</span> <span class="n">SparkContext</span>
+<span class="n">variable</span><span class="p">,</span> <span class="n">but</span> <span class="n">should</span> <span class="ow">not</span> <span class="n">create</span> <span class="n">the</span> <span class="n">SparkContext</span><span class="o">.</span>
+
+<span class="n">code</span> <span class="o">=</span> <span class="s2">&quot;1+1&quot;</span>
+<span class="n">nexuscli_ow</span><span class="o">.</span><span class="n">run_str</span><span class="p">(</span><span class="n">code</span><span class="p">)</span>
+
+<span class="n">The</span> <span class="n">code</span> <span class="n">passed</span> <span class="n">to</span> <span class="n">run_str</span> <span class="n">can</span> <span class="n">also</span> <span class="n">be</span> <span class="n">a</span> <span class="n">multi</span><span class="o">-</span><span class="n">line</span> <span class="n">string</span> <span class="n">containing</span> 
+<span class="n">valid</span> <span class="n">python</span> <span class="n">code</span><span class="o">.</span>  <span class="n">It</span> <span class="n">can</span> <span class="n">also</span> <span class="n">be</span> <span class="n">a</span> <span class="n">multi</span><span class="o">-</span><span class="n">line</span> <span class="n">string</span> <span class="n">containing</span> 
+<span class="n">valid</span> <span class="n">pyspark</span> <span class="n">code</span><span class="o">.</span>  <span class="n">For</span> <span class="n">pyspark</span> <span class="n">code</span> <span class="n">the</span> <span class="n">variable</span> <span class="n">sc</span> <span class="n">may</span> <span class="n">be</span> <span class="n">used</span> <span class="n">to</span> 
+<span class="n">access</span> <span class="n">the</span> <span class="n">SparkContext</span><span class="p">,</span>  <span class="n">but</span> <span class="n">it</span> <span class="n">should</span> <span class="ow">not</span> <span class="n">create</span> <span class="n">the</span> <span class="n">SparkContext</span><span class="o">.</span>
+</pre></div>
   
-  
-  <p class="source_link"><a href="javascript:void(0);" onclick="toggle('source-nexuscli', this);">Show source &equiv;</a></p>
-  <div id="source-nexuscli" class="source">
+  <p class="source_link"><a href="javascript:void(0);" onclick="toggle('source-nexuscli.nexuscli_ow', this);">Show source &equiv;</a></p>
+  <div id="source-nexuscli.nexuscli_ow" class="source">
     <div class="codehilite"><pre><span></span><span class="c1"># Licensed to the Apache Software Foundation (ASF) under one or more</span>
 <span class="c1"># contributor license agreements.  See the NOTICE file distributed with</span>
 <span class="c1"># this work for additional information regarding copyright ownership.</span>
@@ -1080,16 +1117,68 @@ table {
 <span class="c1"># WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.</span>
 <span class="c1"># See the License for the specific language governing permissions and</span>
 <span class="c1"># limitations under the License.</span>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">This module provides a native python client interface to the NEXUS Livy</span>
+<span class="sd">webservice API.</span>
 
-<span class="kn">from</span> <span class="nn">nexuscli.nexuscli</span> <span class="kn">import</span> <span class="n">TimeSeries</span>
-<span class="kn">from</span> <span class="nn">nexuscli.nexuscli</span> <span class="kn">import</span> <span class="n">set_target</span>
-<span class="kn">from</span> <span class="nn">nexuscli.nexuscli</span> <span class="kn">import</span> <span class="n">time_series</span>
-<span class="kn">from</span> <span class="nn">nexuscli.nexuscli</span> <span class="kn">import</span> <span class="n">dataset_list</span>
-<span class="kn">from</span> <span class="nn">nexuscli.nexuscli</span> <span class="kn">import</span> <span class="n">daily_difference_average</span>
-<span class="kn">from</span> <span class="nn">nexuscli.nexuscli</span> <span class="kn">import</span> <span class="n">subset</span>
-<span class="kn">from</span> <span class="nn">nexuscli.nexuscli_ow</span> <span class="kn">import</span> <span class="n">set_target</span>
-<span class="kn">from</span> <span class="nn">nexuscli.nexuscli_ow</span> <span class="kn">import</span> <span class="n">run_file</span>
-<span class="kn">from</span> <span class="nn">nexuscli.nexuscli_ow</span> <span class="kn">import</span> <span class="n">run_str</span>
+<span class="sd">Usage:</span>
+
+<span class="sd">    from nexuscli import nexuscli_ow</span>
+<span class="sd">    </span>
+<span class="sd">    nexuscli_ow.set_target(&quot;http://host:port&quot;)</span>
+
+<span class="sd">    filename = &quot;mycode.py&quot;</span>
+<span class="sd">    nexuscli_ow.run_file(filename)</span>
+
+<span class="sd">    The code in the file passed to run_file must be valid pyspark code.</span>
+<span class="sd">    Furthermore, it must have a main function that takes exactly one</span>
+<span class="sd">    argument, the SparkContext.  The code can make use of that SparkContext</span>
+<span class="sd">    variable, but should not create the SparkContext.</span>
+
+<span class="sd">    code = &quot;1+1&quot;</span>
+<span class="sd">    nexuscli_ow.run_str(code)</span>
+
+<span class="sd">    The code passed to run_str can also be a multi-line string containing </span>
+<span class="sd">    valid python code.  It can also be a multi-line string containing </span>
+<span class="sd">    valid pyspark code.  For pyspark code the variable sc may be used to </span>
+<span class="sd">    access the SparkContext,  but it should not create the SparkContext.</span>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="kn">import</span> <span class="nn">requests</span>
+<span class="kn">import</span> <span class="nn">ast</span>
+
+<span class="n">target</span> <span class="o">=</span> <span class="s1">&#39;http://localhost:8084&#39;</span>
+
+<span class="n">session</span> <span class="o">=</span> <span class="n">requests</span><span class="o">.</span><span class="n">session</span><span class="p">()</span>
+
+
+<span class="k">def</span> <span class="nf">set_target</span><span class="p">(</span><span class="n">url</span><span class="p">,</span> <span class="n">use_session</span><span class="o">=</span><span class="bp">True</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Set the URL for the NEXUS webapp endpoint.  </span>
+<span class="sd">    </span>
+<span class="sd">    __url__ URL for NEXUS webapp endpoint   </span>
+<span class="sd">    __return__ None</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">global</span> <span class="n">target</span>
+    <span class="n">target</span> <span class="o">=</span> <span class="n">url</span>
+
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">use_session</span><span class="p">:</span>
+        <span class="k">global</span> <span class="n">session</span>
+        <span class="n">session</span> <span class="o">=</span> <span class="n">requests</span>
+
+
+<span class="k">def</span> <span class="nf">run_file</span><span class="p">(</span><span class="n">fname</span><span class="p">):</span>
+    <span class="n">files</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;file&#39;</span><span class="p">:</span> <span class="nb">open</span><span class="p">(</span><span class="n">fname</span><span class="p">,</span> <span class="s1">&#39;rb&#39;</span><span class="p">)}</span>
+    <span class="n">response</span> <span class="o">=</span> <span class="n">session</span><span class="o">.</span><span class="n">post</span><span class="p">(</span><span class="n">target</span><span class="o">+</span><span class="s1">&#39;/run_file&#39;</span><span class="p">,</span> <span class="n">files</span><span class="o">=</span><span class="n">files</span><span class="p">)</span>
+    <span class="k">print</span><span class="p">(</span><span class="n">response</span><span class="o">.</span><span class="n">text</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">response</span><span class="o">.</span><span class="n">text</span>
+    
+
+<span class="k">def</span> <span class="nf">run_str</span><span class="p">(</span><span class="n">code</span><span class="p">):</span>
+    <span class="n">response</span> <span class="o">=</span> <span class="n">requests</span><span class="o">.</span><span class="n">post</span><span class="p">(</span><span class="n">target</span><span class="o">+</span><span class="s1">&#39;/run_str&#39;</span><span class="p">,</span> <span class="n">data</span><span class="o">=</span><span class="n">code</span><span class="p">)</span>
+    <span class="n">ans</span> <span class="o">=</span> <span class="n">ast</span><span class="o">.</span><span class="n">literal_eval</span><span class="p">(</span><span class="n">response</span><span class="o">.</span><span class="n">text</span><span class="p">)[</span><span class="s1">&#39;text/plain&#39;</span><span class="p">]</span>
+    <span class="k">for</span> <span class="n">line</span> <span class="ow">in</span> <span class="n">ans</span><span class="p">:</span>
+        <span class="k">print</span><span class="p">(</span><span class="n">line</span><span class="p">,</span> <span class="n">end</span><span class="o">=</span><span class="s2">&quot; &quot;</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">ans</span>
 </pre></div>
 
   </div>
@@ -1097,48 +1186,111 @@ table {
   </header>
 
   <section id="section-items">
-
-
-
-    <h2 class="section-title" id="header-submodules">Sub-modules</h2>
+    <h2 class="section-title" id="header-variables">Module variables</h2>
       <div class="item">
-      <p class="name"><a href="nexuscli.m.html">nexuscli.nexuscli</a></p>
+      <p id="nexuscli.nexuscli_ow.session" class="name">var <span class="ident">session</span></p>
       
   
-    <div class="desc"><p>This module provides a native python client interface to the NEXUS (https://github.com/apache/incubator-sdap-nexus)
-webservice API.</p>
-<p>Usage:</p>
-<div class="codehilite"><pre><span></span><span class="kn">import</span> <span class="nn">nexuscli</span>
-
-<span class="n">nexuscli</span><span class="o">.</span><span class="n">set_target</span><span class="p">(</span><span class="s2">&quot;http://nexus-webapp:8083&quot;</span><span class="p">)</span>
-<span class="n">nexuscli</span><span class="o">.</span><span class="n">dataset_list</span><span class="p">()</span>
-</pre></div></div>
+  <div class="source_cont">
+</div>
 
       </div>
       <div class="item">
-      <p class="name"><a href="nexuscli_ow.m.html">nexuscli.nexuscli_ow</a></p>
+      <p id="nexuscli.nexuscli_ow.target" class="name">var <span class="ident">target</span></p>
       
   
-    <div class="desc"><p>This module provides a native python client interface to the NEXUS Livy
-webservice API.</p>
-<p>Usage:</p>
-<div class="codehilite"><pre><span></span><span class="kn">from</span> <span class="nn">nexuscli</span> <span class="kn">import</span> <span class="n">nexuscli_ow</span>
-
-<span class="n">nexuscli_ow</span><span class="o">.</span><span class="n">set_target</span><span class="p">(</span><span class="s2">&quot;http://host:port&quot;</span><span class="p">)</span>
-
-<span class="n">filename</span> <span class="o">=</span> <span class="s2">&quot;mycode.py&quot;</span>
-<span class="n">nexuscli_ow</span><span class="o">.</span><span class="n">run_file</span><span class="p">(</span><span class="n">filename</span><span class="p">)</span>
-
-<span class="n">The</span> <span class="n">code</span> <span class="ow">in</span> <span class="n">the</span> <span class="nb">file</span> <span class="n">passed</span> <span class="n">to</span> <span class="n">run_file</span> <span class="n">must</span> <span class="n">b</span><span class="o">...</span>
-</pre></div></div>
+  <div class="source_cont">
+</div>
 
       </div>
-      <div class="item">
-      <p class="name"><a href="test/index.html">nexuscli.test</a></p>
+
+    <h2 class="section-title" id="header-functions">Functions</h2>
       
+  <div class="item">
+    <div class="name def" id="nexuscli.nexuscli_ow.run_file">
+    <p>def <span class="ident">run_file</span>(</p><p>fname)</p>
+    </div>
+    
+
+    
+  
+  <div class="source_cont">
+  <p class="source_link"><a href="javascript:void(0);" onclick="toggle('source-nexuscli.nexuscli_ow.run_file', this);">Show source &equiv;</a></p>
+  <div id="source-nexuscli.nexuscli_ow.run_file" class="source">
+    <div class="codehilite"><pre><span></span><span class="k">def</span> <span class="nf">run_file</span><span class="p">(</span><span class="n">fname</span><span class="p">):</span>
+    <span class="n">files</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;file&#39;</span><span class="p">:</span> <span class="nb">open</span><span class="p">(</span><span class="n">fname</span><span class="p">,</span> <span class="s1">&#39;rb&#39;</span><span class="p">)}</span>
+    <span class="n">response</span> <span class="o">=</span> <span class="n">session</span><span class="o">.</span><span class="n">post</span><span class="p">(</span><span class="n">target</span><span class="o">+</span><span class="s1">&#39;/run_file&#39;</span><span class="p">,</span> <span class="n">files</span><span class="o">=</span><span class="n">files</span><span class="p">)</span>
+    <span class="k">print</span><span class="p">(</span><span class="n">response</span><span class="o">.</span><span class="n">text</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">response</span><span class="o">.</span><span class="n">text</span>
+</pre></div>
+
+  </div>
+</div>
+
+  </div>
+  
+      
+  <div class="item">
+    <div class="name def" id="nexuscli.nexuscli_ow.run_str">
+    <p>def <span class="ident">run_str</span>(</p><p>code)</p>
+    </div>
+    
+
+    
+  
+  <div class="source_cont">
+  <p class="source_link"><a href="javascript:void(0);" onclick="toggle('source-nexuscli.nexuscli_ow.run_str', this);">Show source &equiv;</a></p>
+  <div id="source-nexuscli.nexuscli_ow.run_str" class="source">
+    <div class="codehilite"><pre><span></span><span class="k">def</span> <span class="nf">run_str</span><span class="p">(</span><span class="n">code</span><span class="p">):</span>
+    <span class="n">response</span> <span class="o">=</span> <span class="n">requests</span><span class="o">.</span><span class="n">post</span><span class="p">(</span><span class="n">target</span><span class="o">+</span><span class="s1">&#39;/run_str&#39;</span><span class="p">,</span> <span class="n">data</span><span class="o">=</span><span class="n">code</span><span class="p">)</span>
+    <span class="n">ans</span> <span class="o">=</span> <span class="n">ast</span><span class="o">.</span><span class="n">literal_eval</span><span class="p">(</span><span class="n">response</span><span class="o">.</span><span class="n">text</span><span class="p">)[</span><span class="s1">&#39;text/plain&#39;</span><span class="p">]</span>
+    <span class="k">for</span> <span class="n">line</span> <span class="ow">in</span> <span class="n">ans</span><span class="p">:</span>
+        <span class="k">print</span><span class="p">(</span><span class="n">line</span><span class="p">,</span> <span class="n">end</span><span class="o">=</span><span class="s2">&quot; &quot;</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">ans</span>
+</pre></div>
+
+  </div>
+</div>
+
+  </div>
+  
+      
+  <div class="item">
+    <div class="name def" id="nexuscli.nexuscli_ow.set_target">
+    <p>def <span class="ident">set_target</span>(</p><p>url, use_session=True)</p>
+    </div>
+    
+
+    
+  
+    <div class="desc"><p>Set the URL for the NEXUS webapp endpoint.  </p>
+<p><strong>url</strong> URL for NEXUS webapp endpoint <br />
+<strong>return</strong> None</p></div>
+  <div class="source_cont">
+  <p class="source_link"><a href="javascript:void(0);" onclick="toggle('source-nexuscli.nexuscli_ow.set_target', this);">Show source &equiv;</a></p>
+  <div id="source-nexuscli.nexuscli_ow.set_target" class="source">
+    <div class="codehilite"><pre><span></span><span class="k">def</span> <span class="nf">set_target</span><span class="p">(</span><span class="n">url</span><span class="p">,</span> <span class="n">use_session</span><span class="o">=</span><span class="bp">True</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Set the URL for the NEXUS webapp endpoint.  </span>
+<span class="sd">    </span>
+<span class="sd">    __url__ URL for NEXUS webapp endpoint   </span>
+<span class="sd">    __return__ None</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">global</span> <span class="n">target</span>
+    <span class="n">target</span> <span class="o">=</span> <span class="n">url</span>
+
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">use_session</span><span class="p">:</span>
+        <span class="k">global</span> <span class="n">session</span>
+        <span class="n">session</span> <span class="o">=</span> <span class="n">requests</span>
+</pre></div>
+
+  </div>
+</div>
+
+  </div>
   
 
-      </div>
+
   </section>
 
     </article>

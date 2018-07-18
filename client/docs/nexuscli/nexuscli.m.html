@@ -4,7 +4,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1" />
 
     <title>nexuscli.nexuscli API documentation</title>
-    <meta name="description" content="This module provides a native python client interface to the NEXUS (https://github.com/dataplumber/n..." />
+    <meta name="description" content="This module provides a native python client interface to the NEXUS (https://github.com/apache/incuba..." />
 
   <link href='http://fonts.googleapis.com/css?family=Source+Sans+Pro:400,300' rel='stylesheet' type='text/css'>
   
@@ -1056,6 +1056,7 @@ table {
     <li class="mono"><a href="#nexuscli.nexuscli.daily_difference_average">daily_difference_average</a></li>
     <li class="mono"><a href="#nexuscli.nexuscli.dataset_list">dataset_list</a></li>
     <li class="mono"><a href="#nexuscli.nexuscli.set_target">set_target</a></li>
+    <li class="mono"><a href="#nexuscli.nexuscli.subset">subset</a></li>
     <li class="mono"><a href="#nexuscli.nexuscli.time_series">time_series</a></li>
   </ul>
 
@@ -1063,6 +1064,10 @@ table {
 
     <li class="set"><h3><a href="#header-classes">Classes</a></h3>
       <ul>
+        <li class="mono">
+        <span class="class_name"><a href="#nexuscli.nexuscli.Point">Point</a></span>
+        
+        </li>
         <li class="mono">
         <span class="class_name"><a href="#nexuscli.nexuscli.TimeSeries">TimeSeries</a></span>
         
@@ -1082,7 +1087,7 @@ table {
 
   <header id="section-intro">
   <h1 class="title"><span class="name">nexuscli.nexuscli</span> module</h1>
-  <p>This module provides a native python client interface to the NEXUS (https://github.com/dataplumber/nexus) 
+  <p>This module provides a native python client interface to the NEXUS (https://github.com/apache/incubator-sdap-nexus)
 webservice API.</p>
 <p>Usage:</p>
 <div class="codehilite"><pre><span></span><span class="kn">import</span> <span class="nn">nexuscli</span>
@@ -1093,8 +1098,22 @@ webservice API.</p>
   
   <p class="source_link"><a href="javascript:void(0);" onclick="toggle('source-nexuscli.nexuscli', this);">Show source &equiv;</a></p>
   <div id="source-nexuscli.nexuscli" class="source">
-    <div class="codehilite"><pre><span></span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">This module provides a native python client interface to the NEXUS (https://github.com/dataplumber/nexus) </span>
+    <div class="codehilite"><pre><span></span><span class="c1"># Licensed to the Apache Software Foundation (ASF) under one or more</span>
+<span class="c1"># contributor license agreements.  See the NOTICE file distributed with</span>
+<span class="c1"># this work for additional information regarding copyright ownership.</span>
+<span class="c1"># The ASF licenses this file to You under the Apache License, Version 2.0</span>
+<span class="c1"># (the &quot;License&quot;); you may not use this file except in compliance with</span>
+<span class="c1"># the License.  You may obtain a copy of the License at</span>
+<span class="c1">#</span>
+<span class="c1">#   http://www.apache.org/licenses/LICENSE-2.0</span>
+<span class="c1">#</span>
+<span class="c1"># Unless required by applicable law or agreed to in writing, software</span>
+<span class="c1"># distributed under the License is distributed on an &quot;AS IS&quot; BASIS,</span>
+<span class="c1"># WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.</span>
+<span class="c1"># See the License for the specific language governing permissions and</span>
+<span class="c1"># limitations under the License.</span>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">This module provides a native python client interface to the NEXUS (https://github.com/apache/incubator-sdap-nexus)</span>
 <span class="sd">webservice API.</span>
 
 <span class="sd">Usage:</span>
@@ -1124,6 +1143,15 @@ webservice API.</p>
 <span class="n">__pdoc__</span><span class="p">[</span><span class="s1">&#39;TimeSeries.minimum&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;`numpy` array containing minimums&quot;</span>
 <span class="n">__pdoc__</span><span class="p">[</span><span class="s1">&#39;TimeSeries.maximum&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;`numpy` array containing maximums&quot;</span>
 
+<span class="n">Point</span> <span class="o">=</span> <span class="n">namedtuple</span><span class="p">(</span><span class="s1">&#39;Point&#39;</span><span class="p">,</span> <span class="p">(</span><span class="s1">&#39;time&#39;</span><span class="p">,</span> <span class="s1">&#39;latitude&#39;</span><span class="p">,</span> <span class="s1">&#39;longitude&#39;</span><span class="p">,</span> <span class="s1">&#39;variable&#39;</span><span class="p">))</span>
+<span class="n">Point</span><span class="o">.</span><span class="vm">__doc__</span> <span class="o">=</span> <span class="s1">&#39;&#39;&#39;</span><span class="se">\</span>
+<span class="s1">An object containing Point attributes.</span>
+<span class="s1">&#39;&#39;&#39;</span>
+<span class="n">__pdoc__</span><span class="p">[</span><span class="s1">&#39;Point.time&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;time value as `datetime` object&quot;</span>
+<span class="n">__pdoc__</span><span class="p">[</span><span class="s1">&#39;Point.latitude&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;latitude value&quot;</span>
+<span class="n">__pdoc__</span><span class="p">[</span><span class="s1">&#39;Point.longitude&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;longitude value&quot;</span>
+<span class="n">__pdoc__</span><span class="p">[</span><span class="s1">&#39;Point.variable&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;dictionary of variable values&quot;</span>
+
 <span class="n">ISO_FORMAT</span> <span class="o">=</span> <span class="s2">&quot;%Y-%m-</span><span class="si">%d</span><span class="s2">T%H:%M:%SZ&quot;</span>
 
 <span class="n">target</span> <span class="o">=</span> <span class="s1">&#39;http://localhost:8083&#39;</span>
@@ -1131,7 +1159,7 @@ webservice API.</p>
 <span class="n">session</span> <span class="o">=</span> <span class="n">requests</span><span class="o">.</span><span class="n">session</span><span class="p">()</span>
 
 
-<span class="k">def</span> <span class="nf">set_target</span><span class="p">(</span><span class="n">url</span><span class="p">):</span>
+<span class="k">def</span> <span class="nf">set_target</span><span class="p">(</span><span class="n">url</span><span class="p">,</span> <span class="n">use_session</span><span class="o">=</span><span class="bp">True</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Set the URL for the NEXUS webapp endpoint.  </span>
 <span class="sd">    </span>
@@ -1140,6 +1168,10 @@ webservice API.</p>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="k">global</span> <span class="n">target</span>
     <span class="n">target</span> <span class="o">=</span> <span class="n">url</span>
+
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">use_session</span><span class="p">:</span>
+        <span class="k">global</span> <span class="n">session</span>
+        <span class="n">session</span> <span class="o">=</span> <span class="n">requests</span>
 
 
 <span class="k">def</span> <span class="nf">dataset_list</span><span class="p">():</span>
@@ -1288,6 +1320,60 @@ webservice API.</p>
             <span class="p">)</span>
 
     <span class="k">return</span> <span class="n">time_series_result</span>
+
+
+<span class="k">def</span> <span class="nf">subset</span><span class="p">(</span><span class="n">dataset</span><span class="p">,</span> <span class="n">bounding_box</span><span class="p">,</span> <span class="n">start_datetime</span><span class="p">,</span> <span class="n">end_datetime</span><span class="p">,</span> <span class="n">parameter</span><span class="p">,</span> <span class="n">metadata_filter</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Fetches point values for a given dataset and geographical area or metadata criteria and time range.</span>
+
+<span class="sd">    __dataset__ Name of the dataset as a String  </span>
+<span class="sd">    __bounding_box__ Bounding box for area of interest as a `shapely.geometry.polygon.Polygon`  </span>
+<span class="sd">    __start_datetime__ Start time as a `datetime.datetime`  </span>
+<span class="sd">    __end_datetime__ End time as a `datetime.datetime`  </span>
+<span class="sd">    __parameter__ The parameter of interest. One of &#39;sst&#39;, &#39;sss&#39;, &#39;wind&#39; or None  </span>
+<span class="sd">    __metadata_filter__ List of key:value String metadata criteria  </span>
+
+<span class="sd">    __return__ List of `nexuscli.nexuscli.Point` namedtuples</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">url</span> <span class="o">=</span> <span class="s2">&quot;{}/datainbounds?&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">target</span><span class="p">)</span>
+
+    <span class="n">params</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="s1">&#39;ds&#39;</span><span class="p">:</span> <span class="n">dataset</span><span class="p">,</span>
+        <span class="s1">&#39;startTime&#39;</span><span class="p">:</span> <span class="n">start_datetime</span><span class="o">.</span><span class="n">strftime</span><span class="p">(</span><span class="n">ISO_FORMAT</span><span class="p">),</span>
+        <span class="s1">&#39;endTime&#39;</span><span class="p">:</span> <span class="n">end_datetime</span><span class="o">.</span><span class="n">strftime</span><span class="p">(</span><span class="n">ISO_FORMAT</span><span class="p">),</span>
+        <span class="s1">&#39;parameter&#39;</span><span class="p">:</span> <span class="n">parameter</span><span class="p">,</span>
+    <span class="p">}</span>
+    <span class="k">if</span> <span class="n">bounding_box</span><span class="p">:</span>
+        <span class="n">params</span><span class="p">[</span><span class="s1">&#39;b&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;,&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">b</span><span class="p">)</span> <span class="k">for</span> <span class="n">b</span> <span class="ow">in</span> <span class="n">bounding_box</span><span class="o">.</span><span class="n">bounds</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">metadata_filter</span> <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="n">metadata_filter</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">params</span><span class="p">[</span><span class="s1">&#39;metadataFilter&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">metadata_filter</span>
+
+    <span class="n">response</span> <span class="o">=</span> <span class="n">session</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">url</span><span class="p">,</span> <span class="n">params</span><span class="o">=</span><span class="n">params</span><span class="p">)</span>
+    <span class="n">response</span><span class="o">.</span><span class="n">raise_for_status</span><span class="p">()</span>
+    <span class="n">response</span> <span class="o">=</span> <span class="n">response</span><span class="o">.</span><span class="n">json</span><span class="p">()</span>
+
+    <span class="n">data</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">response</span><span class="p">[</span><span class="s1">&#39;data&#39;</span><span class="p">])</span><span class="o">.</span><span class="n">flatten</span><span class="p">()</span>
+
+    <span class="k">assert</span> <span class="nb">len</span><span class="p">(</span><span class="n">data</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">,</span> <span class="s2">&quot;No data found in {} between {} and {} for Datasets {}.&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">bounding_box</span><span class="o">.</span><span class="n">wkt</span> <span class="k">if</span> <span class="n">bounding_box</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span> <span class="k">else</span> <span class="n">metadata_filter</span><span class="p">,</span>
+                                                                                          <span class="n">start_datetime</span><span class="o">.</span><span class="n">strftime</span><span class="p">(</span>
+                                                                                              <span class="n">ISO_FORMAT</span><span class="p">),</span>
+                                                                                          <span class="n">end_datetime</span><span class="o">.</span><span class="n">strftime</span><span class="p">(</span>
+                                                                                              <span class="n">ISO_FORMAT</span><span class="p">),</span>
+                                                                                          <span class="n">dataset</span><span class="p">)</span>
+
+    <span class="n">subset_result</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">d</span> <span class="ow">in</span> <span class="n">data</span><span class="p">:</span>
+        <span class="n">subset_result</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
+            <span class="n">Point</span><span class="p">(</span>
+                <span class="n">time</span><span class="o">=</span><span class="n">datetime</span><span class="o">.</span><span class="n">utcfromtimestamp</span><span class="p">(</span><span class="n">d</span><span class="p">[</span><span class="s1">&#39;time&#39;</span><span class="p">])</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="n">tzinfo</span><span class="o">=</span><span class="n">UTC</span><span class="p">),</span>
+                <span class="n">longitude</span><span class="o">=</span><span class="n">d</span><span class="p">[</span><span class="s1">&#39;longitude&#39;</span><span class="p">],</span>
+                <span class="n">latitude</span><span class="o">=</span><span class="n">d</span><span class="p">[</span><span class="s1">&#39;latitude&#39;</span><span class="p">],</span>
+                <span class="n">variable</span><span class="o">=</span><span class="n">d</span><span class="p">[</span><span class="s1">&#39;data&#39;</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span>
+            <span class="p">)</span>
+        <span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">subset_result</span>
 </pre></div>
 
   </div>
@@ -1447,7 +1533,7 @@ webservice API.</p>
       
   <div class="item">
     <div class="name def" id="nexuscli.nexuscli.set_target">
-    <p>def <span class="ident">set_target</span>(</p><p>url)</p>
+    <p>def <span class="ident">set_target</span>(</p><p>url, use_session=True)</p>
     </div>
     
 
@@ -1459,7 +1545,7 @@ webservice API.</p>
   <div class="source_cont">
   <p class="source_link"><a href="javascript:void(0);" onclick="toggle('source-nexuscli.nexuscli.set_target', this);">Show source &equiv;</a></p>
   <div id="source-nexuscli.nexuscli.set_target" class="source">
-    <div class="codehilite"><pre><span></span><span class="k">def</span> <span class="nf">set_target</span><span class="p">(</span><span class="n">url</span><span class="p">):</span>
+    <div class="codehilite"><pre><span></span><span class="k">def</span> <span class="nf">set_target</span><span class="p">(</span><span class="n">url</span><span class="p">,</span> <span class="n">use_session</span><span class="o">=</span><span class="bp">True</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Set the URL for the NEXUS webapp endpoint.  </span>
 <span class="sd">    </span>
@@ -1468,6 +1554,89 @@ webservice API.</p>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="k">global</span> <span class="n">target</span>
     <span class="n">target</span> <span class="o">=</span> <span class="n">url</span>
+
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">use_session</span><span class="p">:</span>
+        <span class="k">global</span> <span class="n">session</span>
+        <span class="n">session</span> <span class="o">=</span> <span class="n">requests</span>
+</pre></div>
+
+  </div>
+</div>
+
+  </div>
+  
+      
+  <div class="item">
+    <div class="name def" id="nexuscli.nexuscli.subset">
+    <p>def <span class="ident">subset</span>(</p><p>dataset, bounding_box, start_datetime, end_datetime, parameter, metadata_filter)</p>
+    </div>
+    
+
+    
+  
+    <div class="desc"><p>Fetches point values for a given dataset and geographical area or metadata criteria and time range.</p>
+<p><strong>dataset</strong> Name of the dataset as a String<br />
+<strong>bounding_box</strong> Bounding box for area of interest as a <code>shapely.geometry.polygon.Polygon</code><br />
+<strong>start_datetime</strong> Start time as a <code>datetime.datetime</code><br />
+<strong>end_datetime</strong> End time as a <code>datetime.datetime</code><br />
+<strong>parameter</strong> The parameter of interest. One of 'sst', 'sss', 'wind' or None<br />
+<strong>metadata_filter</strong> List of key:value String metadata criteria  </p>
+<p><strong>return</strong> List of <a href="#nexuscli.nexuscli.Point"><code>Point</code></a> namedtuples</p></div>
+  <div class="source_cont">
+  <p class="source_link"><a href="javascript:void(0);" onclick="toggle('source-nexuscli.nexuscli.subset', this);">Show source &equiv;</a></p>
+  <div id="source-nexuscli.nexuscli.subset" class="source">
+    <div class="codehilite"><pre><span></span><span class="k">def</span> <span class="nf">subset</span><span class="p">(</span><span class="n">dataset</span><span class="p">,</span> <span class="n">bounding_box</span><span class="p">,</span> <span class="n">start_datetime</span><span class="p">,</span> <span class="n">end_datetime</span><span class="p">,</span> <span class="n">parameter</span><span class="p">,</span> <span class="n">metadata_filter</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Fetches point values for a given dataset and geographical area or metadata criteria and time range.</span>
+
+<span class="sd">    __dataset__ Name of the dataset as a String  </span>
+<span class="sd">    __bounding_box__ Bounding box for area of interest as a `shapely.geometry.polygon.Polygon`  </span>
+<span class="sd">    __start_datetime__ Start time as a `datetime.datetime`  </span>
+<span class="sd">    __end_datetime__ End time as a `datetime.datetime`  </span>
+<span class="sd">    __parameter__ The parameter of interest. One of &#39;sst&#39;, &#39;sss&#39;, &#39;wind&#39; or None  </span>
+<span class="sd">    __metadata_filter__ List of key:value String metadata criteria  </span>
+
+<span class="sd">    __return__ List of `nexuscli.nexuscli.Point` namedtuples</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">url</span> <span class="o">=</span> <span class="s2">&quot;{}/datainbounds?&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">target</span><span class="p">)</span>
+
+    <span class="n">params</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="s1">&#39;ds&#39;</span><span class="p">:</span> <span class="n">dataset</span><span class="p">,</span>
+        <span class="s1">&#39;startTime&#39;</span><span class="p">:</span> <span class="n">start_datetime</span><span class="o">.</span><span class="n">strftime</span><span class="p">(</span><span class="n">ISO_FORMAT</span><span class="p">),</span>
+        <span class="s1">&#39;endTime&#39;</span><span class="p">:</span> <span class="n">end_datetime</span><span class="o">.</span><span class="n">strftime</span><span class="p">(</span><span class="n">ISO_FORMAT</span><span class="p">),</span>
+        <span class="s1">&#39;parameter&#39;</span><span class="p">:</span> <span class="n">parameter</span><span class="p">,</span>
+    <span class="p">}</span>
+    <span class="k">if</span> <span class="n">bounding_box</span><span class="p">:</span>
+        <span class="n">params</span><span class="p">[</span><span class="s1">&#39;b&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;,&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">b</span><span class="p">)</span> <span class="k">for</span> <span class="n">b</span> <span class="ow">in</span> <span class="n">bounding_box</span><span class="o">.</span><span class="n">bounds</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">metadata_filter</span> <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="n">metadata_filter</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">params</span><span class="p">[</span><span class="s1">&#39;metadataFilter&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">metadata_filter</span>
+
+    <span class="n">response</span> <span class="o">=</span> <span class="n">session</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">url</span><span class="p">,</span> <span class="n">params</span><span class="o">=</span><span class="n">params</span><span class="p">)</span>
+    <span class="n">response</span><span class="o">.</span><span class="n">raise_for_status</span><span class="p">()</span>
+    <span class="n">response</span> <span class="o">=</span> <span class="n">response</span><span class="o">.</span><span class="n">json</span><span class="p">()</span>
+
+    <span class="n">data</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">response</span><span class="p">[</span><span class="s1">&#39;data&#39;</span><span class="p">])</span><span class="o">.</span><span class="n">flatten</span><span class="p">()</span>
+
+    <span class="k">assert</span> <span class="nb">len</span><span class="p">(</span><span class="n">data</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">,</span> <span class="s2">&quot;No data found in {} between {} and {} for Datasets {}.&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">bounding_box</span><span class="o">.</span><span class="n">wkt</span> <span class="k">if</span> <span class="n">bounding_box</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span> <span class="k">else</span> <span class="n">metadata_filter</span><span class="p">,</span>
+                                                                                          <span class="n">start_datetime</span><span class="o">.</span><span class="n">strftime</span><span class="p">(</span>
+                                                                                              <span class="n">ISO_FORMAT</span><span class="p">),</span>
+                                                                                          <span class="n">end_datetime</span><span class="o">.</span><span class="n">strftime</span><span class="p">(</span>
+                                                                                              <span class="n">ISO_FORMAT</span><span class="p">),</span>
+                                                                                          <span class="n">dataset</span><span class="p">)</span>
+
+    <span class="n">subset_result</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">d</span> <span class="ow">in</span> <span class="n">data</span><span class="p">:</span>
+        <span class="n">subset_result</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
+            <span class="n">Point</span><span class="p">(</span>
+                <span class="n">time</span><span class="o">=</span><span class="n">datetime</span><span class="o">.</span><span class="n">utcfromtimestamp</span><span class="p">(</span><span class="n">d</span><span class="p">[</span><span class="s1">&#39;time&#39;</span><span class="p">])</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="n">tzinfo</span><span class="o">=</span><span class="n">UTC</span><span class="p">),</span>
+                <span class="n">longitude</span><span class="o">=</span><span class="n">d</span><span class="p">[</span><span class="s1">&#39;longitude&#39;</span><span class="p">],</span>
+                <span class="n">latitude</span><span class="o">=</span><span class="n">d</span><span class="p">[</span><span class="s1">&#39;latitude&#39;</span><span class="p">],</span>
+                <span class="n">variable</span><span class="o">=</span><span class="n">d</span><span class="p">[</span><span class="s1">&#39;data&#39;</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span>
+            <span class="p">)</span>
+        <span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">subset_result</span>
 </pre></div>
 
   </div>
@@ -1569,6 +1738,70 @@ webservice API.</p>
   
 
     <h2 class="section-title" id="header-classes">Classes</h2>
+      
+      <div class="item">
+      <p id="nexuscli.nexuscli.Point" class="name">class <span class="ident">Point</span></p>
+      
+  
+    <div class="desc"><p>An object containing Point attributes.</p></div>
+  <div class="source_cont">
+</div>
+
+
+      <div class="class">
+          <h3>Ancestors (in MRO)</h3>
+          <ul class="class_list">
+          <li><a href="#nexuscli.nexuscli.Point">Point</a></li>
+          <li>builtins.tuple</li>
+          <li>builtins.object</li>
+          </ul>
+          <h3>Instance variables</h3>
+            <div class="item">
+            <p id="nexuscli.nexuscli.Point.latitude" class="name">var <span class="ident">latitude</span></p>
+            
+
+            
+  
+    <div class="desc"><p>latitude value</p></div>
+  <div class="source_cont">
+</div>
+
+            </div>
+            <div class="item">
+            <p id="nexuscli.nexuscli.Point.longitude" class="name">var <span class="ident">longitude</span></p>
+            
+
+            
+  
+    <div class="desc"><p>longitude value</p></div>
+  <div class="source_cont">
+</div>
+
+            </div>
+            <div class="item">
+            <p id="nexuscli.nexuscli.Point.time" class="name">var <span class="ident">time</span></p>
+            
+
+            
+  
+    <div class="desc"><p>time value as <code>datetime</code> object</p></div>
+  <div class="source_cont">
+</div>
+
+            </div>
+            <div class="item">
+            <p id="nexuscli.nexuscli.Point.variable" class="name">var <span class="ident">variable</span></p>
+            
+
+            
+  
+    <div class="desc"><p>dictionary of variable values</p></div>
+  <div class="source_cont">
+</div>
+
+            </div>
+      </div>
+      </div>
       
       <div class="item">
       <p id="nexuscli.nexuscli.TimeSeries" class="name">class <span class="ident">TimeSeries</span></p>

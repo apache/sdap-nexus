@@ -22,9 +22,10 @@ setup(
     name="nexuscli",
     version=__version__,
     packages=find_packages(),
-    url="https://github.jpl.nasa.gov/thuang/nexus",
+    url="https://github.com/apache/incubator-sdap-nexus",
 
-    author="Team Nexus",
+    author="Apache SDAP",
+    author_email="dev@sdap.apache.org",
 
     description="NEXUS Client Module",
     long_description=open('README.md').read(),
@@ -42,6 +43,6 @@ setup(
         'Development Status :: 1 - Pre-Alpha',
         'Intended Audience :: Developers',
         'Operating System :: OS Independent',
-        'Programming Language :: Python :: 2.7',
+        'Programming Language :: Python :: 3.6',
     ]
 )

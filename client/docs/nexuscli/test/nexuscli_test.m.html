@@ -1080,6 +1080,7 @@ table {
     <li class="mono"><a href="#nexuscli.test.nexuscli_test.TestCli.assertNotIn">assertNotIn</a></li>
     <li class="mono"><a href="#nexuscli.test.nexuscli_test.TestCli.assertNotIsInstance">assertNotIsInstance</a></li>
     <li class="mono"><a href="#nexuscli.test.nexuscli_test.TestCli.assertNotRegex">assertNotRegex</a></li>
+    <li class="mono"><a href="#nexuscli.test.nexuscli_test.TestCli.assertNotRegexpMatches">assertNotRegexpMatches</a></li>
     <li class="mono"><a href="#nexuscli.test.nexuscli_test.TestCli.assertRaises">assertRaises</a></li>
     <li class="mono"><a href="#nexuscli.test.nexuscli_test.TestCli.assertRaisesRegex">assertRaisesRegex</a></li>
     <li class="mono"><a href="#nexuscli.test.nexuscli_test.TestCli.assertRaisesRegexp">assertRaisesRegexp</a></li>
@@ -1112,6 +1113,8 @@ table {
     <li class="mono"><a href="#nexuscli.test.nexuscli_test.TestCli.subTest">subTest</a></li>
     <li class="mono"><a href="#nexuscli.test.nexuscli_test.TestCli.tearDown">tearDown</a></li>
     <li class="mono"><a href="#nexuscli.test.nexuscli_test.TestCli.test_daily_difference_average">test_daily_difference_average</a></li>
+    <li class="mono"><a href="#nexuscli.test.nexuscli_test.TestCli.test_data_in_bounds_with_bounding_box">test_data_in_bounds_with_bounding_box</a></li>
+    <li class="mono"><a href="#nexuscli.test.nexuscli_test.TestCli.test_data_in_bounds_with_metadata_filter">test_data_in_bounds_with_metadata_filter</a></li>
     <li class="mono"><a href="#nexuscli.test.nexuscli_test.TestCli.test_list">test_list</a></li>
     <li class="mono"><a href="#nexuscli.test.nexuscli_test.TestCli.test_time_series">test_time_series</a></li>
     <li class="mono"><a href="#nexuscli.test.nexuscli_test.TestCli.setUpClass">setUpClass</a></li>
@@ -1138,23 +1141,62 @@ table {
   
   <p class="source_link"><a href="javascript:void(0);" onclick="toggle('source-nexuscli.test.nexuscli_test', this);">Show source &equiv;</a></p>
   <div id="source-nexuscli.test.nexuscli_test" class="source">
-    <div class="codehilite"><pre><span></span><span class="n">mport</span> <span class="n">unittest</span>
-<span class="n">rom</span> <span class="n">datetime</span> <span class="kn">import</span> <span class="nn">datetime</span>
-<span class="n">rom</span> <span class="n">shapely</span><span class="o">.</span><span class="n">geometry</span> <span class="kn">import</span> <span class="nn">box</span>
-<span class="n">mport</span> <span class="n">nexuscli</span>
-<span class="n">lass</span> <span class="n">TestCli</span><span class="p">(</span><span class="n">unittest</span><span class="o">.</span><span class="n">TestCase</span><span class="p">):</span>
-   <span class="k">def</span> <span class="nf">test_time_series</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-       <span class="n">ts</span> <span class="o">=</span> <span class="n">nexuscli</span><span class="o">.</span><span class="n">time_series</span><span class="p">((</span><span class="s2">&quot;AVHRR_OI_L4_GHRSST_NCEI&quot;</span><span class="p">,</span> <span class="s2">&quot;MEASURES_SLA_JPL_1603&quot;</span><span class="p">),</span> <span class="n">box</span><span class="p">(</span><span class="o">-</span><span class="mi">150</span><span class="p">,</span> <span class="mi">45</span><span class="p">,</span> <span class="o">-</span><span class="mi">120</span><span class="p">,</span> <span class="mi">60</span><span class="p">),</span>
-                                 <span class="n">datetime</span><span class="p">(</span><span class="mi">2016</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span> <span class="n">datetime</span><span class="p">(</span><span class="mi">2016</span><span class="p">,</span> <span class="mi">12</span><span class="p">,</span> <span class="mi">31</span><span class="p">))</span>
-       <span class="bp">self</span><span class="o">.</span><span class="n">assertEqual</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">ts</span><span class="p">))</span>
-   <span class="k">def</span> <span class="nf">test_list</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-       <span class="n">ds_list</span> <span class="o">=</span> <span class="n">nexuscli</span><span class="o">.</span><span class="n">dataset_list</span><span class="p">()</span>
-       <span class="k">print</span><span class="p">(</span><span class="n">ds_list</span><span class="p">)</span>
-       <span class="bp">self</span><span class="o">.</span><span class="n">assertTrue</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">ds_list</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">)</span>
-   <span class="k">def</span> <span class="nf">test_daily_difference_average</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-       <span class="n">ts</span> <span class="o">=</span> <span class="n">nexuscli</span><span class="o">.</span><span class="n">daily_difference_average</span><span class="p">(</span><span class="s2">&quot;AVHRR_OI_L4_GHRSST_NCEI&quot;</span><span class="p">,</span> <span class="n">box</span><span class="p">(</span><span class="o">-</span><span class="mi">150</span><span class="p">,</span> <span class="mi">45</span><span class="p">,</span> <span class="o">-</span><span class="mi">120</span><span class="p">,</span> <span class="mi">60</span><span class="p">),</span>
-                                              <span class="n">datetime</span><span class="p">(</span><span class="mi">2013</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span> <span class="n">datetime</span><span class="p">(</span><span class="mi">2014</span><span class="p">,</span> <span class="mi">12</span><span class="p">,</span> <span class="mi">31</span><span class="p">))</span>
-       <span class="bp">self</span><span class="o">.</span><span class="n">assertEqual</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">ts</span><span class="p">))</span>
+    <div class="codehilite"><pre><span></span><span class="c1"># Licensed to the Apache Software Foundation (ASF) under one or more</span>
+<span class="c1"># contributor license agreements.  See the NOTICE file distributed with</span>
+<span class="c1"># this work for additional information regarding copyright ownership.</span>
+<span class="c1"># The ASF licenses this file to You under the Apache License, Version 2.0</span>
+<span class="c1"># (the &quot;License&quot;); you may not use this file except in compliance with</span>
+<span class="c1"># the License.  You may obtain a copy of the License at</span>
+<span class="c1">#</span>
+<span class="c1">#   http://www.apache.org/licenses/LICENSE-2.0</span>
+<span class="c1">#</span>
+<span class="c1"># Unless required by applicable law or agreed to in writing, software</span>
+<span class="c1"># distributed under the License is distributed on an &quot;AS IS&quot; BASIS,</span>
+<span class="c1"># WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.</span>
+<span class="c1"># See the License for the specific language governing permissions and</span>
+<span class="c1"># limitations under the License.</span>
+
+<span class="kn">import</span> <span class="nn">unittest</span>
+<span class="kn">from</span> <span class="nn">datetime</span> <span class="kn">import</span> <span class="n">datetime</span>
+
+<span class="kn">from</span> <span class="nn">shapely.geometry</span> <span class="kn">import</span> <span class="n">box</span>
+
+<span class="kn">import</span> <span class="nn">nexuscli</span>
+
+
+<span class="k">class</span> <span class="nc">TestCli</span><span class="p">(</span><span class="n">unittest</span><span class="o">.</span><span class="n">TestCase</span><span class="p">):</span>
+
+    <span class="k">def</span> <span class="nf">setUp</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">setUp</span><span class="p">()</span>
+        <span class="n">nexuscli</span><span class="o">.</span><span class="n">set_target</span><span class="p">(</span><span class="s2">&quot;http://localhost:8083&quot;</span><span class="p">,</span> <span class="n">use_session</span><span class="o">=</span><span class="bp">False</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">test_time_series</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">ts</span> <span class="o">=</span> <span class="n">nexuscli</span><span class="o">.</span><span class="n">time_series</span><span class="p">((</span><span class="s2">&quot;AVHRR_OI_L4_GHRSST_NCEI&quot;</span><span class="p">,</span> <span class="s2">&quot;MEASURES_SLA_JPL_1603&quot;</span><span class="p">),</span> <span class="n">box</span><span class="p">(</span><span class="o">-</span><span class="mi">150</span><span class="p">,</span> <span class="mi">45</span><span class="p">,</span> <span class="o">-</span><span class="mi">120</span><span class="p">,</span> <span class="mi">60</span><span class="p">),</span>
+                                  <span class="n">datetime</span><span class="p">(</span><span class="mi">2016</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span> <span class="n">datetime</span><span class="p">(</span><span class="mi">2016</span><span class="p">,</span> <span class="mi">12</span><span class="p">,</span> <span class="mi">31</span><span class="p">))</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">assertEqual</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">ts</span><span class="p">))</span>
+
+    <span class="k">def</span> <span class="nf">test_list</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">ds_list</span> <span class="o">=</span> <span class="n">nexuscli</span><span class="o">.</span><span class="n">dataset_list</span><span class="p">()</span>
+
+        <span class="k">print</span><span class="p">(</span><span class="n">ds_list</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">assertTrue</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">ds_list</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">test_daily_difference_average</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">ts</span> <span class="o">=</span> <span class="n">nexuscli</span><span class="o">.</span><span class="n">daily_difference_average</span><span class="p">(</span><span class="s2">&quot;AVHRR_OI_L4_GHRSST_NCEI&quot;</span><span class="p">,</span> <span class="n">box</span><span class="p">(</span><span class="o">-</span><span class="mi">150</span><span class="p">,</span> <span class="mi">45</span><span class="p">,</span> <span class="o">-</span><span class="mi">120</span><span class="p">,</span> <span class="mi">60</span><span class="p">),</span>
+                                               <span class="n">datetime</span><span class="p">(</span><span class="mi">2013</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span> <span class="n">datetime</span><span class="p">(</span><span class="mi">2014</span><span class="p">,</span> <span class="mi">12</span><span class="p">,</span> <span class="mi">31</span><span class="p">))</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">assertEqual</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">ts</span><span class="p">))</span>
+
+    <span class="k">def</span> <span class="nf">test_data_in_bounds_with_metadata_filter</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">subset</span> <span class="o">=</span> <span class="n">nexuscli</span><span class="o">.</span><span class="n">subset</span><span class="p">(</span><span class="s2">&quot;MUR-JPL-L4-GLOB-v4.1&quot;</span><span class="p">,</span> <span class="bp">None</span><span class="p">,</span> <span class="n">datetime</span><span class="p">(</span><span class="mi">2018</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span> <span class="n">datetime</span><span class="p">(</span><span class="mi">2018</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">),</span>
+                                 <span class="bp">None</span><span class="p">,</span> <span class="p">[</span><span class="s2">&quot;id:60758e00-5721-3a6e-bf57-78448bb0aeeb&quot;</span><span class="p">])</span>
+        <span class="k">print</span><span class="p">(</span><span class="n">subset</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">test_data_in_bounds_with_bounding_box</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">subset</span> <span class="o">=</span> <span class="n">nexuscli</span><span class="o">.</span><span class="n">subset</span><span class="p">(</span><span class="s2">&quot;MUR-JPL-L4-GLOB-v4.1&quot;</span><span class="p">,</span> <span class="n">box</span><span class="p">(</span><span class="o">-</span><span class="mi">150</span><span class="p">,</span> <span class="mi">45</span><span class="p">,</span> <span class="o">-</span><span class="mi">149</span><span class="p">,</span> <span class="mi">46</span><span class="p">),</span> <span class="n">datetime</span><span class="p">(</span><span class="mi">2018</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span>
+                                 <span class="n">datetime</span><span class="p">(</span><span class="mi">2018</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span> <span class="bp">None</span><span class="p">,</span> <span class="bp">None</span><span class="p">)</span>
+        <span class="k">print</span><span class="p">(</span><span class="n">subset</span><span class="p">)</span>
 </pre></div>
 
   </div>
@@ -1199,6 +1241,11 @@ in order to be run.</p>
   <p class="source_link"><a href="javascript:void(0);" onclick="toggle('source-nexuscli.test.nexuscli_test.TestCli', this);">Show source &equiv;</a></p>
   <div id="source-nexuscli.test.nexuscli_test.TestCli" class="source">
     <div class="codehilite"><pre><span></span><span class="k">class</span> <span class="nc">TestCli</span><span class="p">(</span><span class="n">unittest</span><span class="o">.</span><span class="n">TestCase</span><span class="p">):</span>
+
+    <span class="k">def</span> <span class="nf">setUp</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">setUp</span><span class="p">()</span>
+        <span class="n">nexuscli</span><span class="o">.</span><span class="n">set_target</span><span class="p">(</span><span class="s2">&quot;http://localhost:8083&quot;</span><span class="p">,</span> <span class="n">use_session</span><span class="o">=</span><span class="bp">False</span><span class="p">)</span>
+
     <span class="k">def</span> <span class="nf">test_time_series</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="n">ts</span> <span class="o">=</span> <span class="n">nexuscli</span><span class="o">.</span><span class="n">time_series</span><span class="p">((</span><span class="s2">&quot;AVHRR_OI_L4_GHRSST_NCEI&quot;</span><span class="p">,</span> <span class="s2">&quot;MEASURES_SLA_JPL_1603&quot;</span><span class="p">),</span> <span class="n">box</span><span class="p">(</span><span class="o">-</span><span class="mi">150</span><span class="p">,</span> <span class="mi">45</span><span class="p">,</span> <span class="o">-</span><span class="mi">120</span><span class="p">,</span> <span class="mi">60</span><span class="p">),</span>
                                   <span class="n">datetime</span><span class="p">(</span><span class="mi">2016</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span> <span class="n">datetime</span><span class="p">(</span><span class="mi">2016</span><span class="p">,</span> <span class="mi">12</span><span class="p">,</span> <span class="mi">31</span><span class="p">))</span>
@@ -1216,6 +1263,16 @@ in order to be run.</p>
                                                <span class="n">datetime</span><span class="p">(</span><span class="mi">2013</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span> <span class="n">datetime</span><span class="p">(</span><span class="mi">2014</span><span class="p">,</span> <span class="mi">12</span><span class="p">,</span> <span class="mi">31</span><span class="p">))</span>
 
         <span class="bp">self</span><span class="o">.</span><span class="n">assertEqual</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">ts</span><span class="p">))</span>
+
+    <span class="k">def</span> <span class="nf">test_data_in_bounds_with_metadata_filter</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">subset</span> <span class="o">=</span> <span class="n">nexuscli</span><span class="o">.</span><span class="n">subset</span><span class="p">(</span><span class="s2">&quot;MUR-JPL-L4-GLOB-v4.1&quot;</span><span class="p">,</span> <span class="bp">None</span><span class="p">,</span> <span class="n">datetime</span><span class="p">(</span><span class="mi">2018</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span> <span class="n">datetime</span><span class="p">(</span><span class="mi">2018</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">),</span>
+                                 <span class="bp">None</span><span class="p">,</span> <span class="p">[</span><span class="s2">&quot;id:60758e00-5721-3a6e-bf57-78448bb0aeeb&quot;</span><span class="p">])</span>
+        <span class="k">print</span><span class="p">(</span><span class="n">subset</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">test_data_in_bounds_with_bounding_box</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">subset</span> <span class="o">=</span> <span class="n">nexuscli</span><span class="o">.</span><span class="n">subset</span><span class="p">(</span><span class="s2">&quot;MUR-JPL-L4-GLOB-v4.1&quot;</span><span class="p">,</span> <span class="n">box</span><span class="p">(</span><span class="o">-</span><span class="mi">150</span><span class="p">,</span> <span class="mi">45</span><span class="p">,</span> <span class="o">-</span><span class="mi">149</span><span class="p">,</span> <span class="mi">46</span><span class="p">),</span> <span class="n">datetime</span><span class="p">(</span><span class="mi">2018</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span>
+                                 <span class="n">datetime</span><span class="p">(</span><span class="mi">2018</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span> <span class="bp">None</span><span class="p">,</span> <span class="bp">None</span><span class="p">)</span>
+        <span class="k">print</span><span class="p">(</span><span class="n">subset</span><span class="p">)</span>
 </pre></div>
 
   </div>
@@ -1394,9 +1451,10 @@ their own type equality functions to provide nicer error messages.</p>
     <div class="desc"><p>Fail if the two objects are unequal as determined by their
 difference rounded to the given number of decimal places
 (default 7) and comparing to zero, or by comparing that the
-between the two objects is more than the given delta.</p>
+difference between the two objects is more than the given
+delta.</p>
 <p>Note that decimal places (from zero) are usually not the same
-as significant digits (measured from the most signficant digit).</p>
+as significant digits (measured from the most significant digit).</p>
 <p>If the two objects compare equal then they will automatically
 compare almost equal.</p></div>
   <div class="source_cont">
@@ -1407,9 +1465,10 @@ compare almost equal.</p></div>
     <span class="sd">&quot;&quot;&quot;Fail if the two objects are unequal as determined by their</span>
 <span class="sd">       difference rounded to the given number of decimal places</span>
 <span class="sd">       (default 7) and comparing to zero, or by comparing that the</span>
-<span class="sd">       between the two objects is more than the given delta.</span>
+<span class="sd">       difference between the two objects is more than the given</span>
+<span class="sd">       delta.</span>
 <span class="sd">       Note that decimal places (from zero) are usually not the same</span>
-<span class="sd">       as significant digits (measured from the most signficant digit).</span>
+<span class="sd">       as significant digits (measured from the most significant digit).</span>
 <span class="sd">       If the two objects compare equal then they will automatically</span>
 <span class="sd">       compare almost equal.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
@@ -2063,9 +2122,9 @@ self.assertEqual(cm.output, [&#39;INFO:foo:first message&#39;,
     <div class="desc"><p>Fail if the two objects are equal as determined by their
 difference rounded to the given number of decimal places
 (default 7) and comparing to zero, or by comparing that the
-between the two objects is less than the given delta.</p>
+difference between the two objects is less than the given delta.</p>
 <p>Note that decimal places (from zero) are usually not the same
-as significant digits (measured from the most signficant digit).</p>
+as significant digits (measured from the most significant digit).</p>
 <p>Objects that are equal automatically fail.</p></div>
   <div class="source_cont">
   <p class="source_link"><a href="javascript:void(0);" onclick="toggle('source-nexuscli.test.nexuscli_test.TestCli.assertNotAlmostEqual', this);">Show source &equiv;</a></p>
@@ -2075,9 +2134,9 @@ as significant digits (measured from the most signficant digit).</p>
     <span class="sd">&quot;&quot;&quot;Fail if the two objects are equal as determined by their</span>
 <span class="sd">       difference rounded to the given number of decimal places</span>
 <span class="sd">       (default 7) and comparing to zero, or by comparing that the</span>
-<span class="sd">       between the two objects is less than the given delta.</span>
+<span class="sd">       difference between the two objects is less than the given delta.</span>
 <span class="sd">       Note that decimal places (from zero) are usually not the same</span>
-<span class="sd">       as significant digits (measured from the most signficant digit).</span>
+<span class="sd">       as significant digits (measured from the most significant digit).</span>
 <span class="sd">       Objects that are equal automatically fail.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="k">if</span> <span class="n">delta</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span> <span class="ow">and</span> <span class="n">places</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
@@ -2252,12 +2311,37 @@ operator.</p></div>
         <span class="n">unexpected_regex</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="n">unexpected_regex</span><span class="p">)</span>
     <span class="n">match</span> <span class="o">=</span> <span class="n">unexpected_regex</span><span class="o">.</span><span class="n">search</span><span class="p">(</span><span class="n">text</span><span class="p">)</span>
     <span class="k">if</span> <span class="n">match</span><span class="p">:</span>
-        <span class="n">msg</span> <span class="o">=</span> <span class="n">msg</span> <span class="ow">or</span> <span class="s2">&quot;Regex matched&quot;</span>
-        <span class="n">msg</span> <span class="o">=</span> <span class="s1">&#39;</span><span class="si">%s</span><span class="s1">: </span><span class="si">%r</span><span class="s1"> matches </span><span class="si">%r</span><span class="s1"> in </span><span class="si">%r</span><span class="s1">&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">msg</span><span class="p">,</span>
-                                           <span class="n">text</span><span class="p">[</span><span class="n">match</span><span class="o">.</span><span class="n">start</span><span class="p">():</span><span class="n">match</span><span class="o">.</span><span class="n">end</span><span class="p">()],</span>
-                                           <span class="n">unexpected_regex</span><span class="o">.</span><span class="n">pattern</span><span class="p">,</span>
-                                           <span class="n">text</span><span class="p">)</span>
+        <span class="n">standardMsg</span> <span class="o">=</span> <span class="s1">&#39;Regex matched: </span><span class="si">%r</span><span class="s1"> matches </span><span class="si">%r</span><span class="s1"> in </span><span class="si">%r</span><span class="s1">&#39;</span> <span class="o">%</span> <span class="p">(</span>
+            <span class="n">text</span><span class="p">[</span><span class="n">match</span><span class="o">.</span><span class="n">start</span><span class="p">()</span> <span class="p">:</span> <span class="n">match</span><span class="o">.</span><span class="n">end</span><span class="p">()],</span>
+            <span class="n">unexpected_regex</span><span class="o">.</span><span class="n">pattern</span><span class="p">,</span>
+            <span class="n">text</span><span class="p">)</span>
+        <span class="c1"># _formatMessage ensures the longMessage option is respected</span>
+        <span class="n">msg</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_formatMessage</span><span class="p">(</span><span class="n">msg</span><span class="p">,</span> <span class="n">standardMsg</span><span class="p">)</span>
         <span class="k">raise</span> <span class="bp">self</span><span class="o">.</span><span class="n">failureException</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+</pre></div>
+
+  </div>
+</div>
+
+  </div>
+  
+            
+  <div class="item">
+    <div class="name def" id="nexuscli.test.nexuscli_test.TestCli.assertNotRegexpMatches">
+    <p>def <span class="ident">assertNotRegexpMatches</span>(</p><p>*args, **kwargs)</p>
+    </div>
+    
+
+    
+  
+  <div class="source_cont">
+  <p class="source_link"><a href="javascript:void(0);" onclick="toggle('source-nexuscli.test.nexuscli_test.TestCli.assertNotRegexpMatches', this);">Show source &equiv;</a></p>
+  <div id="source-nexuscli.test.nexuscli_test.TestCli.assertNotRegexpMatches" class="source">
+    <div class="codehilite"><pre><span></span><span class="k">def</span> <span class="nf">deprecated_func</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+    <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span>
+        <span class="s1">&#39;Please use {0} instead.&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">original_func</span><span class="o">.</span><span class="vm">__name__</span><span class="p">),</span>
+        <span class="ne">DeprecationWarning</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">original_func</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
 </pre></div>
 
   </div>
@@ -2322,7 +2406,11 @@ self.assertEqual(the_exception.error_code, 3)
 <span class="sd">           self.assertEqual(the_exception.error_code, 3)</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="n">context</span> <span class="o">=</span> <span class="n">_AssertRaisesContext</span><span class="p">(</span><span class="n">expected_exception</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span>
-    <span class="k">return</span> <span class="n">context</span><span class="o">.</span><span class="n">handle</span><span class="p">(</span><span class="s1">&#39;assertRaises&#39;</span><span class="p">,</span> <span class="n">args</span><span class="p">,</span> <span class="n">kwargs</span><span class="p">)</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">context</span><span class="o">.</span><span class="n">handle</span><span class="p">(</span><span class="s1">&#39;assertRaises&#39;</span><span class="p">,</span> <span class="n">args</span><span class="p">,</span> <span class="n">kwargs</span><span class="p">)</span>
+    <span class="k">finally</span><span class="p">:</span>
+        <span class="c1"># bpo-23890: manually break a reference cycle</span>
+        <span class="n">context</span> <span class="o">=</span> <span class="bp">None</span>
 </pre></div>
 
   </div>
@@ -2415,8 +2503,10 @@ self.assertEqual(the_exception.error_code, 3)
         <span class="k">assert</span> <span class="n">expected_regex</span><span class="p">,</span> <span class="s2">&quot;expected_regex must not be empty.&quot;</span>
         <span class="n">expected_regex</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="n">expected_regex</span><span class="p">)</span>
     <span class="k">if</span> <span class="ow">not</span> <span class="n">expected_regex</span><span class="o">.</span><span class="n">search</span><span class="p">(</span><span class="n">text</span><span class="p">):</span>
-        <span class="n">msg</span> <span class="o">=</span> <span class="n">msg</span> <span class="ow">or</span> <span class="s2">&quot;Regex didn&#39;t match&quot;</span>
-        <span class="n">msg</span> <span class="o">=</span> <span class="s1">&#39;</span><span class="si">%s</span><span class="s1">: </span><span class="si">%r</span><span class="s1"> not found in </span><span class="si">%r</span><span class="s1">&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">msg</span><span class="p">,</span> <span class="n">expected_regex</span><span class="o">.</span><span class="n">pattern</span><span class="p">,</span> <span class="n">text</span><span class="p">)</span>
+        <span class="n">standardMsg</span> <span class="o">=</span> <span class="s2">&quot;Regex didn&#39;t match: </span><span class="si">%r</span><span class="s2"> not found in </span><span class="si">%r</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="p">(</span>
+            <span class="n">expected_regex</span><span class="o">.</span><span class="n">pattern</span><span class="p">,</span> <span class="n">text</span><span class="p">)</span>
+        <span class="c1"># _formatMessage ensures the longMessage option is respected</span>
+        <span class="n">msg</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_formatMessage</span><span class="p">(</span><span class="n">msg</span><span class="p">,</span> <span class="n">standardMsg</span><span class="p">)</span>
         <span class="k">raise</span> <span class="bp">self</span><span class="o">.</span><span class="n">failureException</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
 </pre></div>
 
@@ -2526,7 +2616,7 @@ which can be indexed, has a length, and has an equality operator.</p>
                 <span class="k">break</span>
             <span class="k">if</span> <span class="n">item1</span> <span class="o">!=</span> <span class="n">item2</span><span class="p">:</span>
                 <span class="n">differing</span> <span class="o">+=</span> <span class="p">(</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">First differing element </span><span class="si">%d</span><span class="s1">:</span><span class="se">\n</span><span class="si">%s</span><span class="se">\n</span><span class="si">%s</span><span class="se">\n</span><span class="s1">&#39;</span> <span class="o">%</span>
-                             <span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="n">item1</span><span class="p">,</span> <span class="n">item2</span><span class="p">))</span>
+                             <span class="p">((</span><span class="n">i</span><span class="p">,)</span> <span class="o">+</span> <span class="n">_common_shorten_repr</span><span class="p">(</span><span class="n">item1</span><span class="p">,</span> <span class="n">item2</span><span class="p">)))</span>
                 <span class="k">break</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="k">if</span> <span class="p">(</span><span class="n">len1</span> <span class="o">==</span> <span class="n">len2</span> <span class="ow">and</span> <span class="n">seq_type</span> <span class="ow">is</span> <span class="bp">None</span> <span class="ow">and</span>
@@ -2538,7 +2628,7 @@ which can be indexed, has a length, and has an equality operator.</p>
                          <span class="s1">&#39;elements.</span><span class="se">\n</span><span class="s1">&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">seq_type_name</span><span class="p">,</span> <span class="n">len1</span> <span class="o">-</span> <span class="n">len2</span><span class="p">))</span>
             <span class="k">try</span><span class="p">:</span>
                 <span class="n">differing</span> <span class="o">+=</span> <span class="p">(</span><span class="s1">&#39;First extra element </span><span class="si">%d</span><span class="s1">:</span><span class="se">\n</span><span class="si">%s</span><span class="se">\n</span><span class="s1">&#39;</span> <span class="o">%</span>
-                              <span class="p">(</span><span class="n">len2</span><span class="p">,</span> <span class="n">seq1</span><span class="p">[</span><span class="n">len2</span><span class="p">]))</span>
+                              <span class="p">(</span><span class="n">len2</span><span class="p">,</span> <span class="n">safe_repr</span><span class="p">(</span><span class="n">seq1</span><span class="p">[</span><span class="n">len2</span><span class="p">])))</span>
             <span class="k">except</span> <span class="p">(</span><span class="ne">TypeError</span><span class="p">,</span> <span class="ne">IndexError</span><span class="p">,</span> <span class="ne">NotImplementedError</span><span class="p">):</span>
                 <span class="n">differing</span> <span class="o">+=</span> <span class="p">(</span><span class="s1">&#39;Unable to index element </span><span class="si">%d</span><span class="s1"> &#39;</span>
                               <span class="s1">&#39;of first </span><span class="si">%s</span><span class="se">\n</span><span class="s1">&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">len2</span><span class="p">,</span> <span class="n">seq_type_name</span><span class="p">))</span>
@@ -2547,7 +2637,7 @@ which can be indexed, has a length, and has an equality operator.</p>
                          <span class="s1">&#39;elements.</span><span class="se">\n</span><span class="s1">&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">seq_type_name</span><span class="p">,</span> <span class="n">len2</span> <span class="o">-</span> <span class="n">len1</span><span class="p">))</span>
             <span class="k">try</span><span class="p">:</span>
                 <span class="n">differing</span> <span class="o">+=</span> <span class="p">(</span><span class="s1">&#39;First extra element </span><span class="si">%d</span><span class="s1">:</span><span class="se">\n</span><span class="si">%s</span><span class="se">\n</span><span class="s1">&#39;</span> <span class="o">%</span>
-                              <span class="p">(</span><span class="n">len1</span><span class="p">,</span> <span class="n">seq2</span><span class="p">[</span><span class="n">len1</span><span class="p">]))</span>
+                              <span class="p">(</span><span class="n">len1</span><span class="p">,</span> <span class="n">safe_repr</span><span class="p">(</span><span class="n">seq2</span><span class="p">[</span><span class="n">len1</span><span class="p">])))</span>
             <span class="k">except</span> <span class="p">(</span><span class="ne">TypeError</span><span class="p">,</span> <span class="ne">IndexError</span><span class="p">,</span> <span class="ne">NotImplementedError</span><span class="p">):</span>
                 <span class="n">differing</span> <span class="o">+=</span> <span class="p">(</span><span class="s1">&#39;Unable to index element </span><span class="si">%d</span><span class="s1"> &#39;</span>
                               <span class="s1">&#39;of second </span><span class="si">%s</span><span class="se">\n</span><span class="s1">&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">len1</span><span class="p">,</span> <span class="n">seq_type_name</span><span class="p">))</span>
@@ -3174,8 +3264,11 @@ tearDown.</p></div>
         <span class="k">finally</span><span class="p">:</span>
             <span class="n">result</span><span class="o">.</span><span class="n">stopTest</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
         <span class="k">return</span>
-    <span class="n">expecting_failure</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">testMethod</span><span class="p">,</span>
-                                <span class="s2">&quot;__unittest_expecting_failure__&quot;</span><span class="p">,</span> <span class="bp">False</span><span class="p">)</span>
+    <span class="n">expecting_failure_method</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">testMethod</span><span class="p">,</span>
+                                       <span class="s2">&quot;__unittest_expecting_failure__&quot;</span><span class="p">,</span> <span class="bp">False</span><span class="p">)</span>
+    <span class="n">expecting_failure_class</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+                                      <span class="s2">&quot;__unittest_expecting_failure__&quot;</span><span class="p">,</span> <span class="bp">False</span><span class="p">)</span>
+    <span class="n">expecting_failure</span> <span class="o">=</span> <span class="n">expecting_failure_class</span> <span class="ow">or</span> <span class="n">expecting_failure_method</span>
     <span class="n">outcome</span> <span class="o">=</span> <span class="n">_Outcome</span><span class="p">(</span><span class="n">result</span><span class="p">)</span>
     <span class="k">try</span><span class="p">:</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_outcome</span> <span class="o">=</span> <span class="n">outcome</span>
@@ -3235,8 +3328,8 @@ tearDown.</p></div>
   <p class="source_link"><a href="javascript:void(0);" onclick="toggle('source-nexuscli.test.nexuscli_test.TestCli.setUp', this);">Show source &equiv;</a></p>
   <div id="source-nexuscli.test.nexuscli_test.TestCli.setUp" class="source">
     <div class="codehilite"><pre><span></span><span class="k">def</span> <span class="nf">setUp</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-    <span class="s2">&quot;Hook method for setting up the test fixture before exercising it.&quot;</span>
-    <span class="k">pass</span>
+    <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">setUp</span><span class="p">()</span>
+    <span class="n">nexuscli</span><span class="o">.</span><span class="n">set_target</span><span class="p">(</span><span class="s2">&quot;http://localhost:8083&quot;</span><span class="p">,</span> <span class="n">use_session</span><span class="o">=</span><span class="bp">False</span><span class="p">)</span>
 </pre></div>
 
   </div>
@@ -3316,7 +3409,7 @@ block, allowing further test code to be executed.</p></div>
   <p class="source_link"><a href="javascript:void(0);" onclick="toggle('source-nexuscli.test.nexuscli_test.TestCli.subTest', this);">Show source &equiv;</a></p>
   <div id="source-nexuscli.test.nexuscli_test.TestCli.subTest" class="source">
     <div class="codehilite"><pre><span></span><span class="nd">@contextlib.contextmanager</span>
-<span class="k">def</span> <span class="nf">subTest</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">msg</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="o">**</span><span class="n">params</span><span class="p">):</span>
+<span class="k">def</span> <span class="nf">subTest</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">msg</span><span class="o">=</span><span class="n">_subtest_msg_sentinel</span><span class="p">,</span> <span class="o">**</span><span class="n">params</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;Return a context manager that will return the enclosed block</span>
 <span class="sd">    of code in a subtest identified by the optional message and</span>
 <span class="sd">    keyword parameters.  A failure in the subtest marks the test</span>
@@ -3391,6 +3484,52 @@ block, allowing further test code to be executed.</p></div>
     <span class="n">ts</span> <span class="o">=</span> <span class="n">nexuscli</span><span class="o">.</span><span class="n">daily_difference_average</span><span class="p">(</span><span class="s2">&quot;AVHRR_OI_L4_GHRSST_NCEI&quot;</span><span class="p">,</span> <span class="n">box</span><span class="p">(</span><span class="o">-</span><span class="mi">150</span><span class="p">,</span> <span class="mi">45</span><span class="p">,</span> <span class="o">-</span><span class="mi">120</span><span class="p">,</span> <span class="mi">60</span><span class="p">),</span>
                                            <span class="n">datetime</span><span class="p">(</span><span class="mi">2013</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span> <span class="n">datetime</span><span class="p">(</span><span class="mi">2014</span><span class="p">,</span> <span class="mi">12</span><span class="p">,</span> <span class="mi">31</span><span class="p">))</span>
     <span class="bp">self</span><span class="o">.</span><span class="n">assertEqual</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">ts</span><span class="p">))</span>
+</pre></div>
+
+  </div>
+</div>
+
+  </div>
+  
+            
+  <div class="item">
+    <div class="name def" id="nexuscli.test.nexuscli_test.TestCli.test_data_in_bounds_with_bounding_box">
+    <p>def <span class="ident">test_data_in_bounds_with_bounding_box</span>(</p><p>self)</p>
+    </div>
+    
+
+    
+  
+  <div class="source_cont">
+  <p class="source_link"><a href="javascript:void(0);" onclick="toggle('source-nexuscli.test.nexuscli_test.TestCli.test_data_in_bounds_with_bounding_box', this);">Show source &equiv;</a></p>
+  <div id="source-nexuscli.test.nexuscli_test.TestCli.test_data_in_bounds_with_bounding_box" class="source">
+    <div class="codehilite"><pre><span></span><span class="k">def</span> <span class="nf">test_data_in_bounds_with_bounding_box</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="n">subset</span> <span class="o">=</span> <span class="n">nexuscli</span><span class="o">.</span><span class="n">subset</span><span class="p">(</span><span class="s2">&quot;MUR-JPL-L4-GLOB-v4.1&quot;</span><span class="p">,</span> <span class="n">box</span><span class="p">(</span><span class="o">-</span><span class="mi">150</span><span class="p">,</span> <span class="mi">45</span><span class="p">,</span> <span class="o">-</span><span class="mi">149</span><span class="p">,</span> <span class="mi">46</span><span class="p">),</span> <span class="n">datetime</span><span class="p">(</span><span class="mi">2018</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span>
+                             <span class="n">datetime</span><span class="p">(</span><span class="mi">2018</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span> <span class="bp">None</span><span class="p">,</span> <span class="bp">None</span><span class="p">)</span>
+    <span class="k">print</span><span class="p">(</span><span class="n">subset</span><span class="p">)</span>
+</pre></div>
+
+  </div>
+</div>
+
+  </div>
+  
+            
+  <div class="item">
+    <div class="name def" id="nexuscli.test.nexuscli_test.TestCli.test_data_in_bounds_with_metadata_filter">
+    <p>def <span class="ident">test_data_in_bounds_with_metadata_filter</span>(</p><p>self)</p>
+    </div>
+    
+
+    
+  
+  <div class="source_cont">
+  <p class="source_link"><a href="javascript:void(0);" onclick="toggle('source-nexuscli.test.nexuscli_test.TestCli.test_data_in_bounds_with_metadata_filter', this);">Show source &equiv;</a></p>
+  <div id="source-nexuscli.test.nexuscli_test.TestCli.test_data_in_bounds_with_metadata_filter" class="source">
+    <div class="codehilite"><pre><span></span><span class="k">def</span> <span class="nf">test_data_in_bounds_with_metadata_filter</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="n">subset</span> <span class="o">=</span> <span class="n">nexuscli</span><span class="o">.</span><span class="n">subset</span><span class="p">(</span><span class="s2">&quot;MUR-JPL-L4-GLOB-v4.1&quot;</span><span class="p">,</span> <span class="bp">None</span><span class="p">,</span> <span class="n">datetime</span><span class="p">(</span><span class="mi">2018</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span> <span class="n">datetime</span><span class="p">(</span><span class="mi">2018</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">),</span>
+                             <span class="bp">None</span><span class="p">,</span> <span class="p">[</span><span class="s2">&quot;id:60758e00-5721-3a6e-bf57-78448bb0aeeb&quot;</span><span class="p">])</span>
+    <span class="k">print</span><span class="p">(</span><span class="n">subset</span><span class="p">)</span>
 </pre></div>
 
   </div>
