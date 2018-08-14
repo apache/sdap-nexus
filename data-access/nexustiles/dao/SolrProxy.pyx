@@ -28,6 +28,8 @@ SOLR_CON_LOCK = threading.Lock()
 thread_local = threading.local()
 
 EPOCH = timezone('UTC').localize(datetime(1970, 1, 1))
+SOLR_FORMAT = '%Y-%m-%dT%H:%M:%SZ'
+ISO_8601 = '%Y-%m-%dT%H:%M:%S%z'
 
 
 class SolrProxy(object):
@@ -156,8 +158,12 @@ class SolrProxy(object):
         datasets = self.get_data_series_list_simple()
 
         for dataset in datasets:
-            dataset['start'] = (self.find_min_date_from_tiles([], ds=dataset['title']) - EPOCH).total_seconds() * 1000
-            dataset['end'] = (self.find_max_date_from_tiles([], ds=dataset['title']) - EPOCH).total_seconds() * 1000
+            min_date = self.find_min_date_from_tiles([], ds=dataset['title'])
+            max_date = self.find_max_date_from_tiles([], ds=dataset['title'])
+            dataset['start'] = (min_date - EPOCH).total_seconds()
+            dataset['end'] = (max_date - EPOCH).total_seconds()
+            dataset['iso_start'] = min_date.strftime(ISO_8601)
+            dataset['iso_end'] = max_date.strftime(ISO_8601)
 
         return datasets
 
@@ -236,8 +242,8 @@ class SolrProxy(object):
 
         search = 'dataset_s:%s' % ds
 
-        search_start_s = datetime.utcfromtimestamp(start_time).strftime('%Y-%m-%dT%H:%M:%SZ')
-        search_end_s = datetime.utcfromtimestamp(end_time).strftime('%Y-%m-%dT%H:%M:%SZ')
+        search_start_s = datetime.utcfromtimestamp(start_time).strftime(SOLR_FORMAT)
+        search_end_s = datetime.utcfromtimestamp(end_time).strftime(SOLR_FORMAT)
 
         additionalparams = {
             'fq': [
@@ -258,7 +264,7 @@ class SolrProxy(object):
         response = self.do_query_raw(*(search, None, None, False, None), **additionalparams)
 
         daysinrangeasc = sorted(
-            [(datetime.strptime(a_date, '%Y-%m-%dT%H:%M:%SZ') - datetime.utcfromtimestamp(0)).total_seconds() for a_date
+            [(datetime.strptime(a_date, SOLR_FORMAT) - datetime.utcfromtimestamp(0)).total_seconds() for a_date
              in response.facets['facet_fields']['tile_min_time_dt'][::2]])
 
         return daysinrangeasc
@@ -276,8 +282,8 @@ class SolrProxy(object):
         }
 
         if 0 < start_time <= end_time:
-            search_start_s = datetime.utcfromtimestamp(start_time).strftime('%Y-%m-%dT%H:%M:%SZ')
-            search_end_s = datetime.utcfromtimestamp(end_time).strftime('%Y-%m-%dT%H:%M:%SZ')
+            search_start_s = datetime.utcfromtimestamp(start_time).strftime(SOLR_FORMAT)
+            search_end_s = datetime.utcfromtimestamp(end_time).strftime(SOLR_FORMAT)
 
             time_clause = "(" \
                           "tile_min_time_dt:[%s TO %s] " \
@@ -308,8 +314,8 @@ class SolrProxy(object):
         }
 
         if 0 < start_time <= end_time:
-            search_start_s = datetime.utcfromtimestamp(start_time).strftime('%Y-%m-%dT%H:%M:%SZ')
-            search_end_s = datetime.utcfromtimestamp(end_time).strftime('%Y-%m-%dT%H:%M:%SZ')
+            search_start_s = datetime.utcfromtimestamp(start_time).strftime(SOLR_FORMAT)
+            search_end_s = datetime.utcfromtimestamp(end_time).strftime(SOLR_FORMAT)
 
             time_clause = "(" \
                           "tile_min_time_dt:[%s TO %s] " \
@@ -340,8 +346,8 @@ class SolrProxy(object):
         }
 
         if 0 < start_time <= end_time:
-            search_start_s = datetime.utcfromtimestamp(start_time).strftime('%Y-%m-%dT%H:%M:%SZ')
-            search_end_s = datetime.utcfromtimestamp(end_time).strftime('%Y-%m-%dT%H:%M:%SZ')
+            search_start_s = datetime.utcfromtimestamp(start_time).strftime(SOLR_FORMAT)
+            search_end_s = datetime.utcfromtimestamp(end_time).strftime(SOLR_FORMAT)
 
             time_clause = "(" \
                           "tile_min_time_dt:[%s TO %s] " \
@@ -377,8 +383,8 @@ class SolrProxy(object):
         }
 
         if 0 < start_time <= end_time:
-            search_start_s = datetime.utcfromtimestamp(start_time).strftime('%Y-%m-%dT%H:%M:%SZ')
-            search_end_s = datetime.utcfromtimestamp(end_time).strftime('%Y-%m-%dT%H:%M:%SZ')
+            search_start_s = datetime.utcfromtimestamp(start_time).strftime(SOLR_FORMAT)
+            search_end_s = datetime.utcfromtimestamp(end_time).strftime(SOLR_FORMAT)
 
             time_clause = "(" \
                           "tile_min_time_dt:[%s TO %s] " \
@@ -414,8 +420,8 @@ class SolrProxy(object):
         }
 
         if 0 < start_time <= end_time:
-            search_start_s = datetime.utcfromtimestamp(start_time).strftime('%Y-%m-%dT%H:%M:%SZ')
-            search_end_s = datetime.utcfromtimestamp(end_time).strftime('%Y-%m-%dT%H:%M:%SZ')
+            search_start_s = datetime.utcfromtimestamp(start_time).strftime(SOLR_FORMAT)
+            search_end_s = datetime.utcfromtimestamp(end_time).strftime(SOLR_FORMAT)
 
             time_clause = "(" \
                           "tile_min_time_dt:[%s TO %s] " \
@@ -437,7 +443,7 @@ class SolrProxy(object):
     def find_all_tiles_in_box_at_time(self, min_lat, max_lat, min_lon, max_lon, ds, search_time, **kwargs):
         search = 'dataset_s:%s' % ds
 
-        the_time = datetime.utcfromtimestamp(search_time).strftime('%Y-%m-%dT%H:%M:%SZ')
+        the_time = datetime.utcfromtimestamp(search_time).strftime(SOLR_FORMAT)
         time_clause = "(" \
                       "tile_min_time_dt:[* TO %s] " \
                       "AND tile_max_time_dt:[%s TO *] " \
@@ -460,7 +466,7 @@ class SolrProxy(object):
     def find_all_tiles_in_polygon_at_time(self, bounding_polygon, ds, search_time, **kwargs):
         search = 'dataset_s:%s' % ds
 
-        the_time = datetime.utcfromtimestamp(search_time).strftime('%Y-%m-%dT%H:%M:%SZ')
+        the_time = datetime.utcfromtimestamp(search_time).strftime(SOLR_FORMAT)
         time_clause = "(" \
                       "tile_min_time_dt:[* TO %s] " \
                       "AND tile_max_time_dt:[%s TO *] " \
@@ -483,7 +489,7 @@ class SolrProxy(object):
     def find_all_tiles_within_box_at_time(self, min_lat, max_lat, min_lon, max_lon, ds, time, **kwargs):
         search = 'dataset_s:%s' % ds
 
-        the_time = datetime.utcfromtimestamp(time).strftime('%Y-%m-%dT%H:%M:%SZ')
+        the_time = datetime.utcfromtimestamp(time).strftime(SOLR_FORMAT)
         time_clause = "(" \
                       "tile_min_time_dt:[* TO %s] " \
                       "AND tile_max_time_dt:[%s TO *] " \
@@ -507,7 +513,7 @@ class SolrProxy(object):
     def find_all_boundary_tiles_at_time(self, min_lat, max_lat, min_lon, max_lon, ds, time, **kwargs):
         search = 'dataset_s:%s' % ds
 
-        the_time = datetime.utcfromtimestamp(time).strftime('%Y-%m-%dT%H:%M:%SZ')
+        the_time = datetime.utcfromtimestamp(time).strftime(SOLR_FORMAT)
         time_clause = "(" \
                       "tile_min_time_dt:[* TO %s] " \
                       "AND tile_max_time_dt:[%s TO *] " \
@@ -555,8 +561,8 @@ class SolrProxy(object):
             **additionalparams)
 
     def get_formatted_time_clause(self, start_time, end_time):
-        search_start_s = datetime.utcfromtimestamp(start_time).strftime('%Y-%m-%dT%H:%M:%SZ')
-        search_end_s = datetime.utcfromtimestamp(end_time).strftime('%Y-%m-%dT%H:%M:%SZ')
+        search_start_s = datetime.utcfromtimestamp(start_time).strftime(SOLR_FORMAT)
+        search_end_s = datetime.utcfromtimestamp(end_time).strftime(SOLR_FORMAT)
 
         time_clause = "(" \
                       "tile_min_time_dt:[%s TO %s] " \
@@ -651,7 +657,7 @@ class SolrProxy(object):
         return datetime.strptime(date, "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=UTC)
 
     def convert_iso_to_timestamp(self, date):
-        return (self.convert_iso_to_datetime(date) - EPOCH).total_seconds() * 1000
+        return (self.convert_iso_to_datetime(date) - EPOCH).total_seconds()
 
     def ping(self):
         solrAdminPing = 'http://%s/solr/%s/admin/ping' % (self.solrUrl, self.solrCore)
