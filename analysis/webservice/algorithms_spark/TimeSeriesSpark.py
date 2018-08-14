@@ -505,6 +505,10 @@ def spark_driver(daysinrange, bounding_polygon, ds, fill=-9999., spark_nparts_ne
 
 def calc_average_on_day(tile_in_spark):
     import shapely.wkt
+    from datetime import datetime
+    from pytz import timezone
+    ISO_8601 = '%Y-%m-%dT%H:%M:%S%z'
+
     (bounding_wkt, dataset, timestamps, fill) = tile_in_spark
     if len(timestamps) == 0:
         return []
@@ -561,7 +565,8 @@ def calc_average_on_day(tile_in_spark):
             'mean': daily_mean,
             'cnt': data_count,
             'std': data_std,
-            'time': int(timeinseconds)
+            'time': int(timeinseconds),
+            'iso_time': datetime.utcfromtimestamp(int(timeinseconds)).replace(tzinfo=timezone('UTC')).strftime(ISO_8601)
         }
         stats_arr.append(stat)
     return stats_arr
