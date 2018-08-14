@@ -23,12 +23,17 @@ from datetime import datetime
 import matplotlib.pyplot as plt
 import mpld3
 import numpy as np
+import shapely.geometry
 from matplotlib import cm
 from matplotlib.ticker import FuncFormatter
 from nexustiles.nexustiles import NexusTileService
+from pytz import timezone
 
-from webservice.NexusHandler import SparkHandler, nexus_handler, DEFAULT_PARAMETERS_SPEC
-from webservice.webmodel import NexusProcessingException, NexusResults
+from webservice.NexusHandler import SparkHandler, nexus_handler
+from webservice.webmodel import NexusResults, NoDataException, NexusProcessingException
+
+EPOCH = timezone('UTC').localize(datetime(1970, 1, 1))
+ISO_8601 = '%Y-%m-%dT%H:%M:%SZ'
 
 SENTINEL = 'STOP'
 LATITUDE = 0
@@ -53,6 +58,7 @@ class LongitudeHofMoellerCalculator(object):
         stat = {
             'sequence': index,
             'time': np.ma.min(tile.times),
+            'iso_time': tile.min_time.strftime(ISO_8601),
             'lons': []
         }
         points = list(tile.nexus_point_generator())
@@ -64,7 +70,7 @@ class LongitudeHofMoellerCalculator(object):
             stat['lons'].append({
                 'longitude': float(lon),
                 'cnt': len(values_at_lon),
-                'avg': np.mean(values_at_lon).item(),
+                'mean': np.mean(values_at_lon).item(),
                 'max': np.max(values_at_lon).item(),
                 'min': np.min(values_at_lon).item(),
                 'std': np.std(values_at_lon).item()
@@ -91,6 +97,7 @@ class LatitudeHofMoellerCalculator(object):
         stat = {
             'sequence': index,
             'time': np.ma.min(tile.times),
+            'iso_time': tile.min_time.strftime(ISO_8601),
             'lats': []
         }
 
@@ -104,7 +111,7 @@ class LatitudeHofMoellerCalculator(object):
             stat['lats'].append({
                 'latitude': float(lat),
                 'cnt': len(values_at_lat),
-                'avg': np.mean(values_at_lat).item(),
+                'mean': np.mean(values_at_lat).item(),
                 'max': np.max(values_at_lat).item(),
                 'min': np.min(values_at_lat).item(),
                 'std': np.std(values_at_lat).item()
@@ -114,9 +121,106 @@ class LatitudeHofMoellerCalculator(object):
 
 
 class BaseHoffMoellerHandlerImpl(SparkHandler):
+    params = {
+        "ds": {
+            "name": "Dataset",
+            "type": "comma-delimited string",
+            "description": "The dataset(s) Used to generate the plot. Required"
+        },
+        "startTime": {
+            "name": "Start Time",
+            "type": "string",
+            "description": "Starting time in format YYYY-MM-DDTHH:mm:ssZ or seconds since EPOCH. Required"
+        },
+        "endTime": {
+            "name": "End Time",
+            "type": "string",
+            "description": "Ending time in format YYYY-MM-DDTHH:mm:ssZ or seconds since EPOCH. Required"
+        },
+        "b": {
+            "name": "Bounding box",
+            "type": "comma-delimited float",
+            "description": "Minimum (Western) Longitude, Minimum (Southern) Latitude, "
+                           "Maximum (Eastern) Longitude, Maximum (Northern) Latitude. Required"
+        },
+        "spark": {
+            "name": "Spark Configuration",
+            "type": "comma-delimited value",
+            "description": "Configuration used to launch in the Spark cluster. Value should be 3 elements separated by "
+                           "commas. 1) Spark Master 2) Number of Spark Executors 3) Number of Spark Partitions. Only "
+                           "Number of Spark Partitions is used by this function. Optional (Default: local,1,1)"
+        }
+    }
+
     def __init__(self):
         SparkHandler.__init__(self)
         self.log = logging.getLogger(__name__)
+
+    def parse_arguments(self, request):
+        # Parse input arguments
+        self.log.debug("Parsing arguments")
+
+        try:
+            ds = request.get_dataset()
+            if type(ds) == list or type(ds) == tuple:
+                ds = next(iter(ds))
+        except:
+            raise NexusProcessingException(
+                reason="'ds' argument is required. Must be a string",
+                code=400)
+
+        # Do not allow time series on Climatology
+        if next(iter([clim for clim in ds if 'CLIM' in clim]), False):
+            raise NexusProcessingException(
+                reason="Cannot compute Latitude/Longitude Time Average plot on a climatology", code=400)
+
+        try:
+            bounding_polygon = request.get_bounding_polygon()
+            request.get_min_lon = lambda: bounding_polygon.bounds[0]
+            request.get_min_lat = lambda: bounding_polygon.bounds[1]
+            request.get_max_lon = lambda: bounding_polygon.bounds[2]
+            request.get_max_lat = lambda: bounding_polygon.bounds[3]
+        except:
+            try:
+                west, south, east, north = request.get_min_lon(), request.get_min_lat(), \
+                                           request.get_max_lon(), request.get_max_lat()
+                bounding_polygon = shapely.geometry.Polygon(
+                    [(west, south), (east, south), (east, north), (west, north), (west, south)])
+            except:
+                raise NexusProcessingException(
+                    reason="'b' argument is required. Must be comma-delimited float formatted as "
+                           "Minimum (Western) Longitude, Minimum (Southern) Latitude, "
+                           "Maximum (Eastern) Longitude, Maximum (Northern) Latitude",
+                    code=400)
+
+        try:
+            start_time = request.get_start_datetime()
+        except:
+            raise NexusProcessingException(
+                reason="'startTime' argument is required. Can be int value seconds from epoch or "
+                       "string format YYYY-MM-DDTHH:mm:ssZ",
+                code=400)
+        try:
+            end_time = request.get_end_datetime()
+        except:
+            raise NexusProcessingException(
+                reason="'endTime' argument is required. Can be int value seconds from epoch or "
+                       "string format YYYY-MM-DDTHH:mm:ssZ",
+                code=400)
+
+        if start_time > end_time:
+            raise NexusProcessingException(
+                reason="The starting time must be before the ending time. Received startTime: %s, endTime: %s" % (
+                    request.get_start_datetime().strftime(ISO_8601), request.get_end_datetime().strftime(ISO_8601)),
+                code=400)
+
+        spark_master, spark_nexecs, spark_nparts = request.get_spark_cfg()
+
+        start_seconds_from_epoch = long((start_time - EPOCH).total_seconds())
+        end_seconds_from_epoch = long((end_time - EPOCH).total_seconds())
+
+        return ds, bounding_polygon, start_seconds_from_epoch, end_seconds_from_epoch, \
+               spark_master, spark_nexecs, spark_nparts
 
     def applyDeseasonToHofMoellerByField(self, results, pivot="lats", field="avg", append=True):
         shape = (len(results), len(results[0][pivot]))
@@ -155,23 +259,23 @@ class LatitudeTimeHoffMoellerSparkHandlerImpl(BaseHoffMoellerHandlerImpl):
     name = "Latitude/Time HofMoeller Spark"
     path = "/latitudeTimeHofMoellerSpark"
     description = "Computes a latitude/time HofMoeller plot given an arbitrary geographical area and time range"
-    params = DEFAULT_PARAMETERS_SPEC
+    params = BaseHoffMoellerHandlerImpl.params
     singleton = True
 
     def __init__(self):
         BaseHoffMoellerHandlerImpl.__init__(self)
 
-    def calc(self, computeOptions, **args):
-        nexus_tiles_spark = [(tile.tile_id, x, computeOptions.get_min_lat(), computeOptions.get_max_lat(),
-                              computeOptions.get_min_lon(), computeOptions.get_max_lon()) for x, tile in enumerate(
-            self._tile_service.find_tiles_in_box(computeOptions.get_min_lat(), computeOptions.get_max_lat(),
-                                                 computeOptions.get_min_lon(), computeOptions.get_max_lon(),
-                                                 computeOptions.get_dataset()[0],
-                                                 computeOptions.get_start_time(),
-                                                 computeOptions.get_end_time(), fetch_data=False))]
+    def calc(self, compute_options, **args):
+        ds, bbox, start_time, end_time, spark_master, spark_nexecs, spark_nparts = self.parse_arguments(compute_options)
+
+        min_lon, min_lat, max_lon, max_lat = bbox.bounds
+
+        nexus_tiles_spark = [(tile.tile_id, x, min_lat, max_lat, min_lon, max_lon) for x, tile in enumerate(
+            self._tile_service.find_tiles_in_box(min_lat, max_lat, min_lon, max_lon,
+                                                 ds, start_time, end_time, fetch_data=False))]
 
         if len(nexus_tiles_spark) == 0:
-            raise NexusProcessingException.NoDataException(reason="No data found for selected timeframe")
+            raise NoDataException(reason="No data found for selected timeframe")
 
         # Parallelize list of tile ids
         rdd = self._sc.parallelize(nexus_tiles_spark, determine_parllelism(len(nexus_tiles_spark)))
@@ -182,7 +286,9 @@ class LatitudeTimeHoffMoellerSparkHandlerImpl(BaseHoffMoellerHandlerImpl):
 
         results = self.applyDeseasonToHofMoeller(results)
 
-        result = HoffMoellerResults(results=results, computeOptions=computeOptions, type=HoffMoellerResults.LATITUDE)
+        result = HoffMoellerResults(results=results, compute_options=None, type=HoffMoellerResults.LATITUDE,
+                                    minLat=min_lat, maxLat=max_lat, minLon=min_lon,
+                                    maxLon=max_lon, ds=ds, startTime=start_time, endTime=end_time)
         return result
 
 
@@ -191,23 +297,23 @@ class LongitudeTimeHoffMoellerSparkHandlerImpl(BaseHoffMoellerHandlerImpl):
     name = "Longitude/Time HofMoeller Spark"
     path = "/longitudeTimeHofMoellerSpark"
     description = "Computes a longitude/time HofMoeller plot given an arbitrary geographical area and time range"
-    params = DEFAULT_PARAMETERS_SPEC
+    params = BaseHoffMoellerHandlerImpl.params
     singleton = True
 
     def __init__(self):
         BaseHoffMoellerHandlerImpl.__init__(self)
 
-    def calc(self, computeOptions, **args):
-        nexus_tiles_spark = [(tile.tile_id, x, computeOptions.get_min_lat(), computeOptions.get_max_lat(),
-                              computeOptions.get_min_lon(), computeOptions.get_max_lon()) for x, tile in enumerate(
-            self._tile_service.find_tiles_in_box(computeOptions.get_min_lat(), computeOptions.get_max_lat(),
-                                                 computeOptions.get_min_lon(), computeOptions.get_max_lon(),
-                                                 computeOptions.get_dataset()[0],
-                                                 computeOptions.get_start_time(),
-                                                 computeOptions.get_end_time(), fetch_data=False))]
+    def calc(self, compute_options, **args):
+        ds, bbox, start_time, end_time, spark_master, spark_nexecs, spark_nparts = self.parse_arguments(compute_options)
+
+        min_lon, min_lat, max_lon, max_lat = bbox.bounds
+
+        nexus_tiles_spark = [(tile.tile_id, x, min_lat, max_lat, min_lon, max_lon) for x, tile in enumerate(
+            self._tile_service.find_tiles_in_box(min_lat, max_lat, min_lon, max_lon,
+                                                 ds, start_time, end_time, fetch_data=False))]
 
         if len(nexus_tiles_spark) == 0:
-            raise NexusProcessingException.NoDataException(reason="No data found for selected timeframe")
+            raise NoDataException(reason="No data found for selected timeframe")
 
         # Parallelize list of tile ids
         rdd = self._sc.parallelize(nexus_tiles_spark, determine_parllelism(len(nexus_tiles_spark)))
@@ -218,7 +324,9 @@ class LongitudeTimeHoffMoellerSparkHandlerImpl(BaseHoffMoellerHandlerImpl):
 
         results = self.applyDeseasonToHofMoeller(results, pivot="lons")
 
-        result = HoffMoellerResults(results=results, computeOptions=computeOptions, type=HoffMoellerResults.LONGITUDE)
+        result = HoffMoellerResults(results=results, compute_options=None, type=HoffMoellerResults.LONGITUDE,
+                                    minLat=min_lat, maxLat=max_lat, minLon=min_lon,
+                                    maxLon=max_lon, ds=ds, startTime=start_time, endTime=end_time)
         return result
 
 
@@ -226,9 +334,10 @@ class HoffMoellerResults(NexusResults):
     LATITUDE = 0
     LONGITUDE = 1
 
-    def __init__(self, results=None, meta=None, stats=None, computeOptions=None, **args):
-        NexusResults.__init__(self, results=results, meta=meta, stats=stats, computeOptions=computeOptions)
-        self.__type = args['type']
+    def __init__(self, results=None, meta=None, stats=None, **kwargs):
+
+        NexusResults.__init__(self, results=results, meta=meta, stats=stats, computeOptions=None, **kwargs)
+        self.__type = kwargs['type']
 
     def createHoffmueller(self, data, coordSeries, timeSeries, coordName, title, interpolate='nearest'):
         cmap = cm.coolwarm
