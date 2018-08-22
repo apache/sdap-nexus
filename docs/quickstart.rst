@@ -255,6 +255,8 @@ Now that the data is being (has been) ingested, we need to start the webapp that
 
   docker run -d --name nexus-webapp --network sdap-net -p 8083:8083 -e SPARK_LOCAL_IP=127.0.0.1 -e MASTER=local[4] -e CASSANDRA_CONTACT_POINTS=cassandra -e SOLR_URL_PORT=solr:8983 sdap/nexus-webapp:${VERSION}
 
+.. note:: If you see a messasge like ``docker: invalid reference format`` it likely means you need to re-export the ``VERSION`` environment variable again. This can happen when you open a new terminal window or tab.
+
 This command starts the nexus webservice and connects it to the Solr and Cassandra containers. It also sets the configuration for Spark to use local mode with 4 executors.
 
 After running this command you should be able to access the NEXUS webservice by sending requests to http://localhost:8083. A good test is to query the ``/list`` endpoint which lists all of the datasets currently available to that instance of NEXUS. For example:
