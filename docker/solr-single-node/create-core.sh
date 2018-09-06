@@ -1,3 +1,5 @@
+#!/bin/bash -ex
+
 # Licensed to the Apache Software Foundation (ASF) under one or more
 # contributor license agreements.  See the NOTICE file distributed with
 # this work for additional information regarding copyright ownership.
@@ -12,23 +14,12 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-FROM solr:7.4
-MAINTAINER Apache SDAP "dev@sdap.apache.org"
 
-USER root
+set -ex
 
-ENV SOLR_HOME=/opt/solr/server/solr/
+SOLR_HOME=${SOLR_HOME:=/opt/solr/server/solr/}
+mkdir -p ${SOLR_HOME}/nexustiles
+cp -r /tmp/nexustiles/* ${SOLR_HOME}/nexustiles/
+chown -R ${SOLR_USER}:${SOLR_GROUP} ${SOLR_HOME}/nexustiles
 
-RUN cd / && \
-    apt-get update && \
-    apt-get -y install git && \
-    rm -rf /var/lib/apt/lists/* && \
-    git clone https://github.com/apache/incubator-sdap-nexus.git && \
-    cp -r /incubator-sdap-nexus/data-access/config/schemas/solr/nexustiles /tmp/nexustiles && \
-    rm -rf /incubator-sdap-nexus && \
-    wget http://central.maven.org/maven2/org/locationtech/jts/jts-core/1.15.0/jts-core-1.15.0.jar && \
-    cp jts-core-1.15.0.jar /opt/solr/server/solr-webapp/webapp/WEB-INF/lib/jts-core-1.15.0.jar && \
-    chown ${SOLR_USER}:${SOLR_GROUP} /opt/solr/server/solr-webapp/webapp/WEB-INF/lib/jts-core-1.15.0.jar && \
-    rm jts-core-1.15.0.jar
-
-USER ${SOLR_USER}
+set +x
