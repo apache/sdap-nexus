@@ -130,12 +130,6 @@ To start cassandra using a volume mount and expose the connection port 9042:
   export CASSANDRA_DATA=~/nexus-quickstart/cassandra
   docker run --name cassandra --network sdap-net -p 9042:9042 -v ${CASSANDRA_DATA}:/var/lib/cassandra -d sdap/cassandra:${VERSION}
 
-If this is your first time starting the cassandra container, you need to initialize the database by running the DDL script included in the image. Execute the following command to create the needed keyspace and table:
-
-.. code-block:: bash
-
-  docker exec -it cassandra cqlsh -f /tmp/nexustiles.cql
-
 .. _quickstart-step6:
 
 Ingest Data
