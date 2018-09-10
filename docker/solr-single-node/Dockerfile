@@ -23,12 +23,6 @@ COPY create-core.sh /docker-entrypoint-initdb.d/create-core.sh
 RUN echo "${SOLR_USER} ALL=(ALL) NOPASSWD: /usr/bin/cp -r /tmp/nexustiles/* ${SOLR_HOME}/nexustiles/" >> /etc/sudoers && \
   echo "${SOLR_USER} ALL=(ALL) NOPASSWD: /usr/bin/chown -R ${SOLR_USER}\:${SOLR_GROUP} ${SOLR_HOME}/nexustiles" >> /etc/sudoers
 
-#cp -r /tmp/nexustiles/* ${SOLR_HOME}/nexustiles/
-#chown -R ${SOLR_USER}:${SOLR_GROUP} ${SOLR_HOME}/nexustiles
-#joe ALL=(ALL) NOPASSWD: /full/path/to/command ARG1 ARG2
-
-# RUN chown ${SOLR_USER}:${SOLR_GROUP} /docker-entrypoint-initdb.d/create-core.sh
-
 USER ${SOLR_USER}
 VOLUME ${SOLR_HOME}/nexustiles
 
