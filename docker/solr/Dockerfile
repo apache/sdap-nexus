@@ -17,11 +17,11 @@ MAINTAINER Apache SDAP "dev@sdap.apache.org"
 
 USER root
 
-ENV SOLR_HOME=/opt/solr/server/solr/
+ENV SOLR_HOME=/opt/solr/server/solr
 
 RUN cd / && \
     apt-get update && \
-    apt-get -y install git && \
+    apt-get -y install git sudo && \
     rm -rf /var/lib/apt/lists/* && \
     git clone https://github.com/apache/incubator-sdap-nexus.git && \
     cp -r /incubator-sdap-nexus/data-access/config/schemas/solr/nexustiles /tmp/nexustiles && \

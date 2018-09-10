@@ -233,7 +233,7 @@ The ningester docker image runs a batch job that will ingest one granule. Here, 
 
   for g in `ls ${DATA_DIRECTORY} | awk "{print $1}"`
   do
-    docker run -d --name $(echo avhrr_$g | cut -d'-' -f 1) --network sdap-net -v ${NINGESTER_CONFIG}:/config/ -v ${DATA_DIRECTORY}/${g}:/data/${g} sdap/ningester:${VERSION} docker,solr,cassandra
+    docker run -d --name $(echo avhrr_$g | cut -d'-' -f 1) --network sdap-net -v ${NINGESTER_CONFIG}:/home/ningester/config/ -v ${DATA_DIRECTORY}/${g}:/home/ningester/data/${g} sdap/ningester:${VERSION} docker,solr,cassandra
     sleep 60
   done
 

@@ -19,7 +19,7 @@ set -ex
 
 SOLR_HOME=${SOLR_HOME:=/opt/solr/server/solr/}
 mkdir -p ${SOLR_HOME}/nexustiles
-cp -r /tmp/nexustiles/* ${SOLR_HOME}/nexustiles/
-chown -R ${SOLR_USER}:${SOLR_GROUP} ${SOLR_HOME}/nexustiles
+sudo cp -r /tmp/nexustiles/* ${SOLR_HOME}/nexustiles/
+sudo chown -R ${SOLR_USER}:${SOLR_GROUP} ${SOLR_HOME}/nexustiles
 
 set +x
