@@ -19,12 +19,11 @@ MAINTAINER Apache SDAP "dev@sdap.apache.org"
 
 USER root
 
-RUN apt-get update && apt-get -y install git && rm -rf /var/lib/apt/lists/*
+COPY create-core.sh /docker-entrypoint-initdb.d/create-core.sh
+RUN echo "${SOLR_USER} ALL=(ALL) NOPASSWD: /usr/bin/cp -r /tmp/nexustiles/* ${SOLR_HOME}/nexustiles/" >> /etc/sudoers && \
+  echo "${SOLR_USER} ALL=(ALL) NOPASSWD: /usr/bin/chown -R ${SOLR_USER}\:${SOLR_GROUP} ${SOLR_HOME}/nexustiles" >> /etc/sudoers
 
-RUN cd / && git clone https://github.com/apache/incubator-sdap-nexus.git && cp -r /incubator-sdap-nexus/data-access/config/schemas/solr/nexustiles . && rm -rf /incubator-sdap-nexus
+USER ${SOLR_USER}
+VOLUME ${SOLR_HOME}/nexustiles
 
-USER $SOLR_USER
-
-RUN cp -r /nexustiles /opt/solr/server/solr/.
-
-VOLUME ["/opt/solr/server/solr/nexustiles/data"]
+ENTRYPOINT ["solr-foreground"]
