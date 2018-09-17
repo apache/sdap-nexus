@@ -75,10 +75,10 @@ RUN conda install -c conda-forge -y netCDF4 && \
     ln -s libhdf5_cpp.so.12 libhdf5_cpp.so.10 && \
     ln -s libjpeg.so.9 libjpeg.so.8
 
-# Install Oracle JDK 1.8u172-b11
-RUN wget -q --no-cookies --no-check-certificate --header "Cookie: gpw_e24=http%3A%2F%2Fwww.oracle.com%2F; oraclelicense=accept-securebackup-cookie" "http://download.oracle.com/otn-pub/java/jdk/8u172-b11/a58eab1ec242421181065cdc37240b08/jdk-8u172-linux-x64.rpm" && \
-    yum install -y jdk-8u172-linux-x64.rpm && \
-    rm jdk-8u172-linux-x64.rpm
+# Install Oracle JDK 1.8u182-b13
+RUN wget -q --no-cookies --no-check-certificate --header "Cookie: gpw_e24=http%3A%2F%2Fwww.oracle.com%2F; oraclelicense=accept-securebackup-cookie" "http://download.oracle.com/otn-pub/java/jdk/8u181-b13/96a7b8442fe848ef90c96a2fad6ed6d1/jdk-8u181-linux-x64.rpm" && \
+    yum install -y jdk-8u181-linux-x64.rpm && \
+    rm jdk-8u181-linux-x64.rpm
 
 COPY *.sh /tmp/
 
