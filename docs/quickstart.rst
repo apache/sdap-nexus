@@ -130,12 +130,6 @@ To start cassandra using a volume mount and expose the connection port 9042:
   export CASSANDRA_DATA=~/nexus-quickstart/cassandra
   docker run --name cassandra --network sdap-net -p 9042:9042 -v ${CASSANDRA_DATA}:/var/lib/cassandra -d sdap/cassandra:${VERSION}
 
-If this is your first time starting the cassandra container, you need to initialize the database by running the DDL script included in the image. Execute the following command to create the needed keyspace and table:
-
-.. code-block:: bash
-
-  docker exec -it cassandra cqlsh -f /tmp/nexustiles.cql
-
 .. _quickstart-step6:
 
 Ingest Data
@@ -233,7 +227,7 @@ The ningester docker image runs a batch job that will ingest one granule. Here, 
 
   for g in `ls ${DATA_DIRECTORY} | awk "{print $1}"`
   do
-    docker run -d --name $(echo avhrr_$g | cut -d'-' -f 1) --network sdap-net -v ${NINGESTER_CONFIG}:/config/ -v ${DATA_DIRECTORY}/${g}:/data/${g} sdap/ningester:${VERSION} docker,solr,cassandra
+    docker run -d --name $(echo avhrr_$g | cut -d'-' -f 1) --network sdap-net -v ${NINGESTER_CONFIG}:/home/ningester/config/ -v ${DATA_DIRECTORY}/${g}:/home/ningester/data/${g} sdap/ningester:${VERSION} docker,solr,cassandra
     sleep 60
   done
 
@@ -254,6 +248,8 @@ Now that the data is being (has been) ingested, we need to start the webapp that
 .. code-block:: bash
 
   docker run -d --name nexus-webapp --network sdap-net -p 8083:8083 -e SPARK_LOCAL_IP=127.0.0.1 -e MASTER=local[4] -e CASSANDRA_CONTACT_POINTS=cassandra -e SOLR_URL_PORT=solr:8983 sdap/nexus-webapp:${VERSION}
+
+.. note:: If you see a messasge like ``docker: invalid reference format`` it likely means you need to re-export the ``VERSION`` environment variable again. This can happen when you open a new terminal window or tab.
 
 This command starts the nexus webservice and connects it to the Solr and Cassandra containers. It also sets the configuration for Spark to use local mode with 4 executors.
 
