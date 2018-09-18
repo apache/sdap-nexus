@@ -27,6 +27,7 @@ from pytz import UTC, timezone
 from shapely.geometry import Polygon
 
 EPOCH = timezone('UTC').localize(datetime(1970, 1, 1))
+ISO_8601 = '%Y-%m-%dT%H:%M:%S%z'
 
 
 class RequestParameters(object):
@@ -422,7 +423,9 @@ class NexusResults:
         }
         meta["time"] = {
             "start": startTime,
-            "stop": endTime
+            "stop": endTime,
+            "iso_start": datetime.utcfromtimestamp(int(startTime)).replace(tzinfo=timezone('UTC')).strftime(ISO_8601),
+            "iso_stop": datetime.utcfromtimestamp(int(endTime)).replace(tzinfo=timezone('UTC')).strftime(ISO_8601)
         }
         return meta
 
