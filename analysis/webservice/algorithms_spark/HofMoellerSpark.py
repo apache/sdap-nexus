@@ -264,7 +264,6 @@ def hof_tuple_to_dict(t, avg_var_name):
             'max': t[6],
             'min': t[7]}
 
-
 def spark_driver(sc, latlon, nexus_tiles_spark):
     # Parallelize list of tile ids
     rdd = sc.parallelize(nexus_tiles_spark, determine_parllelism(len(nexus_tiles_spark)))
@@ -351,7 +350,6 @@ class LatitudeTimeHoffMoellerSparkHandlerImpl(BaseHoffMoellerHandlerImpl):
             raise NoDataException(reason="No data found for selected timeframe")
 
         results = spark_driver(self._sc, self._latlon, nexus_tiles_spark)
-
         results = filter(None, results)
         results = sorted(results, key=lambda entry: entry['time'])
         for i in range(len(results)):
