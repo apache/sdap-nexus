@@ -165,7 +165,7 @@ class DailyDifferenceAverageSparkImpl(SparkHandler):
     def get_meta(self, dataset):
 
         # TODO yea this is broken
-        if 'sst' in dataset.lower():
+        if 'sst' in dataset.lower() or 'mur' in dataset.lower():
             meta = {
                 "title": "Sea Surface Temperature (SST) Anomalies",
                 "description": "SST anomalies are departures from the 5-day pixel mean",
