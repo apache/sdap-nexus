@@ -17,12 +17,6 @@ FROM centos:7
 
 MAINTAINER Apache SDAP "dev@sdap.apache.org"
 
-ARG SPARK_VERSION=2.2.0
-ARG APACHE_NEXUSPROTO=https://github.com/apache/incubator-sdap-nexusproto.git
-ARG APACHE_NEXUSPROTO_BRANCH=master
-ARG APACHE_NEXUS=https://github.com/apache/incubator-sdap-nexus.git
-ARG APACHE_NEXUS_BRANCH=master
-
 RUN yum -y update && \
     yum -y install \
     bzip2 \
@@ -34,6 +28,7 @@ RUN yum -y update && \
     which && \
     yum clean all
 
+ARG SPARK_VERSION=2.2.0
 ENV SPARK_LOCAL_IP=127.0.0.1 \
     CASSANDRA_CONTACT_POINTS=127.0.0.1 \
     CASSANDRA_LOCAL_DATACENTER=datacenter1 \
@@ -83,6 +78,10 @@ RUN wget -q --no-cookies --no-check-certificate --header "Cookie: gpw_e24=http%3
 COPY *.sh /tmp/
 
 # Install nexusproto and nexus
+ARG APACHE_NEXUSPROTO=https://github.com/apache/incubator-sdap-nexusproto.git
+ARG APACHE_NEXUSPROTO_BRANCH=master
+ARG APACHE_NEXUS=https://github.com/apache/incubator-sdap-nexus.git
+ARG APACHE_NEXUS_BRANCH=master
 RUN /tmp/install_nexusproto.sh $APACHE_NEXUSPROTO $APACHE_NEXUSPROTO_BRANCH && \
     /tmp/install_nexus.sh $APACHE_NEXUS $APACHE_NEXUS_BRANCH $NEXUS_SRC
 
