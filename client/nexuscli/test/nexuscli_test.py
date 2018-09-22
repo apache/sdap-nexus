@@ -33,12 +33,6 @@ class TestCli(unittest.TestCase):
 
         self.assertEqual(2, len(ts))
 
-    def test_time_series_spark(self):
-        ts = nexuscli.time_series("AVHRR_OI_L4_GHRSST_NCEI", box(-150, 45, -120, 60),
-                                  datetime(2005, 1, 1), datetime(2005, 1, 1), spark=True)
-
-        self.assertEqual(1, len(ts))
-
     def test_list(self):
         ds_list = nexuscli.dataset_list()
 
