@@ -53,6 +53,7 @@ __pdoc__['Point.longitude'] = "longitude value"
 __pdoc__['Point.variable'] = "dictionary of variable values"
 
 ISO_FORMAT = "%Y-%m-%dT%H:%M:%SZ"
+PYTHON32_ISO_FORMAT = "%Y-%m-%dT%H:%M:%S%z"
 
 target = 'http://localhost:8083'
 
@@ -210,8 +211,8 @@ def time_series(datasets, bounding_box, start_datetime, end_datetime, spark=Fals
             time_series_result.append(
                 TimeSeries(
                     dataset=response['meta'][i]['shortName'],
-                    time=np.array([datetime.utcfromtimestamp(t).replace(tzinfo=UTC) for t in
-                                   time_series_data[:, key_to_index['time']]]),
+                    time=np.array([datetime.strptime(t, PYTHON32_ISO_FORMAT) for t in
+                                   time_series_data[:, key_to_index['iso_time']]]),
                     mean=time_series_data[:, key_to_index['mean']],
                     standard_deviation=time_series_data[:, key_to_index['std']],
                     count=time_series_data[:, key_to_index['cnt']],
