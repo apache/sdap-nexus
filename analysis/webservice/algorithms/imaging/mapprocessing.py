@@ -9,6 +9,7 @@ NOTE: This code is an experimental proof-of-concept. The algorithms and methods 
 import numpy as np
 import math
 
+import types
 from scipy.misc import imresize
 from PIL import Image
 from PIL import ImageFont
@@ -33,21 +34,30 @@ def translate_interpolation(interp):
         return Image.NEAREST
 
 
+def get_first_valid_pair(coord_array):
+    """
+    Locates a contiguous pair of coordinates in a masked numpy array.
+    :param coord_array: A numpy array of numpy.float32 values
+    :return: a pair of values
+    :except: When no contiguous pair of coordinates are found.
+    """
+    for i in range(0, len(coord_array)-1):
+        if isinstance(coord_array[i], np.float32) and isinstance(coord_array[i+1], np.float32):
+            return coord_array[i], coord_array[i+1]
+
+    raise Exception("No valid coordinate pair found!")
+
 def get_xy_resolution(tile):
     """
     Computes the x/y (lon, lat) resolution of a tile
     :param tile: A tile
     :return: Resolution as (x_res, y_res)
     """
+    lon_0, lon_1 = get_first_valid_pair(tile.longitudes)
+    lat_0, lat_1 = get_first_valid_pair(tile.latitudes)
 
-    # Sometimes there are NaN values in the latitude and longitude lists....
-    # This is a quick hack to make it work for now. Don't actually keep it like this.
-
-    lon_idx = int(round(len(tile.longitudes) / 2))
-    lat_idx = int(round(len(tile.latitudes) / 2))
-
-    x_res = abs(tile.longitudes[lon_idx] - tile.longitudes[lon_idx+1])
-    y_res = abs(tile.latitudes[lat_idx] - tile.latitudes[lat_idx+1])
+    x_res = abs(lon_0 - lon_1)
+    y_res = abs(lat_0 - lat_1)
 
     return x_res, y_res
 
@@ -223,6 +233,17 @@ def trim_map_to_requested_tllr(data, reqd_tllr, data_tllr):
     return data
 
 
+def expand_map_to_requested_tllr(data, reqd_tllr, data_tllr, x_res, y_res):
+    output_canvas_height, output_canvas_width = compute_canvas_size(reqd_tllr, x_res, y_res)
+
+    expanded_data = np.zeros((output_canvas_height, output_canvas_width, 4))
+
+    expanded_data[0:data.shape[0], 0:data.shape[1]] = data
+
+    return expanded_data
+
+
+
 def process_tiles_to_map(nexus_tiles, stats, reqd_tllr, width=None, height=None, force_min=None, force_max=None, table=colortables.get_color_table("grayscale"), interpolation="nearest"):
     """
     Processes a list of tiles into a colorized image map.
@@ -265,7 +286,7 @@ def process_tiles_to_map(nexus_tiles, stats, reqd_tllr, width=None, height=None,
             data[tl_pixel_y:(tl_pixel_y + tile_img_data.shape[0]),tl_pixel_x:(tl_pixel_x + tile_img_data.shape[1])] = tile_img_data
 
     data = trim_map_to_requested_tllr(data, reqd_tllr, tiles_tllr)
-
+    data = expand_map_to_requested_tllr(data, reqd_tllr, tiles_tllr, x_res, y_res)
     if width is not None and height is not None:
         data = imresize(data, (height, width), interp=interpolation)
 
@@ -296,9 +317,44 @@ def create_no_data(width, height):
     return NO_DATA_IMAGE
 
 
+def check_within(v, mn, mx):
+    """
+    Fit a value within two bounds
+    :param v: The value needing to be fit
+    :param mn: The minimum valid value
+    :param mx: The maximum valid value
+    :return: The fit value
+    """
+    v = np.array((mn, v)).max()
+    v = np.array((mx, v)).min()
+    return v
 
 
+def fetch_nexus_tiles(tile_service, min_lat, max_lat, min_lon, max_lon, ds, dataTimeStart, dataTimeEnd):
+    """
+    Fetches Nexus tiles given a nexus tile service instance and search parameters
+    :param tile_service:
+    :param min_lat:
+    :param max_lat:
+    :param min_lon:
+    :param max_lon:
+    :param ds:
+    :param dataTimeStart:
+    :param dataTimeEnd:
+    :return:
+    """
 
+    min_lat = check_within(min_lat, -90, 90)
+    max_lat = check_within(max_lat, -90, 90)
+    min_lon = check_within(min_lon, -180, 180)
+    max_lon = check_within(max_lon, -180, 180)
+
+    daysinrange = tile_service.find_days_in_range_asc(min_lat, max_lat, min_lon, max_lon, ds, dataTimeStart, dataTimeEnd)
+    if len(daysinrange) > 0:
+        ds1_nexus_tiles = tile_service.get_tiles_bounded_by_box_at_time(min_lat, max_lat, min_lon, max_lon, ds, daysinrange[0])
+        return ds1_nexus_tiles
+    else:
+        None
 
 def create_map(tile_service, tllr, ds, dataTimeStart, dataTimeEnd, width=None, height=None, force_min=None, force_max=None, table=colortables.get_color_table("grayscale"), interpolation="nearest"):
     """
@@ -324,19 +380,12 @@ def create_map(tile_service, tllr, ds, dataTimeStart, dataTimeEnd, width=None, h
     min_lat = tllr[2]
     max_lon = tllr[3]
 
-    print "A"
     stats = tile_service.get_dataset_overall_stats(ds)
 
-    print "B"
-    daysinrange = tile_service.find_days_in_range_asc(min_lat, max_lat, min_lon, max_lon, ds, dataTimeStart, dataTimeEnd)
+    nexus_tiles = fetch_nexus_tiles(tile_service, min_lat, max_lat, min_lon, max_lon, ds, dataTimeStart, dataTimeEnd)
 
-    if len(daysinrange) > 0:
-        print "D"
-        ds1_nexus_tiles = tile_service.get_tiles_bounded_by_box_at_time(min_lat, max_lat, min_lon, max_lon, ds, daysinrange[0])
-
-        print "E"
-        img = process_tiles_to_map(ds1_nexus_tiles, stats, tllr, width, height, force_min, force_max,
-                                   table, interpolation)
+    if len(nexus_tiles) > 0:
+        img = process_tiles_to_map(nexus_tiles, stats, tllr, width, height, force_min, force_max, table, interpolation)
     else:
         img = create_no_data(width, height)
 

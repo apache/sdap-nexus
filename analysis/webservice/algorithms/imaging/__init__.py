@@ -4,3 +4,4 @@ California Institute of Technology.  All rights reserved
 """
 
 import MapFetchHandler
+import WmtsTileServiceHandler
