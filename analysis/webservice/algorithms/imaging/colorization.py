@@ -36,13 +36,14 @@ def pack_float_to_int24(fv):
     return map(int, bytearray(struct.pack("f", fv)))
 
 
-def colorize_tile_matrix(tile_data, data_min, data_max, table):
+def colorize_tile_matrix(tile_data, data_min, data_max, table, background=(0, 0, 0, 0)):
     """
     Performs the colorization of a tile data matrix
     :param tile_data: The tile's data matrix
     :param data_min: The minimum value for determining color range
     :param data_max: The maximum value for determining color range
     :param table: A color table
+    :param background: Default color as RGBA
     :return: A colorized image data matrix
     """
 
@@ -58,7 +59,7 @@ def colorize_tile_matrix(tile_data, data_min, data_max, table):
 
     def f(v):
         if np.isnan(v) or np.ma.is_masked(v):
-            return (0, 0, 0, 0)
+            return background
         #return pack_float_to_int24(v)
         v = (v - data_min) / (data_max - data_min)
         return table.get_color(v)

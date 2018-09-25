@@ -17,65 +17,60 @@
 NOTE: This code is an experimental proof-of-concept. The algorithms and methods have not yet been vetted.
 """
 
-import json
-import time
 import colortables
-from webservice.NexusHandler import nexus_handler
+import numpy as np
+import ConfigParser
+import pkg_resources
 import io
 
-import mapprocessing
-import tilespecs
-import datetime
-from pytz import UTC
-
+from webservice.NexusHandler import nexus_handler
 from S3CachingHandler import S3CachingHandler
 from ImageResult import ImageResult
+import mapprocessing
+
+
 
 
 @nexus_handler
-class WmtsTileServiceHandler(S3CachingHandler):
-    name = "WmtsTileServiceHandler"
-    path = "/imaging/wmts"
-    description = "Emulates a WMTS service"
-    params = {}
+class ThumbnailHandler(S3CachingHandler):
+    name = "ThumbnailHandler"
+    path = "/imaging/thumbnail"
+    description = "Creates a map thumbnail"
+    params = {
 
+    }
     singleton = True
 
     def __init__(self):
         S3CachingHandler.__init__(self)
+        self.imagery_config = ConfigParser.RawConfigParser()
+        self.imagery_config.readfp(pkg_resources.resource_stream(__name__, "config.ini"), filename='config.ini')
 
     def calc(self, computeOptions, **args):
+        ds = computeOptions.get_argument("ds", None)
 
-        ds = computeOptions.get_argument("layer")
-        tilematrixset = computeOptions.get_argument("tilematrixset")
-        format = computeOptions.get_argument("Format")
-        tile_matrix = computeOptions.get_int_arg("TileMatrix")
-        tile_col = computeOptions.get_int_arg("TileCol")
-        tile_row = computeOptions.get_int_arg("TileRow")
-
-        tile_date = computeOptions.get_argument("TIME", None)
-        tile_date = datetime.datetime.strptime(tile_date, "%Y-%m-%d").replace(tzinfo=UTC)
-        data_time_end = time.mktime(tile_date.timetuple())
-        data_time_start = data_time_end - 86400.0
-
-        color_table_identifier = computeOptions.get_argument("ct", "rainbow")
+        color_table_identifier = computeOptions.get_argument("ct", "grayscale")
         color_table = colortables.get_color_table(color_table_identifier)
 
         interpolation = computeOptions.get_argument("interp", "nearest")
+
         force_min = computeOptions.get_float_arg("min", None)
         force_max = computeOptions.get_float_arg("max", None)
 
-        tms = tilespecs.TILE_MATRIX_SETS[tilematrixset]
-        tm = tms.get_tile_matrix_at_level(tile_matrix)
-        tile_tllr = tm.get_tllr_for_tile(tile_col, tile_row)
+        width = np.min([512, computeOptions.get_int_arg("width", 256)])
+        height = np.min([512, computeOptions.get_int_arg("height", 256)])
 
-        s3_key = "{ds}/{colortable}/{tilematrixset}/{tile_matrix}/{ds}-{tilematrixset}-{tile_matrix}-{col}-{row}-{time}-{min}-{max}.png".format(
+        min_lat = 10
+        max_lat = 50
+        min_lon = -90
+        max_lon = -50
+
+        background = (0, 0, 0, 255)
+
+        s3_key = "{ds}/{colortable}/thumbnail/{ds}-{width}-{height}-{min}-{max}.png".format(
             ds=ds,
-            tilematrixset=tilematrixset,
-            tile_matrix=tile_matrix,
-            col=tile_col,
-            row=tile_row,
-            time=data_time_end,
+            width=width,
+            height=height,
             min=(force_min if force_min is not None else "x"),
             max=(force_max if force_max is not None else "x"),
             colortable=color_table_identifier
@@ -84,14 +79,17 @@ class WmtsTileServiceHandler(S3CachingHandler):
         img_data = self._fetch_tile_from_s3(s3_key)
 
         if img_data is None:
-            img = mapprocessing.create_map(self._tile_service, tile_tllr,
-                                           ds, data_time_start, data_time_end, tm.tile_width, tm.tile_height, force_min, force_max, color_table, interpolation)
+            stats = self._tile_service.get_dataset_overall_stats(ds)
 
+            data_time_start = stats["start"]
+            data_time_end = data_time_start + 86400.0
+
+            img = mapprocessing.create_map(self._tile_service, (float(max_lat), float(min_lon), float(min_lat), float(max_lon)),
+                                           ds, data_time_start, data_time_end, width, height, force_min, force_max,
+                                           color_table, interpolation, background)
             img_data = io.BytesIO()
             img.save(img_data, format='PNG')
             img_data = img_data.getvalue()
-
             self._upload_tile_to_s3(s3_key, img_data)
 
         return ImageResult(img_data)
-

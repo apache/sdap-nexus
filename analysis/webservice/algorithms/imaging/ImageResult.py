@@ -13,8 +13,19 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import MapFetchHandler
-import WmtsTileServiceHandler
-import ColorTableHandler
-import LayerListHandler
-import ThumbnailHandler
+import json
+
+
+class ImageResult:
+
+    def __init__(self, img):
+        self.img = img
+
+    def default_results_type(self):
+        return "PNG"
+
+    def toJson(self):
+        return json.dumps({}, indent=4)
+
+    def toImage(self):
+        return self.img

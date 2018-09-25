@@ -17,23 +17,22 @@
 NOTE: This code is an experimental proof-of-concept. The algorithms and methods have not yet been vetted.
 """
 
-import json
 import time
-import colortables
+import io
 import numpy as np
 
 from webservice.NexusHandler import NexusHandler as BaseHandler
 from webservice.NexusHandler import nexus_handler
 
-import io
-
-
+from ImageResult import ImageResult
+import colortables
 import mapprocessing
+
 
 @nexus_handler
 class MapFetchHandler(BaseHandler):
     name = "MapFetchHandler"
-    path = "/map"
+    path = "/imaging/map"
     description = "Creates a map image"
     params = {
         "ds": {
@@ -87,7 +86,6 @@ class MapFetchHandler(BaseHandler):
     def __init__(self):
         BaseHandler.__init__(self)
 
-
     def calc(self, computeOptions, **args):
         ds = computeOptions.get_argument("ds", None)
 
@@ -109,25 +107,15 @@ class MapFetchHandler(BaseHandler):
         width = np.min([8192, computeOptions.get_int_arg("width", None)])
         height = np.min([8192, computeOptions.get_int_arg("height", None)])
 
-        minLat = computeOptions.get_min_lat()
-        maxLat = computeOptions.get_max_lat()
-        minLon = computeOptions.get_min_lon()
-        maxLon = computeOptions.get_max_lon()
+        min_lat = computeOptions.get_min_lat()
+        max_lat = computeOptions.get_max_lat()
+        min_lon = computeOptions.get_min_lon()
+        max_lon = computeOptions.get_max_lon()
 
-        img = mapprocessing.create_map(self._tile_service, (float(maxLat), float(minLon), float(minLat), float(maxLon)), ds, data_time_start, data_time_end, width, height, force_min, force_max, color_table, interpolation)
+        img = mapprocessing.create_map(self._tile_service, (float(max_lat), float(min_lon), float(min_lat), float(max_lon)), ds, data_time_start, data_time_end, width, height, force_min, force_max, color_table, interpolation)
 
-        print "F"
-        imgByteArr = io.BytesIO()
+        image_data = io.BytesIO()
+        img.save(image_data, format='PNG')
+        image_data = image_data.getvalue()
 
-        img.save(imgByteArr, format='PNG')
-        imgByteArr = imgByteArr.getvalue()
-        print "G"
-
-        class SimpleResult(object):
-            def toJson(self):
-                return json.dumps({"status": "Please specify output type as PNG."})
-
-            def toImage(self):
-                return imgByteArr
-
-        return SimpleResult()
+        return ImageResult(image_data)

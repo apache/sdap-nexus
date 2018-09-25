@@ -97,7 +97,7 @@ def positioning_for_tile(tile, tllr, canvas_height, canvas_width):
     return tl_pixel_y, tl_pixel_x
 
 
-def process_tile(tile, tllr, data_min, data_max, table, canvas_height, canvas_width):
+def process_tile(tile, tllr, data_min, data_max, table, canvas_height, canvas_width, background):
     """
     Processes a tile for colorization and positioning
     :param tile: The tile
@@ -107,10 +107,11 @@ def process_tile(tile, tllr, data_min, data_max, table, canvas_height, canvas_wi
     :param table: A color table
     :param canvas_height: Height of the canvas
     :param canvas_width: Width of the canvas
+    :param background: Default color as RGBA
     :return: The tile image data and top left pixel positions as (tile_img_data, tl_pixel_y, tl_pixel_x)
     """
 
-    tile_img_data = colorization.colorize_tile_matrix(tile.data[0], data_min, data_max, table)
+    tile_img_data = colorization.colorize_tile_matrix(tile.data[0], data_min, data_max, table, background)
     tl_pixel_y, tl_pixel_x = positioning_for_tile(tile, tllr, canvas_height, canvas_width)
     return (tile_img_data, tl_pixel_y, tl_pixel_x)
 
@@ -122,10 +123,10 @@ def process_tile_async(args):
     :return: The results of process_tile
     """
 
-    return process_tile(args[0], args[1], args[2], args[3], args[4], args[5], args[6])
+    return process_tile(args[0], args[1], args[2], args[3], args[4], args[5], args[6], args[7])
 
 
-def process_tiles(tiles, tllr, data_min, data_max, table, canvas_height, canvas_width):
+def process_tiles(tiles, tllr, data_min, data_max, table, canvas_height, canvas_width, background):
     """
     Loops through a list of tiles and calls process_tile on each
     :param tiles: A list of tiles
@@ -135,12 +136,13 @@ def process_tiles(tiles, tllr, data_min, data_max, table, canvas_height, canvas_
     :param table: A color table
     :param canvas_height: The height of the canvas
     :param canvas_width: The width of the canvas
+    :param background: Default color as RGBA
     :return: The results of each call to process_tile in a list
     """
 
     results = []
     for tile in tiles:
-        result = process_tile(tile, tllr, data_min, data_max, table, canvas_height, canvas_width)
+        result = process_tile(tile, tllr, data_min, data_max, table, canvas_height, canvas_width, background)
         results.append(result)
     return results
 
@@ -152,7 +154,7 @@ def process_tiles_async(args):
     :return: The results of process_tiles
     """
 
-    return process_tiles(args[0], args[1], args[2], args[3], args[4], args[5], args[6])
+    return process_tiles(args[0], args[1], args[2], args[3], args[4], args[5], args[6], args[7])
 
 
 def compute_canvas_size(tllr, x_res, y_res):
@@ -255,7 +257,7 @@ def expand_map_to_requested_tllr(data, reqd_tllr, data_tllr, x_res, y_res):
 
 
 
-def process_tiles_to_map(nexus_tiles, stats, reqd_tllr, width=None, height=None, force_min=None, force_max=None, table=colortables.get_color_table("grayscale"), interpolation="nearest"):
+def process_tiles_to_map(nexus_tiles, stats, reqd_tllr, width=None, height=None, force_min=None, force_max=None, table=colortables.get_color_table("grayscale"), interpolation="nearest", background=(0, 0, 0, 0)):
     """
     Processes a list of tiles into a colorized image map.
     :param nexus_tiles: A list of nexus tiles
@@ -267,6 +269,7 @@ def process_tiles_to_map(nexus_tiles, stats, reqd_tllr, width=None, height=None,
     :param force_max: A forced maximum value for the data. Will use data maximum from 'stats' if 'None'
     :param table: A color table
     :param interpolation: Resizing interpolation mode. Defaults to "nearest"
+    :param background: Default color as RGBA
     :return: A colorized image map as a PIL Image object
     """
 
@@ -279,11 +282,12 @@ def process_tiles_to_map(nexus_tiles, stats, reqd_tllr, width=None, height=None,
     canvas_height, canvas_width = compute_canvas_size(tiles_tllr, x_res, y_res)
 
     data = np.zeros((canvas_height, canvas_width, 4))
+    data[:,:,:] = background
 
     pool = multiprocessing.Pool(8)
     n = int(math.ceil(len(nexus_tiles) / 8))
     tile_chunks = [nexus_tiles[i * n:(i + 1) * n] for i in range((len(nexus_tiles) + n - 1) // n)]
-    params = [(tiles, tiles_tllr, data_min, data_max, table, canvas_height, canvas_width) for tiles in tile_chunks]
+    params = [(tiles, tiles_tllr, data_min, data_max, table, canvas_height, canvas_width, background) for tiles in tile_chunks]
     proc_results = pool.map(process_tiles_async, params)
 
     for results in proc_results:
@@ -367,7 +371,7 @@ def fetch_nexus_tiles(tile_service, min_lat, max_lat, min_lon, max_lon, ds, data
     else:
         None
 
-def create_map(tile_service, tllr, ds, dataTimeStart, dataTimeEnd, width=None, height=None, force_min=None, force_max=None, table=colortables.get_color_table("grayscale"), interpolation="nearest"):
+def create_map(tile_service, tllr, ds, dataTimeStart, dataTimeEnd, width=None, height=None, force_min=None, force_max=None, table=colortables.get_color_table("grayscale"), interpolation="nearest", background=(0, 0, 0, 0)):
     """
     Creates a colorized data map given a dataset, tllr boundaries, timeframe, etc.
     :param tile_service: The Nexus tile service instance.
@@ -381,6 +385,7 @@ def create_map(tile_service, tllr, ds, dataTimeStart, dataTimeEnd, width=None, h
     :param force_max: Force a maximum data value. Will use data resultset maximum if 'None'
     :param table: A colortable
     :param interpolation: A image resize interpolation model. Defaults to 'nearest'
+    :param background: Default color as RGBA
     :return: A colorized map image as a PIL Image object. Image will contain 'No Data' if no data was found within the given parameters.
     """
 
@@ -396,7 +401,7 @@ def create_map(tile_service, tllr, ds, dataTimeStart, dataTimeEnd, width=None, h
     nexus_tiles = fetch_nexus_tiles(tile_service, min_lat, max_lat, min_lon, max_lon, ds, dataTimeStart, dataTimeEnd)
 
     if len(nexus_tiles) > 0:
-        img = process_tiles_to_map(nexus_tiles, stats, tllr, width, height, force_min, force_max, table, interpolation)
+        img = process_tiles_to_map(nexus_tiles, stats, tllr, width, height, force_min, force_max, table, interpolation, background)
     else:
         img = create_no_data(width, height)
 
