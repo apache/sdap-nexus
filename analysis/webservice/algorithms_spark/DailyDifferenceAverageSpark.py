@@ -150,20 +150,22 @@ class DailyDifferenceAverageSparkImpl(SparkHandler):
 
         average_and_std_by_day = spark_result
 
+        min_lon, min_lat, max_lon, max_lat = bounding_polygon.bounds
         result = DDAResult(
             results=[[{'time': dayms, 'mean': avg_std[0], 'std': avg_std[1], 'ds': 0}] for dayms, avg_std in
                      average_and_std_by_day],
-            stats={},
-            meta=self.get_meta(dataset))
-
-        min_lon, min_lat, max_lon, max_lat = bounding_polygon.bounds
-        result.extendMeta(min_lat, max_lat, min_lon, max_lon, "", start_time, end_time)
+            stats={}, meta=self.get_meta(dataset),
+            computeOptions=None, minLat=min_lat,
+            maxLat=max_lat, minLon=min_lon,
+            maxLon=max_lon, ds=dataset, startTime=start_seconds_from_epoch,
+            endTime=end_seconds_from_epoch)
+        result.meta()['climatology'] = climatology
         return result
 
     def get_meta(self, dataset):
 
         # TODO yea this is broken
-        if 'sst' in dataset.lower():
+        if 'sst' in dataset.lower() or 'mur' in dataset.lower():
             meta = {
                 "title": "Sea Surface Temperature (SST) Anomalies",
                 "description": "SST anomalies are departures from the 5-day pixel mean",

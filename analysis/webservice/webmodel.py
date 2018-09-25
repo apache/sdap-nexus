@@ -415,18 +415,20 @@ class NexusResults:
         meta["shortName"] = ds
         if "title" in meta and "units" in meta:
             meta["label"] = "%s (%s)" % (meta["title"], meta["units"])
-        meta["bounds"] = {
-            "east": maxLon,
-            "west": minLon,
-            "north": maxLat,
-            "south": minLat
-        }
-        meta["time"] = {
-            "start": startTime,
-            "stop": endTime,
-            "iso_start": datetime.utcfromtimestamp(int(startTime)).replace(tzinfo=timezone('UTC')).strftime(ISO_8601),
-            "iso_stop": datetime.utcfromtimestamp(int(endTime)).replace(tzinfo=timezone('UTC')).strftime(ISO_8601)
-        }
+        if all(p is not None for p in [minLat, maxLat, minLon, maxLon]):
+            meta["bounds"] = {
+                "east": maxLon,
+                "west": minLon,
+                "north": maxLat,
+                "south": minLat
+            }
+        if startTime is not None and endTime is not None:
+            meta["time"] = {
+                "start": startTime,
+                "stop": endTime,
+                "iso_start": datetime.utcfromtimestamp(int(startTime)).replace(tzinfo=timezone('UTC')).strftime(ISO_8601),
+                "iso_stop": datetime.utcfromtimestamp(int(endTime)).replace(tzinfo=timezone('UTC')).strftime(ISO_8601)
+            }
         return meta
 
     def extendMeta(self, minLat, maxLat, minLon, maxLon, ds, startTime, endTime):

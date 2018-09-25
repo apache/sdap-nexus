@@ -53,6 +53,7 @@ __pdoc__['Point.longitude'] = "longitude value"
 __pdoc__['Point.variable'] = "dictionary of variable values"
 
 ISO_FORMAT = "%Y-%m-%dT%H:%M:%SZ"
+PYTHON32_ISO_FORMAT = "%Y-%m-%dT%H:%M:%S%z"
 
 target = 'http://localhost:8083'
 
@@ -155,7 +156,7 @@ def daily_difference_average(dataset, bounding_box, start_datetime, end_datetime
     return time_series_result
 
 
-def time_series(datasets, bounding_box, start_datetime, end_datetime, spark=False):
+def time_series(datasets, bounding_box, start_datetime, end_datetime, spark=True):
     """
     Send a request to NEXUS to calculate a time series.
     
@@ -207,18 +208,32 @@ def time_series(datasets, bounding_box, start_datetime, end_datetime, spark=Fals
         time_series_data = np.array([tuple(each.values()) for each in [entry for entry in data if entry['ds'] == i]])
 
         if len(time_series_data) > 0:
-            time_series_result.append(
-                TimeSeries(
-                    dataset=response['meta'][i]['shortName'],
-                    time=np.array([datetime.utcfromtimestamp(t).replace(tzinfo=UTC) for t in
-                                   time_series_data[:, key_to_index['time']]]),
-                    mean=time_series_data[:, key_to_index['mean']],
-                    standard_deviation=time_series_data[:, key_to_index['std']],
-                    count=time_series_data[:, key_to_index['cnt']],
-                    minimum=time_series_data[:, key_to_index['min']],
-                    maximum=time_series_data[:, key_to_index['max']],
+            if 'iso_time' in key_to_index:
+                time_series_result.append(
+                    TimeSeries(
+                        dataset=response['meta'][i]['shortName'],
+                        time=np.array([datetime.strptime(t, PYTHON32_ISO_FORMAT) for t in
+                                       time_series_data[:, key_to_index['iso_time']]]),
+                        mean=np.array(time_series_data[:, key_to_index['mean']], dtype=float),
+                        standard_deviation=np.array(time_series_data[:, key_to_index['std']], dtype=float),
+                        count=np.array(time_series_data[:, key_to_index['cnt']], dtype=int),
+                        minimum=np.array(time_series_data[:, key_to_index['min']], dtype=float),
+                        maximum=np.array(time_series_data[:, key_to_index['max']], dtype=float),
+                    )
                 )
-            )
+            else:
+                time_series_result.append(
+                    TimeSeries(
+                        dataset=response['meta'][i]['shortName'],
+                        time=np.array([datetime.utcfromtimestamp(int(t)).replace(tzinfo=UTC) for t in
+                                       time_series_data[:, key_to_index['time']]]),
+                        mean=np.array(time_series_data[:, key_to_index['mean']], dtype=float),
+                        standard_deviation=np.array(time_series_data[:, key_to_index['std']], dtype=float),
+                        count=np.array(time_series_data[:, key_to_index['cnt']], dtype=int),
+                        minimum=np.array(time_series_data[:, key_to_index['min']], dtype=float),
+                        maximum=np.array(time_series_data[:, key_to_index['max']], dtype=float),
+                    )
+                )
 
     return time_series_result
 

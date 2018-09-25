@@ -198,7 +198,7 @@ class BaseHoffMoellerHandlerImpl(SparkHandler):
         return ds, bounding_polygon, start_seconds_from_epoch, end_seconds_from_epoch, \
                spark_master, spark_nexecs, spark_nparts
 
-    def applyDeseasonToHofMoellerByField(self, results, pivot="lats", field="avg", append=True):
+    def applyDeseasonToHofMoellerByField(self, results, pivot="lats", field="mean", append=True):
         shape = (len(results), len(results[0][pivot]))
         if shape[0] <= 12:
             return results
@@ -215,7 +215,7 @@ class BaseHoffMoellerHandlerImpl(SparkHandler):
         return results
 
     def applyDeseasonToHofMoeller(self, results, pivot="lats", append=True):
-        results = self.applyDeseasonToHofMoellerByField(results, pivot, field="avg", append=append)
+        results = self.applyDeseasonToHofMoellerByField(results, pivot, field="mean", append=append)
         results = self.applyDeseasonToHofMoellerByField(results, pivot, field="min", append=append)
         results = self.applyDeseasonToHofMoellerByField(results, pivot, field="max", append=append)
         return results
@@ -355,7 +355,9 @@ class LatitudeTimeHoffMoellerSparkHandlerImpl(BaseHoffMoellerHandlerImpl):
         for i in range(len(results)):
             results[i]['lats'] = sorted(results[i]['lats'],
                                         key=lambda entry: entry['latitude'])
-        results = self.applyDeseasonToHofMoeller(results)
+
+        # Deseason disabled. See SDAP-148
+        # results = self.applyDeseasonToHofMoeller(results)
 
         result = HoffMoellerResults(results=results, compute_options=None, type=HoffMoellerResults.LATITUDE,
                                     minLat=min_lat, maxLat=max_lat, minLon=min_lon,
@@ -397,7 +399,8 @@ class LongitudeTimeHoffMoellerSparkHandlerImpl(BaseHoffMoellerHandlerImpl):
             results[i]['lons'] = sorted(results[i]['lons'],
                                         key=lambda entry: entry['longitude'])
 
-        results = self.applyDeseasonToHofMoeller(results, pivot="lons")
+        # Deseason disabled. See SDAP-148
+        # results = self.applyDeseasonToHofMoeller(results, pivot="lons")
 
         result = HoffMoellerResults(results=results, compute_options=None, type=HoffMoellerResults.LONGITUDE,
                                     minLat=min_lat, maxLat=max_lat, minLon=min_lon,
