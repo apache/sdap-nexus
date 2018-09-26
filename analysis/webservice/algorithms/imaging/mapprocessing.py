@@ -323,11 +323,11 @@ def create_no_data(width, height):
         img = Image.new("RGBA", (width, height), (0, 0, 0, 0))
         draw = ImageDraw.Draw(img)
 
-        fnt = ImageFont.truetype('webservice/algorithms/imaging/Roboto/Roboto-Bold.ttf', 40)
+        fnt = ImageFont.truetype('webservice/algorithms/imaging/Roboto/Roboto-Bold.ttf', 10)
 
-        for x in range(0, width, 500):
-            for y in range(0, height, 500):
-                draw.text((x, y), "NO DATA", (180, 180, 180), font=fnt)
+        #for x in range(0, width, 100):
+        for y in range(0, height, 150):
+            draw.text((20, y), "NO DATA", (180, 180, 180), font=fnt)
         NO_DATA_IMAGE = img
 
     return NO_DATA_IMAGE
@@ -401,7 +401,7 @@ def create_map(tile_service, tllr, ds, dataTimeStart, dataTimeEnd, width=None, h
 
     nexus_tiles = fetch_nexus_tiles(tile_service, min_lat, max_lat, min_lon, max_lon, ds, dataTimeStart, dataTimeEnd)
 
-    if len(nexus_tiles) > 0:
+    if nexus_tiles is not None and len(nexus_tiles) > 0:
         img = process_tiles_to_map(nexus_tiles, stats, tllr, width, height, force_min, force_max, table, interpolation, background)
     else:
         img = create_no_data(width, height)
