@@ -53,7 +53,7 @@ class LayerListHandler(BaseHandler):
             "ProductLabel": ds["shortName"],
             "DataID": ds["shortName"],
             "CrmShortName": ds["shortName"],
-            "EndPoint": "%s/wmts"%self.imagery_config.get("imaging", "imaging.endpoint"),
+            "EndPoint": "%s/imaging/wmts"%self.imagery_config.get("imaging", "imaging.endpoint"),
             "LayerTitle": ds["shortName"],
             "LayerSubtitle": "",
             "availableForAnalysis": True,
@@ -86,8 +86,8 @@ class LayerListHandler(BaseHandler):
             "UUID": str(uuid.uuid4()),
             "type": "observation",
             "enabled": True,
-            "ThumbnailImage": "%s/thumbnail?ds=%s"%(self.imagery_config.get("imaging", "imaging.endpoint"), ds["shortName"]),
-            "colorbar": "%s/colorbar?ds=%s&ct=rainbow" % (self.imagery_config.get("imaging", "imaging.endpoint"), ds["shortName"]),
+            "ThumbnailImage": "%s/imaging/thumbnail?ds=%s&ct=rainbow"%(self.imagery_config.get("imaging", "imaging.endpoint"), ds["shortName"]),
+            "colorbar": "%s/imaging/colortable?ds=%s&ct=rainbow" % (self.imagery_config.get("imaging", "imaging.endpoint"), ds["shortName"]),
             "ServiceProtocol": "GIBS",
             "WMSEndPoint": ""
         }

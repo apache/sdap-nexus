@@ -60,6 +60,8 @@ class ThumbnailHandler(S3CachingHandler):
         width = np.min([512, computeOptions.get_int_arg("width", 256)])
         height = np.min([512, computeOptions.get_int_arg("height", 256)])
 
+        no_cache = computeOptions.get_boolean_arg("no_cache", False)
+
         min_lat = 10
         max_lat = 50
         min_lon = -90
@@ -76,7 +78,7 @@ class ThumbnailHandler(S3CachingHandler):
             colortable=color_table_identifier
         )
 
-        img_data = self._fetch_tile_from_s3(s3_key)
+        img_data = self._fetch_tile_from_s3(s3_key) if not no_cache else None
 
         if img_data is None:
             stats = self._tile_service.get_dataset_overall_stats(ds)
@@ -90,6 +92,8 @@ class ThumbnailHandler(S3CachingHandler):
             img_data = io.BytesIO()
             img.save(img_data, format='PNG')
             img_data = img_data.getvalue()
-            self._upload_tile_to_s3(s3_key, img_data)
+
+            if not no_cache:
+                self._upload_tile_to_s3(s3_key, img_data)
 
         return ImageResult(img_data)

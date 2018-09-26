@@ -65,6 +65,8 @@ class WmtsTileServiceHandler(S3CachingHandler):
         force_min = computeOptions.get_float_arg("min", None)
         force_max = computeOptions.get_float_arg("max", None)
 
+        no_cache = computeOptions.get_boolean_arg("no_cache", False)
+
         tms = tilespecs.TILE_MATRIX_SETS[tilematrixset]
         tm = tms.get_tile_matrix_at_level(tile_matrix)
         tile_tllr = tm.get_tllr_for_tile(tile_col, tile_row)
@@ -81,7 +83,7 @@ class WmtsTileServiceHandler(S3CachingHandler):
             colortable=color_table_identifier
         )
 
-        img_data = self._fetch_tile_from_s3(s3_key)
+        img_data = self._fetch_tile_from_s3(s3_key) if not no_cache else None
 
         if img_data is None:
             img = mapprocessing.create_map(self._tile_service, tile_tllr,
@@ -91,7 +93,8 @@ class WmtsTileServiceHandler(S3CachingHandler):
             img.save(img_data, format='PNG')
             img_data = img_data.getvalue()
 
-            self._upload_tile_to_s3(s3_key, img_data)
+            if not no_cache:
+                self._upload_tile_to_s3(s3_key, img_data)
 
         return ImageResult(img_data)
 

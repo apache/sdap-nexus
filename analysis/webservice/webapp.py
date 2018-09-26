@@ -59,8 +59,18 @@ class BaseHandler(tornado.web.RequestHandler):
         self.logger.info("Received request %s" % self._request_summary())
         self.request_thread_pool.apply_async(self.run)
 
+    def options(self):
+        # no body
+        self.set_header("Access-Control-Allow-Origin", "*")
+        self.set_header("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE")
+        self.set_header("Access-Control-Allow-Headers", "Content-Type, Access-Control-Allow-Headers, Authorization, X-Requested-With")
+        self.set_status(204)
+        self.finish()
+
     def run(self):
         self.set_header("Access-Control-Allow-Origin", "*")
+        self.set_header("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE")
+        self.set_header("Access-Control-Allow-Headers", "Content-Type, Access-Control-Allow-Headers, Authorization, X-Requested-With")
         reqObject = NexusRequestObject(self)
         try:
             result = self.do_get(reqObject)
