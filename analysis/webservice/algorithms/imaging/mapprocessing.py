@@ -171,8 +171,8 @@ def compute_canvas_size(tllr, x_res, y_res):
     min_lat = tllr[2]
     max_lon = tllr[3]
 
-    canvas_width = int(math.ceil((max_lon - min_lon) / x_res))
-    canvas_height = int(math.ceil((max_lat - min_lat) / y_res))
+    canvas_width = int(round((max_lon - min_lon) / x_res))
+    canvas_height = int(round((max_lat - min_lat) / y_res))
 
     return canvas_height, canvas_width
 
@@ -228,10 +228,10 @@ def trim_map_to_requested_tllr(data, reqd_tllr, data_tllr):
     reqd_min_lon = reqd_tllr[1]
 
     t_pixel_y = int(round((max_lat - reqd_max_lat) / (max_lat - min_lat) * data_height))
-    b_pixel_y = int(round((max_lat - reqd_min_lat) / (max_lat - min_lat) * data_height))
+    b_pixel_y = int(math.ceil((max_lat - reqd_min_lat) / (max_lat - min_lat) * data_height))
 
     l_pixel_x = int(round((reqd_min_lon - min_lon) / (max_lon - min_lon) * data_width))
-    r_pixel_x = int(round((reqd_max_lon - min_lon) / (max_lon - min_lon) * data_width))
+    r_pixel_x = int(math.ceil((reqd_max_lon - min_lon) / (max_lon - min_lon) * data_width))
 
     # Make sure the top and left pixels are at least 0
     t_pixel_y = np.array((0, t_pixel_y)).max()
@@ -241,20 +241,21 @@ def trim_map_to_requested_tllr(data, reqd_tllr, data_tllr):
     b_pixel_y = np.array((len(data) - 1, b_pixel_y)).min()
     r_pixel_x = np.array((len(data[0]) - 1, r_pixel_x)).min()
 
-    data = data[t_pixel_y:b_pixel_y, l_pixel_x:r_pixel_x]
 
+    data = data[t_pixel_y:b_pixel_y, l_pixel_x:r_pixel_x]
     return data
 
 
 def expand_map_to_requested_tllr(data, reqd_tllr, data_tllr, x_res, y_res):
     output_canvas_height, output_canvas_width = compute_canvas_size(reqd_tllr, x_res, y_res)
 
-    expanded_data = np.zeros((output_canvas_height, output_canvas_width, 4))
+    output_canvas_height = np.array((output_canvas_height, data.shape[0])).max()
+    output_canvas_width = np.array((output_canvas_width, data.shape[1])).max()
 
+    expanded_data = np.zeros((output_canvas_height, output_canvas_width, 4))
     expanded_data[0:data.shape[0], 0:data.shape[1]] = data
 
     return expanded_data
-
 
 
 def process_tiles_to_map(nexus_tiles, stats, reqd_tllr, width=None, height=None, force_min=None, force_max=None, table=colortables.get_color_table("grayscale"), interpolation="nearest", background=(0, 0, 0, 0)):
@@ -289,11 +290,11 @@ def process_tiles_to_map(nexus_tiles, stats, reqd_tllr, width=None, height=None,
     tile_chunks = [nexus_tiles[i * n:(i + 1) * n] for i in range((len(nexus_tiles) + n - 1) // n)]
     params = [(tiles, tiles_tllr, data_min, data_max, table, canvas_height, canvas_width, background) for tiles in tile_chunks]
     proc_results = pool.map(process_tiles_async, params)
+    pool.terminate()
 
     for results in proc_results:
         for result in results:
             tile_img_data, tl_pixel_y, tl_pixel_x = result
-
             # Subset the tile image data matrix to the max allowable size (prevent overflows on the 'data' matrix.)
             data_shape = data[tl_pixel_y:(tl_pixel_y + tile_img_data.shape[0]),tl_pixel_x:(tl_pixel_x + tile_img_data.shape[1])].shape
             tile_img_data = tile_img_data[:data_shape[0],:data_shape[1],:]
@@ -366,7 +367,7 @@ def fetch_nexus_tiles(tile_service, min_lat, max_lat, min_lon, max_lon, ds, data
 
     daysinrange = tile_service.find_days_in_range_asc(min_lat, max_lat, min_lon, max_lon, ds, dataTimeStart, dataTimeEnd)
     if len(daysinrange) > 0:
-        ds1_nexus_tiles = tile_service.get_tiles_bounded_by_box_at_time(min_lat, max_lat, min_lon, max_lon, ds, daysinrange[0])
+        ds1_nexus_tiles = tile_service.find_all_tiles_in_box_at_time(min_lat, max_lat, min_lon, max_lon, ds, daysinrange[0])
         return ds1_nexus_tiles
     else:
         None

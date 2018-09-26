@@ -25,15 +25,15 @@ import io
 
 import mapprocessing
 import tilespecs
-import datetime
+from datetime import datetime
 from pytz import UTC
 
-from S3CachingHandler import S3CachingHandler
+from ResourceCachingHandler import ResourceCachingHandler
 from ImageResult import ImageResult
 
 
 @nexus_handler
-class WmtsTileServiceHandler(S3CachingHandler):
+class WmtsTileServiceHandler(ResourceCachingHandler):
     name = "WmtsTileServiceHandler"
     path = "/imaging/wmts"
     description = "Emulates a WMTS service"
@@ -42,7 +42,7 @@ class WmtsTileServiceHandler(S3CachingHandler):
     singleton = True
 
     def __init__(self):
-        S3CachingHandler.__init__(self)
+        ResourceCachingHandler.__init__(self)
 
     def calc(self, computeOptions, **args):
 
@@ -54,7 +54,7 @@ class WmtsTileServiceHandler(S3CachingHandler):
         tile_row = computeOptions.get_int_arg("TileRow")
 
         tile_date = computeOptions.get_argument("TIME", None)
-        tile_date = datetime.datetime.strptime(tile_date, "%Y-%m-%d").replace(tzinfo=UTC)
+        tile_date = datetime.strptime(tile_date, "%Y-%m-%d").replace(tzinfo=UTC)
         data_time_end = time.mktime(tile_date.timetuple())
         data_time_start = data_time_end - 86400.0
 
@@ -83,7 +83,7 @@ class WmtsTileServiceHandler(S3CachingHandler):
             colortable=color_table_identifier
         )
 
-        img_data = self._fetch_tile_from_s3(s3_key) if not no_cache else None
+        img_data = self._get_from_cache(s3_key) if not no_cache else None
 
         if img_data is None:
             img = mapprocessing.create_map(self._tile_service, tile_tllr,
@@ -94,7 +94,7 @@ class WmtsTileServiceHandler(S3CachingHandler):
             img_data = img_data.getvalue()
 
             if not no_cache:
-                self._upload_tile_to_s3(s3_key, img_data)
+                self._put_to_cache(s3_key, img_data)
 
         return ImageResult(img_data)
 

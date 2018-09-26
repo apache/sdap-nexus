@@ -24,7 +24,7 @@ import pkg_resources
 import io
 
 from webservice.NexusHandler import nexus_handler
-from S3CachingHandler import S3CachingHandler
+from ResourceCachingHandler import ResourceCachingHandler
 from ImageResult import ImageResult
 import mapprocessing
 
@@ -32,7 +32,7 @@ import mapprocessing
 
 
 @nexus_handler
-class ThumbnailHandler(S3CachingHandler):
+class ThumbnailHandler(ResourceCachingHandler):
     name = "ThumbnailHandler"
     path = "/imaging/thumbnail"
     description = "Creates a map thumbnail"
@@ -42,7 +42,7 @@ class ThumbnailHandler(S3CachingHandler):
     singleton = True
 
     def __init__(self):
-        S3CachingHandler.__init__(self)
+        ResourceCachingHandler.__init__(self)
         self.imagery_config = ConfigParser.RawConfigParser()
         self.imagery_config.readfp(pkg_resources.resource_stream(__name__, "config.ini"), filename='config.ini')
 
@@ -78,7 +78,7 @@ class ThumbnailHandler(S3CachingHandler):
             colortable=color_table_identifier
         )
 
-        img_data = self._fetch_tile_from_s3(s3_key) if not no_cache else None
+        img_data = self._get_from_cache(s3_key) if not no_cache else None
 
         if img_data is None:
             stats = self._tile_service.get_dataset_overall_stats(ds)
@@ -94,6 +94,6 @@ class ThumbnailHandler(S3CachingHandler):
             img_data = img_data.getvalue()
 
             if not no_cache:
-                self._upload_tile_to_s3(s3_key, img_data)
+                self._put_to_cache(s3_key, img_data)
 
         return ImageResult(img_data)
