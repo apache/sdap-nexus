@@ -18,3 +18,4 @@ import WmtsTileServiceHandler
 import ColorTableHandler
 import LayerListHandler
 import ThumbnailHandler
+import MrfTileServiceHandler
