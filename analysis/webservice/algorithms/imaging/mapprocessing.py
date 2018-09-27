@@ -30,7 +30,6 @@ import multiprocessing
 import colortables
 import colorization
 
-
 NO_DATA_IMAGE = None
 
 
@@ -285,12 +284,18 @@ def process_tiles_to_map(nexus_tiles, stats, reqd_tllr, width=None, height=None,
     data = np.zeros((canvas_height, canvas_width, 4))
     data[:,:,:] = background
 
-    pool = multiprocessing.Pool(8)
-    n = int(math.ceil(len(nexus_tiles) / 8))
-    tile_chunks = [nexus_tiles[i * n:(i + 1) * n] for i in range((len(nexus_tiles) + n - 1) // n)]
-    params = [(tiles, tiles_tllr, data_min, data_max, table, canvas_height, canvas_width, background) for tiles in tile_chunks]
-    proc_results = pool.map(process_tiles_async, params)
-    pool.terminate()
+    pool = multiprocessing.Pool(multiprocessing.cpu_count())
+    proc_results = None
+
+    try:
+        n = int(math.ceil(len(nexus_tiles) / float(multiprocessing.cpu_count())))
+        tile_chunks = np.array_split(np.array(nexus_tiles), n)
+        params = [(tiles, tiles_tllr, data_min, data_max, table, canvas_height, canvas_width, background) for tiles in tile_chunks]
+        proc_results = pool.map(process_tiles_async, params)
+    except:
+        raise
+    finally:
+        pool.terminate()
 
     for results in proc_results:
         for result in results:

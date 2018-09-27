@@ -61,6 +61,9 @@ class TileMatrix:
 
 
 class TileMatrixSet:
+    """
+    Defines a basic WMS tile matrix set
+    """
 
     def __init__(self, identifier, tile_matrixes=[]):
         self.idendifier = identifier
@@ -68,13 +71,16 @@ class TileMatrixSet:
 
         TILE_MATRIX_SETS[self.idendifier] = self
 
-
     def get_tile_matrix_at_level(self, level):
+        """
+        Retrieved the tile matrix definition at the specified level
+        :param level:
+        :return:
+        """
         assert level >= 0 and len(self.tile_matrixes) > level, "Requested level exceeds configured levels"
         tm = self.tile_matrixes[level]
         assert tm.level == level, "Configuration error, level found at incorrect index"
         return tm
-
 
     def get_tllr_for_tile(self, level, col, row):
         """

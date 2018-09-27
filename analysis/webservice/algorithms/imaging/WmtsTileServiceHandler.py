@@ -71,16 +71,15 @@ class WmtsTileServiceHandler(ResourceCachingHandler):
         tm = tms.get_tile_matrix_at_level(tile_matrix)
         tile_tllr = tm.get_tllr_for_tile(tile_col, tile_row)
 
-        s3_key = "{ds}/{colortable}/{tilematrixset}/{date}/{tile_matrix}/{ds}-{tilematrixset}-{tile_matrix}-{col}-{row}-{time}-{min}-{max}.png".format(
+        s3_key = "{ds}/{colortable}/{tilematrixset}/{time}/{tile_matrix}/{ds}-{tilematrixset}-{tile_matrix}-{col}-{row}-{time}-{min}-{max}.png".format(
             ds=ds,
             tilematrixset=tilematrixset,
             tile_matrix=tile_matrix,
             col=tile_col,
             row=tile_row,
-            time=data_time_end,
+            time=int(data_time_end),
             min=(force_min if force_min is not None else "x"),
             max=(force_max if force_max is not None else "x"),
-            date=int(data_time_end),
             colortable=color_table_identifier
         )
 
