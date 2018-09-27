@@ -96,6 +96,37 @@ class S3CacheManager(AbstractCacheManager):
                 raise
 
 
+class FilesystemCacheManager(AbstractCacheManager):
+
+    def __init__(self):
+        AbstractCacheManager.__init__(self)
+        self.__fs_base = self._imagery_config.get("filesystem", "fs.base")
+
+    def __exists(self, key):
+        full_path = "%s/%s" % (self.__fs_base, key)
+        return os.path.exists(full_path)
+
+    def put(self, key, data):
+        full_path = "%s/%s" % (self.__fs_base, key)
+        bn = os.path.dirname(full_path)
+        if not os.path.exists(bn):
+            os.makedirs(bn)
+        f = open(full_path, "wb")
+        f.write(data)
+        f.close()
+        return True
+
+    def get(self, key):
+        if not self.__exists(key):
+            return None
+        full_path = "%s/%s" % (self.__fs_base, key)
+        f = open(full_path, "rb")
+        d = f.read()
+        f.close()
+        return d
+
+
+
 class ResourceCachingHandler(BaseHandler):
 
     def __init__(self):
@@ -113,6 +144,8 @@ class ResourceCachingHandler(BaseHandler):
             self.__store = S3CacheManager()
         elif datastore == "memory":
             self.__store = InMemoryCacheManager()
+        elif datastore == "filesystem":
+            self.__store = FilesystemCacheManager()
         else:
             raise Exception("Missing or invalid cache store specified in the imagery configuration")
 
