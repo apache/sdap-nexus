@@ -322,8 +322,8 @@ class NexusRequestObject(StatsComputeOptions):
     def get_row_count(self):
         return self.get_int_arg(RequestParameters.ROW_COUNT, 10)
 
-    def get_content_type(self):
-        return self.get_argument(RequestParameters.OUTPUT, "JSON")
+    def get_content_type(self, default_type="JSON"):
+        return self.get_argument(RequestParameters.OUTPUT, default_type)
 
     def get_apply_low_pass_filter(self, default=True):
         return self.get_boolean_arg(RequestParameters.APPLY_LOW_PASS, default)

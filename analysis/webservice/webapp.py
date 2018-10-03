@@ -20,7 +20,9 @@ import json
 import logging
 import sys
 import traceback
+import os
 from multiprocessing.pool import ThreadPool
+import types
 
 import matplotlib
 import pkg_resources
@@ -48,6 +50,8 @@ class BaseHandler(tornado.web.RequestHandler):
     def initialize(self, thread_pool):
         self.logger = logging.getLogger('nexus')
         self.request_thread_pool = thread_pool
+        self.set_header('Connection', 'close')
+        self.request.connection.no_keep_alive = True
 
     @tornado.web.asynchronous
     def get(self):
@@ -55,8 +59,18 @@ class BaseHandler(tornado.web.RequestHandler):
         self.logger.info("Received request %s" % self._request_summary())
         self.request_thread_pool.apply_async(self.run)
 
+    def options(self):
+        # no body
+        self.set_header("Access-Control-Allow-Origin", "*")
+        self.set_header("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE")
+        self.set_header("Access-Control-Allow-Headers", "Content-Type, Access-Control-Allow-Headers, Authorization, X-Requested-With")
+        self.set_status(204)
+        self.finish()
+
     def run(self):
         self.set_header("Access-Control-Allow-Origin", "*")
+        self.set_header("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE")
+        self.set_header("Access-Control-Allow-Headers", "Content-Type, Access-Control-Allow-Headers, Authorization, X-Requested-With")
         reqObject = NexusRequestObject(self)
         try:
             result = self.do_get(reqObject)
@@ -107,26 +121,31 @@ class ModularNexusHandlerWrapper(BaseHandler):
 
         results = instance.calc(request)
 
+        default_response_type = "JSON"
+        drt_op = getattr(results, "default_results_type", None)
+        if callable(drt_op):
+            default_response_type = drt_op()
+
         try:
             self.set_status(results.status_code)
         except AttributeError:
             pass
 
-        if request.get_content_type() == ContentTypes.JSON:
+        if request.get_content_type(default_response_type) == ContentTypes.JSON:
             self.set_header("Content-Type", "application/json")
             try:
                 self.write(results.toJson())
             except AttributeError:
                 traceback.print_exc(file=sys.stdout)
                 self.write(json.dumps(results, indent=4))
-        elif request.get_content_type() == ContentTypes.PNG:
+        elif request.get_content_type(default_response_type) == ContentTypes.PNG:
             self.set_header("Content-Type", "image/png")
             try:
                 self.write(results.toImage())
             except AttributeError:
                 traceback.print_exc(file=sys.stdout)
                 raise NexusProcessingException(reason="Unable to convert results to an Image.")
-        elif request.get_content_type() == ContentTypes.CSV:
+        elif request.get_content_type(default_response_type) == ContentTypes.CSV:
             self.set_header("Content-Type", "text/csv")
             self.set_header("Content-Disposition", "filename=\"%s\"" % request.get_argument('filename', "download.csv"))
             try:
@@ -134,7 +153,7 @@ class ModularNexusHandlerWrapper(BaseHandler):
             except:
                 traceback.print_exc(file=sys.stdout)
                 raise NexusProcessingException(reason="Unable to convert results to CSV.")
-        elif request.get_content_type() == ContentTypes.NETCDF:
+        elif request.get_content_type(default_response_type) == ContentTypes.NETCDF:
             self.set_header("Content-Type", "application/x-netcdf")
             self.set_header("Content-Disposition", "filename=\"%s\"" % request.get_argument('filename', "download.nc"))
             try:
@@ -142,7 +161,7 @@ class ModularNexusHandlerWrapper(BaseHandler):
             except:
                 traceback.print_exc(file=sys.stdout)
                 raise NexusProcessingException(reason="Unable to convert results to NetCDF.")
-        elif request.get_content_type() == ContentTypes.ZIP:
+        elif request.get_content_type(default_response_type) == ContentTypes.ZIP:
             self.set_header("Content-Type", "application/zip")
             self.set_header("Content-Disposition", "filename=\"%s\"" % request.get_argument('filename', "download.zip"))
             try:

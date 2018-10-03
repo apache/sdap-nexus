@@ -1,0 +1,222 @@
+<html>
+<head>
+    <title>Nexus Map Tester</title>
+    <link href="https://fonts.googleapis.com/css?family=Roboto" rel="stylesheet">
+    <link rel="stylesheet" href="../lib/font-awesome.min.css">
+    <link rel="stylesheet" href="styles.css">
+
+    <script src="../lib/jquery-3.1.1.min.js"></script>
+</head>
+<body>
+    <div class="controls-container-outter">
+        <div class="control-container">
+            <label for="dataset-select">Dataset:</label>
+            <select id="dataset-select"></select>
+        </div>
+        <div class="control-container">
+            <label for="date-select">Date:</label>
+            <select id="date-select">
+
+            </select>
+        </div>
+        <div class="control-container">
+            <label for="colorbar-select">Colors:</label>
+            <select id="colorbar-select">
+                <option value="rainbow">Rainbow</option>
+                <option value="grayscale">Grayscale</option>
+                <option value="anomaly">Anomaly</option>
+            </select>
+        </div>
+        <div class="control-container">
+            <input type="checkbox" id="custom-min-max-check"/>
+            <label for="custom-min-max-check">Force Min/Max</label>
+        </div>
+        <div class="control-container">
+            <label for="custom-min-text">Min:</label>
+            <input type="text" id="custom-min-text"/>
+        </div>
+        <div class="control-container">
+            <label for="custom-max-text">Max:</label>
+            <input type="text" id="custom-max-text"/>
+        </div>
+
+        <div class="control-container">
+            <label for="interp-select">Interpolation:</label>
+            <select id="interp-select">
+                <option value="nearest">Nearest</option>
+                <option value="bilinear">Bilinear</option>
+                <option value="bicubic">Bicubic</option>
+            </select>
+        </div>
+
+        <div class="control-container">
+            <button id="submit-button">Create Map</button>
+        </div>
+
+        <div class="control-container" id="loading-spinner-container">
+            <div class="loading-spinner"><i class='fa fa-spinner fa-spin'></i></div>
+        </div>
+    </div>
+    <div id="map-image-container">
+
+    </div>
+
+
+
+</body>
+<script>
+
+
+
+$( function() {
+
+    var datasets = null;
+
+
+    function getDatasetById(id) {
+        for (var i = 0; i < datasets.length; i++) {
+            var ds = datasets[i];
+            if (ds.id == id) {
+                return ds;
+            }
+        }
+        return null;
+    }
+
+    function onDatasetsLoaded(data) {
+        console.info(data);
+        datasets = data;
+
+        for (var i = 0; i < data.length; i++) {
+            var ds = data[i];
+            $('#dataset-select').append($('<option>', {value:ds.id, text:ds.id}));
+        }
+        $('#dataset-select').val("AVHRR_OI_L4_GHRSST_NCEI");
+        onDatasetChanged();
+        onCustomMinMaxChanged();
+        adjustMapSize();
+    }
+
+    function formatDate(dt) {
+        var d = dt.getUTCDate();
+        var m =  dt.getUTCMonth();
+        m += 1;
+        var y = dt.getUTCFullYear();
+
+        return m + "/" + d + "/" + y;
+    }
+
+    function updateAvailableDates(ds) {
+        $('#date-select')
+            .find('option')
+            .remove()
+            .end();
+
+        for (var i = 0; i < ds.stats.availableDates.length; i++) {
+            var dtMillis = ds.stats.availableDates[i];
+            var dt = new Date(dtMillis);
+            $('#date-select').prepend($('<option>', {value:dtMillis, text:formatDate(dt)}));
+        }
+
+        $('#date-select').val(ds.stats.availableDates[ds.stats.availableDates.length - 1]);
+    }
+
+    function onDatasetChanged() {
+        var id = $( "#dataset-select" ).val();
+        var ds = getDatasetById(id);
+
+        $( "#custom-min-text" ).val(ds.stats.minValue);
+        $( "#custom-max-text" ).val(ds.stats.maxValue);
+
+        updateAvailableDates(ds);
+    }
+
+    function onCustomMinMaxChanged() {
+        if (!$( "#custom-min-max-check" ).prop("checked")) {
+            $( "#custom-min-text" ).attr("disabled", "disabled");
+            $( "#custom-max-text" ).attr("disabled", "disabled");
+        } else {
+            $( "#custom-min-text" ).removeAttr("disabled");
+            $( "#custom-max-text" ).removeAttr("disabled");
+        }
+    }
+
+    function adjustMapSize() {
+        var containerHeight = $("#map-image-container").height();
+        $("#map-image-container").width(containerHeight * 2);
+    }
+
+    function onSubmitClicked() {
+
+        var id = $( "#dataset-select" ).val();
+        var colors = $( "#colorbar-select" ).val();
+        var min = $( "#custom-min-text" ).val();
+        var max = $( "#custom-max-text" ).val();
+        var customMinMax = $( "#custom-min-max-check" ).prop("checked");
+        var dt = $('#date-select').val() / 1000;
+        var interp = $("#interp-select").val();
+
+        var url = "../map?ds=" + id
+            + "&ct=" + colors
+            + "&t=" + dt
+            + "&output=PNG"
+            + "&interp=" + interp;
+
+        if (customMinMax) {
+            url += "&min=" + min + "&max=" + max;
+        }
+
+        console.info(url);
+
+        $("#loading-spinner-container").css("display", "inline-block");
+
+
+        $("#map-image-container").text("");
+        var img = $('<img>');
+        img.on('load', function(){
+            $("#loading-spinner-container").css("display", "none");
+            adjustMapSize();
+
+        });
+        img.attr('src', url);
+        img.appendTo('#map-image-container');
+    }
+
+    $( window ).resize(function() {
+        adjustMapSize();
+    });
+
+
+    $( "#dataset-select" ).change(function() {
+        onDatasetChanged();
+    });
+
+    $( "#colorbar-select" ).change(function() {
+
+
+    });
+
+    $( "#custom-min-max-check" ).change(function() {
+
+        onCustomMinMaxChanged();
+
+
+    });
+
+    $( "#submit-button" ).click(function() {
+        onSubmitClicked();
+
+    });
+
+    $.ajax({
+      dataType: "json",
+      url: "datasets.json",
+      success: onDatasetsLoaded
+    });
+
+
+});
+
+
+</script>
+</html>
