@@ -101,19 +101,18 @@ class MrfReader:
         self.__rows = []
         self.__cols = []
 
-        self.__levels.append(0)
-        self.__rows.append(h)
-        self.__cols.append(w)
-
         while len_base > low:
             self.__levels.append(len_base)
-            w = int(math.ceil(float(w) / 2.0))
-            h = int(math.ceil(float(h) / 2.0))
             self.__rows.append(h)
             self.__cols.append(w)
+
+            w = int(math.ceil(float(w) / 2.0))
+            h = int(math.ceil(float(h) / 2.0))
             len_base = w * h
 
         self.__levels.append(1)
+        self.__rows.append(h)
+        self.__cols.append(w)
 
     def __read_offset_and_size(self, tile):
         with open(self.__idx_path, "rb") as idx_file:
@@ -127,9 +126,16 @@ class MrfReader:
             return mrf_file.read(size)
 
     def get_tile_bytes(self, tilematrix, tilerow, tilecol):
-        col = self.__cols[-tilematrix]
-        level_start = np.array(self.__levels[: - tilematrix - 1]).sum()
-        tile = (tilerow * col) + tilecol + level_start
+        tilematrix += 1
+
+        cols = self.__cols[-(tilematrix + 1)]
+        rows = self.__rows[-(tilematrix + 1)]
+
+        assert tilecol < cols, "Tile column exceeds maximum columns for this layer/tile matrix"
+        assert tilerow < rows, "Tile row exceeds maximum rows for this layer/tile matrix"
+
+        level_start = np.array(self.__levels[: - (tilematrix + 1) ]).sum()
+        tile = (tilerow * cols) + tilecol + level_start
 
         offset, size = self.__read_offset_and_size(tile)
         tile_data = self.__read_tile_data(offset, size)
