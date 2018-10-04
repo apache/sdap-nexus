@@ -60,22 +60,20 @@ def addlayer(
     layerProjectionGlobal="EPSG:4326",
     layerProjectionNorth="EPSG:3413",
     layerProjectionSouth="EPSG:3031",
-    wmtsGlobalMatrixSet="EPSG4326_500m",
-    wmtsNorthMatrixSet="EPSG3413_250m",
-    wmtsSouthMatrixSet="EPSG3031_250m",
+    wmtsGlobalMatrixSet="EPSG4326",
+    wmtsNorthMatrixSet="EPSG3413",
+    wmtsSouthMatrixSet="EPSG3031",
     wmtsLayerName="",
     wmtsFormat="image/png",
-    colorbar="",
+    colorbar=None,
     availability=None,
     keywords=[],
-    envs=["DEV", "SIT", "UAT", "PROD"],
     utilityLayer=False,
     baseLayer=False,
-    colorbarSpec=None,
     depthSpec=None,
     bounding=bounding(),
-    isGrayscale=False,
-    type="observation"):
+    type="observation",
+    overridesSdap=False):
 
     global __LAYERS__
 
@@ -107,16 +105,14 @@ def addlayer(
         "wmtsSouthMatrixSet": wmtsSouthMatrixSet,
         "wmtsLayerName": wmtsLayerName,
         "wmtsFormat": wmtsFormat,
-        "colorbar": colorbar,
         "availability": availability,
         "keywords": keywords,
-        "envs": envs,
         "utilityLayer": utilityLayer,
         "baseLayer": baseLayer,
-        "colorbarSpec": colorbarSpec,
+        "colorbar": colorbar,
         "depthSpec": depthSpec,
-        "isGrayscale": isGrayscale,
-        "type":type
+        "type":type,
+        "overridesSdap": overridesSdap
     }
 
     __LAYERS__.append(layer)
@@ -131,3 +127,9 @@ def timestamp(year, month, day):
 
 def getLayers():
     return __LAYERS__
+
+def getLayerByLabel(label):
+    for l in __LAYERS__:
+        if l["productLabel"] == label:
+            return l
+    return None

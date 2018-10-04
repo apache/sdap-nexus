@@ -52,10 +52,21 @@ class LayerListHandler(BaseHandler):
         BaseHandler.__init__(self)
         self.imagery_config = ConfigParser.RawConfigParser()
         self.imagery_config.readfp(pkg_resources.resource_stream(__name__, "config.ini"), filename='config.ini')
-
         self.static_layers_base = self.imagery_config.get("tileserver", "mrf.base")
-
         self.parse_static_layers()
+
+    def build_colorbar_url(self, colorbarSpec):
+        if colorbarSpec is None:
+            return None
+        url = "{sdap_base}/imaging/colortable?ds={ds}&ct={ct}&min={min}&max={max}&units={units}&generic=true".format(
+            sdap_base=self.imagery_config.get("imaging", "imaging.endpoint"),
+            ds=colorbarSpec["productLabel"],
+            ct=colorbarSpec["colorbarName"],
+            min=colorbarSpec["minValue"],
+            max=colorbarSpec["maxValue"],
+            units=colorbarSpec["units"]
+        )
+        return url
 
     def build_layer_for_projection(self, layer_def, product_suffix, endpoint_proj, layerProjection, tileMatrixSet):
         layer = {}
@@ -92,7 +103,7 @@ class LayerListHandler(BaseHandler):
             "tileLayerName": layer_def["wmtsLayerName"],
             "tileFormat": layer_def["wmtsFormat"]
         }
-        layer["colorbar"] = layer_def["colorbar"]
+
         layer["nativeResolution"] = "9km"
         if layer_def["availability"] is not None:
             layer["availability"] = {
@@ -104,25 +115,25 @@ class LayerListHandler(BaseHandler):
         layer["keywords"] = layer_def["keywords"]
         layer["utilityLayer"] = layer_def["utilityLayer"]
         layer["depths"] = layer_def["depthSpec"]
-        layer["isGrayscale"] = layer_def["isGrayscale"]
         layer["type"] = layer_def["type"]
+        layer["colorbar"] = self.build_colorbar_url(layer_def["colorbar"])
         return layer
 
     def build_layer(self, layer_def, basemap):
         layers = []
-        if layer_def["hasGlobal"] is True and basemap == layer_def["baseLayer"]:
+        if layer_def["hasGlobal"] is True and basemap == layer_def["baseLayer"] and layer_def["overridesSdap"] is False:
             layers.append(self.build_layer_for_projection(layer_def,
                                                      "",
                                                      "geo",
                                                      layer_def["layerProjectionGlobal"],
                                                      layer_def["wmtsGlobalMatrixSet"]))
-        if layer_def["hasNorth"] is True and basemap == layer_def["baseLayer"]:
+        if layer_def["hasNorth"] is True and basemap == layer_def["baseLayer"] and layer_def["overridesSdap"] is False:
             layers.append(self.build_layer_for_projection(layer_def,
                                                      "-arctic",
                                                      "arctic",
                                                      layer_def["layerProjectionNorth"],
                                                      layer_def["wmtsNorthMatrixSet"]))
-        if layer_def["hasSouth"] is True and basemap == layer_def["baseLayer"]:
+        if layer_def["hasSouth"] is True and basemap == layer_def["baseLayer"] and layer_def["overridesSdap"] is False:
             layers.append(self.build_layer_for_projection(layer_def,
                                                      "-antarctic",
                                                      "antarctic",
@@ -190,6 +201,26 @@ class LayerListHandler(BaseHandler):
         }
         return layer
 
+
+    def apply_layer_overrides(self, sdap_layer):
+        layer_overrides = layer.getLayerByLabel(sdap_layer["ProductLabel"])
+        if layer_overrides["crmShortName"] is not None:
+            sdap_layer["CrmShortName"] = layer_overrides["crmShortName"]
+        if layer_overrides["layerTitle"] is not None:
+            sdap_layer["LayerTitle"] = layer_overrides["layerTitle"]
+        if layer_overrides["layerSubtitle"] is not None:
+            sdap_layer["LayerSubtitle"] = layer_overrides["layerSubtitle"]
+        if layer_overrides["keywords"] is not None:
+            sdap_layer["keywords"] = layer_overrides["keywords"]
+        if layer_overrides["instrument"] is not None:
+            sdap_layer["instrument"] = layer_overrides["instrument"]
+        if layer_overrides["mission"] is not None:
+            sdap_layer["mission"] = layer_overrides["mission"]
+        if layer_overrides["parameter"] is not None:
+            sdap_layer["parameter"] = layer_overrides["parameter"]
+
+
+
     def calc(self, computeOptions, **args):
         basemaps = computeOptions.get_boolean_arg("basemaps", False)
 
@@ -199,6 +230,7 @@ class LayerListHandler(BaseHandler):
             ds_list = self._tile_service.get_dataseries_list()
             for ds in ds_list:
                 sdap_layer = self._build_layer_spec(ds)
+                self.apply_layer_overrides(sdap_layer)
                 layers.append(sdap_layer)
 
         compiled_layers = self.build_layer_config(layer.getLayers(), basemaps)
