@@ -125,6 +125,7 @@ RUN yum install -y mesa-libGL.x86_64
 # Install nexusproto
 ARG APACHE_NEXUSPROTO=https://github.com/apache/incubator-sdap-nexusproto.git
 ARG APACHE_NEXUSPROTO_BRANCH=master
+ARG REBUILD_CODE=1
 COPY install_nexusproto.sh ./install_nexusproto.sh
 RUN ./install_nexusproto.sh $APACHE_NEXUSPROTO $APACHE_NEXUSPROTO_BRANCH
 
