@@ -17,12 +17,6 @@ FROM centos:7
 
 MAINTAINER Apache SDAP "dev@sdap.apache.org"
 
-ARG SPARK_VERSION=2.2.0
-ARG APACHE_NEXUSPROTO=https://github.com/apache/incubator-sdap-nexusproto.git
-ARG APACHE_NEXUSPROTO_BRANCH=master
-ARG APACHE_NEXUS=https://github.com/apache/incubator-sdap-nexus.git
-ARG APACHE_NEXUS_BRANCH=master
-
 RUN yum -y update && \
     yum -y install \
     bzip2 \
@@ -49,6 +43,7 @@ ENV SPARK_LOCAL_IP=127.0.0.1 \
     NEXUS_SRC=/tmp/incubator-sdap-nexus
 
 # Install Spark
+ARG SPARK_VERSION=2.2.0
 RUN cd /usr/local && \
     wget --quiet http://d3kbcqa49mib13.cloudfront.net/spark-${SPARK_VERSION}-bin-hadoop2.7.tgz && \
     tar -xzf spark-${SPARK_VERSION}-bin-hadoop2.7.tgz && \
@@ -75,14 +70,18 @@ RUN conda install -c conda-forge -y netCDF4 && \
     ln -s libhdf5_cpp.so.12 libhdf5_cpp.so.10 && \
     ln -s libjpeg.so.9 libjpeg.so.8
 
-# Install Oracle JDK 1.8u172-b11
-RUN wget -q --no-cookies --no-check-certificate --header "Cookie: gpw_e24=http%3A%2F%2Fwww.oracle.com%2F; oraclelicense=accept-securebackup-cookie" "http://download.oracle.com/otn-pub/java/jdk/8u172-b11/a58eab1ec242421181065cdc37240b08/jdk-8u172-linux-x64.rpm" && \
-    yum install -y jdk-8u172-linux-x64.rpm && \
-    rm jdk-8u172-linux-x64.rpm
+# Install Oracle JDK 1.8u191-b12
+RUN wget -q --no-cookies --no-check-certificate --header "Cookie: gpw_e24=http%3A%2F%2Fwww.oracle.com%2F; oraclelicense=accept-securebackup-cookie" "http://download.oracle.com/otn-pub/java/jdk/8u191-b12/2787e4a523244c269598db4e85c51e0c/jdk-8u191-linux-x64.rpm" && \
+    yum install -y jdk-8u191-linux-x64.rpm && \
+    rm jdk-8u191-linux-x64.rpm
 
 COPY *.sh /tmp/
 
 # Install nexusproto and nexus
+ARG APACHE_NEXUSPROTO=https://github.com/apache/incubator-sdap-nexusproto.git
+ARG APACHE_NEXUSPROTO_BRANCH=master
+ARG APACHE_NEXUS=https://github.com/apache/incubator-sdap-nexus.git
+ARG APACHE_NEXUS_BRANCH=master
 RUN /tmp/install_nexusproto.sh $APACHE_NEXUSPROTO $APACHE_NEXUSPROTO_BRANCH && \
     /tmp/install_nexus.sh $APACHE_NEXUS $APACHE_NEXUS_BRANCH $NEXUS_SRC
 
