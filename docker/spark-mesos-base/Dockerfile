@@ -26,10 +26,10 @@ RUN yum -y update && \
     gcc \
     python-devel
 
-# Install Oracle JDK 1.8u121-b13
-RUN wget -q --no-cookies --no-check-certificate --header "Cookie: gpw_e24=http%3A%2F%2Fwww.oracle.com%2F; oraclelicense=accept-securebackup-cookie" "http://download.oracle.com/otn-pub/java/jdk/8u121-b13/e9e7ea248e2c4826b92b3f075a80e441/jdk-8u121-linux-x64.rpm" && \
-    yum -y install jdk-8u121-linux-x64.rpm && \
-    rm jdk-8u121-linux-x64.rpm
+# Install Oracle JDK 1.8u191-b12
+RUN wget -q --no-cookies --no-check-certificate --header "Cookie: gpw_e24=http%3A%2F%2Fwww.oracle.com%2F; oraclelicense=accept-securebackup-cookie" "http://download.oracle.com/otn-pub/java/jdk/8u191-b12/2787e4a523244c269598db4e85c51e0c/jdk-8u191-linux-x64.rpm" && \
+    yum install -y jdk-8u191-linux-x64.rpm && \
+    rm jdk-8u191-linux-x64.rpm
 ENV JAVA_HOME /usr/java/default
 
 # ########################
@@ -40,7 +40,7 @@ ENV M2 $M2_HOME/bin
 ENV PATH $PATH:$M2
 
 RUN mkdir $M2_HOME && \
-    wget -q http://mirror.stjschools.org/public/apache/maven/maven-3/3.3.9/binaries/apache-maven-3.3.9-bin.tar.gz && \
+    wget -q https://archive.apache.org/dist/maven/maven-3/3.3.9/binaries/apache-maven-3.3.9-bin.tar.gz && \
     tar -xvzf apache-maven-3.3.9-bin.tar.gz -C $M2_HOME --strip-components=1 && \
     rm -f apache-maven-3.3.9-bin.tar.gz
 
@@ -59,7 +59,7 @@ ENV PATH $PATH:/usr/local/anaconda2/bin
 ENV INSTALL_LOC=/usr/local \
     HADOOP_VERSION=2.7.3 \
     SPARK_VERSION=2.1.0 \
-    MESOS_VER=1.5.0 \
+    MESOS_VER=1.5.1 \
     MESOS_MASTER_PORT=5050 \
     MESOS_AGENT_PORT=5051 \
     MESOS_WORKDIR=/var/lib/mesos \
@@ -122,31 +122,15 @@ RUN cd ${CONDA_HOME}/lib && \
 
 RUN yum install -y mesa-libGL.x86_64
 
-# Install nexusproto
+# Install nexusproto and nexus
+COPY *.sh /tmp/
 ARG APACHE_NEXUSPROTO=https://github.com/apache/incubator-sdap-nexusproto.git
 ARG APACHE_NEXUSPROTO_BRANCH=master
+ARG APACHE_NEXUS=https://github.com/apache/incubator-sdap-nexus.git
+ARG APACHE_NEXUS_BRANCH=master
 ARG REBUILD_CODE=1
-COPY install_nexusproto.sh ./install_nexusproto.sh
-RUN ./install_nexusproto.sh $APACHE_NEXUSPROTO $APACHE_NEXUSPROTO_BRANCH
-
-# Retrieve NEXUS code and build it.
-
-WORKDIR /
-
-RUN git clone https://github.com/apache/incubator-sdap-nexus.git
-
-RUN sed -i 's/,webservice.algorithms.doms//g' /incubator-sdap-nexus/analysis/webservice/config/web.ini && \
-    sed -i 's/127.0.0.1/nexus-webapp/g' /incubator-sdap-nexus/analysis/webservice/config/web.ini && \
-    sed -i 's/127.0.0.1/cassandra1,cassandra2,cassandra3,cassandra4,cassandra5,cassandra6/g' /incubator-sdap-nexus/data-access/nexustiles/config/datastores.ini && \
-    sed -i 's/localhost:8983/solr1:8983/g' /incubator-sdap-nexus/data-access/nexustiles/config/datastores.ini
-
-WORKDIR /incubator-sdap-nexus/data-access
-
-RUN python setup.py install
-
-WORKDIR /incubator-sdap-nexus/analysis
-
-RUN python setup.py install
+RUN /tmp/install_nexusproto.sh $APACHE_NEXUSPROTO $APACHE_NEXUSPROTO_BRANCH && \
+    /tmp/install_nexus.sh $APACHE_NEXUS $APACHE_NEXUS_BRANCH $NEXUS_SRC
 
 WORKDIR /tmp
 

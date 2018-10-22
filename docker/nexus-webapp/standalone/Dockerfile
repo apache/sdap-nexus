@@ -75,13 +75,13 @@ RUN wget -q --no-cookies --no-check-certificate --header "Cookie: gpw_e24=http%3
     yum install -y jdk-8u191-linux-x64.rpm && \
     rm jdk-8u191-linux-x64.rpm
 
-COPY *.sh /tmp/
-
 # Install nexusproto and nexus
+COPY *.sh /tmp/
 ARG APACHE_NEXUSPROTO=https://github.com/apache/incubator-sdap-nexusproto.git
 ARG APACHE_NEXUSPROTO_BRANCH=master
 ARG APACHE_NEXUS=https://github.com/apache/incubator-sdap-nexus.git
 ARG APACHE_NEXUS_BRANCH=master
+ARG REBUILD_CODE=1
 RUN /tmp/install_nexusproto.sh $APACHE_NEXUSPROTO $APACHE_NEXUSPROTO_BRANCH && \
     /tmp/install_nexus.sh $APACHE_NEXUS $APACHE_NEXUS_BRANCH $NEXUS_SRC
 
