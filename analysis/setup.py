@@ -16,7 +16,7 @@
 
 import setuptools
 
-__version__ = '1.6'
+__version__ = '1.5'
 
 setuptools.setup(
     name="nexusanalysis",
@@ -28,9 +28,10 @@ setuptools.setup(
     description="NEXUS API.",
     long_description=open('README.md').read(),
 
-    packages=['webservice', 'webservice.algorithms', 'webservice.algorithms.doms', 'webservice.algorithms_spark'],
+    packages=['webservice', 'webservice.algorithms', 'webservice.algorithms.doms', 'webservice.algorithms_spark', 'webservice.algorithms.imaging'],
     package_data={'webservice': ['config/web.ini', 'config/algorithms.ini'],
-                  'webservice.algorithms.doms': ['domsconfig.ini']},
+                  'webservice.algorithms.doms': ['domsconfig.ini'],
+                  'webservice.algorithms.imaging': ['config.ini']},
     data_files=[
         ('static', ['static/index.html'])
     ],

@@ -16,7 +16,7 @@
 import setuptools
 from Cython.Build import cythonize
 
-__version__ = '0.33'
+__version__ = '0.32'
 
 setuptools.setup(
     name="nexus-data-access",
@@ -36,7 +36,7 @@ setuptools.setup(
         'cassandra-driver==3.5.0',
         'pysolr==3.7.0',
         'requests',
-        'nexusproto==1.0.0',
+        'nexusproto',
         'shapely'
     ],
 

@@ -238,7 +238,7 @@ class NexusTileService(object):
         return start_time, end_time
 
     def get_dataset_overall_stats(self, ds):
-        return self._solr.get_data_series_stats(ds)
+        return self._metadatastore.get_data_series_stats(ds)
 
     def get_tiles_bounded_by_box_at_time(self, min_lat, max_lat, min_lon, max_lon, dataset, time, **kwargs):
         tiles = self.find_all_tiles_in_box_at_time(min_lat, max_lat, min_lon, max_lon, dataset, time, **kwargs)

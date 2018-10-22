@@ -1,0 +1,70 @@
+body {
+    font-family: 'Roboto', sans-serif;
+    background: #000;
+    color: #FFF;
+    padding: 0px;
+    margin: 0px;
+}
+
+.controls-container-outter {
+    background-color: #333333;
+    padding: 5px;
+}
+
+.control-container {
+    display: inline-block;
+    margin-left: 10px;
+    padding-right: 3px;
+    vertical-align: middle;
+}
+
+.control-container label {
+    vertical-align: middle;
+    font-size: .8em;
+}
+
+.control-container input {
+
+}
+
+.control-container input[type="text"] {
+    width: 50px;
+}
+
+.control-container input:disabled {
+    color: #C0C0C0;
+}
+
+.control-container button {
+    display: block;
+    font-size: .8em;
+    cursor: pointer;
+    border: 1px solid #909090;
+    margin: 4px auto 4px auto;
+    padding: 4px;
+    text-align: center;
+    width: 100px;
+}
+
+#map-image-container {
+    text-align: center;
+    margin: 20px auto;
+    background-image: url(land_shallow_topo_2048.jpg);
+    height: calc(100% - 100px);
+    background-size: 100% 100%;
+}
+
+#map-image-container img {
+    height: 100%;
+    width: 100%;
+}
+
+#loading-spinner-container {
+    display: none;
+}
+
+
+
+.loading-spinner {
+
+}

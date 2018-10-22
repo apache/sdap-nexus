@@ -82,7 +82,6 @@ ARG APACHE_NEXUSPROTO=https://github.com/apache/incubator-sdap-nexusproto.git
 ARG APACHE_NEXUSPROTO_BRANCH=master
 ARG APACHE_NEXUS=https://github.com/apache/incubator-sdap-nexus.git
 ARG APACHE_NEXUS_BRANCH=master
-ARG REBUILD_CODE=1
 RUN /tmp/install_nexusproto.sh $APACHE_NEXUSPROTO $APACHE_NEXUSPROTO_BRANCH && \
     /tmp/install_nexus.sh $APACHE_NEXUS $APACHE_NEXUS_BRANCH $NEXUS_SRC
 
