@@ -20,7 +20,7 @@ MAINTAINER Apache SDAP "dev@sdap.apache.org"
 
 # Run a Mesos slave.
 
-WORKDIR ${MESOS_HOME}/build
+WORKDIR /tmp
 
 COPY docker-entrypoint.sh /tmp/docker-entrypoint.sh
 

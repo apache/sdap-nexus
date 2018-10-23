@@ -120,6 +120,9 @@ RUN cd ${CONDA_HOME}/lib && \
     ln -s libhdf5_cpp.so.12 libhdf5_cpp.so.10 && \
     ln -s libjpeg.so.9 libjpeg.so.8
 
+# Workaround for missing environment variable for basemap https://github.com/conda-forge/basemap-feedstock/issues/30
+ENV PROJ_LIB=${CONDA_HOME}/share/proj
+
 RUN yum install -y mesa-libGL.x86_64
 
 # Install nexusproto and nexus
