@@ -13,23 +13,18 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-set -e
 
-APACHE_NEXUS="https://github.com/apache/incubator-sdap-nexus.git"
-MASTER="master"
-NEXUS_SRC=/incubator-sdap-nexus
+set -ebx
 
-GIT_REPO=${1:-$APACHE_NEXUS}
-GIT_BRANCH=${2:-$MASTER}
-NEXUS_SRC_LOC=${3:-$NEXUS_SRC}
+DL_HOST=${1:-"http://d3kbcqa49mib13.cloudfront.net"}
+VERSION=${2:-"2.2.0"}
+DIR=${3:-"spark-${VERSION}"}
+INSTALL_DIR=${4:-"/usr/local"}
 
-mkdir -p ${NEXUS_SRC_LOC}
-pushd ${NEXUS_SRC_LOC}
-git init
-git pull ${GIT_REPO} ${GIT_BRANCH}
-
-cd data-access
-python setup.py install
-cd ../analysis
-python setup.py install
+pushd ${INSTALL_DIR}
+wget --quiet ${DL_HOST}/spark-${VERSION}-bin-hadoop2.7.tgz
+tar -xzf spark-${VERSION}-bin-hadoop2.7.tgz
+chown -R root.root spark-${VERSION}-bin-hadoop2.7.tgz
+ln -s spark-${VERSION}-bin-hadoop2.7 ${DIR}
+rm spark-${VERSION}-bin-hadoop2.7.tgz
 popd

@@ -1,3 +1,4 @@
+#!/usr/bin/env bash
 # Licensed to the Apache Software Foundation (ASF) under one or more
 # contributor license agreements.  See the NOTICE file distributed with
 # this work for additional information regarding copyright ownership.
@@ -13,15 +14,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-ARG tag_version=1.0.0-SNAPSHOT
-FROM sdap/spark-mesos-base:${tag_version}
+set -ebx
 
-MAINTAINER Apache SDAP "dev@sdap.apache.org"
+URL=${1:-"https://repo.continuum.io/miniconda/Miniconda2-latest-Linux-x86_64.sh"}
+CONDA=${2:-"/usr/local/anaconda2"}
 
-# Run a Mesos slave.
-
-WORKDIR /tmp
-
-COPY docker-entrypoint.sh /tmp/docker-entrypoint.sh
-
-ENTRYPOINT ["/tmp/docker-entrypoint.sh"]
+pushd /tmp
+wget -q ${URL} -O install_anaconda.sh
+/bin/bash install_anaconda.sh -b -p ${CONDA}
+rm install_anaconda.sh
+${CONDA}/bin/conda update -n base conda
+popd

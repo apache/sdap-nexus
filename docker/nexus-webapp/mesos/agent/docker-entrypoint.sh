@@ -15,7 +15,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-set -e
+set -ebx
 
 if [ -n "$TORNADO_HOST" ]; then
   sed -i "s/server.socket_host = .*/server.socket_host = '${TORNADO_HOST}'/g" ${NEXUS_SRC}/analysis/webservice/config/web.ini
@@ -35,5 +35,4 @@ python setup.py install --force
 cd ${NEXUS_SRC}/analysis
 python setup.py install --force
 
-
-${MESOS_HOME}/build/bin/mesos-agent.sh --master=${MESOS_MASTER_NAME}:${MESOS_MASTER_PORT} --port=${MESOS_AGENT_PORT} --work_dir=${MESOS_WORKDIR} --no-systemd_enable_support --launcher=posix --no-switch_user --executor_environment_variables='{ "PYTHON_EGG_CACHE": "/tmp" }'
+${MESOS_HOME}/build/bin/mesos-agent.sh --no-systemd_enable_support --launcher=posix --no-switch_user --executor_environment_variables='{"PYTHON_EGG_CACHE": "/tmp]"}' "$@"

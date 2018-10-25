@@ -1,3 +1,4 @@
+#!/usr/bin/env bash
 # Licensed to the Apache Software Foundation (ASF) under one or more
 # contributor license agreements.  See the NOTICE file distributed with
 # this work for additional information regarding copyright ownership.
@@ -13,12 +14,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-ARG tag_version=1.0.0-SNAPSHOT
-FROM sdap/spark-mesos-base:${tag_version}
+set -ebx
 
-MAINTAINER Apache SDAP "dev@sdap.apache.org"
+URL=${1:-"http://download.oracle.com/otn-pub/java/jdk/8u191-b12/2787e4a523244c269598db4e85c51e0c/jdk-8u191-linux-x64.rpm"}
+RPM_PACKAGE=${URL##*/}
 
-COPY *.sh /tmp/
-ENV MASTER=mesos://${MESOS_MASTER_NAME}:${MESOS_MASTER_PORT}
-
-ENTRYPOINT ["/tmp/docker-entrypoint.sh"]
+# Install Oracle JDK
+wget -q --no-cookies --no-check-certificate --header "Cookie: gpw_e24=http%3A%2F%2Fwww.oracle.com%2F; oraclelicense=accept-securebackup-cookie" ${URL}
+yum install -y ${RPM_PACKAGE}
+rm ${RPM_PACKAGE}

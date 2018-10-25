@@ -24,4 +24,7 @@ EXPOSE ${MESOS_MASTER_PORT}
 
 WORKDIR ${MESOS_HOME}/build
 
-CMD ["/bin/bash", "-c", "./bin/mesos-master.sh --ip=${MESOS_IP} --hostname=${MESOS_MASTER_NAME} --port=${MESOS_MASTER_PORT} --work_dir=${MESOS_WORKDIR}"]
+# This will run mesos-master.sh with the value of CMD as default arguments. However, if any arguments are supplied
+# to the docker run command when launching this image, the command line arguments will override these CMD arguments
+ENTRYPOINT ["/bin/bash", "-c", "./bin/mesos-master.sh $(eval echo $@)", "$@"]
+CMD ["--ip=${MESOS_IP}", "--hostname=${MESOS_MASTER_NAME}", "--port=${MESOS_MASTER_PORT}", "--work_dir=${MESOS_WORKDIR}"]
