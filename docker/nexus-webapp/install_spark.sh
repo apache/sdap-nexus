@@ -26,5 +26,6 @@ wget --quiet ${DL_HOST}/spark-${VERSION}-bin-hadoop2.7.tgz
 tar -xzf spark-${VERSION}-bin-hadoop2.7.tgz
 chown -R root.root spark-${VERSION}-bin-hadoop2.7.tgz
 ln -s spark-${VERSION}-bin-hadoop2.7 ${DIR}
-rm spark-${VERSION}-bin-hadoop2.7.tgz
+# Do not remove the package, mesos requires it
+# rm spark-${VERSION}-bin-hadoop2.7.tgz
 popd
