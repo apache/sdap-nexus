@@ -44,7 +44,7 @@ ENV SPARK_LOCAL_IP=127.0.0.1 \
     NEXUS_SRC=/tmp/incubator-sdap-nexus \
     PATH=/usr/local/anaconda2/bin:$PATH \
     # Workaround for missing environment variable for basemap https://github.com/conda-forge/basemap-feedstock/issues/30
-    PROJ_LIB=${CONDA_HOME}/share/proj
+    PROJ_LIB=/usr/local/anaconda2/share/proj
 
 WORKDIR /tmp
 
@@ -58,7 +58,7 @@ RUN ./install_spark.sh "http://d3kbcqa49mib13.cloudfront.net" ${SPARK_VERSION} $
 
 # Install Anaconda
 COPY install_conda.sh ./install_conda.sh
-RUN ./install_conda.sh "https://repo.continuum.io/miniconda/Miniconda2-latest-Linux-x86_64.sh" ${CONDA_HOME}
+RUN ./install_conda.sh "https://repo.continuum.io/miniconda/Miniconda2-latest-Linux-x86_64.sh" /usr/local/anaconda2
 
 # Conda dependencies for nexus
 RUN conda install -c conda-forge -y netCDF4 && \
