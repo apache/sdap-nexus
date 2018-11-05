@@ -14,6 +14,7 @@
 # limitations under the License.
 
 
+import math
 import calendar
 import itertools
 import logging
@@ -156,11 +157,9 @@ class TimeSeriesHandlerImpl(SparkHandler):
         start_seconds_from_epoch = long((start_time - EPOCH).total_seconds())
         end_seconds_from_epoch = long((end_time - EPOCH).total_seconds())
 
-        nparts = request.get_nparts()
+        nparts_requested = request.get_nparts()
 
-        return ds, bounding_polygon, \
-            start_seconds_from_epoch, end_seconds_from_epoch, \
-            apply_seasonal_cycle_filter, apply_low_pass_filter, nparts
+        return ds, bounding_polygon, start_seconds_from_epoch, end_seconds_from_epoch, apply_seasonal_cycle_filter, apply_low_pass_filter, nparts_requested
 
     def calc(self, request, **args):
         """
@@ -170,10 +169,7 @@ class TimeSeriesHandlerImpl(SparkHandler):
         :return:
         """
 
-        (ds, bounding_polygon, start_seconds_from_epoch,
-         end_seconds_from_epoch, apply_seasonal_cycle_filter,
-         apply_low_pass_filter, nparts_requested) = \
-            self.parse_arguments(request)
+        ds, bounding_polygon, start_seconds_from_epoch, end_seconds_from_epoch, apply_seasonal_cycle_filter, apply_low_pass_filter, nparts_requested = self.parse_arguments(request)
 
         resultsRaw = []
 
@@ -196,9 +192,8 @@ class TimeSeriesHandlerImpl(SparkHandler):
             self.log.debug('Found {0} days in range'.format(ndays))
             for i, d in enumerate(daysinrange):
                 self.log.debug('{0}, {1}'.format(i, datetime.utcfromtimestamp(d)))
-            spark_nparts = determine_parallelism(ndays, nparts_requested)
-
-            print('Using {} partitions'.format(spark_nparts))
+            spark_nparts = self._spark_nparts(nparts_requested)
+            self.log.info('Using {} partitions'.format(spark_nparts))
             the_time = datetime.now()
             results, meta = spark_driver(daysinrange, bounding_polygon,
                                          shortName, spark_nparts=spark_nparts,
@@ -489,15 +484,6 @@ class TimeSeriesResults(NexusResults):
         sio = StringIO()
         plt.savefig(sio, format='png')
         return sio.getvalue()
-
-
-def determine_parallelism(ndays, nparts_requested):
-    max_parallelism = 128
-    days_per_partition = 24
-    num_partitions = min(nparts_requested if nparts_requested > 0
-                         else ndays / days_per_partition,
-                         max_parallelism)
-    return num_partitions
 
 
 def spark_driver(daysinrange, bounding_polygon, ds, fill=-9999.,
