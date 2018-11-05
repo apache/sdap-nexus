@@ -35,4 +35,5 @@ python setup.py install --force
 cd ${NEXUS_SRC}/analysis
 python setup.py install --force
 
-${MESOS_HOME}/build/bin/mesos-agent.sh --no-systemd_enable_support --launcher=posix --no-switch_user --executor_environment_variables='{"PYTHON_EGG_CACHE": "/tmp]"}' "$@"
+# Set PROJ_LIB env var as workaround for missing environment variable for basemap https://github.com/conda-forge/basemap-feedstock/issues/30
+${MESOS_HOME}/build/bin/mesos-agent.sh --no-systemd_enable_support --launcher=posix --no-switch_user --executor_environment_variables='{"PYTHON_EGG_CACHE": "/tmp", "PROJ_LIB":"/usr/local/anaconda2/share/proj"}' "$@"
