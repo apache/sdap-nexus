@@ -17,8 +17,13 @@ import os
 import math
 import xml.etree.ElementTree as ET
 import struct
+import numpy as np
+
 
 class MrfMeta:
+    """
+    Implements a basic MRF metadata reader
+    """
 
     def __init__(self, mrf_meta_path):
         self.__mrf_meta_path = mrf_meta_path
@@ -62,13 +67,17 @@ class MrfMeta:
             self.projection = proj_el.text
 
         rsets = root.find("./Rsets")
-        self.rsets_model = rsets.attrib["model"]
-        self.rsets_scale = rsets.attrib["scale"]
-
-
+        if rsets is not None:
+            if "model" in rsets.attrib:
+                self.rsets_model = rsets.attrib["model"]
+            if "scale" in rsets.attrib:
+                self.rsets_scale = rsets.attrib["scale"]
 
 
 class MrfReader:
+    """
+    Implements a basic MRF tile data reader
+    """
 
     def __init__(self, mrf_path):
         self.__mrf_path = mrf_path
@@ -87,68 +96,48 @@ class MrfReader:
 
         len_base = w * h
         low = 1
-        idx_size = int(os.path.getsize(self.__idx_path))
-        len_tiles = idx_size / 16
-        print "Number of tiles:", len_tiles
 
         self.__levels = []
         self.__rows = []
         self.__cols = []
 
-        self.__levels.append(0)
-        self.__rows.append(h)
-        self.__cols.append(w)
-
         while len_base > low:
             self.__levels.append(len_base)
-            w = int(math.ceil(float(w) / 2.0))
-            h = int(math.ceil(float(h) / 2.0))
             self.__rows.append(h)
             self.__cols.append(w)
+
+            w = int(math.ceil(float(w) / 2.0))
+            h = int(math.ceil(float(h) / 2.0))
             len_base = w * h
 
         self.__levels.append(1)
+        self.__rows.append(h)
+        self.__cols.append(w)
 
+    def __read_offset_and_size(self, tile):
+        with open(self.__idx_path, "rb") as idx_file:
+            idx_file.seek(16 * tile, os.SEEK_SET)
+            offset, size = struct.unpack(">2Q", idx_file.read(16))
+            return offset, size
 
+    def __read_tile_data(self, offset, size):
+        with open(self.__data_path) as mrf_file:
+            mrf_file.seek(offset, os.SEEK_SET)
+            return mrf_file.read(size)
 
     def get_tile_bytes(self, tilematrix, tilerow, tilecol):
-        tilematrix = tilematrix + 2
-        level = self.__levels[len(self.__levels) - tilematrix]
-        row = self.__rows[len(self.__levels) - tilematrix]
-        col = self.__cols[len(self.__levels) - tilematrix]
-        #print tilerow, tilecol, level, row, col
-        #assert tilerow > row - 1, "Tile row exceeds the maximum"
-        #assert tilecol > col - 1, "Tole col exceeds the maximum"
+        tilematrix += 1
 
-        level_start = 0
+        cols = self.__cols[-(tilematrix + 1)]
+        rows = self.__rows[-(tilematrix + 1)]
 
-        for idx in range(0, len(self.__levels)):
-            val = self.__levels[idx]
-            if idx > 0 and self.__levels[idx - 1] == level:
-                break
-            level_start += val
+        assert tilecol < cols, "Tile column exceeds maximum columns for this layer/tile matrix"
+        assert tilerow < rows, "Tile row exceeds maximum rows for this layer/tile matrix"
 
-        tile = (tilerow * col) + tilecol + level_start
+        level_start = np.array(self.__levels[: - (tilematrix + 1) ]).sum()
+        tile = (tilerow * cols) + tilecol + level_start
 
-        offset = 0
-        size = 0
-        buffer = None
+        offset, size = self.__read_offset_and_size(tile)
+        tile_data = self.__read_tile_data(offset, size)
+        return tile_data
 
-        with open(self.__idx_path) as idx_file:
-            idx_file.seek(16 * tile)
-            offset = struct.unpack('L', idx_file.read(8))[0]
-            size = struct.unpack('L', idx_file.read(8))[0]
-
-        with open(self.__mrf_path) as mrf_file:
-            print offset, size
-            mrf_file.seek(offset)
-            buffer = mrf_file.read(size)
-
-        return buffer
-
-
-if __name__ == "__main__":
-
-    mrf_path = "/Users/kgill/data/ASCATB-L2-Coastal/ASCATB-L2-Coastal/MRF-GEO/2018/ASCATBL2Coastal_2018254_.mrf"
-
-    reader = MrfReader(mrf_path)

@@ -75,8 +75,22 @@ class ColorTableHandler(BaseHandler):
             values.append((value, value_high))
         return values
 
+    def _create_colortable(self, color_table, min_value, max_value, num_items, units):
+        colors = ColorTableHandler._create_hex_color_list(color_table, num_items)
+        labels = ColorTableHandler._create_labels(min_value, max_value, units, num_items)
+        values = ColorTableHandler._create_values(min_value, max_value, num_items)
+        return colors, labels, values
+
+    def _create_from_sdap(self, ds, color_table, force_min, force_max, num_items, units):
+        stats = self._tile_service.get_dataset_overall_stats(ds)
+        min_value = force_min if force_min is not None else stats["minValue"]
+        max_value = force_max if force_max is not None else stats["maxValue"]
+        return self._create_colortable(color_table, min_value, max_value, num_items, units)
+
     def calc(self, computeOptions, **args):
         ds = computeOptions.get_argument("ds")
+
+        generic = computeOptions.get_boolean_arg("generic", False)
 
         color_table_identifier = computeOptions.get_argument("ct", "rainbow")
         color_table = colortables.get_color_table(color_table_identifier)
@@ -88,16 +102,12 @@ class ColorTableHandler(BaseHandler):
         num_items = np.array((2048, num_items)).min()
         num_items = np.array((255, num_items)).max()
 
-        stats = self._tile_service.get_dataset_overall_stats(ds)
-
         units = computeOptions.get_argument("units", "&deg;c")
 
-        min_value = force_min if force_min is not None else stats["minValue"]
-        max_value = force_max if force_max is not None else stats["maxValue"]
-
-        colors = ColorTableHandler._create_hex_color_list(color_table, num_items)
-        labels = ColorTableHandler._create_labels(min_value, max_value, units, num_items)
-        values = ColorTableHandler._create_values(min_value, max_value, num_items)
+        if generic is False:
+            colors, labels, values = self._create_from_sdap(ds, color_table, force_min, force_max, num_items, units)
+        else:
+            colors, labels, values = self._create_colortable(color_table, force_min, force_max, num_items, units)
 
         return ColorTableResponse({
             "units": units,

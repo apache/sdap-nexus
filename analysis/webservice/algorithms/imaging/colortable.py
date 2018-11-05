@@ -15,13 +15,18 @@
 
 import numpy as np
 import math
-
+import types
 
 class ColorTable:
 
     def __init__(self, identifier, name, spec):
         self.identifier = identifier
         self.name = name
+
+        # If the list of colors was passed in as a list of hex strings ("ABCDEFFF"), convert them to RGB values
+        if isinstance(spec[0], types.StringType):
+            spec = [[int(p[i:i+2], 16) for i in range(0, 6, 2)] for p in spec]
+
         self.spec = np.array(spec)
 
     def get_color(self, fraction):

@@ -29,6 +29,7 @@ import multiprocessing
 
 import colortables
 import colorization
+import reprojection
 
 NO_DATA_IMAGE = None
 
@@ -308,6 +309,9 @@ def process_tiles_to_map(nexus_tiles, stats, reqd_tllr, width=None, height=None,
 
     data = trim_map_to_requested_tllr(data, reqd_tllr, tiles_tllr)
     data = expand_map_to_requested_tllr(data, reqd_tllr, tiles_tllr, x_res, y_res)
+
+    #data = reprojection.reproject_rgba_map(data, reprojection.TargetProjection.NORTH)
+
     if width is not None and height is not None:
         data = imresize(data, (height, width), interp=interpolation)
 
