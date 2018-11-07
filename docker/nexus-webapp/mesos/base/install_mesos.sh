@@ -14,6 +14,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+set -ebx
+
 # Install a few utility tools
 yum install -y tar wget git
 
@@ -56,10 +58,15 @@ tar -zxf ${MESOS_PACKAGE} -C ${INSTALL_LOC}
 rm -f ${MESOS_PACKAGE}
 
 # Configure and build.
-cd ${MESOS_HOME}
+mkdir -p ${MESOS_WORKDIR}
+mkdir -p ${MESOS_HOME}
+pushd ${MESOS_HOME}
 mkdir build
-cd build
+pushd build
 ../configure
 make
-make check
+# Can't run make check until this is fixed: https://issues.apache.org/jira/browse/MESOS-8608
+# make check
 make install
+popd
+popd
