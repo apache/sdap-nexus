@@ -1,4 +1,3 @@
-#!/usr/bin/env bash
 # Licensed to the Apache Software Foundation (ASF) under one or more
 # contributor license agreements.  See the NOTICE file distributed with
 # this work for additional information regarding copyright ownership.
@@ -13,23 +12,19 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-set -e
 
-APACHE_NEXUSPROTO="https://github.com/apache/incubator-sdap-nexusproto.git"
-MASTER="master"
+ARG tag_version=1.0.0-SNAPSHOT
+FROM sdap/spark-mesos-base:${tag_version}
 
-GIT_REPO=${1:-$APACHE_NEXUSPROTO}
-GIT_BRANCH=${2:-$MASTER}
+MAINTAINER Apache SDAP "dev@sdap.apache.org"
 
-mkdir nexusproto
-pushd nexusproto
-git init
-git pull ${GIT_REPO} ${GIT_BRANCH}
+EXPOSE ${MESOS_MASTER_PORT}
 
-./gradlew pythonInstall --info
+# Run a Mesos master.
 
-./gradlew install --info
+WORKDIR ${MESOS_HOME}/build
 
-rm -rf /root/.gradle
-popd
-rm -rf nexusproto
+# This will run mesos-master.sh with the value of CMD as default arguments. However, if any arguments are supplied
+# to the docker run command when launching this image, the command line arguments will override these CMD arguments
+ENTRYPOINT ["/bin/bash", "-c", "./bin/mesos-master.sh $(eval echo $@)", "$@"]
+CMD ["--ip=${MESOS_IP}", "--hostname=${MESOS_MASTER_NAME}", "--port=${MESOS_MASTER_PORT}", "--work_dir=${MESOS_WORKDIR}"]
