@@ -45,7 +45,7 @@ Pull the necessary Docker images from the `SDAP repository <https://hub.docker.c
   docker pull sdap/ningester:${VERSION}
   docker pull sdap/solr-singlenode:${VERSION}
   docker pull sdap/cassandra:${VERSION}
-  docker pull sdap/nexus-webapp:${VERSION}
+  docker pull sdap/nexus-webapp:standalone.${VERSION}
 
 .. _quickstart-step2:
 

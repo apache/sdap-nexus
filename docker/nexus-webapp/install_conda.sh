@@ -1,3 +1,4 @@
+#!/usr/bin/env bash
 # Licensed to the Apache Software Foundation (ASF) under one or more
 # contributor license agreements.  See the NOTICE file distributed with
 # this work for additional information regarding copyright ownership.
@@ -13,15 +14,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-ARG tag_version=1.0.0-SNAPSHOT
-FROM sdap/spark-mesos-base:${tag_version}
+set -ebx
 
-MAINTAINER Apache SDAP "dev@sdap.apache.org"
+URL=${1:-"https://repo.continuum.io/miniconda/Miniconda2-latest-Linux-x86_64.sh"}
+CONDA=${2:-"/usr/local/anaconda2"}
 
-EXPOSE ${MESOS_MASTER_PORT}
-
-# Run a Mesos master.
-
-WORKDIR ${MESOS_HOME}/build
-
-CMD ["/bin/bash", "-c", "./bin/mesos-master.sh --ip=${MESOS_IP} --hostname=${MESOS_MASTER_NAME} --port=${MESOS_MASTER_PORT} --work_dir=${MESOS_WORKDIR}"]
+pushd /tmp
+wget -q ${URL} -O install_anaconda.sh
+/bin/bash install_anaconda.sh -b -p ${CONDA}
+rm install_anaconda.sh
+${CONDA}/bin/conda update -n base conda
+popd
