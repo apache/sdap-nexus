@@ -179,6 +179,8 @@ class AlgorithmModuleWrapper:
             except AttributeError:
                 pass
 
+            return instance
+
     def isValid(self):
         try:
             self.validate()
