@@ -22,8 +22,6 @@ import numpy as np
 from netCDF4 import Dataset
 from nexustiles.nexustiles import NexusTileService
 
-from webservice.webmodel import NexusProcessingException
-
 AVAILABLE_HANDLERS = []
 AVAILABLE_INITIALIZERS = []
 
@@ -162,18 +160,13 @@ class AlgorithmModuleWrapper:
     def params(self):
         return self.__clazz.params
 
-    def instance(self, algorithm_config=None, sc=None):
+    def instance(self, algorithm_config=None):
         if "singleton" in self.__clazz.__dict__ and self.__clazz.__dict__["singleton"] is True:
             if self.__instance is None:
                 self.__instance = self.__clazz()
 
                 try:
                     self.__instance.set_config(algorithm_config)
-                except AttributeError:
-                    pass
-
-                try:
-                    self.__instance.set_spark_context(sc)
                 except AttributeError:
                     pass
 
@@ -185,12 +178,6 @@ class AlgorithmModuleWrapper:
                 instance.set_config(algorithm_config)
             except AttributeError:
                 pass
-
-            try:
-                self.__instance.set_spark_context(sc)
-            except AttributeError:
-                pass
-            return instance
 
     def isValid(self):
         try:
@@ -282,40 +269,13 @@ class SparkHandler(NexusHandler):
                 self.spark_job_stack.append(self.job_name)
 
     def __init__(self, **kwargs):
-        import inspect
         NexusHandler.__init__(self, **kwargs)
         self._sc = None
-
-        self.spark_job_stack = []
-
-        def with_spark_job_context(calc_func):
-            from functools import wraps
-
-            @wraps(calc_func)
-            def wrapped(*args, **kwargs1):
-                try:
-                    with SparkHandler.SparkJobContext(self.spark_job_stack) as job_context:
-                        # TODO Pool and Job are forced to a 1-to-1 relationship
-                        calc_func.im_self._sc.setLocalProperty("spark.scheduler.pool", job_context.job_name)
-                        calc_func.im_self._sc.setJobGroup(job_context.job_name, "a spark job")
-                        return calc_func(*args, **kwargs1)
-                except SparkHandler.SparkJobContext.MaxConcurrentJobsReached:
-                    raise NexusProcessingException(code=503,
-                                                   reason="Max concurrent requests reached. Please try again later.")
-
-            return wrapped
-
-        for member in inspect.getmembers(self, predicate=inspect.ismethod):
-            if member[0] == "calc":
-                setattr(self, member[0], with_spark_job_context(member[1]))
 
     def set_spark_context(self, sc):
         self._sc = sc
 
     def set_config(self, algorithm_config):
-        max_concurrent_jobs = algorithm_config.getint("spark", "maxconcurrentjobs") if algorithm_config.has_section(
-            "spark") and algorithm_config.has_option("spark", "maxconcurrentjobs") else 10
-        self.spark_job_stack = list(["Job %s" % x for x in xrange(1, max_concurrent_jobs + 1)])
         self.algorithm_config = algorithm_config
 
     def _setQueryParams(self, ds, bounds, start_time=None, end_time=None,
@@ -336,7 +296,7 @@ class SparkHandler(NexusHandler):
 
     def _set_info_from_tile_set(self, nexus_tiles):
         ntiles = len(nexus_tiles)
-        self.log.debug('Attempting to extract info from {0} tiles'.\
+        self.log.debug('Attempting to extract info from {0} tiles'. \
                        format(ntiles))
         status = False
         self._latRes = None
@@ -354,7 +314,7 @@ class SparkHandler(NexusHandler):
                 if (len(lons) > 1):
                     self._lonRes = abs(lons[1] - lons[0])
             if ((self._latRes is not None) and
-                (self._lonRes is not None)):
+                    (self._lonRes is not None)):
                 lats_agg = np.concatenate([tile.latitudes.compressed()
                                            for tile in nexus_tiles])
                 lons_agg = np.concatenate([tile.longitudes.compressed()
@@ -395,7 +355,8 @@ class SparkHandler(NexusHandler):
         # Check one time stamp at a time and attempt to extract the global
         # tile set.
         for t in t_in_range:
-            nexus_tiles = self._tile_service.get_tiles_bounded_by_box(self._minLat, self._maxLat, self._minLon, self._maxLon, ds=ds, start_time=t, end_time=t)
+            nexus_tiles = self._tile_service.get_tiles_bounded_by_box(self._minLat, self._maxLat, self._minLon,
+                                                                      self._maxLon, ds=ds, start_time=t, end_time=t)
             if self._set_info_from_tile_set(nexus_tiles):
                 # Successfully retrieved global tile set from nexus_tiles,
                 # so no need to check any other time stamps.

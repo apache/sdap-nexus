@@ -18,22 +18,21 @@ import ConfigParser
 import importlib
 import json
 import logging
+import signal
 import sys
 import traceback
-from multiprocessing.pool import ThreadPool
+from functools import partial
 
 import matplotlib
 import pkg_resources
+import tornado.process
 import tornado.web
-from tornado.options import define, options, parse_command_line
 from tornado.httpserver import HTTPServer
-from webservice import NexusHandler
 from tornado.ioloop import IOLoop
-from webservice.webmodel import NexusRequestObject, NexusProcessingException
+from tornado.options import define, options, parse_command_line
 
-import signal
-from functools import partial
-import psutil
+from webservice import NexusHandler
+from webservice.webmodel import NexusRequestObject, NexusProcessingException
 
 matplotlib.use('Agg')
 
@@ -88,24 +87,17 @@ class BaseHandler(tornado.web.RequestHandler):
     ''' Override me for standard handlers! '''
 
     def do_get(self, reqObject):
-
-        for root, dirs, files in os.walk("."):
-            for pyfile in [afile for afile in files if afile.endswith(".py")]:
-                print(os.path.join(root, pyfile))
-                with open(os.path.join(root, pyfile), 'r') as original: data = original.read()
-                with open(os.path.join(root, pyfile), 'w') as modified: modified.write(license + "\n" + data)
         pass
 
 
 class ModularNexusHandlerWrapper(BaseHandler):
-    def initialize(self, clazz=None, algorithm_config=None, sc=None):
+    def initialize(self, clazz=None, algorithm_config=None):
         BaseHandler.initialize(self)
         self.__algorithm_config = algorithm_config
         self.__clazz = clazz
-        self.__sc = sc
 
     def do_get(self, request):
-        instance = self.__clazz.instance(algorithm_config=self.__algorithm_config, sc=self.__sc)
+        instance = self.__clazz.instance(algorithm_config=self.__algorithm_config)
 
         results = instance.calc(request)
 
@@ -161,32 +153,62 @@ class ModularNexusHandlerWrapper(BaseHandler):
             result.cleanup()
 
 
-def sig_handler(server, sig, frame):
+def init_spark():
+    from pyspark import SparkContext, SparkConf
+
+    # Configure Spark
+    start_port = 4040
+    __sp_conf = SparkConf()
+    __sp_conf.set("spark.executor.memory", "6g")
+    if tornado.process.task_id():
+        logging.info("Configuring spark context for task {}".format(tornado.process.task_id()))
+        __sp_conf.setAppName("nexus-analysis-{}".format(tornado.process.task_id()))
+        __sp_conf.set("spark.ui.port", "{}".format(start_port + tornado.process.task_id()))
+    else:
+        logging.info("Configuring spark context")
+        __sp_conf.setAppName("nexus-analysis")
+
+    sc = SparkContext(conf=__sp_conf)
+    sc.setLogLevel("INFO")
+
+    for wrapper in NexusHandler.AVAILABLE_HANDLERS:
+        if issubclass(wrapper.clazz(), NexusHandler.SparkHandler):
+            try:
+                wrapper.instance().set_spark_context(sc)
+            except AttributeError as e:
+                raise e
+    return sc
+
+
+def shutdown(sig, frame, sserver=None, sc=None):
     """
-    Will attempt to identify subprocesses and shut them down before exiting.
+    Graceful shutdown of all processes.
 
-    TODO: Expand with graceful shutdowns of the server and IOLoop thread
-
-    :param server:
-    :param sig:
+    :param sserver:
+    :param sc:
     :param frame:
+    :param sig:
     :return:
     """
-    logging.warning('Caught signal: %s', sig)
+    # Stop spark context
+    if sc:
+        sc.stop()
 
-    logging.info('Stopping child processes')
-    current_process = psutil.Process()
-    children = current_process.children(recursive=True)
-    logging.warning("Stopping %s subprocesses", len(children))
-    for child in children:
-        logging.warning("Stopping subprocess with PID %s", child.pid)
-        os.kill(child.pid, signal.SIGTERM)
+    # Parent process shuts down the server and IO loop.
+    if tornado.process.task_id() is None:
+        logging.info("Received Signal %s Stopping server...", sig)
+        # Stop accepting new connections
+        sserver.stop()
+        # Stop the IO Loop
+        IOLoop.current().stop()
+    else:
+        # Exit normally
+        sys.exit(0)
 
-    sys.exit(0)
 
 if __name__ == "__main__":
     logging.basicConfig(
-        level=logging.DEBUG,
+        level=logging.INFO,
         format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
         datefmt="%Y-%m-%dT%H:%M:%S", stream=sys.stdout)
 
@@ -201,7 +223,8 @@ if __name__ == "__main__":
     define("debug", default=False, help="run in debug mode")
     define("port", default=webconfig.get("global", "server.socket_port"), help="run on the given port", type=int)
     define("address", default=webconfig.get("global", "server.socket_host"), help="Bind to the given address")
-    define("subprocesses", default=webconfig.get("global", "server.num_sub_processes"), help="Number of http server subprocesses", type=int)
+    define("subprocesses", default=webconfig.get("global", "server.num_sub_processes"),
+           help="Number of http server subprocesses", type=int)
     parse_command_line()
 
     moduleDirs = webconfig.get("modules", "module_dirs").split(",")
@@ -225,29 +248,17 @@ if __name__ == "__main__":
     log.info("Running Nexus Initializers")
     NexusHandler.executeInitializers(algorithm_config)
 
-    spark_context = None
+    spark_handlers_loaded = False
     for clazzWrapper in NexusHandler.AVAILABLE_HANDLERS:
+        handlers.append(
+            (clazzWrapper.path(), ModularNexusHandlerWrapper,
+             dict(clazz=clazzWrapper, algorithm_config=algorithm_config)))
         if issubclass(clazzWrapper.clazz(), NexusHandler.SparkHandler):
-            if spark_context is None:
-                from pyspark import SparkContext, SparkConf
-
-                # Configure Spark
-                sp_conf = SparkConf()
-                sp_conf.setAppName("nexus-analysis")
-                sp_conf.set("spark.scheduler.mode", "FAIR")
-                sp_conf.set("spark.executor.memory", "6g")
-                spark_context = SparkContext(conf=sp_conf)
-
-            handlers.append(
-                (clazzWrapper.path(), ModularNexusHandlerWrapper,
-                 dict(clazz=clazzWrapper, algorithm_config=algorithm_config, sc=spark_context)))
-        else:
-            handlers.append(
-                (clazzWrapper.path(), ModularNexusHandlerWrapper,
-                 dict(clazz=clazzWrapper, algorithm_config=algorithm_config)))
+            spark_handlers_loaded = True
 
 
     class VersionHandler(tornado.web.RequestHandler):
+
         def get(self):
             self.write(pkg_resources.get_distribution("nexusanalysis").version)
 
@@ -267,8 +278,15 @@ if __name__ == "__main__":
     server = HTTPServer(app)
     server.bind(options.port, address=options.address)
 
-    signal.signal(signal.SIGTERM, partial(sig_handler, server))
-    signal.signal(signal.SIGINT, partial(sig_handler, server))
+    signal.signal(signal.SIGTERM, partial(shutdown, sserver=server, sc=None))
+    signal.signal(signal.SIGINT, partial(shutdown, sserver=server, sc=None))
 
     server.start(int(options.subprocesses))  # Forks multiple sub-processes
+
+    # Needs to be after fork
+    if spark_handlers_loaded:
+        _sc = init_spark()
+        # Spark overrides the SIGINT handler from earlier, reset it
+        signal.signal(signal.SIGINT, partial(shutdown, sserver=server, sc=_sc))
+
     IOLoop.current().start()
