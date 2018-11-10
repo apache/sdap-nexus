@@ -18,7 +18,7 @@
 set -ebx
 
 if [ -n "$TORNADO_HOST" ]; then
-  sed -i "s/server.socket_host.*/server.socket_host = '${TORNADO_HOST}'/g" ${NEXUS_SRC}/analysis/webservice/config/web.ini
+  sed -i "s/server.socket_host.*/server.socket_host=${TORNADO_HOST}/g" ${NEXUS_SRC}/analysis/webservice/config/web.ini
 fi
 if [ -n "$MAX_PROCESSES" ]; then
   sed -i "s/server.num_sub_processes.*/server.num_sub_processes=${MAX_PROCESSES}/g" ${NEXUS_SRC}/analysis/webservice/config/web.ini
