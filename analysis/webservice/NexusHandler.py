@@ -246,29 +246,6 @@ class NexusHandler(CalcHandler):
 
 
 class SparkHandler(NexusHandler):
-    class SparkJobContext(object):
-
-        class MaxConcurrentJobsReached(Exception):
-            def __init__(self, *args, **kwargs):
-                Exception.__init__(self, *args, **kwargs)
-
-        def __init__(self, job_stack):
-            self.spark_job_stack = job_stack
-            self.job_name = None
-            self.log = logging.getLogger(__name__)
-
-        def __enter__(self):
-            try:
-                self.job_name = self.spark_job_stack.pop()
-                self.log.debug("Using %s" % self.job_name)
-            except IndexError:
-                raise SparkHandler.SparkJobContext.MaxConcurrentJobsReached()
-            return self
-
-        def __exit__(self, exc_type, exc_val, exc_tb):
-            if self.job_name is not None:
-                self.log.debug("Returning %s" % self.job_name)
-                self.spark_job_stack.append(self.job_name)
 
     def __init__(self, **kwargs):
         NexusHandler.__init__(self, **kwargs)
