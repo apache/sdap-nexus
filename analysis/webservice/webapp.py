@@ -194,13 +194,14 @@ def shutdown(sig, frame, sserver=None, sc=None):
     if sc:
         sc.stop()
 
-    # Parent process shuts down the server and IO loop.
+    # Parent process
     if tornado.process.task_id() is None:
         logging.info("Received Signal %s Stopping server...", sig)
         # Stop accepting new connections
         sserver.stop()
         # Stop the IO Loop
         IOLoop.current().stop()
+    # Child Process(es)
     else:
         # Exit normally
         sys.exit(0)
