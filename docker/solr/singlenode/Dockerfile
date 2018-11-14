@@ -17,13 +17,9 @@ ARG tag_version=latest
 FROM sdap/solr:${tag_version}
 MAINTAINER Apache SDAP "dev@sdap.apache.org"
 
-USER root
+WORKDIR /opt/solr
+VOLUME ${SOLR_HOME}
+ENV INIT_SOLR_HOME="yes"
 
-COPY create-core.sh /docker-entrypoint-initdb.d/create-core.sh
-RUN echo "${SOLR_USER} ALL=(ALL) NOPASSWD: /usr/bin/cp -r /tmp/nexustiles/* ${SOLR_HOME}/nexustiles/" >> /etc/sudoers && \
-  echo "${SOLR_USER} ALL=(ALL) NOPASSWD: /usr/bin/chown -R ${SOLR_USER}\:${SOLR_GROUP} ${SOLR_HOME}/nexustiles" >> /etc/sudoers
-
-USER ${SOLR_USER}
-VOLUME ${SOLR_HOME}/nexustiles
-
-ENTRYPOINT ["solr-foreground"]
+ENTRYPOINT ["docker-entrypoint.sh"]
+CMD ["solr-foreground"]

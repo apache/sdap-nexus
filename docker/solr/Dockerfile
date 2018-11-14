@@ -17,18 +17,21 @@ MAINTAINER Apache SDAP "dev@sdap.apache.org"
 
 USER root
 
-ENV SOLR_HOME=/opt/solr/server/solr
+ENV SOLR_HOME="/usr/local/solrhome"
 
-RUN cd / && \
+WORKDIR /
+RUN set -e; \
+    rm -rf /opt/solr/server/solr/mycores && \
     apt-get update && \
     apt-get -y install git sudo && \
     rm -rf /var/lib/apt/lists/* && \
     git clone https://github.com/apache/incubator-sdap-nexus.git && \
-    cp -r /incubator-sdap-nexus/data-access/config/schemas/solr/nexustiles /tmp/nexustiles && \
+    cp -r /incubator-sdap-nexus/data-access/config/schemas/solr/nexustiles /opt/solr/server/solr/nexustiles && \
     rm -rf /incubator-sdap-nexus && \
-    wget http://central.maven.org/maven2/org/locationtech/jts/jts-core/1.15.0/jts-core-1.15.0.jar && \
-    cp jts-core-1.15.0.jar /opt/solr/server/solr-webapp/webapp/WEB-INF/lib/jts-core-1.15.0.jar && \
-    chown ${SOLR_USER}:${SOLR_GROUP} /opt/solr/server/solr-webapp/webapp/WEB-INF/lib/jts-core-1.15.0.jar && \
-    rm jts-core-1.15.0.jar
+    wget http://central.maven.org/maven2/org/locationtech/jts/jts-core/1.15.1/jts-core-1.15.1.jar && \
+    cp jts-core-1.15.1.jar /opt/solr/server/solr-webapp/webapp/WEB-INF/lib/jts-core-1.15.1.jar && \
+    chown ${SOLR_USER}:${SOLR_GROUP} /opt/solr/server/solr-webapp/webapp/WEB-INF/lib/jts-core-1.15.1.jar && \
+    rm jts-core-1.15.1.jar
 
+WORKDIR /opt/solr
 USER ${SOLR_USER}
