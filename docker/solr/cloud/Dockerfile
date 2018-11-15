@@ -1,4 +1,3 @@
-#!/bin/bash -ex
 
 # Licensed to the Apache Software Foundation (ASF) under one or more
 # contributor license agreements.  See the NOTICE file distributed with
@@ -14,12 +13,20 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+ARG tag_version=latest
+FROM sdap/solr:${tag_version}
+MAINTAINER Apache SDAP "dev@sdap.apache.org"
 
-set -ex
+WORKDIR /opt/solr
+VOLUME ${SOLR_HOME}
 
-SOLR_HOME=${SOLR_HOME:=/opt/solr/server/solr/}
-mkdir -p ${SOLR_HOME}/nexustiles
-sudo cp -r /tmp/nexustiles/* ${SOLR_HOME}/nexustiles/
-sudo chown -R ${SOLR_USER}:${SOLR_GROUP} ${SOLR_HOME}/nexustiles
+ENV INIT_SOLR_HOME="yes" \
+    SDAP_ZK_SERVICE_HOST="localhost" \
+    SDAP_ZK_SERVICE_PORT="2181" \
+    SDAP_ZK_SOLR_CHROOT="solr" \
+    SOLR_HOST="localhost"
 
-set +x
+COPY ./cloud/bootstrap-zk.sh /docker-entrypoint-initdb.d/bootstrap-zk.sh
+
+ENTRYPOINT ["docker-entrypoint.sh"]
+CMD ["solr-foreground"]

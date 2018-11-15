@@ -20,13 +20,13 @@ This Docker container runs Apache Solr v7.4 as a single node with the nexustiles
 Persist Data
 """"""""""""
 
-To persist the data, we need to provide a volume mount from the host machine to the container path where `SOLR_HOME` is. If you do not provide a custom `SOLR_HOME` location, the default is `/usr/local/solrhome`. Therefore, the easiest way to run this image and persist data to a location on the host machine is:
+To persist the data, we need to provide a volume mount from the host machine to the container path where ``SOLR_HOME`` is. If you do not provide a custom ``SOLR_HOME`` location, the default is ``/usr/local/solrhome``. Therefore, the easiest way to run this image and persist data to a location on the host machine is:
 
 .. code-block:: bash
 
     docker run --name solr -v ${PWD}/solrhome:/usr/local/solrhome -p 8083:8083 -d sdap/solr-singlenode:${VERSION}
 
-${PWD}/solrhome is the directory on host machine where `SOLR_HOME` will be created if it does not already exist. If you have run this container before and ${PWD}/solrhome already contains files, those files will not be overwritten and will be used.
+``${PWD}/solrhome`` is the directory on host machine where ``SOLR_HOME`` will be created if it does not already exist. If you have run this container before and ``${PWD}/solrhome`` already contains files, those files will not be overwritten and will be used.
 
 Don't Persist Data
 """"""""""""""""""
