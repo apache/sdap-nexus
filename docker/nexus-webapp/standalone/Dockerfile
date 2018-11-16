@@ -41,23 +41,25 @@ ENV SPARK_LOCAL_IP=127.0.0.1 \
     PYSPARK_SUBMIT_ARGS="--driver-memory=4g pyspark-shell" \
     PYTHONPATH=${PYTHONPATH}:/usr/local/spark-${SPARK_VERSION}/python:/usr/local/spark-${SPARK_VERSION}/python/lib/py4j-0.10.4-src.zip:/usr/local/spark-${SPARK_VERSION}/python/lib/pyspark.zip \
     SPARK_EXECUTOR_URI=/usr/local/spark-${SPARK_VERSION}-bin-hadoop2.7.tgz \
-    NEXUS_SRC=/tmp/incubator-sdap-nexus
+    NEXUS_SRC=/tmp/incubator-sdap-nexus \
+    PATH=/usr/local/anaconda2/bin:$PATH \
+    # Workaround for missing environment variable for basemap https://github.com/conda-forge/basemap-feedstock/issues/30
+    PROJ_LIB=/usr/local/anaconda2/share/proj
+
+WORKDIR /tmp
+
+# Install Oracle JDK
+COPY install_java.sh ./install_java.sh
+RUN ./install_java.sh "http://download.oracle.com/otn-pub/java/jdk/8u191-b12/2787e4a523244c269598db4e85c51e0c/jdk-8u191-linux-x64.rpm"
 
 # Install Spark
-RUN cd /usr/local && \
-    wget --quiet http://d3kbcqa49mib13.cloudfront.net/spark-${SPARK_VERSION}-bin-hadoop2.7.tgz && \
-    tar -xzf spark-${SPARK_VERSION}-bin-hadoop2.7.tgz && \
-    chown -R root.root spark-${SPARK_VERSION}-bin-hadoop2.7.tgz && \
-    ln -s spark-${SPARK_VERSION}-bin-hadoop2.7 ${SPARK_DIR} && \
-    rm spark-${SPARK_VERSION}-bin-hadoop2.7.tgz && \
-    cd /
+COPY install_spark.sh ./install_spark.sh
+RUN ./install_spark.sh "http://d3kbcqa49mib13.cloudfront.net" ${SPARK_VERSION} ${SPARK_DIR} ${INSTALL_LOC}
 
-# Install Miniconda
-RUN wget -q https://repo.continuum.io/miniconda/Miniconda2-latest-Linux-x86_64.sh -O install_anaconda.sh && \
-    /bin/bash install_anaconda.sh -b -p /usr/local/anaconda2 && \
-    rm install_anaconda.sh && \
-    /usr/local/anaconda2/bin/conda update -n base conda
-ENV PATH /usr/local/anaconda2/bin:$PATH
+# Install Anaconda
+COPY install_conda.sh ./install_conda.sh
+RUN ./install_conda.sh "https://repo.continuum.io/miniconda/Miniconda2-latest-Linux-x86_64.sh" /usr/local/anaconda2
+
 # Conda dependencies for nexus
 RUN conda install -c conda-forge -y netCDF4 && \
     conda install -y numpy cython mpld3 scipy basemap gdal matplotlib && \
@@ -70,22 +72,16 @@ RUN conda install -c conda-forge -y netCDF4 && \
     ln -s libhdf5_cpp.so.12 libhdf5_cpp.so.10 && \
     ln -s libjpeg.so.9 libjpeg.so.8
 
-# Install Oracle JDK 1.8u182-b13
-RUN wget -q --no-cookies --no-check-certificate --header "Cookie: gpw_e24=http%3A%2F%2Fwww.oracle.com%2F; oraclelicense=accept-securebackup-cookie" "http://download.oracle.com/otn-pub/java/jdk/8u181-b13/96a7b8442fe848ef90c96a2fad6ed6d1/jdk-8u181-linux-x64.rpm" && \
-    yum install -y jdk-8u181-linux-x64.rpm && \
-    rm jdk-8u181-linux-x64.rpm
-
-COPY *.sh /tmp/
-
 # Install nexusproto and nexus
 ARG APACHE_NEXUSPROTO=https://github.com/apache/incubator-sdap-nexusproto.git
 ARG APACHE_NEXUSPROTO_BRANCH=master
 ARG APACHE_NEXUS=https://github.com/apache/incubator-sdap-nexus.git
 ARG APACHE_NEXUS_BRANCH=master
 ARG REBUILD_CODE=1
+COPY install_nexusproto.sh ./install_nexusproto.sh
+COPY install_nexus.sh ./install_nexus.sh
 RUN /tmp/install_nexusproto.sh $APACHE_NEXUSPROTO $APACHE_NEXUSPROTO_BRANCH && \
     /tmp/install_nexus.sh $APACHE_NEXUS $APACHE_NEXUS_BRANCH $NEXUS_SRC
 
-EXPOSE 8083
-
+COPY standalone/docker-entrypoint.sh ./docker-entrypoint.sh
 ENTRYPOINT ["/tmp/docker-entrypoint.sh"]
