@@ -320,8 +320,7 @@ class SparkHandler(NexusHandler):
 
     def _setQueryParams(self, ds, bounds, start_time=None, end_time=None,
                         start_year=None, end_year=None, clim_month=None,
-                        fill=-9999., spark_master=None, spark_nexecs=None,
-                        spark_nparts=None):
+                        fill=-9999.):
         self._ds = ds
         self._minLat, self._maxLat, self._minLon, self._maxLon = bounds
         self._startTime = start_time
@@ -330,10 +329,7 @@ class SparkHandler(NexusHandler):
         self._endYear = end_year
         self._climMonth = clim_month
         self._fill = fill
-        self._spark_master = spark_master
-        self._spark_nexecs = spark_nexecs
-        self._spark_nparts = spark_nparts
-
+        
     def _set_info_from_tile_set(self, nexus_tiles):
         ntiles = len(nexus_tiles)
         self.log.debug('Attempting to extract info from {0} tiles'.\
@@ -577,6 +573,13 @@ class SparkHandler(NexusHandler):
 
     def _create_nc_file(self, a, fname, varname, **kwargs):
         self._create_nc_file_latlon2d(a, fname, varname, **kwargs)
+
+    def _spark_nparts(self, nparts_requested):
+        max_parallelism = 128
+        num_partitions = min(nparts_requested if nparts_requested > 0
+                             else self._sc.defaultParallelism,
+                             max_parallelism)
+        return num_partitions
 
 
 def executeInitializers(config):

@@ -14,6 +14,7 @@
 # limitations under the License.
 
 
+import math
 import calendar
 import itertools
 import logging
@@ -153,13 +154,12 @@ class TimeSeriesHandlerImpl(SparkHandler):
         apply_seasonal_cycle_filter = request.get_apply_seasonal_cycle_filter(default=False)
         apply_low_pass_filter = request.get_apply_low_pass_filter()
 
-        spark_master, spark_nexecs, spark_nparts = request.get_spark_cfg()
-
         start_seconds_from_epoch = long((start_time - EPOCH).total_seconds())
         end_seconds_from_epoch = long((end_time - EPOCH).total_seconds())
 
-        return ds, bounding_polygon, start_seconds_from_epoch, end_seconds_from_epoch, \
-               apply_seasonal_cycle_filter, apply_low_pass_filter, spark_master, spark_nexecs, spark_nparts
+        nparts_requested = request.get_nparts()
+
+        return ds, bounding_polygon, start_seconds_from_epoch, end_seconds_from_epoch, apply_seasonal_cycle_filter, apply_low_pass_filter, nparts_requested
 
     def calc(self, request, **args):
         """
@@ -169,9 +169,7 @@ class TimeSeriesHandlerImpl(SparkHandler):
         :return:
         """
 
-        ds, bounding_polygon, start_seconds_from_epoch, end_seconds_from_epoch, \
-        apply_seasonal_cycle_filter, apply_low_pass_filter, spark_master, \
-        spark_nexecs, spark_nparts = self.parse_arguments(request)
+        ds, bounding_polygon, start_seconds_from_epoch, end_seconds_from_epoch, apply_seasonal_cycle_filter, apply_low_pass_filter, nparts_requested = self.parse_arguments(request)
 
         resultsRaw = []
 
@@ -194,11 +192,12 @@ class TimeSeriesHandlerImpl(SparkHandler):
             self.log.debug('Found {0} days in range'.format(ndays))
             for i, d in enumerate(daysinrange):
                 self.log.debug('{0}, {1}'.format(i, datetime.utcfromtimestamp(d)))
-            spark_nparts_needed = min(spark_nparts, ndays)
-
+            spark_nparts = self._spark_nparts(nparts_requested)
+            self.log.info('Using {} partitions'.format(spark_nparts))
             the_time = datetime.now()
-            results, meta = spark_driver(daysinrange, bounding_polygon, shortName,
-                                         spark_nparts_needed=spark_nparts_needed, sc=self._sc)
+            results, meta = spark_driver(daysinrange, bounding_polygon,
+                                         shortName, spark_nparts=spark_nparts,
+                                         sc=self._sc)
             self.log.info(
                 "Time series calculation took %s for dataset %s" % (str(datetime.now() - the_time), shortName))
 
@@ -487,15 +486,15 @@ class TimeSeriesResults(NexusResults):
         return sio.getvalue()
 
 
-def spark_driver(daysinrange, bounding_polygon, ds, fill=-9999., spark_nparts_needed=1, sc=None):
+def spark_driver(daysinrange, bounding_polygon, ds, fill=-9999.,
+                 spark_nparts=1, sc=None):
     nexus_tiles_spark = [(bounding_polygon.wkt, ds,
                           list(daysinrange_part), fill)
                          for daysinrange_part
-                         in np.array_split(daysinrange,
-                                           spark_nparts_needed)]
+                         in np.array_split(daysinrange, spark_nparts)]
 
     # Launch Spark computations
-    rdd = sc.parallelize(nexus_tiles_spark, spark_nparts_needed)
+    rdd = sc.parallelize(nexus_tiles_spark, spark_nparts)
     results = rdd.map(calc_average_on_day).collect()
     results = list(itertools.chain.from_iterable(results))
     results = sorted(results, key=lambda entry: entry["time"])

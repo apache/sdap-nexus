@@ -51,7 +51,7 @@ class RequestParameters(object):
     ORDER = "lpOrder"
     PLOT_SERIES = "plotSeries"
     PLOT_TYPE = "plotType"
-    SPARK_CFG = "spark"
+    NPARTS = "nparts"
     METADATA_FILTER = "metadataFilter"
 
 
@@ -77,12 +77,6 @@ class NoDataException(NexusProcessingException):
 class DatasetNotFoundException(NexusProcessingException):
     def __init__(self, reason="Dataset not found"):
         NexusProcessingException.__init__(self, StandardNexusErrors.DATASET_MISSING, reason, code=404)
-
-
-class SparkConfig(object):
-    MAX_NUM_EXECS = 64
-    MAX_NUM_PARTS = 8192
-    DEFAULT = "local,1,1"
 
 
 class StatsComputeOptions(object):
@@ -149,7 +143,7 @@ class StatsComputeOptions(object):
     def get_plot_type(self, default="default"):
         raise Exception("Please implement")
 
-    def get_spark_cfg(self, default=SparkConfig.DEFAULT):
+    def get_nparts(self):
         raise Exception("Please implement")
 
 
@@ -343,25 +337,8 @@ class NexusRequestObject(StatsComputeOptions):
     def get_plot_type(self, default="default"):
         return self.get_argument(RequestParameters.PLOT_TYPE, default=default)
 
-    def get_spark_cfg(self, default=SparkConfig.DEFAULT):
-        arg = self.get_argument(RequestParameters.SPARK_CFG, default)
-        try:
-            master, nexecs, nparts = arg.split(',')
-        except:
-            raise ValueError('Invalid spark configuration: %s' % arg)
-        if master not in ("local", "yarn", "mesos"):
-            raise ValueError('Invalid spark master: %s' % master)
-        nexecs = int(nexecs)
-        if (nexecs < 1) or (nexecs > SparkConfig.MAX_NUM_EXECS):
-            raise ValueError('Invalid number of Spark executors: %d (must be between 1 and %d)' % (
-            nexecs, SparkConfig.MAX_NUM_EXECS))
-        nparts = int(nparts)
-        if (nparts < 1) or (nparts > SparkConfig.MAX_NUM_PARTS):
-            raise ValueError('Invalid number of Spark data partitions: %d (must be between 1 and %d)' % (
-            nparts, SparkConfig.MAX_NUM_PARTS))
-        if master == "local":
-            master = "local[%d]" % nexecs
-        return master, nexecs, nparts
+    def get_nparts(self):
+        return self.get_int_arg(RequestParameters.NPARTS, 0)
 
 
 class NexusResults:
