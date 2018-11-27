@@ -334,57 +334,72 @@ class SparkHandler(NexusHandler):
         self._spark_nexecs = spark_nexecs
         self._spark_nparts = spark_nparts
 
+    def _set_info_from_tile_set(self, nexus_tiles):
+        ntiles = len(nexus_tiles)
+        self.log.debug('Attempting to extract info from {0} tiles'.\
+                       format(ntiles))
+        status = False
+        self._latRes = None
+        self._lonRes = None
+        for tile in nexus_tiles:
+            self.log.debug('tile coords:')
+            self.log.debug('tile lats: {0}'.format(tile.latitudes))
+            self.log.debug('tile lons: {0}'.format(tile.longitudes))
+            if self._latRes is None:
+                lats = tile.latitudes.data
+                if (len(lats) > 1):
+                    self._latRes = abs(lats[1] - lats[0])
+            if self._lonRes is None:
+                lons = tile.longitudes.data
+                if (len(lons) > 1):
+                    self._lonRes = abs(lons[1] - lons[0])
+            if ((self._latRes is not None) and
+                (self._lonRes is not None)):
+                lats_agg = np.concatenate([tile.latitudes.compressed()
+                                           for tile in nexus_tiles])
+                lons_agg = np.concatenate([tile.longitudes.compressed()
+                                           for tile in nexus_tiles])
+                self._minLatCent = np.min(lats_agg)
+                self._maxLatCent = np.max(lats_agg)
+                self._minLonCent = np.min(lons_agg)
+                self._maxLonCent = np.max(lons_agg)
+                self._nlats = int((self._maxLatCent - self._minLatCent) /
+                                  self._latRes + 0.5) + 1
+                self._nlons = int((self._maxLonCent - self._minLonCent) /
+                                  self._lonRes + 0.5) + 1
+                status = True
+                break
+        return status
+
     def _find_global_tile_set(self):
+        # This only works for a single dataset.  If more than one is provided,
+        # we use the first one and ignore the rest.
         if type(self._ds) in (list, tuple):
             ds = self._ds[0]
         else:
             ds = self._ds
-        ntiles = 0
-        ##################################################################
-        # Temporary workaround until we have dataset metadata to indicate
-        # temporal resolution.
-        if "monthly" in ds.lower():
-            t_incr = 2592000  # 30 days
-        else:
-            t_incr = 86400  # 1 day
-        ##################################################################
-        t = self._endTime
-        self._latRes = None
-        self._lonRes = None
-        while ntiles == 0:
-            nexus_tiles = self._tile_service.get_tiles_bounded_by_box(self._minLat, self._maxLat, self._minLon,
-                                                                      self._maxLon, ds=ds, start_time=t - t_incr,
-                                                                      end_time=t)
-            ntiles = len(nexus_tiles)
-            self.log.debug('find_global_tile_set got {0} tiles'.format(ntiles))
-            if ntiles > 0:
-                for tile in nexus_tiles:
-                    self.log.debug('tile coords:')
-                    self.log.debug('tile lats: {0}'.format(tile.latitudes))
-                    self.log.debug('tile lons: {0}'.format(tile.longitudes))
-                    if self._latRes is None:
-                        lats = tile.latitudes.data
-                        if (len(lats) > 1):
-                            self._latRes = abs(lats[1] - lats[0])
-                    if self._lonRes is None:
-                        lons = tile.longitudes.data
-                        if (len(lons) > 1):
-                            self._lonRes = abs(lons[1] - lons[0])
-                    if ((self._latRes is not None) and
-                            (self._lonRes is not None)):
-                        break
-                if (self._latRes is None) or (self._lonRes is None):
-                    ntiles = 0
-                else:
-                    lats_agg = np.concatenate([tile.latitudes.compressed()
-                                               for tile in nexus_tiles])
-                    lons_agg = np.concatenate([tile.longitudes.compressed()
-                                               for tile in nexus_tiles])
-                    self._minLatCent = np.min(lats_agg)
-                    self._maxLatCent = np.max(lats_agg)
-                    self._minLonCent = np.min(lons_agg)
-                    self._maxLonCent = np.max(lons_agg)
-            t -= t_incr
+
+        # See what time stamps are in the specified range.
+        t_in_range = self._tile_service.find_days_in_range_asc(self._minLat,
+                                                               self._maxLat,
+                                                               self._minLon,
+                                                               self._maxLon,
+                                                               ds,
+                                                               self._startTime,
+                                                               self._endTime)
+
+        # Empty tile set will be returned upon failure to find the global
+        # tile set.
+        nexus_tiles = []
+
+        # Check one time stamp at a time and attempt to extract the global
+        # tile set.
+        for t in t_in_range:
+            nexus_tiles = self._tile_service.get_tiles_bounded_by_box(self._minLat, self._maxLat, self._minLon, self._maxLon, ds=ds, start_time=t, end_time=t)
+            if self._set_info_from_tile_set(nexus_tiles):
+                # Successfully retrieved global tile set from nexus_tiles,
+                # so no need to check any other time stamps.
+                break
         return nexus_tiles
 
     def _find_tile_bounds(self, t):
@@ -506,10 +521,10 @@ class SparkHandler(NexusHandler):
             del nexus_tiles[i]
 
     def _lat2ind(self, lat):
-        return int((lat - self._minLatCent) / self._latRes)
+        return int((lat - self._minLatCent) / self._latRes + 0.5)
 
     def _lon2ind(self, lon):
-        return int((lon - self._minLonCent) / self._lonRes)
+        return int((lon - self._minLonCent) / self._lonRes + 0.5)
 
     def _ind2lat(self, y):
         return self._minLatCent + y * self._latRes

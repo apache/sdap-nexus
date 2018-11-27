@@ -22,6 +22,11 @@ import nexuscli
 
 
 class TestCli(unittest.TestCase):
+
+    def setUp(self):
+        super().setUp()
+        nexuscli.set_target("http://localhost:8083", use_session=False)
+
     def test_time_series(self):
         ts = nexuscli.time_series(("AVHRR_OI_L4_GHRSST_NCEI", "MEASURES_SLA_JPL_1603"), box(-150, 45, -120, 60),
                                   datetime(2016, 1, 1), datetime(2016, 12, 31))
@@ -39,3 +44,13 @@ class TestCli(unittest.TestCase):
                                                datetime(2013, 1, 1), datetime(2014, 12, 31))
 
         self.assertEqual(1, len(ts))
+
+    def test_data_in_bounds_with_metadata_filter(self):
+        subset = nexuscli.subset("MUR-JPL-L4-GLOB-v4.1", None, datetime(2018, 1, 1), datetime(2018, 1, 2),
+                                 None, ["id:60758e00-5721-3a6e-bf57-78448bb0aeeb"])
+        print(subset)
+
+    def test_data_in_bounds_with_bounding_box(self):
+        subset = nexuscli.subset("MUR-JPL-L4-GLOB-v4.1", box(-150, 45, -149, 46), datetime(2018, 1, 1),
+                                 datetime(2018, 1, 1), None, None)
+        print(subset)

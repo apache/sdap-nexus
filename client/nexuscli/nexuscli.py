@@ -43,6 +43,15 @@ __pdoc__['TimeSeries.count'] = "`numpy` array containing counts"
 __pdoc__['TimeSeries.minimum'] = "`numpy` array containing minimums"
 __pdoc__['TimeSeries.maximum'] = "`numpy` array containing maximums"
 
+Point = namedtuple('Point', ('time', 'latitude', 'longitude', 'variable'))
+Point.__doc__ = '''\
+An object containing Point attributes.
+'''
+__pdoc__['Point.time'] = "time value as `datetime` object"
+__pdoc__['Point.latitude'] = "latitude value"
+__pdoc__['Point.longitude'] = "longitude value"
+__pdoc__['Point.variable'] = "dictionary of variable values"
+
 ISO_FORMAT = "%Y-%m-%dT%H:%M:%SZ"
 
 target = 'http://localhost:8083'
@@ -50,7 +59,7 @@ target = 'http://localhost:8083'
 session = requests.session()
 
 
-def set_target(url):
+def set_target(url, use_session=True):
     """
     Set the URL for the NEXUS webapp endpoint.  
     
@@ -59,6 +68,11 @@ def set_target(url):
     """
     global target
     target = url
+    print("Target set to {}".format(target))
+
+    if not use_session:
+        global session
+        session = requests
 
 
 def dataset_list():
@@ -207,3 +221,57 @@ def time_series(datasets, bounding_box, start_datetime, end_datetime, spark=Fals
             )
 
     return time_series_result
+
+
+def subset(dataset, bounding_box, start_datetime, end_datetime, parameter, metadata_filter):
+    """
+    Fetches point values for a given dataset and geographical area or metadata criteria and time range.
+
+    __dataset__ Name of the dataset as a String  
+    __bounding_box__ Bounding box for area of interest as a `shapely.geometry.polygon.Polygon`  
+    __start_datetime__ Start time as a `datetime.datetime`  
+    __end_datetime__ End time as a `datetime.datetime`  
+    __parameter__ The parameter of interest. One of 'sst', 'sss', 'wind' or None  
+    __metadata_filter__ List of key:value String metadata criteria  
+
+    __return__ List of `nexuscli.nexuscli.Point` namedtuples
+    """
+    url = "{}/datainbounds?".format(target)
+
+    params = {
+        'ds': dataset,
+        'startTime': start_datetime.strftime(ISO_FORMAT),
+        'endTime': end_datetime.strftime(ISO_FORMAT),
+        'parameter': parameter,
+    }
+    if bounding_box:
+        params['b'] = ','.join(str(b) for b in bounding_box.bounds)
+    else:
+        if metadata_filter and len(metadata_filter) > 0:
+            params['metadataFilter'] = metadata_filter
+
+    response = session.get(url, params=params)
+    response.raise_for_status()
+    response = response.json()
+
+    data = np.array(response['data']).flatten()
+
+    assert len(data) > 0, "No data found in {} between {} and {} for Datasets {}.".format(bounding_box.wkt if bounding_box is not None else metadata_filter,
+                                                                                          start_datetime.strftime(
+                                                                                              ISO_FORMAT),
+                                                                                          end_datetime.strftime(
+                                                                                              ISO_FORMAT),
+                                                                                          dataset)
+
+    subset_result = []
+    for d in data:
+        subset_result.append(
+            Point(
+                time=datetime.utcfromtimestamp(d['time']).replace(tzinfo=UTC),
+                longitude=d['longitude'],
+                latitude=d['latitude'],
+                variable=d['data'][0]
+            )
+        )
+
+    return subset_result

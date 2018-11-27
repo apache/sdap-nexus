@@ -12,26 +12,34 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-FROM solr:6.4.2
+FROM jupyter/scipy-notebook
+
 MAINTAINER Apache SDAP "dev@sdap.apache.org"
 
 USER root
+RUN apt-get update && \
+    apt-get install -y git libgeos-dev
+USER jovyan
 
-RUN cd / && wget https://downloads.sourceforge.net/project/jts-topo-suite/jts/1.14/jts-1.14.zip && unzip jts-1.14.zip -d /jts-1.14 && rm jts-1.14.zip
+COPY requirements.txt /tmp
+RUN pip install -r /tmp/requirements.txt && \
+    conda install -y basemap
 
-RUN apt-get update && apt-get -y install git && rm -rf /var/lib/apt/lists/*
+ENV CHOWN_HOME_OPTS='-R'
+ENV REBUILD_CODE=true
 
-RUN cd / && git clone https://github.com/apache/incubator-sdap-nexus.git && cp -r /incubator-sdap-nexus/data-access/config/schemas/solr/nexustiles /tmp/nexustiles && rm -rf /incubator-sdap-nexus
+ARG APACHE_NEXUS=https://github.com/apache/incubator-sdap-nexus.git
+ARG APACHE_NEXUS_BRANCH=master
 
-RUN mkdir /solr-home
+RUN mkdir -p /home/jovyan/Quickstart && \
+    mkdir -p /home/jovyan/nexuscli && \
+    cd /home/jovyan/nexuscli && \
+    git init && \
+    git remote add -f origin ${APACHE_NEXUS} && \
+    git config core.sparseCheckout true && \
+    echo "client" >> .git/info/sparse-checkout && \
+    git pull origin ${APACHE_NEXUS_BRANCH} && \
+    cd client && \
+    python setup.py install
 
-RUN chown -R $SOLR_USER:$SOLR_USER /solr-home
-
-VOLUME /solr-home
-
-VOLUME /opt/solr/server/solr/
-RUN chown -R $SOLR_USER:$SOLR_USER /opt/solr/server/solr/
-
-RUN cp /jts-1.14/lib/jts-1.14.jar /opt/solr/server/lib/jts-1.14.jar
-
-RUN cp /jts-1.14/lib/jtsio-1.14.jar /opt/solr/server/lib/jtsio-1.14.jar
+COPY ["Time Series Example.ipynb", "/home/jovyan/Quickstart/Time Series Example.ipynb"]

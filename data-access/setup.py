@@ -34,7 +34,7 @@ setuptools.setup(
     setup_requires=['cython'],
     install_requires=[
         'cassandra-driver==3.5.0',
-        'solrpy==0.9.7',
+        'pysolr==3.7.0',
         'requests',
         'nexusproto==1.0.0-SNAPSHOT',
         'shapely'

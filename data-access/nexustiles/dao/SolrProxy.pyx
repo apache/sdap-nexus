@@ -18,13 +18,16 @@ import logging
 import threading
 import time
 from datetime import datetime
+from pytz import timezone, UTC
 
 import requests
-import solr
+import pysolr
 from shapely import wkt
 
 SOLR_CON_LOCK = threading.Lock()
 thread_local = threading.local()
+
+EPOCH = timezone('UTC').localize(datetime(1970, 1, 1))
 
 
 class SolrProxy(object):
@@ -36,7 +39,7 @@ class SolrProxy(object):
         with SOLR_CON_LOCK:
             solrcon = getattr(thread_local, 'solrcon', None)
             if solrcon is None:
-                solrcon = solr.Solr('http://%s/solr/%s' % (self.solrUrl, self.solrCore), debug=False)
+                solrcon = pysolr.Solr('http://%s/solr/%s' % (self.solrUrl, self.solrCore))
                 thread_local.solrcon = solrcon
 
             self.solrcon = solrcon
@@ -94,7 +97,7 @@ class SolrProxy(object):
 
         results, start, found = self.do_query(*(search, None, None, True, None), **additionalparams)
 
-        return results[0]['tile_min_time_dt']
+        return self.convert_iso_to_datetime(results[0]['tile_min_time_dt'])
 
     def find_max_date_from_tiles(self, tile_ids, ds=None, **kwargs):
 
@@ -116,7 +119,7 @@ class SolrProxy(object):
 
         results, start, found = self.do_query(*(search, None, None, True, None), **additionalparams)
 
-        return results[0]['tile_max_time_dt']
+        return self.convert_iso_to_datetime(results[0]['tile_max_time_dt'])
 
     def find_min_max_date_from_granule(self, ds, granule_name, **kwargs):
         search = 'dataset_s:%s' % ds
@@ -132,7 +135,7 @@ class SolrProxy(object):
 
         self._merge_kwargs(additionalparams, **kwargs)
         results, start, found = self.do_query(*(search, None, None, False, None), **additionalparams)
-        start_time = results[0]['tile_min_time_dt']
+        start_time = self.convert_iso_to_datetime(results[0]['tile_min_time_dt'])
 
         kwargs['fl'] = 'tile_max_time_dt'
         kwargs['sort'] = ['tile_max_time_dt desc']
@@ -144,7 +147,7 @@ class SolrProxy(object):
 
         self._merge_kwargs(additionalparams, **kwargs)
         results, start, found = self.do_query(*(search, None, None, False, None), **additionalparams)
-        end_time = results[0]['tile_max_time_dt']
+        end_time = self.convert_iso_to_datetime(results[0]['tile_max_time_dt'])
 
         return start_time, end_time
 
@@ -153,8 +156,8 @@ class SolrProxy(object):
         datasets = self.get_data_series_list_simple()
 
         for dataset in datasets:
-            dataset['start'] = time.mktime(self.find_min_date_from_tiles([], ds=dataset['title']).timetuple()) * 1000
-            dataset['end'] = time.mktime(self.find_max_date_from_tiles([], ds=dataset['title']).timetuple()) * 1000
+            dataset['start'] = (self.find_min_date_from_tiles([], ds=dataset['title']) - EPOCH).total_seconds() * 1000
+            dataset['end'] = (self.find_max_date_from_tiles([], ds=dataset['title']) - EPOCH).total_seconds() * 1000
 
         return datasets
 
@@ -164,12 +167,13 @@ class SolrProxy(object):
             'rows': 0,
             "facet": "true",
             "facet.field": "dataset_s",
-            "facet.mincount": "1"
+            "facet.mincount": "1",
+            "facet.limit": "-1"
         }
 
         response = self.do_query_raw(*(search, None, None, False, None), **params)
         l = []
-        for g, v in response.facet_counts["facet_fields"]["dataset_s"].items():
+        for g, v in zip(*[iter(response.facets["facet_fields"]["dataset_s"])]*2):
             l.append({
                 "shortName": g,
                 "title": g,
@@ -194,17 +198,17 @@ class SolrProxy(object):
 
         stats = {}
 
-        for g in response.facet_counts["facet_pivot"]["dataset_s"]:
+        for g in response.facets["facet_pivot"]["dataset_s"]:
             if g["value"] == ds:
-                stats["start"] = time.mktime(g["stats"]["stats_fields"]["tile_max_time_dt"]["min"].timetuple()) * 1000
-                stats["end"] = time.mktime(g["stats"]["stats_fields"]["tile_max_time_dt"]["max"].timetuple()) * 1000
+                stats["start"] = self.convert_iso_to_timestamp(g["stats"]["stats_fields"]["tile_max_time_dt"]["min"])
+                stats["end"] = self.convert_iso_to_timestamp(g["stats"]["stats_fields"]["tile_max_time_dt"]["max"])
                 stats["minValue"] = g["stats"]["stats_fields"]["tile_min_val_d"]["min"]
                 stats["maxValue"] = g["stats"]["stats_fields"]["tile_max_val_d"]["max"]
 
 
         stats["availableDates"] = []
-        for dt in response.facet_counts["facet_fields"]["tile_max_time_dt"]:
-            stats["availableDates"].append(time.mktime(datetime.strptime(dt, "%Y-%m-%dT%H:%M:%SZ").timetuple()) * 1000)
+        for dt in response.facets["facet_fields"]["tile_max_time_dt"][::2]:
+            stats["availableDates"].append(self.convert_iso_to_timestamp(dt))
 
         stats["availableDates"] = sorted(stats["availableDates"])
 
@@ -244,9 +248,9 @@ class SolrProxy(object):
             ],
             'rows': 0,
             'facet': 'true',
-            'facet_field': 'tile_min_time_dt',
-            'facet_mincount': '1',
-            'facet_limit': '-1'
+            'facet.field': 'tile_min_time_dt',
+            'facet.mincount': '1',
+            'facet.limit': '-1'
         }
 
         self._merge_kwargs(additionalparams, **kwargs)
@@ -255,7 +259,7 @@ class SolrProxy(object):
 
         daysinrangeasc = sorted(
             [(datetime.strptime(a_date, '%Y-%m-%dT%H:%M:%SZ') - datetime.utcfromtimestamp(0)).total_seconds() for a_date
-             in response.facet_counts['facet_fields']['tile_min_time_dt'].keys()])
+             in response.facets['facet_fields']['tile_min_time_dt'][::2]])
 
         return daysinrangeasc
 
@@ -391,7 +395,7 @@ class SolrProxy(object):
 
         response = self.do_query_raw(*(search, None, None, False, None), **additionalparams)
 
-        distinct_bounds = [wkt.loads(key).bounds for key in response.facet_counts["facet_fields"]["geo_s"].keys()]
+        distinct_bounds = [wkt.loads(key).bounds for key in response.facets["facet_fields"]["geo_s"][::2]]
 
         return distinct_bounds
 
@@ -565,27 +569,54 @@ class SolrProxy(object):
                           )
         return time_clause
 
+    def get_tile_count(self, ds, bounding_polygon=None, start_time=0, end_time=-1, metadata=None, **kwargs):
+        """
+        Return number of tiles that match search criteria.
+        :param ds: The dataset name to search
+        :param bounding_polygon: The polygon to search for tiles
+        :param start_time: The start time to search for tiles
+        :param end_time: The end time to search for tiles
+        :param metadata: List of metadata values to search for tiles e.g ["river_id_i:1", "granule_s:granule_name"]
+        :return: number of tiles that match search criteria
+        """
+        search = 'dataset_s:%s' % ds
+
+        additionalparams = {
+            'fq': [
+                "tile_count_i:[1 TO *]"
+            ],
+            'rows': 0
+        }
+
+        if bounding_polygon:
+            min_lon, min_lat, max_lon, max_lat = bounding_polygon.bounds
+            additionalparams['fq'].append("geo:[%s,%s TO %s,%s]" % (min_lat, min_lon, max_lat, max_lon))
+
+        if 0 < start_time <= end_time:
+            additionalparams['fq'].append(self.get_formatted_time_clause(start_time, end_time))
+
+        if metadata:
+            additionalparams['fq'].extend(metadata)
+
+        self._merge_kwargs(additionalparams, **kwargs)
+
+        results, start, found = self.do_query(*(search, None, None, True, None), **additionalparams)
+
+        return found
+
     def do_query(self, *args, **params):
 
         response = self.do_query_raw(*args, **params)
 
-        return response.results, response.start, response.numFound
+        return response.docs, response.raw_response['response']['start'], response.hits
 
     def do_query_raw(self, *args, **params):
 
-        # fl only works when passed as the second argument to solrcon.select
-        if 'fl' in params.keys():
-            fl = params['fl']
-            del (params['fl'])
-        else:
-            fl = args[1]
+        if 'fl' not in params.keys() and args[1]:
+            params['fl'] = args[1]
 
-        # sort only works when passed as the fourth argument to solrcon.select
-        if 'sort' in params.keys():
-            s = ','.join(params['sort'])
-            del (params['sort'])
-        else:
-            s = args[4]
+        if 'sort' not in params.keys() and args[4]:
+            params['sort'] = args[4]
 
         # If dataset_s is specified as the search term,
         # add the _route_ parameter to limit the search to the correct shard
@@ -593,10 +624,8 @@ class SolrProxy(object):
             ds = args[0].split(':')[-1]
             params['shard_keys'] = ds + '!'
 
-        args = (args[0],) + (fl,) + (args[2:4]) + (s,)
-
         with SOLR_CON_LOCK:
-            response = self.solrcon.select(*args, **params)
+            response = self.solrcon.search(args[0], **params)
 
         return response
 
@@ -605,18 +634,24 @@ class SolrProxy(object):
         results = []
 
         response = self.do_query_raw(*args, **params)
-        results.extend(response.results)
+        results.extend(response.docs)
 
-        limit = min(params.get('limit', float('inf')), response.numFound)
+        limit = min(params.get('limit', float('inf')), response.hits)
 
         while len(results) < limit:
             params['start'] = len(results)
             response = self.do_query_raw(*args, **params)
-            results.extend(response.results)
+            results.extend(response.docs)
 
         assert len(results) == limit
 
         return results
+
+    def convert_iso_to_datetime(self, date):
+        return datetime.strptime(date, "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=UTC)
+
+    def convert_iso_to_timestamp(self, date):
+        return (self.convert_iso_to_datetime(date) - EPOCH).total_seconds() * 1000
 
     def ping(self):
         solrAdminPing = 'http://%s/solr/%s/admin/ping' % (self.solrUrl, self.solrCore)

@@ -76,3 +76,16 @@ class TestQuery(unittest.TestCase):
         result = self.proxy.find_all_tiles_by_metadata(['granule_s:19811114120000-NCEI-L4_GHRSST-SSTblend-AVHRR_OI-GLOB-v02.0-fv02.0.nc'], ds="AVHRR_OI_L4_GHRSST_NCEI")
 
         print len(result)
+
+    def test_get_tile_count(self):
+        tile_count = self.proxy.get_tile_count("AVHRR_OI_L4_GHRSST_NCEI", bounding_polygon=box(-180, -90, 180, 90),
+                                               start_time=1, end_time=time.time(),
+                                               metadata=['granule_s:19811114120000-NCEI-L4_GHRSST-SSTblend-AVHRR_OI-GLOB-v02.0-fv02.0.nc'])
+
+        print(tile_count)
+
+    def test_get_data_series_stats(self):
+        print(self.proxy.get_data_series_stats('AVHRR_OI_L4_GHRSST_NCEI'))
+
+    def test_find_days_in_range_asc(self):
+        print(self.proxy.find_days_in_range_asc(-90, 90, -180, 180, 'AVHRR_OI_L4_GHRSST_NCEI', 1, time.time()))
