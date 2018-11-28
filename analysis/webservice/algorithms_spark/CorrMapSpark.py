@@ -15,8 +15,9 @@
 
 
 import json
+import math
 import logging
-
+from datetime import datetime
 import numpy as np
 from nexustiles.nexustiles import NexusTileService
 
@@ -164,17 +165,14 @@ class CorrMapSparkHandlerImpl(SparkHandler):
 
     def calc(self, computeOptions, **args):
 
-        spark_master, spark_nexecs, spark_nparts = computeOptions.get_spark_cfg()
         self._setQueryParams(computeOptions.get_dataset(),
                              (float(computeOptions.get_min_lat()),
                               float(computeOptions.get_max_lat()),
                               float(computeOptions.get_min_lon()),
                               float(computeOptions.get_max_lon())),
                              computeOptions.get_start_time(),
-                             computeOptions.get_end_time(),
-                             spark_master=spark_master,
-                             spark_nexecs=spark_nexecs,
-                             spark_nparts=spark_nparts)
+                             computeOptions.get_end_time())
+        nparts_requested = computeOptions.get_nparts()
 
         self.log.debug('ds = {0}'.format(self._ds))
         if not len(self._ds) == 2:
@@ -200,6 +198,20 @@ class CorrMapSparkHandlerImpl(SparkHandler):
         self.log.debug('Using Native resolution: lat_res={0}, lon_res={1}'.format(self._latRes, self._lonRes))
         self.log.debug('nlats={0}, nlons={1}'.format(self._nlats, self._nlons))
 
+        daysinrange = self._tile_service.find_days_in_range_asc(self._minLat,
+                                                                self._maxLat,
+                                                                self._minLon,
+                                                                self._maxLon,
+                                                                self._ds[0],
+                                                                self._startTime,
+                                                                self._endTime)
+        ndays = len(daysinrange)
+        if ndays == 0:
+            raise NoDataException(reason="No data found for selected timeframe")
+        self.log.debug('Found {0} days in range'.format(ndays))
+        for i, d in enumerate(daysinrange):
+            self.log.debug('{0}, {1}'.format(i, datetime.utcfromtimestamp(d)))
+
         # Create array of tuples to pass to Spark map function
         nexus_tiles_spark = [[self._find_tile_bounds(t),
                               self._startTime, self._endTime,
@@ -212,30 +224,20 @@ class CorrMapSparkHandlerImpl(SparkHandler):
 
         # Expand Spark map tuple array by duplicating each entry N times,
         # where N is the number of ways we want the time dimension carved up.
-        num_time_parts = 72
-        # num_time_parts = 2
-        # num_time_parts = 1
+        # Set the time boundaries for each of the Spark map tuples so that
+        # every Nth element in the array gets the same time bounds.
+        max_time_parts = 72
+        num_time_parts = min(max_time_parts, ndays)
+
+        spark_part_time_ranges = np.tile(np.array([a[[0,-1]] for a in np.array_split(np.array(daysinrange), num_time_parts)]), (len(nexus_tiles_spark),1))
         nexus_tiles_spark = np.repeat(nexus_tiles_spark, num_time_parts, axis=0)
-        self.log.debug('repeated len(nexus_tiles_spark) = {0}'.format(len(nexus_tiles_spark)))
-
-        # Set the time boundaries for each of the Spark map tuples.
-        # Every Nth element in the array gets the same time bounds.
-        spark_part_times = np.linspace(self._startTime, self._endTime + 1,
-                                       num_time_parts + 1, dtype=np.int64)
-
-        spark_part_time_ranges = \
-            np.repeat([[[spark_part_times[i],
-                         spark_part_times[i + 1] - 1] for i in range(num_time_parts)]],
-                      len(nexus_tiles_spark) / num_time_parts, axis=0).reshape((len(nexus_tiles_spark), 2))
-        self.log.debug('spark_part_time_ranges={0}'.format(spark_part_time_ranges))
         nexus_tiles_spark[:, 1:3] = spark_part_time_ranges
-        # print 'nexus_tiles_spark final = '
-        # for i in range(len(nexus_tiles_spark)):
-        #    print nexus_tiles_spark[i]
 
         # Launch Spark computations
-        # print 'nexus_tiles_spark=',nexus_tiles_spark
-        rdd = self._sc.parallelize(nexus_tiles_spark, self._spark_nparts)
+        spark_nparts = self._spark_nparts(nparts_requested)
+        self.log.info('Using {} partitions'.format(spark_nparts))
+
+        rdd = self._sc.parallelize(nexus_tiles_spark, spark_nparts)
         sum_tiles_part = rdd.map(self._map)
         # print "sum_tiles_part = ",sum_tiles_part.collect()
         sum_tiles = \
