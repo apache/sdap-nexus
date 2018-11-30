@@ -14,6 +14,7 @@
 # limitations under the License.
 
 
+import math
 import logging
 from datetime import datetime
 
@@ -128,13 +129,12 @@ class TimeAvgMapSparkHandlerImpl(SparkHandler):
                     request.get_start_datetime().strftime(ISO_8601), request.get_end_datetime().strftime(ISO_8601)),
                 code=400)
 
-        spark_master, spark_nexecs, spark_nparts = request.get_spark_cfg()
+        nparts_requested = request.get_nparts()
 
         start_seconds_from_epoch = long((start_time - EPOCH).total_seconds())
         end_seconds_from_epoch = long((end_time - EPOCH).total_seconds())
 
-        return ds, bounding_polygon, start_seconds_from_epoch, end_seconds_from_epoch, \
-               spark_master, spark_nexecs, spark_nparts
+        return ds, bounding_polygon, start_seconds_from_epoch, end_seconds_from_epoch, nparts_requested
 
     def calc(self, compute_options, **args):
         """
@@ -144,20 +144,14 @@ class TimeAvgMapSparkHandlerImpl(SparkHandler):
         :return:
         """
 
-        ds, bbox, start_time, end_time, spark_master, spark_nexecs, spark_nparts = self.parse_arguments(compute_options)
-
-        compute_options.get_spark_cfg()
-
+        ds, bbox, start_time, end_time, nparts_requested = self.parse_arguments(compute_options)
         self._setQueryParams(ds,
                              (float(bbox.bounds[1]),
                               float(bbox.bounds[3]),
                               float(bbox.bounds[0]),
                               float(bbox.bounds[2])),
                              start_time,
-                             end_time,
-                             spark_master=spark_master,
-                             spark_nexecs=spark_nexecs,
-                             spark_nparts=spark_nparts)
+                             end_time)
 
         nexus_tiles = self._find_global_tile_set()
 
@@ -165,6 +159,22 @@ class TimeAvgMapSparkHandlerImpl(SparkHandler):
             raise NoDataException(reason="No data found for selected timeframe")
 
         self.log.debug('Found {0} tiles'.format(len(nexus_tiles)))
+        print('Found {} tiles'.format(len(nexus_tiles)))
+
+        daysinrange = self._tile_service.find_days_in_range_asc(bbox.bounds[1],
+                                                                bbox.bounds[3],
+                                                                bbox.bounds[0],
+                                                                bbox.bounds[2],
+                                                                ds,
+                                                                start_time,
+                                                                end_time)
+        ndays = len(daysinrange)
+        if ndays == 0:
+            raise NoDataException(reason="No data found for selected timeframe")
+        self.log.debug('Found {0} days in range'.format(ndays))
+        for i, d in enumerate(daysinrange):
+            self.log.debug('{0}, {1}'.format(i, datetime.utcfromtimestamp(d)))
+
 
         self.log.debug('Using Native resolution: lat_res={0}, lon_res={1}'.format(self._latRes, self._lonRes))
         self.log.debug('nlats={0}, nlons={1}'.format(self._nlats, self._nlons))
@@ -185,25 +195,20 @@ class TimeAvgMapSparkHandlerImpl(SparkHandler):
 
         # Expand Spark map tuple array by duplicating each entry N times,
         # where N is the number of ways we want the time dimension carved up.
-        num_time_parts = 72
+        # Set the time boundaries for each of the Spark map tuples so that
+        # every Nth element in the array gets the same time bounds.
+        max_time_parts = 72
+        num_time_parts = min(max_time_parts, ndays)
 
+        spark_part_time_ranges = np.tile(np.array([a[[0,-1]] for a in np.array_split(np.array(daysinrange), num_time_parts)]), (len(nexus_tiles_spark),1))
         nexus_tiles_spark = np.repeat(nexus_tiles_spark, num_time_parts, axis=0)
-        self.log.debug('repeated len(nexus_tiles_spark) = {0}'.format(len(nexus_tiles_spark)))
-
-        # Set the time boundaries for each of the Spark map tuples.
-        # Every Nth element in the array gets the same time bounds.
-        spark_part_times = np.linspace(self._startTime, self._endTime,
-                                       num_time_parts + 1, dtype=np.int64)
-
-        spark_part_time_ranges = \
-            np.repeat([[[spark_part_times[i],
-                         spark_part_times[i + 1]] for i in range(num_time_parts)]],
-                      len(nexus_tiles_spark) / num_time_parts, axis=0).reshape((len(nexus_tiles_spark), 2))
-        self.log.debug('spark_part_time_ranges={0}'.format(spark_part_time_ranges))
         nexus_tiles_spark[:, 1:3] = spark_part_time_ranges
 
         # Launch Spark computations
-        rdd = self._sc.parallelize(nexus_tiles_spark, self._spark_nparts)
+        spark_nparts = self._spark_nparts(nparts_requested)
+        self.log.info('Using {} partitions'.format(spark_nparts))
+
+        rdd = self._sc.parallelize(nexus_tiles_spark, spark_nparts)
         sum_count_part = rdd.map(self._map)
         sum_count = \
             sum_count_part.combineByKey(lambda val: val,

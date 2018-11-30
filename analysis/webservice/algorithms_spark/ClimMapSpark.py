@@ -14,6 +14,7 @@
 # limitations under the License.
 
 
+import math
 import logging
 from calendar import timegm, monthrange
 from datetime import datetime
@@ -120,7 +121,6 @@ class ClimMapSparkHandlerImpl(SparkHandler):
         :return:
         """
 
-        spark_master, spark_nexecs, spark_nparts = computeOptions.get_spark_cfg()
         self._setQueryParams(computeOptions.get_dataset()[0],
                              (float(computeOptions.get_min_lat()),
                               float(computeOptions.get_max_lat()),
@@ -128,16 +128,15 @@ class ClimMapSparkHandlerImpl(SparkHandler):
                               float(computeOptions.get_max_lon())),
                              start_year=computeOptions.get_start_year(),
                              end_year=computeOptions.get_end_year(),
-                             clim_month=computeOptions.get_clim_month(),
-                             spark_master=spark_master,
-                             spark_nexecs=spark_nexecs,
-                             spark_nparts=spark_nparts)
+                             clim_month=computeOptions.get_clim_month())
         self._startTime = timegm((self._startYear, 1, 1, 0, 0, 0))
         self._endTime = timegm((self._endYear, 12, 31, 23, 59, 59))
 
         if 'CLIM' in self._ds:
             raise NexusProcessingException(reason="Cannot compute Latitude/Longitude Time Average map on a climatology",
                                            code=400)
+
+        nparts_requested = computeOptions.get_nparts()
 
         nexus_tiles = self._find_global_tile_set()
         # print 'tiles:'
@@ -199,7 +198,9 @@ class ClimMapSparkHandlerImpl(SparkHandler):
         #    print nexus_tiles_spark[i]
 
         # Launch Spark computations
-        rdd = self._sc.parallelize(nexus_tiles_spark, self._spark_nparts)
+        spark_nparts = self._spark_nparts(nparts_requested)
+        self.log.info('Using {} partitions'.format(spark_nparts))
+        rdd = self._sc.parallelize(nexus_tiles_spark, spark_nparts)
         sum_count_part = rdd.map(self._map)
         sum_count = \
             sum_count_part.combineByKey(lambda val: val,
