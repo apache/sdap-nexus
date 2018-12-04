@@ -14,6 +14,7 @@
 # limitations under the License.
 
 import StringIO
+import os
 import csv
 import json
 from datetime import datetime
@@ -38,6 +39,7 @@ except ImportError:
     from gdalnumeric import *
 
 from netCDF4 import Dataset
+import netCDF4
 import tempfile
 
 
@@ -96,7 +98,7 @@ class DomsQueryResults(NexusResults):
         return DomsCSVFormatter.create(self.__executionId, self.results(), self.__args, self.__details)
 
     def toNetCDF(self):
-        return DomsNetCDFFormatterAlt.create(self.__executionId, self.results(), self.__args, self.__details)
+        return DomsNetCDFFormatter.create(self.__executionId, self.results(), self.__args, self.__details)
 
 
 class DomsCSVFormatter:
@@ -138,7 +140,7 @@ class DomsCSVFormatter:
                 row = [
                     # Primary
                     primaryValue["id"], primaryValue["source"], str(primaryValue["x"]), str(primaryValue["y"]),
-                    primaryValue["time"].strftime(ISO_8601), primaryValue["platform"],
+                    datetime.utcfromtimestamp(primaryValue["time"]).strftime(ISO_8601), primaryValue["platform"],
                     primaryValue.get("sea_water_salinity_depth", ""), primaryValue.get("sea_water_salinity", ""),
                     primaryValue.get("sea_water_temperature_depth", ""), primaryValue.get("sea_water_temperature", ""),
                     primaryValue.get("wind_speed", ""), primaryValue.get("wind_direction", ""),
@@ -146,7 +148,7 @@ class DomsCSVFormatter:
 
                     # Matchup
                     matchup["id"], matchup["source"], matchup["x"], matchup["y"],
-                    matchup["time"].strftime(ISO_8601), matchup["platform"],
+                    datetime.utcfromtimestamp(matchup["time"]).strftime(ISO_8601), matchup["platform"],
                     matchup.get("sea_water_salinity_depth", ""), matchup.get("sea_water_salinity", ""),
                     matchup.get("sea_water_temperature_depth", ""), matchup.get("sea_water_temperature", ""),
                     matchup.get("wind_speed", ""), matchup.get("wind_direction", ""),
@@ -159,6 +161,7 @@ class DomsCSVFormatter:
     def __addConstants(csvfile):
 
         global_attrs = [
+            {"Global Attribute": "product_version", "Value": "1.0"},
             {"Global Attribute": "Conventions", "Value": "CF-1.6, ACDD-1.3"},
             {"Global Attribute": "title", "Value": "DOMS satellite-insitu machup output file"},
             {"Global Attribute": "history",
@@ -223,18 +226,18 @@ class DomsCSVFormatter:
             {"Global Attribute": "DOMS_matchID", "Value": executionId},
             {"Global Attribute": "DOMS_TimeWindow", "Value": params["timeTolerance"] / 60 / 60},
             {"Global Attribute": "DOMS_TimeWindow_Units", "Value": "hours"},
-            {"Global Attribute": "DOMS_depth_min", "Value": params["depthMin"]},
-            {"Global Attribute": "DOMS_depth_min_units", "Value": "m"},
-            {"Global Attribute": "DOMS_depth_max", "Value": params["depthMax"]},
-            {"Global Attribute": "DOMS_depth_max_units", "Value": "m"},
+            # {"Global Attribute": "DOMS_depth_min", "Value": params["depthMin"]},
+            # {"Global Attribute": "DOMS_depth_min_units", "Value": "m"},
+            # {"Global Attribute": "DOMS_depth_max", "Value": params["depthMax"]},
+            # {"Global Attribute": "DOMS_depth_max_units", "Value": "m"},
 
             {"Global Attribute": "DOMS_platforms", "Value": params["platforms"]},
             {"Global Attribute": "DOMS_SearchRadius", "Value": params["radiusTolerance"]},
             {"Global Attribute": "DOMS_SearchRadius_Units", "Value": "m"},
-            {"Global Attribute": "DOMS_bounding_box", "Value": params["bbox"]},
+            # {"Global Attribute": "DOMS_bounding_box", "Value": params["bbox"]},
 
             {"Global Attribute": "DOMS_primary", "Value": params["primary"]},
-            {"Global Attribute": "DOMS_match-up", "Value": ",".join(params["matchup"])},
+            {"Global Attribute": "DOMS_match_up", "Value": params["matchup"]},
             {"Global Attribute": "DOMS_ParameterPrimary", "Value": params.get("parameter", "")},
 
             {"Global Attribute": "DOMS_time_to_complete", "Value": details["timeToComplete"]},
@@ -248,6 +251,9 @@ class DomsCSVFormatter:
 
             {"Global Attribute": "date_modified", "Value": datetime.utcnow().replace(tzinfo=UTC).strftime(ISO_8601)},
             {"Global Attribute": "date_created", "Value": datetime.utcnow().replace(tzinfo=UTC).strftime(ISO_8601)},
+
+            {"Global Attribute": "URI_Matchup", "Value": "http://webservice matchup query request"},
+            {"Global Attribute": "URI_Subset", "Value": "http://webservice subsetting query request"},
         ]
 
         writer = csv.DictWriter(csvfile, sorted(next(iter(global_attrs)).keys()))
@@ -258,31 +264,24 @@ class DomsCSVFormatter:
 class DomsNetCDFFormatter:
     @staticmethod
     def create(executionId, results, params, details):
+
         t = tempfile.mkstemp(prefix="doms_", suffix=".nc")
         tempFileName = t[1]
 
         dataset = Dataset(tempFileName, "w", format="NETCDF4")
+        dataset.DOMS_matchID = executionId
+        DomsNetCDFFormatter.__addNetCDFConstants(dataset)
 
-        dataset.matchID = executionId
-        dataset.Matchup_TimeWindow = params["timeTolerance"]
-        dataset.Matchup_TimeWindow_Units = "hours"
-
-        dataset.time_coverage_start = datetime.fromtimestamp(params["startTime"] / 1000).strftime('%Y%m%d %H:%M:%S')
-        dataset.time_coverage_end = datetime.fromtimestamp(params["endTime"] / 1000).strftime('%Y%m%d %H:%M:%S')
-        dataset.depth_min = params["depthMin"]
-        dataset.depth_max = params["depthMax"]
-        dataset.platforms = params["platforms"]
-
-        dataset.Matchup_SearchRadius = params["radiusTolerance"]
-        dataset.Matchup_SearchRadius_Units = "m"
-
-        dataset.bounding_box = params["bbox"]
-        dataset.primary = params["primary"]
-        dataset.secondary = ",".join(params["matchup"])
-
-        dataset.Matchup_ParameterPrimary = params["parameter"] if "parameter" in params else ""
-
+        dataset.date_modified = datetime.utcnow().replace(tzinfo=UTC).strftime(ISO_8601)
+        dataset.date_created = datetime.utcnow().replace(tzinfo=UTC).strftime(ISO_8601)
+        dataset.time_coverage_start = params["startTime"].strftime('%Y%m%d %H:%M:%S')
+        dataset.time_coverage_end = params["endTime"].strftime('%Y%m%d %H:%M:%S')
         dataset.time_coverage_resolution = "point"
+        dataset.DOMS_match_up = params["matchup"]
+        dataset.DOMS_num_matchup_matched = details["numInSituMatched"]
+        dataset.DOMS_num_primary_matched = details["numGriddedMatched"]
+        dataset.DOMS_num_matchup_checked = details["numInSituChecked"] if details["numInSituChecked"] != 0 else "N/A"
+        dataset.DOMS_num_primary_checked = details["numGriddedChecked"] if details["numGriddedChecked"] != 0 else "N/A"
 
         bbox = geo.BoundingBox(asString=params["bbox"])
         dataset.geospatial_lat_max = bbox.north
@@ -293,54 +292,48 @@ class DomsNetCDFFormatter:
         dataset.geospatial_lon_resolution = "point"
         dataset.geospatial_lat_units = "degrees_north"
         dataset.geospatial_lon_units = "degrees_east"
-        dataset.geospatial_vertical_min = 0.0
-        dataset.geospatial_vertical_max = params["radiusTolerance"]
+        dataset.geospatial_vertical_min = params["depthMin"]
+        dataset.geospatial_vertical_max = params["depthMax"]
         dataset.geospatial_vertical_units = "m"
         dataset.geospatial_vertical_resolution = "point"
         dataset.geospatial_vertical_positive = "down"
 
-        dataset.time_to_complete = details["timeToComplete"]
-        dataset.num_insitu_matched = details["numInSituMatched"]
-        dataset.num_gridded_checked = details["numGriddedChecked"]
-        dataset.num_gridded_matched = details["numGriddedMatched"]
-        dataset.num_insitu_checked = details["numInSituChecked"]
+        dataset.Matchup_TimeWindow = params["timeTolerance"] / 60 / 60
+        dataset.Matchup_TimeWindow_Units = "hours"
+        dataset.DOMS_SearchRadius = params["radiusTolerance"]
+        dataset.DOMS_SearchRadius_Units = "m"
+        dataset.URI_Subset = "http://webservice subsetting query request"
+        dataset.URI_Matchup = "http://webservice matchup query request"
+        dataset.DOMS_ParameterPrimary = params["parameter"] if "parameter" in params else ""
+        dataset.DOMS_platforms = params["platforms"]
+        dataset.DOMS_primary = params["primary"]
+        dataset.DOMS_time_to_complete = details["timeToComplete"]
+        dataset.DOMS_time_to_complete_units = "seconds"
 
-        dataset.date_modified = datetime.now().strftime('%Y%m%d %H:%M:%S')
-        dataset.date_created = datetime.now().strftime('%Y%m%d %H:%M:%S')
+        platforms = set()
+        for primaryValue in results:
+            platforms.add(primaryValue['platform'])
+            for match in primaryValue['matches']:
+                platforms.add(match['platform'])
 
-        DomsNetCDFFormatter.__addNetCDFConstants(dataset)
+        dataset.platform = ', '.join(platforms)
 
-        idList = []
-        primaryIdList = []
-        DomsNetCDFFormatter.__packDataIntoDimensions(idList, primaryIdList, results)
+        #Create Satellite group, variables, and attributes
+        satelliteGroup = dataset.createGroup("SatelliteData")
+        satelliteWriter = DomsNetCDFValueWriter(satelliteGroup)
 
-        idDim = dataset.createDimension("id", size=None)
-        primaryIdDim = dataset.createDimension("primary_id", size=None)
+        # Create InSitu group, variables, and attributes
+        insituGroup = dataset.createGroup("InsituData")
+        insituWriter = DomsNetCDFValueWriter(insituGroup)
 
-        idVar = dataset.createVariable("id", "i4", ("id",), chunksizes=(2048,))
-        primaryIdVar = dataset.createVariable("primary_id", "i4", ("primary_id",), chunksizes=(2048,))
+        # Add data to Insitu and Satellite groups, generate array of match ID pairs
+        matches = DomsNetCDFFormatter.__writeResults(results, satelliteWriter, insituWriter)
+        dataset.createDimension("MatchedRecords", size=None)
+        dataset.createDimension("MatchedGroups", size=2)
+        matchArray = dataset.createVariable("matchIDs", "f4", ("MatchedRecords", "MatchedGroups"))
+        matchArray[:] = matches
 
-        idVar[:] = idList
-        primaryIdVar[:] = primaryIdList
-
-        DomsNetCDFFormatter.__createDimension(dataset, results, "lat", "f4", "y")
-        DomsNetCDFFormatter.__createDimension(dataset, results, "lon", "f4", "x")
-
-        DomsNetCDFFormatter.__createDimension(dataset, results, "sea_water_temperature_depth", "f4",
-                                              "sea_water_temperature_depth")
-        DomsNetCDFFormatter.__createDimension(dataset, results, "sea_water_temperature", "f4", "sea_water_temperature")
-        DomsNetCDFFormatter.__createDimension(dataset, results, "sea_water_salinity_depth", "f4",
-                                              "sea_water_salinity_depth")
-        DomsNetCDFFormatter.__createDimension(dataset, results, "sea_water_salinity", "f4", "sea_water_salinity")
-
-        DomsNetCDFFormatter.__createDimension(dataset, results, "wind_speed", "f4", "wind_speed")
-        DomsNetCDFFormatter.__createDimension(dataset, results, "wind_direction", "f4", "wind_direction")
-        DomsNetCDFFormatter.__createDimension(dataset, results, "wind_u", "f4", "wind_u")
-        DomsNetCDFFormatter.__createDimension(dataset, results, "wind_v", "f4", "wind_v")
-
-        DomsNetCDFFormatter.__createDimension(dataset, results, "time", "f4", "time")
         dataset.close()
-
         f = open(tempFileName, "rb")
         data = f.read()
         f.close()
@@ -348,199 +341,8 @@ class DomsNetCDFFormatter:
         return data
 
     @staticmethod
-    def __packDataIntoDimensions(idVar, primaryIdVar, values, primaryValueId=None):
-
-        for value in values:
-            id = hash(value["id"])
-            idVar.append(id)
-            primaryIdVar.append(primaryValueId if primaryValueId is not None else -1)
-
-            if "matches" in value and len(value["matches"]) > 0:
-                DomsNetCDFFormatter.__packDataIntoDimensions(idVar, primaryIdVar, value["matches"], id)
-
-    @staticmethod
-    def __packDimensionList(values, field, varList):
-        for value in values:
-            if field in value:
-                varList.append(value[field])
-            else:
-                varList.append(np.nan)
-            if "matches" in value and len(value["matches"]) > 0:
-                DomsNetCDFFormatter.__packDimensionList(value["matches"], field, varList)
-
-    @staticmethod
-    def __createDimension(dataset, values, name, type, arrayField):
-        dim = dataset.createDimension(name, size=None)
-        var = dataset.createVariable(name, type, (name,), chunksizes=(2048,), fill_value=-32767.0)
-
-        varList = []
-        DomsNetCDFFormatter.__packDimensionList(values, arrayField, varList)
-
-        var[:] = varList
-
-        if name == "lon":
-            DomsNetCDFFormatter.__enrichLonVariable(var)
-        elif name == "lat":
-            DomsNetCDFFormatter.__enrichLatVariable(var)
-        elif name == "time":
-            DomsNetCDFFormatter.__enrichTimeVariable(var)
-        elif name == "sea_water_salinity":
-            DomsNetCDFFormatter.__enrichSSSVariable(var)
-        elif name == "sea_water_salinity_depth":
-            DomsNetCDFFormatter.__enrichSSSDepthVariable(var)
-        elif name == "sea_water_temperature":
-            DomsNetCDFFormatter.__enrichSSTVariable(var)
-        elif name == "sea_water_temperature_depth":
-            DomsNetCDFFormatter.__enrichSSTDepthVariable(var)
-        elif name == "wind_direction":
-            DomsNetCDFFormatter.__enrichWindDirectionVariable(var)
-        elif name == "wind_speed":
-            DomsNetCDFFormatter.__enrichWindSpeedVariable(var)
-        elif name == "wind_u":
-            DomsNetCDFFormatter.__enrichWindUVariable(var)
-        elif name == "wind_v":
-            DomsNetCDFFormatter.__enrichWindVVariable(var)
-
-    @staticmethod
-    def __enrichSSSVariable(var):
-        var.long_name = "sea surface salinity"
-        var.standard_name = "sea_surface_salinity"
-        var.units = "1e-3"
-        var.valid_min = 30
-        var.valid_max = 40
-        var.scale_factor = 1.0
-        var.add_offset = 0.0
-        var.coordinates = "lon lat time"
-        var.grid_mapping = "crs"
-        var.comment = ""
-        var.cell_methods = ""
-        var.metadata_link = ""
-
-    @staticmethod
-    def __enrichSSSDepthVariable(var):
-        var.long_name = "sea surface salinity_depth"
-        var.standard_name = "sea_surface_salinity_depth"
-        var.units = "m"
-        var.scale_factor = 1.0
-        var.add_offset = 0.0
-        var.coordinates = "lon lat time"
-        var.grid_mapping = "crs"
-        var.comment = ""
-        var.cell_methods = ""
-        var.metadata_link = ""
-
-    @staticmethod
-    def __enrichSSTVariable(var):
-        var.long_name = "sea surface temperature"
-        var.standard_name = "sea_surface_temperature"
-        var.units = "c"
-        var.valid_min = -3
-        var.valid_max = 50
-        var.scale_factor = 1.0
-        var.add_offset = 0.0
-        var.coordinates = "lon lat time"
-        var.grid_mapping = "crs"
-        var.comment = ""
-        var.cell_methods = ""
-        var.metadata_link = ""
-
-    @staticmethod
-    def __enrichSSTDepthVariable(var):
-        var.long_name = "sea surface temperature_depth"
-        var.standard_name = "sea_surface_temperature_depth"
-        var.units = "m"
-        var.scale_factor = 1.0
-        var.add_offset = 0.0
-        var.coordinates = "lon lat time"
-        var.grid_mapping = "crs"
-        var.comment = ""
-        var.cell_methods = ""
-        var.metadata_link = ""
-
-    @staticmethod
-    def __enrichWindDirectionVariable(var):
-        var.long_name = "wind direction"
-        var.standard_name = "wind_direction"
-        var.units = "degrees"
-        var.scale_factor = 1.0
-        var.add_offset = 0.0
-        var.coordinates = "lon lat time"
-        var.grid_mapping = "crs"
-        var.comment = ""
-        var.cell_methods = ""
-        var.metadata_link = ""
-
-    @staticmethod
-    def __enrichWindSpeedVariable(var):
-        var.long_name = "wind speed"
-        var.standard_name = "wind_speed"
-        var.units = "km/h"
-        var.scale_factor = 1.0
-        var.add_offset = 0.0
-        var.coordinates = "lon lat time"
-        var.grid_mapping = "crs"
-        var.comment = ""
-        var.cell_methods = ""
-        var.metadata_link = ""
-
-    @staticmethod
-    def __enrichWindUVariable(var):
-        var.long_name = "wind u"
-        var.standard_name = "wind_u"
-        var.units = ""
-        var.scale_factor = 1.0
-        var.add_offset = 0.0
-        var.coordinates = "lon lat time"
-        var.grid_mapping = "crs"
-        var.comment = ""
-        var.cell_methods = ""
-        var.metadata_link = ""
-
-    @staticmethod
-    def __enrichWindVVariable(var):
-        var.long_name = "wind v"
-        var.standard_name = "wind_v"
-        var.units = ""
-        var.scale_factor = 1.0
-        var.add_offset = 0.0
-        var.coordinates = "lon lat time"
-        var.grid_mapping = "crs"
-        var.comment = ""
-        var.cell_methods = ""
-        var.metadata_link = ""
-
-    @staticmethod
-    def __enrichTimeVariable(var):
-        var.long_name = "Time"
-        var.standard_name = "time"
-        var.axis = "T"
-        var.units = "seconds since 1970-01-01 00:00:00 0:00"
-        var.calendar = "standard"
-        var.comment = "Nominal time of satellite corresponding to the start of the product time interval"
-
-    @staticmethod
-    def __enrichLonVariable(var):
-        var.long_name = "Longitude"
-        var.standard_name = "longitude"
-        var.axis = "X"
-        var.units = "degrees_east"
-        var.valid_min = -180.0
-        var.valid_max = 180.0
-        var.comment = "Data longitude for in-situ, midpoint beam for satellite measurements."
-
-    @staticmethod
-    def __enrichLatVariable(var):
-        var.long_name = "Latitude"
-        var.standard_name = "latitude"
-        var.axis = "Y"
-        var.units = "degrees_north"
-        var.valid_min = -90.0
-        var.valid_max = 90.0
-        var.comment = "Data latitude for in-situ, midpoint beam for satellite measurements."
-
-    @staticmethod
     def __addNetCDFConstants(dataset):
-        dataset.bnds = 2
+        dataset.product_version = "1.0"
         dataset.Conventions = "CF-1.6, ACDD-1.3"
         dataset.title = "DOMS satellite-insitu machup output file"
         dataset.history = "Processing_Version = V1.0, Software_Name = DOMS, Software_Version = 1.03"
@@ -549,7 +351,8 @@ class DomsNetCDFFormatter:
         dataset.standard_name_vocabulary = "CF Standard Name Table v27", "BODC controlled vocabulary"
         dataset.cdm_data_type = "Point/Profile, Swath/Grid"
         dataset.processing_level = "4"
-        dataset.platform = "Endeavor"
+
+        # dataset.platform = "Endeavor"
         dataset.instrument = "Endeavor on-board sea-bird SBE 9/11 CTD"
         dataset.project = "Distributed Oceanographic Matchup System (DOMS)"
         dataset.keywords_vocabulary = "NASA Global Change Master Directory (GCMD) Science Keywords"
@@ -560,99 +363,12 @@ class DomsNetCDFFormatter:
         dataset.publisher_name = "NASA PO.DAAC"
         dataset.publisher_email = "podaac@podaac.jpl.nasa.gov"
         dataset.publisher_url = "https://podaac.jpl.nasa.gov"
-        dataset.acknowledgment = "DOMS is a NASA/AIST-funded project.  Grant number ####."
-
-
-class DomsNetCDFFormatterAlt:
-    @staticmethod
-    def create(executionId, results, params, details):
-        t = tempfile.mkstemp(prefix="doms_", suffix=".nc")
-        tempFileName = t[1]
-
-        dataset = Dataset(tempFileName, "w", format="NETCDF4")
-
-        dataset.matchID = executionId
-        dataset.Matchup_TimeWindow = params["timeTolerance"]
-        dataset.Matchup_TimeWindow_Units = "hours"
-
-        dataset.time_coverage_start = datetime.fromtimestamp(params["startTime"] / 1000).strftime('%Y%m%d %H:%M:%S')
-        dataset.time_coverage_end = datetime.fromtimestamp(params["endTime"] / 1000).strftime('%Y%m%d %H:%M:%S')
-        dataset.depth_min = params["depthMin"]
-        dataset.depth_max = params["depthMax"]
-        dataset.platforms = params["platforms"]
-
-        dataset.Matchup_SearchRadius = params["radiusTolerance"]
-        dataset.Matchup_SearchRadius_Units = "m"
-
-        dataset.bounding_box = params["bbox"]
-        dataset.primary = params["primary"]
-        dataset.secondary = ",".join(params["matchup"])
-
-        dataset.Matchup_ParameterPrimary = params["parameter"] if "parameter" in params else ""
-
-        dataset.time_coverage_resolution = "point"
-
-        bbox = geo.BoundingBox(asString=params["bbox"])
-        dataset.geospatial_lat_max = bbox.north
-        dataset.geospatial_lat_min = bbox.south
-        dataset.geospatial_lon_max = bbox.east
-        dataset.geospatial_lon_min = bbox.west
-        dataset.geospatial_lat_resolution = "point"
-        dataset.geospatial_lon_resolution = "point"
-        dataset.geospatial_lat_units = "degrees_north"
-        dataset.geospatial_lon_units = "degrees_east"
-        dataset.geospatial_vertical_min = 0.0
-        dataset.geospatial_vertical_max = params["radiusTolerance"]
-        dataset.geospatial_vertical_units = "m"
-        dataset.geospatial_vertical_resolution = "point"
-        dataset.geospatial_vertical_positive = "down"
-
-        dataset.time_to_complete = details["timeToComplete"]
-        dataset.num_insitu_matched = details["numInSituMatched"]
-        dataset.num_gridded_checked = details["numGriddedChecked"]
-        dataset.num_gridded_matched = details["numGriddedMatched"]
-        dataset.num_insitu_checked = details["numInSituChecked"]
-
-        dataset.date_modified = datetime.now().strftime('%Y%m%d %H:%M:%S')
-        dataset.date_created = datetime.now().strftime('%Y%m%d %H:%M:%S')
-
-        DomsNetCDFFormatterAlt.__addNetCDFConstants(dataset)
-
-        satelliteGroup = dataset.createGroup("SatelliteData")
-        satelliteWriter = DomsNetCDFValueWriter(satelliteGroup)
-
-        insituGroup = dataset.createGroup("InsituData")
-        insituWriter = DomsNetCDFValueWriter(insituGroup)
-
-        matches = DomsNetCDFFormatterAlt.__writeResults(results, satelliteWriter, insituWriter)
-
-        satelliteWriter.commit()
-        insituWriter.commit()
-
-        satDim = dataset.createDimension("satellite_ids", size=None)
-        satVar = dataset.createVariable("satellite_ids", "i4", ("satellite_ids",), chunksizes=(2048,),
-                                        fill_value=-32767)
-
-        satVar[:] = [f[0] for f in matches]
-
-        insituDim = dataset.createDimension("insitu_ids", size=None)
-        insituVar = dataset.createVariable("insitu_ids", "i4", ("insitu_ids",), chunksizes=(2048,),
-                                           fill_value=-32767)
-        insituVar[:] = [f[1] for f in matches]
-
-        dataset.close()
-
-        f = open(tempFileName, "rb")
-        data = f.read()
-        f.close()
-        os.unlink(tempFileName)
-        return data
+        dataset.acknowledgment = "DOMS is a NASA/AIST-funded project. NRA NNH14ZDA001N."
 
     @staticmethod
     def __writeResults(results, satelliteWriter, insituWriter):
         ids = {}
         matches = []
-
         insituIndex = 0
 
         for r in range(0, len(results)):
@@ -665,60 +381,147 @@ class DomsNetCDFFormatterAlt:
                     insituWriter.write(match)
 
                 matches.append((r, ids[match["id"]]))
+                #matches.append((result["id"], match["id"]))
+
+        satelliteWriter.commit("SatelliteData")
+        insituWriter.commit("InsituData")
 
         return matches
-
-    @staticmethod
-    def __addNetCDFConstants(dataset):
-        dataset.bnds = 2
-        dataset.Conventions = "CF-1.6, ACDD-1.3"
-        dataset.title = "DOMS satellite-insitu machup output file"
-        dataset.history = "Processing_Version = V1.0, Software_Name = DOMS, Software_Version = 1.03"
-        dataset.institution = "JPL, FSU, NCAR"
-        dataset.source = "doms.jpl.nasa.gov"
-        dataset.standard_name_vocabulary = "CF Standard Name Table v27", "BODC controlled vocabulary"
-        dataset.cdm_data_type = "Point/Profile, Swath/Grid"
-        dataset.processing_level = "4"
-        dataset.platform = "Endeavor"
-        dataset.instrument = "Endeavor on-board sea-bird SBE 9/11 CTD"
-        dataset.project = "Distributed Oceanographic Matchup System (DOMS)"
-        dataset.keywords_vocabulary = "NASA Global Change Master Directory (GCMD) Science Keywords"
-        dataset.keywords = "Salinity, Upper Ocean, SPURS, CTD, Endeavor, Atlantic Ocean"
-        dataset.creator_name = "NASA PO.DAAC"
-        dataset.creator_email = "podaac@podaac.jpl.nasa.gov"
-        dataset.creator_url = "https://podaac.jpl.nasa.gov/"
-        dataset.publisher_name = "NASA PO.DAAC"
-        dataset.publisher_email = "podaac@podaac.jpl.nasa.gov"
-        dataset.publisher_url = "https://podaac.jpl.nasa.gov"
-        dataset.acknowledgment = "DOMS is a NASA/AIST-funded project.  Grant number ####."
 
 
 class DomsNetCDFValueWriter:
     def __init__(self, group):
-        self.latVar = DomsNetCDFValueWriter.__createDimension(group, "lat", "f4")
-        self.lonVar = DomsNetCDFValueWriter.__createDimension(group, "lon", "f4")
-        self.sstVar = DomsNetCDFValueWriter.__createDimension(group, "sea_water_temperature", "f4")
-        self.timeVar = DomsNetCDFValueWriter.__createDimension(group, "time", "f4")
+        group.createDimension("dim", size=None)
 
+        self.lonVar = DomsNetCDFValueWriter.__createVaraible(group, "lon", "f4")
+        self.latVar = DomsNetCDFValueWriter.__createVaraible(group, "lat", "f4")
+        self.timeVar = DomsNetCDFValueWriter.__createVaraible(group, "time", "f4")
+        self.platformVar = DomsNetCDFValueWriter.__createVaraible(group, "PlatformType", "S1")
+        if group.name == "SatelliteData":
+            self.measurementVar = DomsNetCDFValueWriter.__createVaraible(group, "SatelliteMeasurements", "f4")
+        if group.name == "InsituData":
+            self.measurementVar = DomsNetCDFValueWriter.__createVaraible(group, "InSituMeasurements", "f4")
+            self.depthVar = DomsNetCDFValueWriter.__createVaraible(group, "depth", "f4")
+
+        self.depth = []
         self.lat = []
         self.lon = []
-        self.sst = []
         self.time = []
+        self.platform = []
+        self.measurements = []
 
     def write(self, value):
         self.lat.append(value["y"])
         self.lon.append(value["x"])
         self.time.append(value["time"])
-        self.sst.append(value["sea_water_temperature"])
+        self.platform.append(value["platform"])
+        self.measurements.append(value["sea_water_salinity"])
 
-    def commit(self):
+        self.depth.append(value["sea_water_salinity_depth"])
+
+    def commit(self, group):
         self.latVar[:] = self.lat
         self.lonVar[:] = self.lon
-        self.sstVar[:] = self.sst
         self.timeVar[:] = self.time
+        self.measurementVar[:] = self.measurements
+
+        self.platform = np.asarray(self.platform)
+        self.platform = self.platform.astype('S18')
+        self.platformVar._Encoding = 'ascii'
+        self.platformVar[:] = self.platform
+
+        if group == "InsituData":
+            self.depthVar[:] = self.depth
 
     @staticmethod
-    def __createDimension(group, name, type):
-        dim = group.createDimension(name, size=None)
-        var = group.createVariable(name, type, (name,), chunksizes=(2048,), fill_value=-32767.0)
+    def __createVaraible(group, name, type):
+        if name == "PlatformType":
+            group.createDimension("nchar", size=18)
+            var = group.createVariable(name, type, ("dim", "nchar"), fill_value=-32767.0)
+        else:
+            var = group.createVariable(name, type, ("dim",), chunksizes=(2048,), fill_value=-32767.0)
+
+        if name == "lon":
+            DomsNetCDFValueWriter.__enrichLon(var)
+        elif name == "lon_bnds":
+            DomsNetCDFValueWriter.__enrichLonBounds(var)
+        elif name == "lat":
+            DomsNetCDFValueWriter.__enrichLat(var)
+        elif name == "lon_bnds":
+            DomsNetCDFValueWriter.__enrichLatBounds(var)
+        elif name == "time":
+            DomsNetCDFValueWriter.__enrichTime(var)
+        elif name == "time_bnds":
+            DomsNetCDFValueWriter.__enrichTimeBounds(var)
+        elif name == "SatelliteMeasurements":
+            DomsNetCDFValueWriter.__enrichSSSMeasurements(var)
+        elif name == "InSituMeasurements":
+            DomsNetCDFValueWriter.__enrichSWSMeasurements(var)
+        elif name == "depth":
+            DomsNetCDFValueWriter.__enrichDepth(var)
+        # elif name == "MetaString":
+        #     DomsNetCDFValueWriter.__enrichMetaString(var)
+
         return var
+
+    @staticmethod
+    def __enrichLon(var):
+        var.long_name = "Longitude"
+        var.standard_name = "Longitude"
+        var.axis = "X"
+        var.units = "degrees_east"
+        var.valid_min = -180.0
+        var.valid_max = 180.0
+
+    @staticmethod
+    def __enrichLat(var):
+        var.long_name = "Latitude"
+        var.standard_name = "Latitude"
+        var.axis = "Y"
+        var.units = "degrees_north"
+        var.valid_min = -90.0
+        var.valid_max = 90.0
+
+    @staticmethod
+    def __enrichTime(var):
+        var.long_name = "Time"
+        var.standard_name = "time"
+        var.axis = "T"
+        var.units = "seconds since 1970-01-01 00:00:00 0:00"
+
+    @staticmethod
+    def __enrichSSSMeasurements(var):
+        var.long_name = "sea surface salinity"
+        var.standard_name = "sea_surface_salinity"
+        var.units = "1e-3"
+        var.valid_min = 30.0
+        var.valid_max = 40.0
+        var.coordinates = "lon lat time"
+        var.metadata_link = "http://..."
+
+    @staticmethod
+    def __enrichSWSMeasurements(var):
+        var.long_name = "sea water salinity"
+        var.standard_name = "sea_water_salinity"
+        var.units = "1e-3"
+        var.valid_min = 30.0
+        var.valid_max = 40.0
+        var.coordinates = "lon lat depth time"
+        var.metadata_link = "http://..."
+
+    @staticmethod
+    def __enrichDepth(var):
+        var.valid_min = 0.0
+        var.valid_max = 6000.0
+        var.long_name = "Depth"
+        var.standard_name = "depth"
+        var.axis = "Z"
+        var.positive = "Down"
+
+    # @staticmethod
+    # def __enrichMetaString(var):
+    #     var.grid_mapping_name = "latitude_longitude"
+    #     var.longitude_of_prime_meridian = 0.0
+    #     var.semi_major_axis = 6378137.0
+    #     var.inverse_flattening = 298.25723
+    #     var.comment = "Latitude-Longitude on WGS84 datum"
