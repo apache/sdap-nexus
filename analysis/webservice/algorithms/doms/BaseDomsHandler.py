@@ -252,8 +252,8 @@ class DomsCSVFormatter:
             {"Global Attribute": "date_modified", "Value": datetime.utcnow().replace(tzinfo=UTC).strftime(ISO_8601)},
             {"Global Attribute": "date_created", "Value": datetime.utcnow().replace(tzinfo=UTC).strftime(ISO_8601)},
 
-            {"Global Attribute": "URI_Matchup", "Value": "http://webservice matchup query request"},
-            {"Global Attribute": "URI_Subset", "Value": "http://webservice subsetting query request"},
+            {"Global Attribute": "URI_Matchup", "Value": "http://{webservice}/domsresults?id=" + executionId + "&output=CSV"},
+            # {"Global Attribute": "URI_Subset", "Value": "http://webservice subsetting query request"},
         ]
 
         writer = csv.DictWriter(csvfile, sorted(next(iter(global_attrs)).keys()))
@@ -302,13 +302,24 @@ class DomsNetCDFFormatter:
         dataset.Matchup_TimeWindow_Units = "hours"
         dataset.DOMS_SearchRadius = params["radiusTolerance"]
         dataset.DOMS_SearchRadius_Units = "m"
-        dataset.URI_Subset = "http://webservice subsetting query request"
-        dataset.URI_Matchup = "http://webservice matchup query request"
+        # dataset.URI_Subset = "http://webservice subsetting query request"
+        dataset.URI_Matchup = "http://{webservice}/domsresults?id=" + executionId + "&output=NETCDF"
         dataset.DOMS_ParameterPrimary = params["parameter"] if "parameter" in params else ""
         dataset.DOMS_platforms = params["platforms"]
         dataset.DOMS_primary = params["primary"]
         dataset.DOMS_time_to_complete = details["timeToComplete"]
         dataset.DOMS_time_to_complete_units = "seconds"
+
+        insituDatasets = params["matchup"].split(",")
+        insituLinks = set()
+        for insitu in insituDatasets:
+            if insitu == "samos":
+                insituLinks.add("http://samos.coaps.fsu.edu/html/nav.php?s=2")
+            if insitu == "icoads":
+                insituLinks.add("https://rda.ucar.edu/datasets/ds548.1/")
+            if insitu == "spurs":
+                insituLinks.add("https://podaac.jpl.nasa.gov/spurs")
+        dataset.DOMS_DatasetMetadata = ', '.join(insituLinks)
 
         platforms = set()
         for primaryValue in results:
@@ -392,46 +403,103 @@ class DomsNetCDFFormatter:
 class DomsNetCDFValueWriter:
     def __init__(self, group):
         group.createDimension("dim", size=None)
+        self.group = group
 
-        self.lonVar = DomsNetCDFValueWriter.__createVaraible(group, "lon", "f4")
-        self.latVar = DomsNetCDFValueWriter.__createVaraible(group, "lat", "f4")
-        self.timeVar = DomsNetCDFValueWriter.__createVaraible(group, "time", "f4")
-        self.platformVar = DomsNetCDFValueWriter.__createVaraible(group, "PlatformType", "S1")
-        if group.name == "SatelliteData":
-            self.measurementVar = DomsNetCDFValueWriter.__createVaraible(group, "SatelliteMeasurements", "f4")
-        if group.name == "InsituData":
-            self.measurementVar = DomsNetCDFValueWriter.__createVaraible(group, "InSituMeasurements", "f4")
-            self.depthVar = DomsNetCDFValueWriter.__createVaraible(group, "depth", "f4")
-
-        self.depth = []
         self.lat = []
         self.lon = []
         self.time = []
-        self.platform = []
-        self.measurements = []
+        # self.platform = []
+        self.sea_water_salinity = []
+        self.sea_water_salinity_depth = []
+        self.wind_speed = []
+        self.wind_u = []
+        self.wind_v = []
+        self.wind_direction = []
+        self.sea_water_temperature = []
+        self.sea_water_temperature_depth = []
 
     def write(self, value):
         self.lat.append(value["y"])
         self.lon.append(value["x"])
         self.time.append(value["time"])
-        self.platform.append(value["platform"])
-        self.measurements.append(value["sea_water_salinity"])
-
-        self.depth.append(value["sea_water_salinity_depth"])
+        # self.platform.append(value["platform"])
+        self.sea_water_salinity.append(value["sea_water_salinity"])
+        self.sea_water_salinity_depth.append(value["sea_water_salinity_depth"])
+        self.wind_speed.append(value["wind_speed"])
+        self.wind_u.append(value["wind_u"])
+        self.wind_v.append(value["wind_v"])
+        self.wind_direction.append(value["wind_direction"])
+        self.sea_water_temperature.append(value["sea_water_temperature"])
+        self.sea_water_temperature_depth.append(value["sea_water_temperature_depth"])
 
     def commit(self, group):
-        self.latVar[:] = self.lat
-        self.lonVar[:] = self.lon
-        self.timeVar[:] = self.time
-        self.measurementVar[:] = self.measurements
+        print("length of depth", len(self.sea_water_salinity_depth))
+        #
+        # Create variables
+        #
+        lonVar = DomsNetCDFValueWriter.__createVaraible(self.group, "lon", "f4")
+        latVar = DomsNetCDFValueWriter.__createVaraible(self.group, "lat", "f4")
+        timeVar = DomsNetCDFValueWriter.__createVaraible(self.group, "time", "f4")
+        # platformVar = DomsNetCDFValueWriter.__createVaraible(self.group, "PlatformType", "S1")
 
-        self.platform = np.asarray(self.platform)
-        self.platform = self.platform.astype('S18')
-        self.platformVar._Encoding = 'ascii'
-        self.platformVar[:] = self.platform
+        latVar[:] = self.lat
+        lonVar[:] = self.lon
+        timeVar[:] = self.time
+        # self.platform = np.asarray(self.platform)
+        # self.platform = self.platform.astype('S18')
+        # platformVar._Encoding = 'ascii'
+        # platformVar[:] = self.platform
+
+        if self.sea_water_salinity.count(None) != len(self.sea_water_salinity):
+            if self.group.name == "SatelliteData":
+                sssVar = DomsNetCDFValueWriter.__createVaraible(self.group, "SeaWaterSalinity", "f4")
+            else:  # group.name == "InsituData"
+                sssVar = DomsNetCDFValueWriter.__createVaraible(self.group, "SeaSurfaceSalinity", "f4")
+                depthVar = DomsNetCDFValueWriter.__createVaraible(self.group, "SalinityDepth", "f4")
+                depthVar[:] = self.sea_water_salinity_depth
+            sssVar[:] = self.sea_water_salinity
+
+        if self.wind_speed.count(None) != len(self.wind_speed):
+            windSpeedVar = DomsNetCDFValueWriter.__createVaraible(self.group, "WindSpeed", "f4")
+            windSpeedVar[:] = self.wind_speed
+
+        if self.wind_u.count(None) != len(self.wind_u):
+            windUVar = DomsNetCDFValueWriter.__createVaraible(self.group, "WindU", "f4")
+            windUVar[:] = self.wind_u
+
+        if self.wind_v.count(None) != len(self.wind_v):
+            windVVar = DomsNetCDFValueWriter.__createVaraible(self.group, "WindV", "f4")
+            windVVar[:] = self.wind_v
+
+        if self.wind_direction.count(None) != len(self.wind_direction):
+            windDirVar = DomsNetCDFValueWriter.__createVaraible(self.group, "WindDirection", "f4")
+            windDirVar[:] = self.wind_direction
+
+        if self.sea_water_temperature.count(None) != len(self.sea_water_temperature):
+            if self.group.name == "SatelliteData":
+                tempVar = DomsNetCDFValueWriter.__createVaraible(self.group, "SeaWaterTemp", "f4")
+            else:
+                tempVar = DomsNetCDFValueWriter.__createVaraible(self.group, "SeaSurfaceTemp", "f4")
+                tempDepthVar = DomsNetCDFValueWriter.__createVaraible(self.group, "TemperatureDepth", "f4")
+                tempDepthVar[:] = self.sea_water_temperature_depth
+            tempVar[:] = self.sea_water_temperature
+
+
+        #
+        # Enrich variables with attributes
+        #
+        self.__enrichLon(lonVar, min(self.lon), max(self.lon))
+        self.__enrichLat(latVar, min(self.lat), max(self.lat))
+        self.__enrichTime(timeVar)
+
+        if group == "SatelliteData":
+            self.__enrichSSSMeasurements(sssVar, min(self.sea_water_salinity), max(self.sea_water_salinity))
 
         if group == "InsituData":
-            self.depthVar[:] = self.depth
+            self.__enrichSWSMeasurements(sssVar, min(self.sea_water_salinity), max(self.sea_water_salinity))
+            self.__enrichDepth(depthVar, min(self.sea_water_salinity_depth), max(self.sea_water_salinity_depth))
+
+
 
     @staticmethod
     def __createVaraible(group, name, type):
@@ -439,48 +507,27 @@ class DomsNetCDFValueWriter:
             group.createDimension("nchar", size=18)
             var = group.createVariable(name, type, ("dim", "nchar"), fill_value=-32767.0)
         else:
-            var = group.createVariable(name, type, ("dim",), chunksizes=(2048,), fill_value=-32767.0)
-
-        if name == "lon":
-            DomsNetCDFValueWriter.__enrichLon(var)
-        elif name == "lon_bnds":
-            DomsNetCDFValueWriter.__enrichLonBounds(var)
-        elif name == "lat":
-            DomsNetCDFValueWriter.__enrichLat(var)
-        elif name == "lon_bnds":
-            DomsNetCDFValueWriter.__enrichLatBounds(var)
-        elif name == "time":
-            DomsNetCDFValueWriter.__enrichTime(var)
-        elif name == "time_bnds":
-            DomsNetCDFValueWriter.__enrichTimeBounds(var)
-        elif name == "SatelliteMeasurements":
-            DomsNetCDFValueWriter.__enrichSSSMeasurements(var)
-        elif name == "InSituMeasurements":
-            DomsNetCDFValueWriter.__enrichSWSMeasurements(var)
-        elif name == "depth":
-            DomsNetCDFValueWriter.__enrichDepth(var)
-        # elif name == "MetaString":
-        #     DomsNetCDFValueWriter.__enrichMetaString(var)
+            var = group.createVariable(name, type, ("dim",), fill_value=-32767.0)
 
         return var
 
     @staticmethod
-    def __enrichLon(var):
+    def __enrichLon(var, var_min, var_max):
         var.long_name = "Longitude"
         var.standard_name = "Longitude"
         var.axis = "X"
         var.units = "degrees_east"
-        var.valid_min = -180.0
-        var.valid_max = 180.0
+        var.valid_min = var_min
+        var.valid_max = var_max
 
     @staticmethod
-    def __enrichLat(var):
+    def __enrichLat(var, var_min, var_max):
         var.long_name = "Latitude"
         var.standard_name = "Latitude"
         var.axis = "Y"
         var.units = "degrees_north"
-        var.valid_min = -90.0
-        var.valid_max = 90.0
+        var.valid_min = var_min
+        var.valid_max = var_max
 
     @staticmethod
     def __enrichTime(var):
@@ -490,38 +537,30 @@ class DomsNetCDFValueWriter:
         var.units = "seconds since 1970-01-01 00:00:00 0:00"
 
     @staticmethod
-    def __enrichSSSMeasurements(var):
+    def __enrichSSSMeasurements(var, var_min, var_max):
         var.long_name = "sea surface salinity"
         var.standard_name = "sea_surface_salinity"
         var.units = "1e-3"
-        var.valid_min = 30.0
-        var.valid_max = 40.0
+        var.valid_min = var_min
+        var.valid_max = var_max
         var.coordinates = "lon lat time"
-        var.metadata_link = "http://..."
 
     @staticmethod
-    def __enrichSWSMeasurements(var):
+    def __enrichSWSMeasurements(var, var_min, var_max):
         var.long_name = "sea water salinity"
         var.standard_name = "sea_water_salinity"
         var.units = "1e-3"
-        var.valid_min = 30.0
-        var.valid_max = 40.0
+        var.valid_min = var_min
+        var.valid_max = var_max
         var.coordinates = "lon lat depth time"
-        var.metadata_link = "http://..."
 
     @staticmethod
-    def __enrichDepth(var):
-        var.valid_min = 0.0
-        var.valid_max = 6000.0
+    def __enrichDepth(var, var_min, var_max):
+        print ("valid min is", var_min)
+        var.valid_min = var_min if var_min is not None else 0
+        var.valid_max = var_max if var_max is not None else 0
         var.long_name = "Depth"
         var.standard_name = "depth"
         var.axis = "Z"
         var.positive = "Down"
 
-    # @staticmethod
-    # def __enrichMetaString(var):
-    #     var.grid_mapping_name = "latitude_longitude"
-    #     var.longitude_of_prime_meridian = 0.0
-    #     var.semi_major_axis = 6378137.0
-    #     var.inverse_flattening = 298.25723
-    #     var.comment = "Latitude-Longitude on WGS84 datum"
