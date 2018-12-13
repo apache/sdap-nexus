@@ -49,7 +49,7 @@ class DomsResultsRetrievalHandler(BaseDomsHandler.BaseDomsQueryHandler):
         #with ResultsStorage.ResultsRetrieval() as storage:
         #    params, stats, data = storage.retrieveResults(execution_id, trim_data=simple_results)
 
-        with open('webservice/algorithms/doms/matchup.json') as f:
+        with open('webservice/algorithms/doms/matchupAVHRR.json') as f:
             json_data = json.load(f)
 
         params = json_data["params"]
@@ -60,8 +60,8 @@ class DomsResultsRetrievalHandler(BaseDomsHandler.BaseDomsQueryHandler):
         params["startTime"] = datetime.datetime.utcfromtimestamp(params["startTime"])
         params["endTime"] = datetime.datetime.utcfromtimestamp(params["endTime"])
 
-        stats["numInSituChecked"] = 0
-        stats["numGriddedChecked"] = 0
+        # stats["numInSituChecked"] = 0
+        # stats["numGriddedChecked"] = 0
 
         return BaseDomsHandler.DomsQueryResults(results=data, args=params, details=stats, bounds=None, count=None,
                                                 computeOptions=None, executionId=execution_id)
