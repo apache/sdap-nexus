@@ -345,7 +345,6 @@ class DomsNetCDFFormatter:
             platforms.add(primaryValue['platform'])
             for match in primaryValue['matches']:
                 platforms.add(match['platform'])
-
         dataset.platform = ', '.join(platforms)
 
         #Create Satellite group, variables, and attributes
@@ -381,9 +380,6 @@ class DomsNetCDFFormatter:
         dataset.standard_name_vocabulary = "CF Standard Name Table v27", "BODC controlled vocabulary"
         dataset.cdm_data_type = "Point/Profile, Swath/Grid"
         dataset.processing_level = "4"
-
-        # dataset.platform = "Endeavor"
-        # dataset.instrument = "Endeavor on-board sea-bird SBE 9/11 CTD"
         dataset.project = "Distributed Oceanographic Matchup System (DOMS)"
         dataset.keywords_vocabulary = "NASA Global Change Master Directory (GCMD) Science Keywords"
         dataset.keywords = "Salinity, Upper Ocean, SPURS, CTD, Endeavor, Atlantic Ocean"
@@ -411,7 +407,6 @@ class DomsNetCDFFormatter:
                     insituWriter.write(match)
 
                 matches.append((r, ids[match["id"]]))
-                #matches.append((result["id"], match["id"]))
 
         satelliteWriter.commit("SatelliteData")
         insituWriter.commit("InsituData")
@@ -427,7 +422,6 @@ class DomsNetCDFValueWriter:
         self.lat = []
         self.lon = []
         self.time = []
-        # self.platform = []
         self.sea_water_salinity = []
         self.sea_water_salinity_depth = []
         self.wind_speed = []
@@ -453,27 +447,17 @@ class DomsNetCDFValueWriter:
 
 
     def commit(self, group):
-        print("length of depth", len(self.sea_water_salinity_depth))
         #
-        # Create variables
+        # Create variables, add data, and enrich with attributes
         #
         lonVar = DomsNetCDFValueWriter.__createVaraible(self.group, "lon", "f4")
         latVar = DomsNetCDFValueWriter.__createVaraible(self.group, "lat", "f4")
         timeVar = DomsNetCDFValueWriter.__createVaraible(self.group, "time", "f4")
-        # platformVar = DomsNetCDFValueWriter.__createVaraible(self.group, "PlatformType", "S1")
 
         latVar[:] = self.lat
         lonVar[:] = self.lon
-        print(self.time)
         timeVar[:] = self.time
-        # self.platform = np.asarray(self.platform)
-        # self.platform = self.platform.astype('S18')
-        # platformVar._Encoding = 'ascii'
-        # platformVar[:] = self.platform
 
-        #
-        # Enrich variables with attributes
-        #
         self.__enrichLon(lonVar, min(self.lon), max(self.lon))
         self.__enrichLat(latVar, min(self.lat), max(self.lat))
         self.__enrichTime(timeVar)
@@ -489,7 +473,6 @@ class DomsNetCDFValueWriter:
                 self.__enrichDepth(depthVar, min(self.sea_water_salinity_depth), max(self.sea_water_salinity_depth))
                 depthVar[:] = self.sea_water_salinity_depth
             sssVar[:] = self.sea_water_salinity
-
 
         if self.wind_speed.count(None) != len(self.wind_speed):
             windSpeedVar = DomsNetCDFValueWriter.__createVaraible(self.group, "WindSpeed", "f4")
@@ -509,18 +492,19 @@ class DomsNetCDFValueWriter:
         if self.wind_direction.count(None) != len(self.wind_direction):
             windDirVar = DomsNetCDFValueWriter.__createVaraible(self.group, "WindDirection", "f4")
             windDirVar[:] = self.wind_direction
+            self.__enrichWindDir(windDirVar)
 
         if self.sea_water_temperature.count(None) != len(self.sea_water_temperature):
             if self.group.name == "SatelliteData":
                 tempVar = DomsNetCDFValueWriter.__createVaraible(self.group, "SeaSurfaceTemp", "f4")
+                self.__enrichSurfaceTemp(tempVar, min(self.sea_water_temperature), max(self.sea_water_temperature))
             else:
                 tempVar = DomsNetCDFValueWriter.__createVaraible(self.group, "SeaWaterTemp", "f4")
-                self.__enrichTemp(tempVar, min(self.sea_water_temperature), max(self.sea_water_temperature))
+                self.__enrichWaterTemp(tempVar, min(self.sea_water_temperature), max(self.sea_water_temperature))
                 tempDepthVar = DomsNetCDFValueWriter.__createVaraible(self.group, "TemperatureDepth", "f4")
                 tempDepthVar[:] = self.sea_water_temperature_depth
+                self.__enrichDepth(tempDepthVar, min(self.sea_water_temperature_depth), max(self.sea_water_temperature_depth))
             tempVar[:] = self.sea_water_temperature
-
-
 
 
     @staticmethod
@@ -614,10 +598,26 @@ class DomsNetCDFValueWriter:
         var.coordinates = "lon lat depth time"
 
     @staticmethod
-    def __enrichTemp(var, var_min, var_max):
+    def __enrichWaterTemp(var, var_min, var_max):
         var.long_name = "Sea water temperature"
         var.standard_name = "sea_water_temperature"
         var.units = "degree_C"
         var.valid_min = var_min
         var.valid_max = var_max
         var.coordinates = "lon lat depth time"
+
+    @staticmethod
+    def __enrichSurfaceTemp(var, var_min, var_max):
+        var.long_name = "Sea surface temperature"
+        var.standard_name = "sea_surface_temperature"
+        var.units = "degree_C"
+        var.valid_min = var_min
+        var.valid_max = var_max
+        var.coordinates = "lon lat depth time"
+
+    @staticmethod
+    def __enrichWindDir(var):
+        var.long_name = "Wind direction"
+        var.standard_name = "wind_direction"
+        var.units = "degree"
+        var.coordinates = "lon lat time"
