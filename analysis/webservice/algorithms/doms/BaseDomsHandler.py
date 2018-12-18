@@ -132,15 +132,37 @@ class DomsCSVFormatter:
             "wind_u (m s-1)", "wind_v (m s-1)",
             # Match
             "id", "source", "lon (degrees_east)", "lat (degrees_north)", "time", "platform",
-            "sea_water_salinity_depth (m)", "sea_water_salinity (1e-3)",
-            "sea_water_temperature_depth (m)", "sea_water_temperature (degree_C)", "wind_speed (m s-1)",
+            "depth (m)", "sea_water_salinity (1e-3)",
+            "sea_water_temperature (degree_C)", "wind_speed (m s-1)",
             "wind_direction", "wind_u (m s-1)", "wind_v (m s-1)"
         ]
 
         writer.writerow(headers)
 
+        #
+        # Compress multiple depth variables into one depth array
+        #
+        depthAggregate = []
         for primaryValue in results:
             for matchup in primaryValue["matches"]:
+                if matchup.get("sea_water_salinity_depth") is not None:
+                    depthAggregate.append(matchup.get("sea_water_salinity_depth"))
+                elif matchup.get("sea_water_temperature_depth") is not None:
+                    depthAggregate.append(matchup.get("sea_water_temperature_depth"))
+                else:
+                    depthAggregate.append(None)
+
+
+        #
+        # If there is no depth data, fill all values to 0
+        #
+        if depthAggregate.count(None) == len(depthAggregate):
+            depthAggregate = [0 for x in range(len(depthAggregate))]
+        depthTrack = 0;
+
+        for primaryValue in results:
+            for matchup in primaryValue["matches"]:
+                print(depthAggregate[depthTrack])
                 row = [
                     # Primary
                     primaryValue["id"], primaryValue["source"], str(primaryValue["x"]), str(primaryValue["y"]),
@@ -152,12 +174,12 @@ class DomsCSVFormatter:
                     # Matchup
                     matchup["id"], matchup["source"], matchup["x"], matchup["y"],
                     matchup["time"].strftime(ISO_8601), matchup["platform"],
-                    matchup.get("sea_water_salinity_depth", ""), matchup.get("sea_water_salinity", ""),
-                    matchup.get("sea_water_temperature_depth", ""), matchup.get("sea_water_temperature", ""),
+                    depthAggregate[depthTrack], matchup.get("sea_water_salinity", ""),
+                    matchup.get("sea_water_temperature", ""),
                     matchup.get("wind_speed", ""), matchup.get("wind_direction", ""),
                     matchup.get("wind_u", ""), matchup.get("wind_v", ""),
                 ]
-
+                depthTrack = depthTrack + 1
                 writer.writerow(row)
 
     @staticmethod
@@ -407,26 +429,33 @@ class DomsNetCDFValueWriter:
         self.lon = []
         self.time = []
         self.sea_water_salinity = []
-        self.sea_water_salinity_depth = []
         self.wind_speed = []
         self.wind_u = []
         self.wind_v = []
         self.wind_direction = []
         self.sea_water_temperature = []
-        self.sea_water_temperature_depth = []
+        self.depth = []
 
     def addData(self, value):
         self.lat.append(value.get("y", None))
         self.lon.append(value.get("x", None))
         self.time.append(time.mktime(value.get("time").timetuple()))
         self.sea_water_salinity.append(value.get("sea_water_salinity", None))
-        self.sea_water_salinity_depth.append(value.get("sea_water_salinity_depth", None))
         self.wind_speed.append(value.get("wind_speed", None))
         self.wind_u.append(value.get("wind_u", None))
         self.wind_v.append(value.get("wind_v", None))
         self.wind_direction.append(value.get("wind_direction", None))
         self.sea_water_temperature.append(value.get("sea_water_temperature", None))
-        self.sea_water_temperature_depth.append(value.get("sea_water_temperature_depth", None))
+
+        #
+        # Compress multiple depth variables into one depth array
+        #
+        if value.get("sea_water_temperature_depth") is not None:
+            self.depth.append(value.get("sea_water_temperature_depth"))
+        elif value.get("sea_water_salinity_depth") is not None:
+            self.depth.append(value.get("sea_water_salinity_depth"))
+        else:
+            self.depth.append(None)
 
     def writeGroup(self):
         #
@@ -450,26 +479,23 @@ class DomsNetCDFValueWriter:
                 self.__enrichSSSMeasurements(sssVar, min(self.sea_water_salinity), max(self.sea_water_salinity))
             else:  # group.name == "InsituData"
                 sssVar = self.group.createVariable("SeaWaterSalinity", "f4", ("dim",), fill_value=-32767.0)
-                depthVar = self.group.createVariable("SalinityDepth", "f4", ("dim",), fill_value=-32767.0)
                 self.__enrichSWSMeasurements(sssVar, min(self.sea_water_salinity), max(self.sea_water_salinity))
-                self.__enrichDepth(depthVar, min(self.sea_water_salinity_depth), max(self.sea_water_salinity_depth))
-                depthVar[:] = self.sea_water_salinity_depth
             sssVar[:] = self.sea_water_salinity
 
         if self.wind_speed.count(None) != len(self.wind_speed):
             windSpeedVar = self.group.createVariable("WindSpeed", "f4", ("dim",), fill_value=-32767.0)
-            self.__enrichWindSpeed(windSpeedVar, min(self.wind_speed), max(self.wind_speed))
+            self.__enrichWindSpeed(windSpeedVar, self.__calcMin(self.wind_speed), max(self.wind_speed))
             windSpeedVar[:] = self.wind_speed
 
         if self.wind_u.count(None) != len(self.wind_u):
             windUVar = self.group.createVariable("WindU", "f4", ("dim",), fill_value=-32767.0)
             windUVar[:] = self.wind_u
-            self.__enrichWindU(windUVar, min(self.wind_u), max(self.wind_u))
+            self.__enrichWindU(windUVar, self.__calcMin(self.wind_u), max(self.wind_u))
 
         if self.wind_v.count(None) != len(self.wind_v):
             windVVar = self.group.createVariable("WindV", "f4", ("dim",), fill_value=-32767.0)
             windVVar[:] = self.wind_v
-            self.__enrichWindV(windVVar, min(self.wind_v), max(self.wind_v))
+            self.__enrichWindV(windVVar, self.__calcMin(self.wind_v), max(self.wind_v))
 
         if self.wind_direction.count(None) != len(self.wind_direction):
             windDirVar = self.group.createVariable("WindDirection", "f4", ("dim",), fill_value=-32767.0)
@@ -479,16 +505,34 @@ class DomsNetCDFValueWriter:
         if self.sea_water_temperature.count(None) != len(self.sea_water_temperature):
             if self.group.name == "SatelliteData":
                 tempVar = self.group.createVariable("SeaSurfaceTemp", "f4", ("dim",), fill_value=-32767.0)
-                self.__enrichSurfaceTemp(tempVar, min(self.sea_water_temperature), max(self.sea_water_temperature))
+                self.__enrichSurfaceTemp(tempVar, self.__calcMin(self.sea_water_temperature), max(self.sea_water_temperature))
             else:
                 tempVar = self.group.createVariable("SeaWaterTemp", "f4", ("dim",), fill_value=-32767.0)
-                self.__enrichWaterTemp(tempVar, min(self.sea_water_temperature), max(self.sea_water_temperature))
-                tempDepthVar = self.group.createVariable("TemperatureDepth", "f4", ("dim",), fill_value=-32767.0)
-                tempDepthVar[:] = self.sea_water_temperature_depth
-                self.__enrichDepth(tempDepthVar, min(self.sea_water_temperature_depth), max(self.sea_water_temperature_depth))
+                self.__enrichWaterTemp(tempVar, self.__calcMin(self.sea_water_temperature), max(self.sea_water_temperature))
             tempVar[:] = self.sea_water_temperature
 
+        if self.group.name == "InsituData":
+            depthVar = self.group.createVariable("Depth", "f4", ("dim",), fill_value=-32767.0)
 
+            if self.depth.count(None) != len(self.depth):
+                self.__enrichDepth(depthVar, self.__calcMin(self.depth), max(self.depth))
+                depthVar[:] = self.depth
+            else:
+                # If depth has no data, set all values to 0
+                tempDepth = [0 for x in range(len(self.depth))]
+                depthVar[:] = tempDepth
+
+    #
+    # Lists may include 'None" values, to calc min these must be filtered out
+    #
+    @staticmethod
+    def __calcMin(var):
+        return min(x for x in var if x is not None)
+
+
+    #
+    # Add attributes to each variable
+    #
     @staticmethod
     def __enrichLon(var, var_min, var_max):
         var.long_name = "Longitude"
@@ -534,8 +578,8 @@ class DomsNetCDFValueWriter:
 
     @staticmethod
     def __enrichDepth(var, var_min, var_max):
-        var.valid_min = var_min if var_min is not None else 0
-        var.valid_max = var_max if var_max is not None else 0
+        var.valid_min = var_min
+        var.valid_ax = var_max
         var.units = "m"
         var.long_name = "Depth"
         var.standard_name = "depth"
@@ -589,7 +633,7 @@ class DomsNetCDFValueWriter:
 
     @staticmethod
     def __enrichWindDir(var):
-        var.long_name = "Wind direction"
-        var.standard_name = "wind_direction"
+        var.long_name = "Wind from direction"
+        var.standard_name = "wind_from_direction"
         var.units = "degree"
-        var.coordinates = "lon lat time"
+        var.coordinates = "lon lat depth time"
