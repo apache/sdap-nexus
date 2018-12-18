@@ -151,8 +151,6 @@ class DomsCSVFormatter:
                     depthAggregate.append(matchup.get("sea_water_temperature_depth"))
                 else:
                     depthAggregate.append(None)
-
-
         #
         # If there is no depth data, fill all values to 0
         #
@@ -162,7 +160,6 @@ class DomsCSVFormatter:
 
         for primaryValue in results:
             for matchup in primaryValue["matches"]:
-                print(depthAggregate[depthTrack])
                 row = [
                     # Primary
                     primaryValue["id"], primaryValue["source"], str(primaryValue["x"]), str(primaryValue["y"]),
@@ -579,7 +576,7 @@ class DomsNetCDFValueWriter:
     @staticmethod
     def __enrichDepth(var, var_min, var_max):
         var.valid_min = var_min
-        var.valid_ax = var_max
+        var.valid_max = var_max
         var.units = "m"
         var.long_name = "Depth"
         var.standard_name = "depth"
@@ -629,7 +626,7 @@ class DomsNetCDFValueWriter:
         var.units = "degree_C"
         var.valid_min = var_min
         var.valid_max = var_max
-        var.coordinates = "lon lat depth time"
+        var.coordinates = "lon lat time"
 
     @staticmethod
     def __enrichWindDir(var):
