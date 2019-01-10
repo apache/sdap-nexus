@@ -216,12 +216,8 @@ class DomsCSVFormatter:
         insituDatasets = params["matchup"]
         insituLinks = set()
         for insitu in insituDatasets:
-            if insitu == "samos":
-                insituLinks.add("http://samos.coaps.fsu.edu/html/nav.php?s=2")
-            if insitu == "icoads":
-                insituLinks.add("https://rda.ucar.edu/datasets/ds548.1/")
-            if insitu == "spurs":
-                insituLinks.add("https://podaac.jpl.nasa.gov/spurs")
+            insituLinks.add(config.METADATA_LINKS[insitu])
+
 
         global_attrs = [
             {"Global Attribute": "Platform", "Value": ', '.join(platforms)},
@@ -322,16 +318,10 @@ class DomsNetCDFFormatter:
         dataset.DOMS_time_to_complete = details["timeToComplete"]
         dataset.DOMS_time_to_complete_units = "seconds"
 
-        # insituDatasets = params["matchup"].split(",")
         insituDatasets = params["matchup"]
         insituLinks = set()
         for insitu in insituDatasets:
-            if insitu == "samos":
-                insituLinks.add("http://samos.coaps.fsu.edu/html/nav.php?s=2")
-            if insitu == "icoads":
-                insituLinks.add("https://rda.ucar.edu/datasets/ds548.1/")
-            if insitu == "spurs":
-                insituLinks.add("https://podaac.jpl.nasa.gov/spurs")
+            insituLinks.add(config.METADATA_LINKS[insitu])
         dataset.DOMS_DatasetMetadata = ', '.join(insituLinks)
 
         platforms = set()
