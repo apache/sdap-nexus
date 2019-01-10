@@ -189,7 +189,9 @@ class DomsCSVFormatter:
             {"Global Attribute": "keywords_vocabulary",
              "Value": "NASA Global Change Master Directory (GCMD) Science Keywords"},
             # TODO What should the keywords be?
-            {"Global Attribute": "keywords", "Value": ""},
+            {"Global Attribute": "keywords", "Value": "SATELLITES, OCEAN PLATFORMS, SHIPS, BUOYS, MOORINGS, AUVS, ROV, "
+                                                      "NASA/JPL/PODAAC, FSU/COAPS, UCAR/NCAR, SALINITY, "
+                                                      "SEA SURFACE TEMPERATURE, SURFACE WINDS"},
             {"Global Attribute": "creator_name", "Value": "NASA PO.DAAC"},
             {"Global Attribute": "creator_email", "Value": "podaac@podaac.jpl.nasa.gov"},
             {"Global Attribute": "creator_url", "Value": "https://podaac.jpl.nasa.gov/"},
@@ -369,7 +371,8 @@ class DomsNetCDFFormatter:
         dataset.processing_level = "4"
         dataset.project = "Distributed Oceanographic Matchup System (DOMS)"
         dataset.keywords_vocabulary = "NASA Global Change Master Directory (GCMD) Science Keywords"
-        dataset.keywords = ""
+        dataset.keywords = "SATELLITES, OCEAN PLATFORMS, SHIPS, BUOYS, MOORINGS, AUVS, ROV, NASA/JPL/PODAAC, " \
+                           "FSU/COAPS, UCAR/NCAR, SALINITY, SEA SURFACE TEMPERATURE, SURFACE WINDS"
         dataset.creator_name = "NASA PO.DAAC"
         dataset.creator_email = "podaac@podaac.jpl.nasa.gov"
         dataset.creator_url = "https://podaac.jpl.nasa.gov/"
