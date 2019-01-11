@@ -48,6 +48,12 @@ ENDPOINTS = [
     }
 ]
 
+METADATA_LINKS = {
+    "samos": "http://samos.coaps.fsu.edu/html/nav.php?s=2",
+    "icoads": "https://rda.ucar.edu/datasets/ds548.1/",
+    "spurs": "https://podaac.jpl.nasa.gov/spurs"
+}
+
 import os
 
 try:
@@ -87,6 +93,11 @@ try:
                 "metadataUrl": "http://doms.jpl.nasa.gov/ws/metadata/dataset?shortName=SPURS-2&format=umm-json"
             }
         ]
+        METADATA_LINKS = {
+            "samos": "http://samos.coaps.fsu.edu/html/nav.php?s=2",
+            "icoads": "https://rda.ucar.edu/datasets/ds548.1/",
+            "spurs": "https://podaac.jpl.nasa.gov/spurs"
+        }
 except KeyError:
     pass
 
