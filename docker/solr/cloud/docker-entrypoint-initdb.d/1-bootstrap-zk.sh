@@ -1,3 +1,5 @@
+#!/bin/bash
+
 # Licensed to the Apache Software Foundation (ASF) under one or more
 # contributor license agreements.  See the NOTICE file distributed with
 # this work for additional information regarding copyright ownership.
@@ -12,19 +14,10 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-ARG tag_version=latest
-FROM sdap/solr:${tag_version}
-MAINTAINER Apache SDAP "dev@sdap.apache.org"
 
-USER root
+set -ex
 
-RUN echo "${SOLR_USER} ALL=(ALL) NOPASSWD: /usr/bin/cp -r /tmp/nexustiles/* ${SOLR_HOME}/nexustiles/" >> /etc/sudoers && \
-    echo "${SOLR_USER} ALL=(ALL) NOPASSWD: /usr/bin/chown -R ${SOLR_USER}\:${SOLR_GROUP} ${SOLR_HOME}/nexustiles" >> /etc/sudoers
+ZK_HOST="${SDAP_ZK_SERVICE_HOST}:${SDAP_ZK_SERVICE_PORT}/${SDAP_ZK_SOLR_CHROOT}"
 
-COPY ./singlenode/create-core.sh /docker-entrypoint-initdb.d/0-create-core.sh
-
-USER ${SOLR_USER}
-VOLUME ${SOLR_HOME}/nexustiles
-
-ENTRYPOINT ["docker-entrypoint.sh"]
-CMD ["solr-foreground"]
+./bin/solr zk upconfig -z ${ZK_HOST} -n nexustiles -d /tmp/nexustiles
+./bin/solr zk cp -z ${ZK_HOST} ${SOLR_HOME}/solr.xml zk:/solr.xml

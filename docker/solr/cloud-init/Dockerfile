@@ -1,3 +1,4 @@
+
 # Licensed to the Apache Software Foundation (ASF) under one or more
 # contributor license agreements.  See the NOTICE file distributed with
 # this work for additional information regarding copyright ownership.
@@ -12,19 +13,19 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-ARG tag_version=latest
-FROM sdap/solr:${tag_version}
+
+FROM python:3
 MAINTAINER Apache SDAP "dev@sdap.apache.org"
 
-USER root
+ENV MINIMUM_NODES="1" \
+    SDAP_ZK_SOLR="localhost:2181/solr" \
+    SDAP_SOLR_URL="http://localhost:8983/solr/" \
+    ZK_LOCK_GUID="c4d193b1-7e47-4b32-a169-a596463da0f5" \
+    MAX_RETRIES="30" \
+    CREATE_COLLECTION_PARAMS="name=nexustiles&collection.configName=nexustiles&numShards=1"
 
-RUN echo "${SOLR_USER} ALL=(ALL) NOPASSWD: /usr/bin/cp -r /tmp/nexustiles/* ${SOLR_HOME}/nexustiles/" >> /etc/sudoers && \
-    echo "${SOLR_USER} ALL=(ALL) NOPASSWD: /usr/bin/chown -R ${SOLR_USER}\:${SOLR_GROUP} ${SOLR_HOME}/nexustiles" >> /etc/sudoers
 
-COPY ./singlenode/create-core.sh /docker-entrypoint-initdb.d/0-create-core.sh
+RUN pip install kazoo==2.6.0 requests==2.21.0
+COPY ./cloud-init/create-collection.py /tmp/create-collection.py
 
-USER ${SOLR_USER}
-VOLUME ${SOLR_HOME}/nexustiles
-
-ENTRYPOINT ["docker-entrypoint.sh"]
-CMD ["solr-foreground"]
+ENTRYPOINT ["/tmp/create-collection.py"]

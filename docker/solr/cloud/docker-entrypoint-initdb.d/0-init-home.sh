@@ -1,4 +1,4 @@
-#!/bin/bash -ex
+#!/bin/bash
 
 # Licensed to the Apache Software Foundation (ASF) under one or more
 # contributor license agreements.  See the NOTICE file distributed with
@@ -17,6 +17,10 @@
 
 set -ex
 
-ZK_HOST="${SDAP_ZK_SERVICE_HOST}:${SDAP_ZK_SERVICE_PORT}/${SDAP_ZK_SOLR_CHROOT}"
+if [ ! -f ${SOLR_HOME}/solr.xml ]; then
+    cp /tmp/solr.xml ${SOLR_HOME}
+fi
 
-./server/scripts/cloud-scripts/zkcli.sh -zkhost ${ZK_HOST} -cmd bootstrap -solrhome ${SOLR_HOME}
+if [ ! -f ${SOLR_HOME}/zoo.cfg ]; then
+    cp /tmp/zoo.cfg ${SOLR_HOME}
+fi

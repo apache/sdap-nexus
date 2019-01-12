@@ -17,16 +17,15 @@ ARG tag_version=latest
 FROM sdap/solr:${tag_version}
 MAINTAINER Apache SDAP "dev@sdap.apache.org"
 
-WORKDIR /opt/solr
-VOLUME ${SOLR_HOME}
-
-ENV INIT_SOLR_HOME="yes" \
-    SDAP_ZK_SERVICE_HOST="localhost" \
+ENV SDAP_ZK_SERVICE_HOST="localhost" \
     SDAP_ZK_SERVICE_PORT="2181" \
     SDAP_ZK_SOLR_CHROOT="solr" \
     SOLR_HOST="localhost"
 
-COPY ./cloud/bootstrap-zk.sh /docker-entrypoint-initdb.d/bootstrap-zk.sh
+COPY ./cloud/docker-entrypoint-initdb.d/* /docker-entrypoint-initdb.d/
+COPY ./cloud/tmp/* /tmp/
 
-ENTRYPOINT ["docker-entrypoint.sh"]
-CMD ["solr-foreground"]
+# This will run docker-entrypoint.sh with the value of CMD as default arguments. However, if any arguments are supplied
+# to the docker run command when launching this image, the command line arguments will override these CMD arguments
+ENTRYPOINT ["/bin/bash", "-c", "docker-entrypoint.sh $(eval echo $@)", "$@"]
+CMD ["solr-foreground", "-c", "-z ${SDAP_ZK_SERVICE_HOST}:${SDAP_ZK_SERVICE_PORT}/${SDAP_ZK_SOLR_CHROOT}"]
