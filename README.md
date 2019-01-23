@@ -5,9 +5,9 @@ The next generation cloud-based science data service platform. More information 
 
 ## Building the Docs
 
-Ensure sphinx and sphinx-autobuild are installed
+Ensure sphinx, sphinx-autobuild, and recommonmark are installed. We use the recommonmark module for parsing Markdown files.
 
-    pip install sphinx sphinx-autobuild
+    pip install sphinx sphinx-autobuild recommonmark
 
 Run sphinx-autobuild to view the docs locally.
 

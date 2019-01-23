@@ -1,3 +1,4 @@
+
 # Licensed to the Apache Software Foundation (ASF) under one or more
 # contributor license agreements.  See the NOTICE file distributed with
 # this work for additional information regarding copyright ownership.
@@ -12,24 +13,19 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-FROM solr:7.4
+
+FROM python:3
 MAINTAINER Apache SDAP "dev@sdap.apache.org"
 
-USER root
-
-ENV SOLR_HOME=/opt/solr/server/solr
-
-RUN cd / && \
-    apt-get update && \
-    apt-get -y install git sudo && \
-    rm -rf /var/lib/apt/lists/* && \
-    git clone https://github.com/apache/incubator-sdap-nexus.git && \
-    cp -r /incubator-sdap-nexus/data-access/config/schemas/solr/nexustiles /tmp/nexustiles && \
-    rm -rf /incubator-sdap-nexus && \
-    wget http://central.maven.org/maven2/org/locationtech/jts/jts-core/1.15.1/jts-core-1.15.1.jar && \
-    cp jts-core-1.15.1.jar /opt/solr/server/solr-webapp/webapp/WEB-INF/lib/jts-core-1.15.1.jar && \
-    chown ${SOLR_USER}:${SOLR_GROUP} /opt/solr/server/solr-webapp/webapp/WEB-INF/lib/jts-core-1.15.1.jar && \
-    rm jts-core-1.15.1.jar
+ENV MINIMUM_NODES="1" \
+    SDAP_ZK_SOLR="localhost:2181/solr" \
+    SDAP_SOLR_URL="http://localhost:8983/solr/" \
+    ZK_LOCK_GUID="c4d193b1-7e47-4b32-a169-a596463da0f5" \
+    MAX_RETRIES="30" \
+    CREATE_COLLECTION_PARAMS="name=nexustiles&collection.configName=nexustiles&numShards=1"
 
 
-USER ${SOLR_USER}
+RUN pip install kazoo==2.6.0 requests==2.21.0
+COPY ./cloud-init/create-collection.py /tmp/create-collection.py
+
+ENTRYPOINT ["/tmp/create-collection.py"]
