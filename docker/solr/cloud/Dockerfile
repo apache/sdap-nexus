@@ -1,3 +1,4 @@
+
 # Licensed to the Apache Software Foundation (ASF) under one or more
 # contributor license agreements.  See the NOTICE file distributed with
 # this work for additional information regarding copyright ownership.
@@ -12,24 +13,19 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-FROM solr:7.4
+ARG tag_version=latest
+FROM sdap/solr:${tag_version}
 MAINTAINER Apache SDAP "dev@sdap.apache.org"
 
-USER root
+ENV SDAP_ZK_SERVICE_HOST="localhost" \
+    SDAP_ZK_SERVICE_PORT="2181" \
+    SDAP_ZK_SOLR_CHROOT="solr" \
+    SOLR_HOST="localhost"
 
-ENV SOLR_HOME=/opt/solr/server/solr
+COPY ./cloud/docker-entrypoint-initdb.d/* /docker-entrypoint-initdb.d/
+COPY ./cloud/tmp/* /tmp/
 
-RUN cd / && \
-    apt-get update && \
-    apt-get -y install git sudo && \
-    rm -rf /var/lib/apt/lists/* && \
-    git clone https://github.com/apache/incubator-sdap-nexus.git && \
-    cp -r /incubator-sdap-nexus/data-access/config/schemas/solr/nexustiles /tmp/nexustiles && \
-    rm -rf /incubator-sdap-nexus && \
-    wget http://central.maven.org/maven2/org/locationtech/jts/jts-core/1.15.1/jts-core-1.15.1.jar && \
-    cp jts-core-1.15.1.jar /opt/solr/server/solr-webapp/webapp/WEB-INF/lib/jts-core-1.15.1.jar && \
-    chown ${SOLR_USER}:${SOLR_GROUP} /opt/solr/server/solr-webapp/webapp/WEB-INF/lib/jts-core-1.15.1.jar && \
-    rm jts-core-1.15.1.jar
-
-
-USER ${SOLR_USER}
+# This will run docker-entrypoint.sh with the value of CMD as default arguments. However, if any arguments are supplied
+# to the docker run command when launching this image, the command line arguments will override these CMD arguments
+ENTRYPOINT ["/bin/bash", "-c", "docker-entrypoint.sh $(eval echo $@)", "$@"]
+CMD ["solr-foreground", "-c", "-z ${SDAP_ZK_SERVICE_HOST}:${SDAP_ZK_SERVICE_PORT}/${SDAP_ZK_SOLR_CHROOT}"]

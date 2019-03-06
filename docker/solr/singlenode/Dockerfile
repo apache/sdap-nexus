@@ -1,5 +1,3 @@
-#!/bin/bash -ex
-
 # Licensed to the Apache Software Foundation (ASF) under one or more
 # contributor license agreements.  See the NOTICE file distributed with
 # this work for additional information regarding copyright ownership.
@@ -14,12 +12,19 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+ARG tag_version=latest
+FROM sdap/solr:${tag_version}
+MAINTAINER Apache SDAP "dev@sdap.apache.org"
 
-set -ex
+USER root
 
-SOLR_HOME=${SOLR_HOME:=/opt/solr/server/solr/}
-mkdir -p ${SOLR_HOME}/nexustiles
-sudo cp -r /tmp/nexustiles/* ${SOLR_HOME}/nexustiles/
-sudo chown -R ${SOLR_USER}:${SOLR_GROUP} ${SOLR_HOME}/nexustiles
+RUN echo "${SOLR_USER} ALL=(ALL) NOPASSWD: /usr/bin/cp -r /tmp/nexustiles/* ${SOLR_HOME}/nexustiles/" >> /etc/sudoers && \
+    echo "${SOLR_USER} ALL=(ALL) NOPASSWD: /usr/bin/chown -R ${SOLR_USER}\:${SOLR_GROUP} ${SOLR_HOME}/nexustiles" >> /etc/sudoers
 
-set +x
+COPY ./singlenode/create-core.sh /docker-entrypoint-initdb.d/0-create-core.sh
+
+USER ${SOLR_USER}
+VOLUME ${SOLR_HOME}/nexustiles
+
+ENTRYPOINT ["docker-entrypoint.sh"]
+CMD ["solr-foreground"]

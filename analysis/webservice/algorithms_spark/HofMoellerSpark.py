@@ -190,13 +190,10 @@ class BaseHoffMoellerHandlerImpl(SparkHandler):
                     request.get_start_datetime().strftime(ISO_8601), request.get_end_datetime().strftime(ISO_8601)),
                 code=400)
 
-        spark_master, spark_nexecs, spark_nparts = request.get_spark_cfg()
-
         start_seconds_from_epoch = long((start_time - EPOCH).total_seconds())
         end_seconds_from_epoch = long((end_time - EPOCH).total_seconds())
 
-        return ds, bounding_polygon, start_seconds_from_epoch, end_seconds_from_epoch, \
-               spark_master, spark_nexecs, spark_nparts
+        return ds, bounding_polygon, start_seconds_from_epoch, end_seconds_from_epoch
 
     def applyDeseasonToHofMoellerByField(self, results, pivot="lats", field="mean", append=True):
         shape = (len(results), len(results[0][pivot]))
@@ -336,7 +333,7 @@ class LatitudeTimeHoffMoellerSparkHandlerImpl(BaseHoffMoellerHandlerImpl):
         BaseHoffMoellerHandlerImpl.__init__(self)
 
     def calc(self, compute_options, **args):
-        ds, bbox, start_time, end_time, spark_master, spark_nexecs, spark_nparts = self.parse_arguments(compute_options)
+        ds, bbox, start_time, end_time = self.parse_arguments(compute_options)
 
         min_lon, min_lat, max_lon, max_lat = bbox.bounds
 
@@ -378,7 +375,7 @@ class LongitudeTimeHoffMoellerSparkHandlerImpl(BaseHoffMoellerHandlerImpl):
         BaseHoffMoellerHandlerImpl.__init__(self)
 
     def calc(self, compute_options, **args):
-        ds, bbox, start_time, end_time, spark_master, spark_nexecs, spark_nparts = self.parse_arguments(compute_options)
+        ds, bbox, start_time, end_time = self.parse_arguments(compute_options)
 
         min_lon, min_lat, max_lon, max_lat = bbox.bounds
 
