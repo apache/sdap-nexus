@@ -38,6 +38,7 @@ class DomsInitializer:
         domsconfig.readfp(pkg_resources.resource_stream(__name__, "domsconfig.ini"), filename='domsconfig.ini')
 
         cassHost = domsconfig.get("cassandra", "host")
+        cassPort = domsconfig.get("cassandra", "port")
         cassKeyspace = domsconfig.get("cassandra", "keyspace")
         cassDatacenter = domsconfig.get("cassandra", "local_datacenter")
         cassVersion = int(domsconfig.get("cassandra", "protocol_version"))
@@ -50,7 +51,7 @@ class DomsInitializer:
         dc_policy = DCAwareRoundRobinPolicy(cassDatacenter)
         token_policy = TokenAwarePolicy(dc_policy)
 
-        with Cluster([host for host in cassHost.split(',')], load_balancing_policy=token_policy,
+        with Cluster([host for host in cassHost.split(',')], port=cassPort, load_balancing_policy=token_policy,
                      protocol_version=cassVersion) as cluster:
             session = cluster.connect()
 
