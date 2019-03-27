@@ -1,0 +1,133 @@
+# Licensed to the Apache Software Foundation (ASF) under one or more
+# contributor license agreements.  See the NOTICE file distributed with
+# this work for additional information regarding copyright ownership.
+# The ASF licenses this file to You under the Apache License, Version 2.0
+# (the "License"); you may not use this file except in compliance with
+# the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+import argparse
+from netCDF4 import Dataset
+import sys
+import datetime
+import csv
+from collections import OrderedDict
+
+def assemble_matches(filename):
+    """
+    Read a DOMS netCDF file and return a list of matches.
+    
+    Arguments: 
+        filename (string): the DOMS netCDF file name.
+    
+    Returns:
+        matches (list): List of matches. Each list element is a dictionary:
+            For netCDF group GROUP (SatelliteData or InsituData) and group
+                variable VARIABLE:
+            matches[GROUP]['matchID']: MatchedRecords dimension ID for the match
+            matches[GROUP]['GROUPID']: GROUP dim dimension ID for the record
+            matches[GROUP][VARIABLE]: variable value 
+    """
+    # Open the netCDF file.
+    try:
+        doms_nc = Dataset(filename, 'r')
+    except OSError as err:
+        sys.exit("Error reading netCDF file " + filename + ": " + str(err))
+    
+    # Check that the number of groups is consistent w/ MatchedGroups dimension
+    matched_groups = doms_nc.dimensions['MatchedGroups'].size
+    groups = []
+    for group in doms_nc.groups:
+        groups.append(group)
+    
+    assert len(groups) == matched_groups, \
+        ("Number of groups isn't the same as MatchedGroups dimension.")
+    
+    matches = []
+    matched_records = doms_nc.dimensions['MatchedRecords'].size
+    
+    # Check that the time units are 'seconds since 1970-01-01 00:00:00 0:00'.
+    # Necessary to create the datetime field using utcfromtimestamp function.
+    for group in groups:
+        time_units = "seconds since 1970-01-01 00:00:00 0:00"
+        assert doms_nc.groups[group]['time'].units == time_units, \
+            "Time units != '" + time_units + "'. Can't create datetime field."
+
+    # Loop through the match IDs to assemble matches
+    for match in range(0, matched_records):
+        match_dict = OrderedDict()
+        # Grab the data from each platform (group) in the match
+        for group_num, group in enumerate(groups):
+            match_dict[group] = OrderedDict()
+            match_dict[group]['matchID'] = match
+            ID = doms_nc.variables['matchIDs'][match][group_num]
+            match_dict[group][group + 'ID'] = ID
+            for variable in doms_nc.groups[group].variables.keys():
+                match_dict[group][variable] = doms_nc.groups[group][variable][ID]
+            
+            # Create a UTC datetime field from timestamp
+            dt = datetime.datetime.utcfromtimestamp(match_dict[group]['time'])
+            match_dict[group]['datetime'] = dt
+            print(match_dict)
+        matches.append(match_dict)
+    
+    return matches
+    
+def matches_to_csv(matches, filename):
+    """
+    Write the DOMS matches to a CSV file. Include a header of column names
+    which are based on the group and variable names from the netCDF file.
+    
+    Arguments:
+        matches (list): the list of dictionaries containing the DOMS matches as
+            returned from assemble_matches.
+            
+        filename (string): the name of the CSV output file.
+    """
+    header = []
+    for key, value in doms_matches[0].items():
+        for otherkey in value.keys():
+            header.append(key + "_" + otherkey)
+    
+    with open(filename, 'w') as output_file:
+        csv_writer = csv.writer(output_file)
+        csv_writer.writerow(header)
+        for match in matches:
+            row = []
+            for group, data in match.items():
+                for value in data.values():
+                    row.append(value)
+            csv_writer.writerow(row)
+
+if __name__ == '__main__':
+    """
+    Execution:
+        python doms_reader.py filename
+        OR
+        python3 doms_reader.py filename
+    """
+    p = argparse.ArgumentParser()
+    p.add_argument('filename', help='DOMS netCDF file to read')
+    args = p.parse_args()
+
+    doms_matches = assemble_matches(args.filename)
+
+    #matches_to_csv(doms_matches, 'matches_to_csv.csv')
+    
+    
+    
+    
+    
+    
+    
+    
+
+    
+    
