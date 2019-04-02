@@ -14,7 +14,7 @@
 # limitations under the License.
 
 import argparse
-from netCDF4 import Dataset
+from netCDF4 import Dataset, num2date
 import sys
 import datetime
 import csv
@@ -52,13 +52,6 @@ def assemble_matches(filename):
     
     matches = []
     matched_records = doms_nc.dimensions['MatchedRecords'].size
-    
-    # Check that the time units are 'seconds since 1970-01-01 00:00:00 0:00'.
-    # Necessary to create the datetime field using utcfromtimestamp function.
-    for group in groups:
-        time_units = "seconds since 1970-01-01 00:00:00 0:00"
-        assert doms_nc.groups[group]['time'].units == time_units, \
-            "Time units != '" + time_units + "'. Can't create datetime field."
 
     # Loop through the match IDs to assemble matches
     for match in range(0, matched_records):
@@ -73,7 +66,8 @@ def assemble_matches(filename):
                 match_dict[group][variable] = doms_nc.groups[group][variable][ID]
             
             # Create a UTC datetime field from timestamp
-            dt = datetime.datetime.utcfromtimestamp(match_dict[group]['time'])
+            dt = num2date(match_dict[group]['time'],
+                          doms_nc.groups[group]['time'].units)
             match_dict[group]['datetime'] = dt
             print(match_dict)
         matches.append(match_dict)
@@ -119,7 +113,7 @@ if __name__ == '__main__':
 
     doms_matches = assemble_matches(args.filename)
 
-    #matches_to_csv(doms_matches, 'matches_to_csv.csv')
+    matches_to_csv(doms_matches, 'matches_to_csv.csv')
     
     
     
