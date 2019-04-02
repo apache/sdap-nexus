@@ -46,12 +46,7 @@ def assemble_matches(filename):
         raise err
     
     # Check that the number of groups is consistent w/ MatchedGroups dimension
-    matched_groups = doms_nc.dimensions['MatchedGroups'].size
-    groups = []
-    for group in doms_nc.groups:
-        groups.append(group)
-    
-    assert len(groups) == matched_groups, \
+    assert len(doms_nc.groups) == doms_nc.dimensions['MatchedGroups'].size, \
         ("Number of groups isn't the same as MatchedGroups dimension.")
     
     matches = []
@@ -61,7 +56,7 @@ def assemble_matches(filename):
     for match in range(0, matched_records):
         match_dict = OrderedDict()
         # Grab the data from each platform (group) in the match
-        for group_num, group in enumerate(groups):
+        for group_num, group in enumerate(doms_nc.groups):
             match_dict[group] = OrderedDict()
             match_dict[group]['matchID'] = match
             ID = doms_nc.variables['matchIDs'][match][group_num]
@@ -75,6 +70,8 @@ def assemble_matches(filename):
             match_dict[group]['datetime'] = dt
             print(match_dict)
         matches.append(match_dict)
+    
+    doms_nc.close()
     
     return matches
     
@@ -90,7 +87,7 @@ def matches_to_csv(matches, filename):
         filename (string): the name of the CSV output file.
     """
     header = []
-    for key, value in doms_matches[0].items():
+    for key, value in matches[0].items():
         for otherkey in value.keys():
             header.append(key + "_" + otherkey)
     
