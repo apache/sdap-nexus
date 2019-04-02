@@ -19,6 +19,9 @@ import sys
 import datetime
 import csv
 from collections import OrderedDict
+import logging
+
+LOGGER = logging.getLogger("doms_reader")
 
 def assemble_matches(filename):
     """
@@ -38,8 +41,9 @@ def assemble_matches(filename):
     # Open the netCDF file.
     try:
         doms_nc = Dataset(filename, 'r')
-    except OSError as err:
-        sys.exit("Error reading netCDF file " + filename + ": " + str(err))
+    except (OSError, IOError) as err:
+        LOGGER.exception("Error reading netCDF file " + filename)
+        raise err
     
     # Check that the number of groups is consistent w/ MatchedGroups dimension
     matched_groups = doms_nc.dimensions['MatchedGroups'].size
@@ -107,6 +111,10 @@ if __name__ == '__main__':
         OR
         python3 doms_reader.py filename
     """
+    logging.basicConfig(format='%(asctime)s %(levelname)-8s %(message)s',
+                    level=logging.INFO,
+                    datefmt='%Y-%m-%d %H:%M:%S')
+
     p = argparse.ArgumentParser()
     p.add_argument('filename', help='DOMS netCDF file to read')
     args = p.parse_args()
