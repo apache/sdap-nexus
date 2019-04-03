@@ -38,42 +38,41 @@ def assemble_matches(filename):
             matches[GROUP]['GROUPID']: GROUP dim dimension ID for the record
             matches[GROUP][VARIABLE]: variable value 
     """
-    # Open the netCDF file.
+    
     try:
-        doms_nc = Dataset(filename, 'r')
+        # Open the netCDF file
+        with Dataset(filename, 'r') as doms_nc:
+            # Check that the number of groups is consistent w/ the MatchedGroups
+            # dimension
+            assert len(doms_nc.groups) == doms_nc.dimensions['MatchedGroups'].size,\
+                ("Number of groups isn't the same as MatchedGroups dimension.")
+            
+            matches = []
+            matched_records = doms_nc.dimensions['MatchedRecords'].size
+            
+            # Loop through the match IDs to assemble matches
+            for match in range(0, matched_records):
+                match_dict = OrderedDict()
+                # Grab the data from each platform (group) in the match
+                for group_num, group in enumerate(doms_nc.groups):
+                    match_dict[group] = OrderedDict()
+                    match_dict[group]['matchID'] = match
+                    ID = doms_nc.variables['matchIDs'][match][group_num]
+                    match_dict[group][group + 'ID'] = ID
+                    for var in doms_nc.groups[group].variables.keys():
+                        match_dict[group][var] = doms_nc.groups[group][var][ID]
+                    
+                    # Create a UTC datetime field from timestamp
+                    dt = num2date(match_dict[group]['time'],
+                                  doms_nc.groups[group]['time'].units)
+                    match_dict[group]['datetime'] = dt
+                print(match_dict)
+                matches.append(match_dict)
+            
+            return matches
     except (OSError, IOError) as err:
         LOGGER.exception("Error reading netCDF file " + filename)
         raise err
-    
-    # Check that the number of groups is consistent w/ MatchedGroups dimension
-    assert len(doms_nc.groups) == doms_nc.dimensions['MatchedGroups'].size, \
-        ("Number of groups isn't the same as MatchedGroups dimension.")
-    
-    matches = []
-    matched_records = doms_nc.dimensions['MatchedRecords'].size
-
-    # Loop through the match IDs to assemble matches
-    for match in range(0, matched_records):
-        match_dict = OrderedDict()
-        # Grab the data from each platform (group) in the match
-        for group_num, group in enumerate(doms_nc.groups):
-            match_dict[group] = OrderedDict()
-            match_dict[group]['matchID'] = match
-            ID = doms_nc.variables['matchIDs'][match][group_num]
-            match_dict[group][group + 'ID'] = ID
-            for variable in doms_nc.groups[group].variables.keys():
-                match_dict[group][variable] = doms_nc.groups[group][variable][ID]
-            
-            # Create a UTC datetime field from timestamp
-            dt = num2date(match_dict[group]['time'],
-                          doms_nc.groups[group]['time'].units)
-            match_dict[group]['datetime'] = dt
-            print(match_dict)
-        matches.append(match_dict)
-    
-    doms_nc.close()
-    
-    return matches
     
 def matches_to_csv(matches, filename):
     """
@@ -86,20 +85,27 @@ def matches_to_csv(matches, filename):
             
         filename (string): the name of the CSV output file.
     """
+    # Create a header for the CSV. Column names are GROUP_VARIABLE or
+    # GROUP_GROUPID.
     header = []
     for key, value in matches[0].items():
         for otherkey in value.keys():
             header.append(key + "_" + otherkey)
     
-    with open(filename, 'w') as output_file:
-        csv_writer = csv.writer(output_file)
-        csv_writer.writerow(header)
-        for match in matches:
-            row = []
-            for group, data in match.items():
-                for value in data.values():
-                    row.append(value)
-            csv_writer.writerow(row)
+    try:
+        # Write the CSV file
+        with open(filename, 'w') as output_file:
+            csv_writer = csv.writer(output_file)
+            csv_writer.writerow(header)
+            for match in matches:
+                row = []
+                for group, data in match.items():
+                    for value in data.values():
+                        row.append(value)
+                csv_writer.writerow(row)
+    except (OSError, IOError) as err:
+        LOGGER.exception("Error writing CSV file " + filename)
+        raise err
 
 if __name__ == '__main__':
     """
@@ -118,7 +124,7 @@ if __name__ == '__main__':
 
     doms_matches = assemble_matches(args.filename)
 
-    matches_to_csv(doms_matches, 'matches_to_csv.csv')
+    matches_to_csv(doms_matches, 'doms_matches.csv')
     
     
     
