@@ -66,7 +66,7 @@ def assemble_matches(filename):
                     dt = num2date(match_dict[group]['time'],
                                   doms_nc.groups[group]['time'].units)
                     match_dict[group]['datetime'] = dt
-                print(match_dict)
+                LOGGER.info(match_dict)
                 matches.append(match_dict)
             
             return matches
