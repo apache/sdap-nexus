@@ -16,7 +16,6 @@
 # import sys
 # sys.path.insert(0, os.path.abspath('.'))
 
-
 # -- Project information -----------------------------------------------------
 
 project = u'incubator-sdap-nexus'
@@ -24,9 +23,9 @@ copyright = u'2018, Apache SDAP'
 author = u'Apache SDAP'
 
 # The short X.Y version
-version = u''
+version = u'1.0'
 # The full version, including alpha/beta/rc tags
-release = u''
+release = u'1.0.0-SNAPSHOT'
 
 
 # -- General configuration ---------------------------------------------------
@@ -52,7 +51,7 @@ templates_path = ['_templates']
 # You can specify multiple suffix as a list of string:
 #
 # source_suffix = ['.rst', '.md']
-source_suffix = '.rst'
+source_suffix = ['.rst']
 
 # The master toctree document.
 master_doc = 'index'

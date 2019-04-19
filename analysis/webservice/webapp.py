@@ -56,7 +56,6 @@ class BaseHandler(tornado.web.RequestHandler):
         self.request_thread_pool.apply_async(self.run)
 
     def run(self):
-        self.set_header("Access-Control-Allow-Origin", "*")
         reqObject = NexusRequestObject(self)
         try:
             result = self.do_get(reqObject)
