@@ -20,6 +20,7 @@ import json
 from datetime import datetime
 import time
 from decimal import Decimal
+import itertools
 
 import numpy as np
 from pytz import timezone, UTC
@@ -442,16 +443,49 @@ class DomsNetCDFValueWriter:
             self.matchup_depth = "NO_DEPTH"
 
     def addData(self, value):
-        self.lat.append(value.get("y", None))
-        self.lon.append(value.get("x", None))
-        self.time.append(time.mktime(value.get("time").timetuple()))
-        self.sea_water_salinity.append(value.get("sea_water_salinity", None))
-        self.wind_speed.append(value.get("wind_speed", None))
-        self.wind_u.append(value.get("wind_u", None))
-        self.wind_v.append(value.get("wind_v", None))
-        self.wind_direction.append(value.get("wind_direction", None))
-        self.sea_water_temperature.append(value.get("sea_water_temperature", None))
-        self.depth.append(value.get(self.matchup_depth, None))
+
+        # Create array of measurements and their corresponding depths
+        depths = [{"val": "sea_water_salinity", "depth": value.get("sea_water_salinity_depth", None)},
+                  {"val": "sea_water_temperature", "depth": value.get("sea_water_temperature_depth", None)},
+                  {"val": "wind", "depth": None}]
+
+        # For each unique depth, create a new entry in the netcdf file
+        for depth, var_list in itertools.groupby(depths, key=lambda x: x['depth']):
+
+            # Add information that applies to this entry, regardless of variable
+            self.lat.append(value.get("y", None))
+            self.lon.append(value.get("x", None))
+            print(EPOCH)
+            t = (value.get("time") - datetime(1970, 1, 1).replace(tzinfo=UTC)).total_seconds()
+            self.time.append(t)
+            self.depth.append(depth)
+
+            # add each of the variables that have this depth attribute, add None values for the variables that
+            # don't have this depth measurement
+            for item in var_list:
+
+                if item['val'] == "sea_water_salinity":
+                    self.sea_water_salinity.append(value.get("sea_water_salinity", None))
+                    self.sea_water_temperature.append(None)
+                    self.wind_speed.append(None)
+                    self.wind_u.append(None)
+                    self.wind_v.append(None)
+                    self.wind_direction.append(None)
+                if item['val'] == "sea_water_temperature":
+                    self.sea_water_temperature.append(value.get("sea_water_temperature", None))
+                    self.sea_water_salinity.append(None)
+                    self.wind_speed.append(None)
+                    self.wind_u.append(None)
+                    self.wind_v.append(None)
+                    self.wind_direction.append(None)
+                if item['val'] == "wind":
+                    self.wind_speed.append(value.get("wind_speed", None))
+                    self.wind_u.append(value.get("wind_u", None))
+                    self.wind_v.append(value.get("wind_v", None))
+                    self.wind_direction.append(value.get("wind_direction", None))
+                    self.sea_water_temperature.append(None)
+                    self.sea_water_salinity.append(None)
+
 
     def writeGroup(self):
         #
