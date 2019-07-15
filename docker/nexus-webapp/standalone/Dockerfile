@@ -50,7 +50,7 @@ WORKDIR /tmp
 
 # Install Oracle JDK
 COPY install_java.sh ./install_java.sh
-RUN ./install_java.sh "http://download.oracle.com/otn-pub/java/jdk/8u191-b12/2787e4a523244c269598db4e85c51e0c/jdk-8u191-linux-x64.rpm"
+RUN ./install_java.sh "https://download.oracle.com/otn-pub/java/jdk/8u201-b09/42970487e3af4f5aa5bca3f542482c60/jdk-8u201-linux-x64.rpm"
 
 # Install Spark
 COPY install_spark.sh ./install_spark.sh
@@ -61,16 +61,18 @@ COPY install_conda.sh ./install_conda.sh
 RUN ./install_conda.sh "https://repo.continuum.io/miniconda/Miniconda2-latest-Linux-x86_64.sh" /usr/local/anaconda2
 
 # Conda dependencies for nexus
-RUN conda install -c conda-forge -y netCDF4 && \
-    conda install -y numpy cython mpld3 scipy basemap gdal matplotlib && \
-    pip install shapely==1.5.16 cassandra-driver==3.5.0 && \
-    conda install -c conda-forge backports.functools_lru_cache=1.3 && \
-    cd /usr/lib64 && ln -s libcom_err.so.2 libcom_err.so.3 && \
-    cd /usr/local/anaconda2/lib && \
-    ln -s libnetcdf.so.11 libnetcdf.so.7 && \
-    ln -s libkea.so.1.4.6 libkea.so.1.4.5 && \
-    ln -s libhdf5_cpp.so.12 libhdf5_cpp.so.10 && \
-    ln -s libjpeg.so.9 libjpeg.so.8
+# RUN conda install -c conda-forge -y netCDF4 backports.functools_lru_cache=1.3 && \
+RUN conda config --add channels conda-forge && \
+    conda install -y netCDF4 \
+                     backports.functools_lru_cache \
+                     numpy \
+                     cython \
+                     mpld3 \
+                     scipy \
+                     basemap \
+                     gdal \
+                     matplotlib && \
+    pip install shapely==1.5.16 cassandra-driver==3.5.0
 
 # Install nexusproto and nexus
 ARG APACHE_NEXUSPROTO=https://github.com/apache/incubator-sdap-nexusproto.git
