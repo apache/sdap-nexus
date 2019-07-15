@@ -215,8 +215,12 @@ class DomsCSVFormatter:
             for match in primaryValue['matches']:
                 platforms.add(match['platform'])
 
-        # insituDatasets = params["matchup"].split(",")
-        insituDatasets = params["matchup"]
+        if params["matchup"] == list:
+            insituDatasets = params["matchup"]
+        else:
+            insituDatasets = []
+            insituDatasets.append(params["matchup"])
+
         insituLinks = set()
         for insitu in insituDatasets:
             insituLinks.add(config.METADATA_LINKS[insitu])
@@ -321,7 +325,12 @@ class DomsNetCDFFormatter:
         dataset.DOMS_time_to_complete = details["timeToComplete"]
         dataset.DOMS_time_to_complete_units = "seconds"
 
-        insituDatasets = params["matchup"]
+        if params["matchup"] == list:
+            insituDatasets = params["matchup"]
+        else:
+            insituDatasets = []
+            insituDatasets.append(params["matchup"])
+
         insituLinks = set()
         for insitu in insituDatasets:
             insituLinks.add(config.METADATA_LINKS[insitu])
@@ -455,7 +464,6 @@ class DomsNetCDFValueWriter:
             # Add information that applies to this entry, regardless of variable
             self.lat.append(value.get("y", None))
             self.lon.append(value.get("x", None))
-            print(EPOCH)
             t = (value.get("time") - datetime(1970, 1, 1).replace(tzinfo=UTC)).total_seconds()
             self.time.append(t)
             self.depth.append(depth)
@@ -466,25 +474,23 @@ class DomsNetCDFValueWriter:
 
                 if item['val'] == "sea_water_salinity":
                     self.sea_water_salinity.append(value.get("sea_water_salinity", None))
-                    self.sea_water_temperature.append(None)
-                    self.wind_speed.append(None)
-                    self.wind_u.append(None)
-                    self.wind_v.append(None)
-                    self.wind_direction.append(None)
+                else:
+                    self.sea_water_salinity.append(None)
+
                 if item['val'] == "sea_water_temperature":
                     self.sea_water_temperature.append(value.get("sea_water_temperature", None))
-                    self.sea_water_salinity.append(None)
-                    self.wind_speed.append(None)
-                    self.wind_u.append(None)
-                    self.wind_v.append(None)
-                    self.wind_direction.append(None)
+                else:
+                    self.sea_water_temperature.append(None)
+
                 if item['val'] == "wind":
                     self.wind_speed.append(value.get("wind_speed", None))
-                    self.wind_u.append(value.get("wind_u", None))
-                    self.wind_v.append(value.get("wind_v", None))
-                    self.wind_direction.append(value.get("wind_direction", None))
-                    self.sea_water_temperature.append(None)
-                    self.sea_water_salinity.append(None)
+                else:
+                    self.wind_speed.append(None)
+
+                # We are not currently tracking the depth for these variables
+                self.wind_u.append(None)
+                self.wind_v.append(None)
+                self.wind_direction.append(None)
 
 
     def writeGroup(self):
@@ -506,10 +512,10 @@ class DomsNetCDFValueWriter:
         if self.sea_water_salinity.count(None) != len(self.sea_water_salinity):
             if self.group.name == self.satellite_group_name:
                 sssVar = self.group.createVariable("SeaSurfaceSalinity", "f4", ("dim",), fill_value=-32767.0)
-                self.__enrichSSSMeasurements(sssVar, min(self.sea_water_salinity), max(self.sea_water_salinity))
+                self.__enrichSSSMeasurements(sssVar, self.__calcMin(self.sea_water_salinity), max(self.sea_water_salinity))
             else:  # group.name == self.insitu_group_name
                 sssVar = self.group.createVariable("SeaWaterSalinity", "f4", ("dim",), fill_value=-32767.0)
-                self.__enrichSWSMeasurements(sssVar, min(self.sea_water_salinity), max(self.sea_water_salinity))
+                self.__enrichSWSMeasurements(sssVar, self.__calcMin(self.sea_water_salinity), max(self.sea_water_salinity))
             sssVar[:] = self.sea_water_salinity
 
         if self.wind_speed.count(None) != len(self.wind_speed):
