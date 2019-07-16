@@ -161,11 +161,6 @@ class DomsCSVFormatter:
                 # For each unique depth, create a new line in csv
                 for depth, var_list in itertools.groupby(depths, key=lambda x: x['depth']):
 
-                    # print "TESTING"
-                    # print depth
-                    # for x in var_list:
-                    #     print x['val']
-
                     # Add information that applies to this entry, regardless of variable
                     matchup_vars = [
                         # Matchup
@@ -174,13 +169,14 @@ class DomsCSVFormatter:
                         depth
                     ]
 
-                    # add each of the variables that have this depth attribute, add None values for the variables that
-                    # don't have this depth measurement
-
+                    # Pull out just the variable names from the objects into a simpler array that is easier to
+                    # search
                     just_vars = []
                     for x in var_list:
-                        print x['val']
                         just_vars.append(x['val'])
+
+                    # Add each of the variables that have this depth attribute, add None values for the variables that
+                    # don't have this depth measurement
 
                     if "sea_water_salinity" in just_vars:
                         matchup_vars.append(matchup.get("sea_water_salinity", ""))
@@ -209,7 +205,6 @@ class DomsCSVFormatter:
                         matchup_vars.append("")
 
                     print_row = row + matchup_vars
-                    print('\n\n')
                     writer.writerow(print_row)
 
     @staticmethod
