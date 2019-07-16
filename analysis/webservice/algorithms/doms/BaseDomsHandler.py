@@ -140,36 +140,77 @@ class DomsCSVFormatter:
 
         writer.writerow(headers)
 
-        #
-        # Only include the depth variable related to the match-up parameter. If the match-up parameter
-        # is not sss or sst then do not include any depth data, just fill values.
-        #
-        if params["parameter"] == "sss":
-            depth = "sea_water_salinity_depth"
-        elif params["parameter"] == "sst":
-            depth = "sea_water_temperature_depth"
-        else:
-            depth = "NO_DEPTH"
-
         for primaryValue in results:
-            for matchup in primaryValue["matches"]:
-                row = [
-                    # Primary
-                    primaryValue["id"], primaryValue["source"], str(primaryValue["x"]), str(primaryValue["y"]),
-                    primaryValue["time"].strftime(ISO_8601), primaryValue["platform"],
-                    primaryValue.get("sea_water_salinity", ""), primaryValue.get("sea_water_temperature", ""),
-                    primaryValue.get("wind_speed", ""), primaryValue.get("wind_direction", ""),
-                    primaryValue.get("wind_u", ""), primaryValue.get("wind_v", ""),
 
-                    # Matchup
-                    matchup["id"], matchup["source"], matchup["x"], matchup["y"],
-                    matchup["time"].strftime(ISO_8601), matchup["platform"],
-                    matchup.get(depth, ""), matchup.get("sea_water_salinity", ""),
-                    matchup.get("sea_water_temperature", ""),
-                    matchup.get("wind_speed", ""), matchup.get("wind_direction", ""),
-                    matchup.get("wind_u", ""), matchup.get("wind_v", ""),
-                ]
-                writer.writerow(row)
+            row = [
+                # Primary
+                primaryValue["id"], primaryValue["source"], str(primaryValue["x"]), str(primaryValue["y"]),
+                primaryValue["time"].strftime(ISO_8601), primaryValue["platform"],
+                primaryValue.get("sea_water_salinity", ""), primaryValue.get("sea_water_temperature", ""),
+                primaryValue.get("wind_speed", ""), primaryValue.get("wind_direction", ""),
+                primaryValue.get("wind_u", ""), primaryValue.get("wind_v", "")
+            ]
+
+            for matchup in primaryValue["matches"]:
+
+                # Create array of measurements and their corresponding depths
+                depths = [{"val": "sea_water_salinity", "depth": matchup.get("sea_water_salinity_depth", None)},
+                          {"val": "sea_water_temperature", "depth": matchup.get("sea_water_temperature_depth", None)},
+                          {"val": "wind", "depth": None}]
+
+                # For each unique depth, create a new line in csv
+                for depth, var_list in itertools.groupby(depths, key=lambda x: x['depth']):
+
+                    # print "TESTING"
+                    # print depth
+                    # for x in var_list:
+                    #     print x['val']
+
+                    # Add information that applies to this entry, regardless of variable
+                    matchup_vars = [
+                        # Matchup
+                        matchup["id"], matchup["source"], matchup["x"], matchup["y"],
+                        matchup["time"].strftime(ISO_8601), matchup["platform"],
+                        depth
+                    ]
+
+                    # add each of the variables that have this depth attribute, add None values for the variables that
+                    # don't have this depth measurement
+
+                    just_vars = []
+                    for x in var_list:
+                        print x['val']
+                        just_vars.append(x['val'])
+
+                    if "sea_water_salinity" in just_vars:
+                        matchup_vars.append(matchup.get("sea_water_salinity", ""))
+                    else:
+                        matchup_vars.append("")
+
+                    if "sea_water_temperature" in just_vars:
+                        matchup_vars.append(matchup.get("sea_water_temperature", ""))
+                    else:
+                        matchup_vars.append("")
+
+                    if "wind" in just_vars:
+                        matchup_vars.append(matchup.get("wind_speed", ""))
+                    else:
+                        matchup_vars.append("")
+
+                    # We are not currently tracking the depth for these variables, only include their values
+                    # when depth is None
+                    if depth == None:
+                        matchup_vars.append(matchup.get("wind_direction", ""))
+                        matchup_vars.append(matchup.get("wind_u", ""))
+                        matchup_vars.append(matchup.get("wind_v", ""))
+                    else:
+                        matchup_vars.append("")
+                        matchup_vars.append("")
+                        matchup_vars.append("")
+
+                    print_row = row + matchup_vars
+                    print('\n\n')
+                    writer.writerow(print_row)
 
     @staticmethod
     def __addConstants(csvfile):
@@ -470,27 +511,31 @@ class DomsNetCDFValueWriter:
 
             # add each of the variables that have this depth attribute, add None values for the variables that
             # don't have this depth measurement
-            for item in var_list:
+            if "sea_water_salinity" in var_list:
+                self.sea_water_salinity.append(value.get("sea_water_salinity", None))
+            else:
+                self.sea_water_salinity.append(None)
 
-                if item['val'] == "sea_water_salinity":
-                    self.sea_water_salinity.append(value.get("sea_water_salinity", None))
-                else:
-                    self.sea_water_salinity.append(None)
+            if "sea_water_temperature" in var_list:
+                self.sea_water_temperature.append(value.get("sea_water_temperature", None))
+            else:
+                self.sea_water_temperature.append(None)
 
-                if item['val'] == "sea_water_temperature":
-                    self.sea_water_temperature.append(value.get("sea_water_temperature", None))
-                else:
-                    self.sea_water_temperature.append(None)
+            if "wind" in var_list:
+                self.wind_speed.append(value.get("wind_speed", None))
+            else:
+                self.wind_speed.append(None)
 
-                if item['val'] == "wind":
-                    self.wind_speed.append(value.get("wind_speed", None))
-                else:
-                    self.wind_speed.append(None)
-
-                # We are not currently tracking the depth for these variables
+            # We are not currently tracking the depth for these variables, only include their values when depth is None
+            if depth is None:
+                self.wind_u.append(value.get("wind_u", None))
+                self.wind_v.append(value.get("wind_v", None))
+                self.wind_direction.append(value.get("wind_direction", None))
+            else:
                 self.wind_u.append(None)
                 self.wind_v.append(None)
                 self.wind_direction.append(None)
+
 
 
     def writeGroup(self):
