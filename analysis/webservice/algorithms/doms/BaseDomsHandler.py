@@ -247,15 +247,14 @@ class DomsCSVFormatter:
 
         platforms = set()
         for primaryValue in results:
-            platforms.add(primaryValue['platform'])
+            platforms.add(primaryValue.get('platform', ""))
             for match in primaryValue['matches']:
-                platforms.add(match['platform'])
+                platforms.add(match.get('platform', ""))
 
-        if params["matchup"] == list:
+        if type(params["matchup"]) == list:
             insituDatasets = params["matchup"]
         else:
-            insituDatasets = []
-            insituDatasets.append(params["matchup"])
+            insituDatasets = params["matchup"].split(",")
 
         insituLinks = set()
         for insitu in insituDatasets:
@@ -361,11 +360,10 @@ class DomsNetCDFFormatter:
         dataset.DOMS_time_to_complete = details["timeToComplete"]
         dataset.DOMS_time_to_complete_units = "seconds"
 
-        if params["matchup"] == list:
+        if type(params["matchup"]) == list:
             insituDatasets = params["matchup"]
         else:
-            insituDatasets = []
-            insituDatasets.append(params["matchup"])
+            insituDatasets = params["matchup"].split(",")
 
         insituLinks = set()
         for insitu in insituDatasets:
@@ -374,9 +372,9 @@ class DomsNetCDFFormatter:
 
         platforms = set()
         for primaryValue in results:
-            platforms.add(primaryValue['platform'])
+            platforms.add(primaryValue.get('platform', None))
             for match in primaryValue['matches']:
-                platforms.add(match['platform'])
+                platforms.add(match.get('platform', None))
         dataset.platform = ', '.join(platforms)
 
         satellite_group_name = "SatelliteData"
@@ -504,19 +502,25 @@ class DomsNetCDFValueWriter:
             self.time.append(t)
             self.depth.append(depth)
 
-            # add each of the variables that have this depth attribute, add None values for the variables that
+            # Pull out just the variable names from the objects into a simpler array that is easier to
+            # search
+            just_vars = []
+            for x in var_list:
+                just_vars.append(x['val'])
+
+            # Add each of the variables that have this depth attribute, add None values for the variables that
             # don't have this depth measurement
-            if "sea_water_salinity" in var_list:
+            if "sea_water_salinity" in just_vars:
                 self.sea_water_salinity.append(value.get("sea_water_salinity", None))
             else:
                 self.sea_water_salinity.append(None)
 
-            if "sea_water_temperature" in var_list:
+            if "sea_water_temperature" in just_vars:
                 self.sea_water_temperature.append(value.get("sea_water_temperature", None))
             else:
                 self.sea_water_temperature.append(None)
 
-            if "wind" in var_list:
+            if "wind" in just_vars:
                 self.wind_speed.append(value.get("wind_speed", None))
             else:
                 self.wind_speed.append(None)
@@ -530,8 +534,6 @@ class DomsNetCDFValueWriter:
                 self.wind_u.append(None)
                 self.wind_v.append(None)
                 self.wind_direction.append(None)
-
-
 
     def writeGroup(self):
         #
