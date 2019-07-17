@@ -129,13 +129,14 @@ class DomsCSVFormatter:
         headers = [
             # Primary
             "id", "source", "lon (degrees_east)", "lat (degrees_north)", "time", "platform",
-            "sea_surface_salinity (1e-3)", "sea_surface_temperature (degree_C)", "wind_speed (m s-1)", "wind_direction",
-            "wind_u (m s-1)", "wind_v (m s-1)",
+            "sea_surface_salinity (1e-3)", "sea_surface_salinity_quality", "sea_surface_temperature (degree_C)",
+            "sea_surface_temperature_quality", "wind_speed (m s-1)", "wind_speed_quality", "wind_direction",
+            "wind_u (m s-1)", "wind_v (m s-1)", "wind_component_quality",
             # Match
             "id", "source", "lon (degrees_east)", "lat (degrees_north)", "time", "platform",
-            "depth (m)", "sea_water_salinity (1e-3)",
-            "sea_water_temperature (degree_C)", "wind_speed (m s-1)",
-            "wind_direction", "wind_u (m s-1)", "wind_v (m s-1)"
+            "depth (m)", "sea_water_salinity (1e-3)", "sea_water_salinity_quality",
+            "sea_water_temperature (degree_C)", "sea_water_temperature_quality", "wind_speed (m s-1)",
+            "wind_speed_quality", "wind_direction", "wind_u (m s-1)", "wind_v (m s-1)", "wind_component_quality"
         ]
 
         writer.writerow(headers)
@@ -146,9 +147,11 @@ class DomsCSVFormatter:
                 # Primary
                 primaryValue["id"], primaryValue["source"], str(primaryValue["x"]), str(primaryValue["y"]),
                 primaryValue["time"].strftime(ISO_8601), primaryValue["platform"],
-                primaryValue.get("sea_water_salinity", ""), primaryValue.get("sea_water_temperature", ""),
-                primaryValue.get("wind_speed", ""), primaryValue.get("wind_direction", ""),
-                primaryValue.get("wind_u", ""), primaryValue.get("wind_v", "")
+                primaryValue.get("sea_water_salinity", ""), primaryValue.get("sea_water_salinity_quality", ""),
+                primaryValue.get("sea_water_temperature", ""), primaryValue.get("sea_water_temperature_quality", ""),
+                primaryValue.get("wind_speed", ""), primaryValue.get("wind_speed_quality", ""),
+                primaryValue.get("wind_direction", ""), primaryValue.get("wind_u", ""), primaryValue.get("wind_v", ""),
+                primaryValue.get("wind_component_quality", "")
             ]
 
             for matchup in primaryValue["matches"]:
@@ -180,17 +183,23 @@ class DomsCSVFormatter:
 
                     if "sea_water_salinity" in just_vars:
                         matchup_vars.append(matchup.get("sea_water_salinity", ""))
+                        matchup_vars.append(matchup.get("sea_water_salinity_quality", ""))
                     else:
+                        matchup_vars.append("")
                         matchup_vars.append("")
 
                     if "sea_water_temperature" in just_vars:
                         matchup_vars.append(matchup.get("sea_water_temperature", ""))
+                        matchup_vars.append(matchup.get("sea_water_temperature_quality", ""))
                     else:
+                        matchup_vars.append("")
                         matchup_vars.append("")
 
                     if "wind" in just_vars:
                         matchup_vars.append(matchup.get("wind_speed", ""))
+                        matchup_vars.append(matchup.get("wind_speed_quality", ""))
                     else:
+                        matchup_vars.append("")
                         matchup_vars.append("")
 
                     # We are not currently tracking the depth for these variables, only include their values
@@ -199,7 +208,9 @@ class DomsCSVFormatter:
                         matchup_vars.append(matchup.get("wind_direction", ""))
                         matchup_vars.append(matchup.get("wind_u", ""))
                         matchup_vars.append(matchup.get("wind_v", ""))
+                        matchup_vars.append(matchup.get("wind_component_quality", ""))
                     else:
+                        matchup_vars.append("")
                         matchup_vars.append("")
                         matchup_vars.append("")
                         matchup_vars.append("")
