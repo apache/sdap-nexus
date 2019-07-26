@@ -382,11 +382,11 @@ class DomsNetCDFFormatter:
 
         #Create Satellite group, variables, and attributes
         satelliteGroup = dataset.createGroup(satellite_group_name)
-        satelliteWriter = DomsNetCDFValueWriter(satelliteGroup, params["parameter"])
+        satelliteWriter = DomsNetCDFValueWriter(satelliteGroup)
 
         # Create InSitu group, variables, and attributes
         insituGroup = dataset.createGroup(insitu_group_name)
-        insituWriter = DomsNetCDFValueWriter(insituGroup, params["parameter"])
+        insituWriter = DomsNetCDFValueWriter(insituGroup)
 
         # Add data to Insitu and Satellite groups, generate array of match ID pairs
         matches = DomsNetCDFFormatter.__writeResults(results, satelliteWriter, insituWriter)
@@ -456,7 +456,7 @@ class DomsNetCDFFormatter:
 
 
 class DomsNetCDFValueWriter:
-    def __init__(self, group, matchup_parameter):
+    def __init__(self, group):
         group.createDimension("dim", size=None)
         self.group = group
 
@@ -474,16 +474,6 @@ class DomsNetCDFValueWriter:
         self.satellite_group_name = "SatelliteData"
         self.insitu_group_name = "InsituData"
 
-        #
-        # Only include the depth variable related to the match-up parameter. If the match-up parameter is
-        # not sss or sst then do not include any depth data, just fill values.
-        #
-        if matchup_parameter == "sss":
-            self.matchup_depth = "sea_water_salinity_depth"
-        elif matchup_parameter == "sst":
-            self.matchup_depth = "sea_water_temperature_depth"
-        else:
-            self.matchup_depth = "NO_DEPTH"
 
     def addData(self, value):
 
