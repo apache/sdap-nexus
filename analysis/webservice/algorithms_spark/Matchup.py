@@ -71,6 +71,11 @@ class Matchup(SparkHandler):
             "type": "string",
             "description": "The parameter of interest used for the match up. One of 'sst', 'sss', 'wind'. Required"
         },
+        "qualityFlag": {
+            "name": "In-Situ Quality Flag",
+            "type": "int",
+            "description": "The quality of in-situ data to be used for the match up. It must be an IODE primary level flag. Optional. Default: no quality filter applied"
+        },
         "startTime": {
             "name": "Start Time",
             "type": "string",
@@ -176,6 +181,10 @@ class Matchup(SparkHandler):
 
         depth_min = request.get_decimal_arg('depthMin', default=None)
         depth_max = request.get_decimal_arg('depthMax', default=None)
+        quality_flag = request.get_int_arg('qualityFlag', default=None)
+        if not quality_flag in [1,2,3,4,9]:
+            raise NexusProcessingException(
+                reason="Quality flag not a IODE primary level flag value", code=400)
 
         if depth_min is not None and depth_max is not None and depth_min >= depth_max:
             raise NexusProcessingException(
@@ -202,7 +211,7 @@ class Matchup(SparkHandler):
 
         return bounding_polygon, primary_ds_name, matchup_ds_names, parameter_s, \
                start_time, start_seconds_from_epoch, end_time, end_seconds_from_epoch, \
-               depth_min, depth_max, time_tolerance, radius_tolerance, \
+               depth_min, depth_max, quality_flag, time_tolerance, radius_tolerance, \
                platforms, match_once, result_size_limit
 
     def calc(self, request, **args):
@@ -210,7 +219,7 @@ class Matchup(SparkHandler):
         # TODO Assuming Satellite primary
         bounding_polygon, primary_ds_name, matchup_ds_names, parameter_s, \
         start_time, start_seconds_from_epoch, end_time, end_seconds_from_epoch, \
-        depth_min, depth_max, time_tolerance, radius_tolerance, \
+        depth_min, depth_max, quality_flag, time_tolerance, radius_tolerance, \
         platforms, match_once, result_size_limit = self.parse_arguments(request)
 
         with ResultsStorage() as resultsStorage:
@@ -230,7 +239,7 @@ class Matchup(SparkHandler):
         self.log.debug("Calling Spark Driver")
         try:
             spark_result = spark_matchup_driver(tile_ids, wkt.dumps(bounding_polygon), primary_ds_name,
-                                                matchup_ds_names, parameter_s, depth_min, depth_max, time_tolerance,
+                                                matchup_ds_names, parameter_s, depth_min, depth_max,quality_flag, time_tolerance,
                                                 radius_tolerance, platforms, match_once, sc=self._sc)
         except Exception as e:
             self.log.exception(e)
@@ -248,7 +257,7 @@ class Matchup(SparkHandler):
             "timeTolerance": time_tolerance,
             "radiusTolerance": float(radius_tolerance),
             "platforms": platforms,
-            "parameter": parameter_s
+            "parameter": parameter_s,
         }
 
         if depth_min is not None:
@@ -256,6 +265,9 @@ class Matchup(SparkHandler):
 
         if depth_max is not None:
             args["depthMax"] = float(depth_max)
+
+        if quality_flag is not None:
+            args["qualityFlag"] = int(quality_flag)
 
         total_keys = len(spark_result.keys())
         total_values = sum(len(v) for v in spark_result.itervalues())
@@ -302,10 +314,14 @@ class Matchup(SparkHandler):
         return {
             "sea_water_temperature": domspoint.sst,
             "sea_water_temperature_depth": domspoint.sst_depth,
+            "sea_water_temperature_quality": domspoint.sst_quality,
             "sea_water_salinity": domspoint.sss,
             "sea_water_salinity_depth": domspoint.sss_depth,
+            "sea_water_salinity_quality": domspoint.sss_quality,
             "wind_speed": domspoint.wind_speed,
             "wind_direction": domspoint.wind_direction,
+            "wind_speed_quality": domspoint.wind_speed_quality,
+            "wind_direction_quality": domspoint.wind_direction_quality,
             "wind_u": domspoint.wind_u,
             "wind_v": domspoint.wind_v,
             "platform": doms_values.getPlatformById(domspoint.platform),
@@ -333,10 +349,14 @@ class DomsPoint(object):
         self.wind_v = None
         self.wind_direction = None
         self.wind_speed = None
+        self.wind_speed_quality = None
+        self.wind_direction_quality = None
         self.sst = None
         self.sst_depth = None
+        self.sst_quality = None
         self.sss = None
         self.sss_depth = None
+        self.sss_quality = None
         self.source = None
         self.depth = None
         self.platform = None
@@ -415,10 +435,14 @@ class DomsPoint(object):
         point.wind_v = edge_point.get('northward_wind')
         point.wind_direction = edge_point.get('wind_direction')
         point.wind_speed = edge_point.get('wind_speed')
+        point.wind_speed_quality = edge_point.get('wind_speed_quality')
+        point.wind_direction_quality = edge_point.get('wind_direction_quality')
         point.sst = edge_point.get('sea_water_temperature')
         point.sst_depth = edge_point.get('sea_water_temperature_depth')
+        point.sst_quality = edge_point.get('sea_water_temperature_quality')
         point.sss = edge_point.get('sea_water_salinity')
         point.sss_depth = edge_point.get('sea_water_salinity_depth')
+        point.sss_quality = edge_point.get('sea_water_salinity_quality')
         point.source = edge_point.get('source')
         point.platform = edge_point.get('platform')
         point.device = edge_point.get('device')
@@ -437,7 +461,7 @@ from threading import Lock
 DRIVER_LOCK = Lock()
 
 
-def spark_matchup_driver(tile_ids, bounding_wkt, primary_ds_name, matchup_ds_names, parameter, depth_min, depth_max,
+def spark_matchup_driver(tile_ids, bounding_wkt, primary_ds_name, matchup_ds_names, parameter, depth_min, depth_max, quality_flag,
                          time_tolerance, radius_tolerance, platforms, match_once, sc=None):
     from functools import partial
 
@@ -447,6 +471,7 @@ def spark_matchup_driver(tile_ids, bounding_wkt, primary_ds_name, matchup_ds_nam
         matchup_b = sc.broadcast(matchup_ds_names)
         depth_min_b = sc.broadcast(float(depth_min) if depth_min is not None else None)
         depth_max_b = sc.broadcast(float(depth_max) if depth_max is not None else None)
+        quality_flag_b = sc.broadcast(int(quality_flag) if quality_flag is not None else None)
         tt_b = sc.broadcast(time_tolerance)
         rt_b = sc.broadcast(float(radius_tolerance))
         platforms_b = sc.broadcast(platforms)
@@ -460,7 +485,7 @@ def spark_matchup_driver(tile_ids, bounding_wkt, primary_ds_name, matchup_ds_nam
     rdd_filtered = rdd.mapPartitions(
         partial(match_satellite_to_insitu, primary_b=primary_b, matchup_b=matchup_b, parameter_b=parameter_b, tt_b=tt_b,
                 rt_b=rt_b, platforms_b=platforms_b, bounding_wkt_b=bounding_wkt_b, depth_min_b=depth_min_b,
-                depth_max_b=depth_max_b), preservesPartitioning=True) \
+                depth_max_b=depth_max_b, quality_flag_b=quality_flag_b), preservesPartitioning=True) \
         .filter(lambda p_m_tuple: abs(
         iso_time_to_epoch(p_m_tuple[0].time) - iso_time_to_epoch(p_m_tuple[1].time)) <= time_tolerance)
 
@@ -519,7 +544,7 @@ def add_meters_to_lon_lat(lon, lat, meters):
 
 
 def match_satellite_to_insitu(tile_ids, primary_b, matchup_b, parameter_b, tt_b, rt_b, platforms_b,
-                              bounding_wkt_b, depth_min_b, depth_max_b):
+                              bounding_wkt_b, depth_min_b, depth_max_b, quality_flag_b):
     the_time = datetime.now()
     tile_ids = list(tile_ids)
     if len(tile_ids) == 0:
@@ -563,7 +588,7 @@ def match_satellite_to_insitu(tile_ids, primary_b, matchup_b, parameter_b, tt_b,
             bbox = ','.join(
                 [str(matchup_min_lon), str(matchup_min_lat), str(matchup_max_lon), str(matchup_max_lat)])
             edge_response = query_edge(insitudata_name, parameter_b.value, matchup_min_time, matchup_max_time, bbox,
-                                       platforms_b.value, depth_min_b.value, depth_max_b.value, session=edge_session)
+                                       platforms_b.value, depth_min_b.value, depth_max_b.value, quality_flag_b.value, session=edge_session)
             if edge_response['totalResults'] == 0:
                 continue
             r = edge_response['results']
@@ -647,7 +672,7 @@ def match_tile_to_point_generator(tile_service, tile_id, m_tree, edge_results, s
                 yield p_doms_point, m_doms_point
 
 
-def query_edge(dataset, variable, startTime, endTime, bbox, platform, depth_min, depth_max, itemsPerPage=1000,
+def query_edge(dataset, variable, startTime, endTime, bbox, platform, depth_min, depth_max, quality_flag, itemsPerPage=1000,
                startIndex=0, stats=True, session=None):
     try:
         startTime = datetime.utcfromtimestamp(startTime).strftime('%Y-%m-%dT%H:%M:%SZ')
@@ -674,6 +699,7 @@ def query_edge(dataset, variable, startTime, endTime, bbox, platform, depth_min,
               "minDepth": depth_min,
               "maxDepth": depth_max,
               "platform": platform,
+              "qualityFlag": quality_flag,
               "itemsPerPage": itemsPerPage, "startIndex": startIndex, "stats": str(stats).lower()}
 
     if session is not None:

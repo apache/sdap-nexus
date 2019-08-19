@@ -86,9 +86,9 @@ class ResultsStorage(AbstractResultsContainer):
 
     def __insertParams(self, execution_id, params):
         cql = """INSERT INTO doms_params
-                    (execution_id, primary_dataset, matchup_datasets, depth_min, depth_max, time_tolerance, radius_tolerance, start_time, end_time, platforms, bounding_box, parameter)
+                    (execution_id, primary_dataset, matchup_datasets, depth_min, depth_max, time_tolerance, radius_tolerance, start_time, end_time, platforms, bounding_box, parameter, quality_flag)
                  VALUES
-                    (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                    (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
         """
         self._session.execute(cql, (execution_id,
                                     params["primary"],
@@ -102,7 +102,8 @@ class ResultsStorage(AbstractResultsContainer):
                                     params["endTime"],
                                     params["platforms"],
                                     params["bbox"],
-                                    params["parameter"]
+                                    params["parameter"],
+                                    params["qualityFlag"] if "qualityFlag" in params.keys() else None
                                     ))
 
     def __insertStats(self, execution_id, stats):
@@ -125,9 +126,9 @@ class ResultsStorage(AbstractResultsContainer):
 
         cql = """
            INSERT INTO doms_data
-                (id, execution_id, value_id, primary_value_id, x, y, source_dataset, measurement_time, platform, device, measurement_values, is_primary)
+                (id, execution_id, value_id, primary_value_id, x, y, source_dataset, measurement_time,wind_speed_quality, wind_direction_quality, sst_quality, sss_quality, platform, device, measurement_values, is_primary)
            VALUES
-                (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """
         insertStatement = self._session.prepare(cql)
         batch = BatchStatement()
@@ -150,6 +151,10 @@ class ResultsStorage(AbstractResultsContainer):
             result["y"],
             result["source"],
             result["time"],
+            result["wind_speed_quality"],
+            result["wind_direction_quality"],
+            result["sst_quality"],
+            result["sss_quality"],
             result["platform"] if "platform" in result else None,
             result["device"] if "device" in result else None,
             dataMap,
@@ -242,7 +247,11 @@ class ResultsRetrieval(AbstractResultsContainer):
                 "source": row.source_dataset,
                 "device": row.device,
                 "platform": row.platform,
-                "time": row.measurement_time.replace(tzinfo=UTC)
+                "time": row.measurement_time.replace(tzinfo=UTC),
+                "wind_speed_quality": row.wind_speed_quality,
+                "wind_direction_quality": row.wind_direction_quality,
+                "sst_quality": row.sst_quality,
+                "sss_quality": row.sss_quality,
             }
         for key in row.measurement_values:
             value = float(row.measurement_values[key])
@@ -279,7 +288,8 @@ class ResultsRetrieval(AbstractResultsContainer):
                 "endTime": row.end_time.replace(tzinfo=UTC),
                 "platforms": row.platforms,
                 "bbox": row.bounding_box,
-                "parameter": row.parameter
+                "parameter": row.parameter,
+                "quality_flag": row.quality_flag
             }
             return params
 
