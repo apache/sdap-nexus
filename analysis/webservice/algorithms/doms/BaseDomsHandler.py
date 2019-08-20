@@ -129,13 +129,14 @@ class DomsCSVFormatter:
         headers = [
             # Primary
             "id", "source", "lon (degrees_east)", "lat (degrees_north)", "time", "platform",
-            "sea_surface_salinity (1e-3)", "sea_surface_temperature (degree_C)", "wind_speed (m s-1)", "wind_direction",
-            "wind_u (m s-1)", "wind_v (m s-1)",
+            "sea_surface_salinity (1e-3)", "sea_surface_salinity_quality", "sea_surface_temperature (degree_C)",
+            "sea_surface_temperature_quality", "wind_speed (m s-1)", "wind_speed_quality", "wind_direction",
+            "wind_u (m s-1)", "wind_v (m s-1)", "wind_component_quality",
             # Match
             "id", "source", "lon (degrees_east)", "lat (degrees_north)", "time", "platform",
-            "depth (m)", "sea_water_salinity (1e-3)",
-            "sea_water_temperature (degree_C)", "wind_speed (m s-1)",
-            "wind_direction", "wind_u (m s-1)", "wind_v (m s-1)"
+            "depth (m)", "sea_water_salinity (1e-3)", "sea_water_salinity_quality",
+            "sea_water_temperature (degree_C)", "sea_water_temperature_quality", "wind_speed (m s-1)",
+            "wind_speed_quality", "wind_direction", "wind_u (m s-1)", "wind_v (m s-1)", "wind_component_quality"
         ]
 
         writer.writerow(headers)
@@ -146,9 +147,11 @@ class DomsCSVFormatter:
                 # Primary
                 primaryValue["id"], primaryValue["source"], str(primaryValue["x"]), str(primaryValue["y"]),
                 primaryValue["time"].strftime(ISO_8601), primaryValue["platform"],
-                primaryValue.get("sea_water_salinity", ""), primaryValue.get("sea_water_temperature", ""),
-                primaryValue.get("wind_speed", ""), primaryValue.get("wind_direction", ""),
-                primaryValue.get("wind_u", ""), primaryValue.get("wind_v", "")
+                primaryValue.get("sea_water_salinity", ""), primaryValue.get("sea_water_salinity_quality", ""),
+                primaryValue.get("sea_water_temperature", ""), primaryValue.get("sea_water_temperature_quality", ""),
+                primaryValue.get("wind_speed", ""), primaryValue.get("wind_speed_quality", ""),
+                primaryValue.get("wind_direction", ""), primaryValue.get("wind_u", ""), primaryValue.get("wind_v", ""),
+                primaryValue.get("wind_component_quality", "")
             ]
 
             for matchup in primaryValue["matches"]:
@@ -180,17 +183,23 @@ class DomsCSVFormatter:
 
                     if "sea_water_salinity" in just_vars:
                         matchup_vars.append(matchup.get("sea_water_salinity", ""))
+                        matchup_vars.append(matchup.get("sea_water_salinity_quality", ""))
                     else:
+                        matchup_vars.append("")
                         matchup_vars.append("")
 
                     if "sea_water_temperature" in just_vars:
                         matchup_vars.append(matchup.get("sea_water_temperature", ""))
+                        matchup_vars.append(matchup.get("sea_water_temperature_quality", ""))
                     else:
+                        matchup_vars.append("")
                         matchup_vars.append("")
 
                     if "wind" in just_vars:
                         matchup_vars.append(matchup.get("wind_speed", ""))
+                        matchup_vars.append(matchup.get("wind_speed_quality", ""))
                     else:
+                        matchup_vars.append("")
                         matchup_vars.append("")
 
                     # We are not currently tracking the depth for these variables, only include their values
@@ -199,7 +208,9 @@ class DomsCSVFormatter:
                         matchup_vars.append(matchup.get("wind_direction", ""))
                         matchup_vars.append(matchup.get("wind_u", ""))
                         matchup_vars.append(matchup.get("wind_v", ""))
+                        matchup_vars.append(matchup.get("wind_component_quality", ""))
                     else:
+                        matchup_vars.append("")
                         matchup_vars.append("")
                         matchup_vars.append("")
                         matchup_vars.append("")
@@ -464,11 +475,15 @@ class DomsNetCDFValueWriter:
         self.lon = []
         self.time = []
         self.sea_water_salinity = []
+        self.sea_water_salinity_quality = []
         self.wind_speed = []
+        self.wind_speed_quality = []
         self.wind_u = []
         self.wind_v = []
         self.wind_direction = []
+        self.wind_component_quality = []
         self.sea_water_temperature = []
+        self.sea_water_temperature_quality = []
         self.depth = []
 
         self.satellite_group_name = "SatelliteData"
@@ -502,28 +517,36 @@ class DomsNetCDFValueWriter:
             # don't have this depth measurement
             if "sea_water_salinity" in just_vars:
                 self.sea_water_salinity.append(value.get("sea_water_salinity", None))
+                self.sea_water_salinity_quality.append(value.get("sea_water_salinity_quality", None))
             else:
                 self.sea_water_salinity.append(None)
+                self.sea_water_salinity_quality.append(None)
 
             if "sea_water_temperature" in just_vars:
                 self.sea_water_temperature.append(value.get("sea_water_temperature", None))
+                self.sea_water_temperature_quality.append(value.get("sea_water_temperature_quality", None))
             else:
                 self.sea_water_temperature.append(None)
+                self.sea_water_temperature_quality.append(None)
 
             if "wind" in just_vars:
                 self.wind_speed.append(value.get("wind_speed", None))
+                self.wind_speed_quality.append(value.get("wind_speed_quality", None))
             else:
                 self.wind_speed.append(None)
+                self.wind_speed_quality.append(None)
 
             # We are not currently tracking the depth for these variables, only include their values when depth is None
             if depth is None:
                 self.wind_u.append(value.get("wind_u", None))
                 self.wind_v.append(value.get("wind_v", None))
                 self.wind_direction.append(value.get("wind_direction", None))
+                self.wind_component_quality.append(value.get("wind_component_quality", None))
             else:
                 self.wind_u.append(None)
                 self.wind_v.append(None)
                 self.wind_direction.append(None)
+                self.wind_component_quality.append(None)
 
     def writeGroup(self):
         #
@@ -541,6 +564,9 @@ class DomsNetCDFValueWriter:
         lonVar[:] = self.lon
         timeVar[:] = self.time
 
+        # The following checks make sure that there is actual data for a specific variable before adding it to the
+        # netCDF file by ensuring that the array does not only contain 'None' values
+
         if self.sea_water_salinity.count(None) != len(self.sea_water_salinity):
             if self.group.name == self.satellite_group_name:
                 sssVar = self.group.createVariable("SeaSurfaceSalinity", "f4", ("dim",), fill_value=-32767.0)
@@ -550,10 +576,25 @@ class DomsNetCDFValueWriter:
                 self.__enrichSWSMeasurements(sssVar, self.__calcMin(self.sea_water_salinity), max(self.sea_water_salinity))
             sssVar[:] = self.sea_water_salinity
 
+        if self.sea_water_salinity_quality.count(None) != len(self.sea_water_salinity_quality):
+            if self.group.name == self.satellite_group_name:
+                sssQualVar = self.group.createVariable("SeaSurfaceSalinityQuality", "f4", ("dim",), fill_value=9)
+                self.__enrichQuality(sssQualVar, "Sea surface salinity quality")
+
+            else:   # group.name == self.insitu_group_name
+                sssQualVar = self.group.createVariable("SeaWaterSalinityQuality", "f4", ("dim",), fill_value=9)
+                self.__enrichQuality(sssQualVar, "Sea water salinity quality")
+            sssQualVar[:] = self.sea_water_salinity_quality
+
         if self.wind_speed.count(None) != len(self.wind_speed):
             windSpeedVar = self.group.createVariable("WindSpeed", "f4", ("dim",), fill_value=-32767.0)
             self.__enrichWindSpeed(windSpeedVar, self.__calcMin(self.wind_speed), max(self.wind_speed))
             windSpeedVar[:] = self.wind_speed
+
+        if self.wind_speed_quality.count(None) != len(self.wind_speed_quality):
+            windSpeedQualVar = self.group.createVariable("WindSpeedQuality", "f4", ("dim",), fill_value=9)
+            self.__enrichQuality(windSpeedQualVar, "Wind speed quality")
+            windSpeedQualVar[:] = self.wind_speed_quality
 
         if self.wind_u.count(None) != len(self.wind_u):
             windUVar = self.group.createVariable("WindU", "f4", ("dim",), fill_value=-32767.0)
@@ -570,6 +611,11 @@ class DomsNetCDFValueWriter:
             windDirVar[:] = self.wind_direction
             self.__enrichWindDir(windDirVar)
 
+        if self.wind_component_quality.count(None) != len(self.wind_component_quality):
+            windComponentQualVar = self.group.createVariable("WindComponentQuality", "f4", ("dim",), fill_value=9)
+            self.__enrichQuality(windComponentQualVar, "Wind component quality")
+            windComponentQualVar[:] = self.wind_component_quality
+
         if self.sea_water_temperature.count(None) != len(self.sea_water_temperature):
             if self.group.name == self.satellite_group_name:
                 tempVar = self.group.createVariable("SeaSurfaceTemp", "f4", ("dim",), fill_value=-32767.0)
@@ -579,6 +625,17 @@ class DomsNetCDFValueWriter:
                 self.__enrichWaterTemp(tempVar, self.__calcMin(self.sea_water_temperature), max(self.sea_water_temperature))
             tempVar[:] = self.sea_water_temperature
 
+        if self.sea_water_temperature_quality.count(None) != len(self.sea_water_temperature_quality):
+            if self.group.name == self.satellite_group_name:
+                tempQualVar = self.group.createVariable("SeaSurfaceTempQuality", "f4", ("dim",), fill_value=9)
+                self.__enrichQuality(tempQualVar, "Sea surface temperature quality")
+
+            else:   # group.name == self.insitu_group_name
+                tempQualVar = self.group.createVariable("SeaWaterTempQuality", "f4", ("dim",), fill_value=9)
+                self.__enrichQuality(tempQualVar, "Sea water temperature quality")
+            tempQualVar[:] = self.sea_water_temperature_quality
+
+        # Only include depth for insitu group
         if self.group.name == self.insitu_group_name:
             depthVar = self.group.createVariable("Depth", "f4", ("dim",), fill_value=-32767.0)
 
@@ -705,3 +762,12 @@ class DomsNetCDFValueWriter:
         var.standard_name = "wind_from_direction"
         var.units = "degree"
         var.coordinates = "lon lat depth time"
+
+    @staticmethod
+    def __enrichQuality(var, long_name):
+        var.long_name = long_name
+        var.standard_name = "status_flag"
+        var.valid_min = 1
+        var.valid_max = 4
+        var.flag_values = 1, 2, 3, 4
+        var.flag_meanings = "good unknown_unavailable_notevaluated questionable_suspect bad"
