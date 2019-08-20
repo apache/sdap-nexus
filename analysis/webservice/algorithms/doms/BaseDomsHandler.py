@@ -129,9 +129,9 @@ class DomsCSVFormatter:
         headers = [
             # Primary
             "id", "source", "lon (degrees_east)", "lat (degrees_north)", "time", "platform",
-            "sea_surface_salinity (1e-3)", "sea_surface_salinity_quality", "sea_surface_temperature (degree_C)",
-            "sea_surface_temperature_quality", "wind_speed (m s-1)", "wind_speed_quality", "wind_direction",
-            "wind_u (m s-1)", "wind_v (m s-1)", "wind_component_quality",
+            "sea_surface_salinity (1e-3)", "sea_surface_temperature (degree_C)",
+            "wind_speed (m s-1)", "wind_direction",
+            "wind_u (m s-1)", "wind_v (m s-1)",
             # Match
             "id", "source", "lon (degrees_east)", "lat (degrees_north)", "time", "platform",
             "depth (m)", "sea_water_salinity (1e-3)", "sea_water_salinity_quality",
