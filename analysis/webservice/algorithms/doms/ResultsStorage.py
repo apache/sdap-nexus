@@ -14,7 +14,6 @@
 # limitations under the License.
 
 
-
 import ConfigParser
 import logging
 import uuid
@@ -126,7 +125,7 @@ class ResultsStorage(AbstractResultsContainer):
 
         cql = """
            INSERT INTO doms_data
-                (id, execution_id, value_id, primary_value_id, x, y, source_dataset, measurement_time,wind_speed_quality, wind_direction_quality, sst_quality, sss_quality, platform, device, measurement_values, is_primary)
+                (id, execution_id, value_id, primary_value_id, x, y, source_dataset, measurement_time, wind_speed_quality, wind_component_quality, sst_quality, sss_quality, platform, device, measurement_values, is_primary)
            VALUES
                 (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """
@@ -152,9 +151,9 @@ class ResultsStorage(AbstractResultsContainer):
             result["source"],
             result["time"],
             result["wind_speed_quality"],
-            result["wind_direction_quality"],
-            result["sst_quality"],
-            result["sss_quality"],
+            result["wind_component_quality"],
+            result["sea_water_temperature_quality"],
+            result["sea_water_salinity_quality"],
             result["platform"] if "platform" in result else None,
             result["device"] if "device" in result else None,
             dataMap,
@@ -183,8 +182,8 @@ class ResultsStorage(AbstractResultsContainer):
         dataMap = {}
         for name in result:
             value = result[name]
-            if name not in ["id", "x", "y", "source", "time", "platform", "device", "point", "matches"] and type(
-                    value) in [float, int]:
+            if name not in ["id", "x", "y", "source", "time", "platform", "device", "point",
+                            "matches"] and value is not None and type(value) in [float, int]:
                 dataMap[name] = value
         return dataMap
 
@@ -228,6 +227,7 @@ class ResultsRetrieval(AbstractResultsContainer):
         dataMap = {}
         for row in rows:
             entry = self.__rowToDataEntry(row, trim_data=trim_data)
+
             dataMap[row.value_id] = entry
         return dataMap
 
@@ -249,13 +249,14 @@ class ResultsRetrieval(AbstractResultsContainer):
                 "platform": row.platform,
                 "time": row.measurement_time.replace(tzinfo=UTC),
                 "wind_speed_quality": row.wind_speed_quality,
-                "wind_direction_quality": row.wind_direction_quality,
-                "sst_quality": row.sst_quality,
-                "sss_quality": row.sss_quality,
+                "wind_component_quality": row.wind_component_quality,
+                "sea_water_temperature_quality": row.sst_quality,
+                "sea_water_salinity_quality": row.sss_quality
             }
+
         for key in row.measurement_values:
             value = float(row.measurement_values[key])
-            entry[key] = value
+            entry[key] = entry[key] if key in entry else value
         return entry
 
     def __retrieveStats(self, id):
@@ -289,7 +290,7 @@ class ResultsRetrieval(AbstractResultsContainer):
                 "platforms": row.platforms,
                 "bbox": row.bounding_box,
                 "parameter": row.parameter,
-                "quality_flag": row.quality_flag
+                "qualityFlag": row.quality_flag
             }
             return params
 

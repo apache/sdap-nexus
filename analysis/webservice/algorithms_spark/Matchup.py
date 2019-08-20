@@ -14,7 +14,6 @@
 # limitations under the License.
 
 
-
 import json
 import logging
 import threading
@@ -32,7 +31,6 @@ from shapely import wkt
 from shapely.geometry import Point
 from shapely.geometry import box
 from shapely.geos import ReadingError
-
 from webservice.NexusHandler import SparkHandler, nexus_handler
 from webservice.algorithms.doms import config as edge_endpoints
 from webservice.algorithms.doms import values as doms_values
@@ -74,7 +72,8 @@ class Matchup(SparkHandler):
         "qualityFlag": {
             "name": "In-Situ Quality Flag",
             "type": "int",
-            "description": "The quality of in-situ data to be used for the match up. It must be an IODE primary level flag. Optional. Default: no quality filter applied"
+            "description": "The quality of in-situ data to be used for the match up. It must be an IODE primary level "
+                           "flag. Optional. Default: no quality filter applied"
         },
         "startTime": {
             "name": "Start Time",
@@ -181,14 +180,15 @@ class Matchup(SparkHandler):
 
         depth_min = request.get_decimal_arg('depthMin', default=None)
         depth_max = request.get_decimal_arg('depthMax', default=None)
-        quality_flag = request.get_int_arg('qualityFlag', default=None)
-        if not quality_flag in [1,2,3,4,9]:
-            raise NexusProcessingException(
-                reason="Quality flag not a IODE primary level flag value", code=400)
 
         if depth_min is not None and depth_max is not None and depth_min >= depth_max:
             raise NexusProcessingException(
                 reason="Depth Min should be less than Depth Max", code=400)
+
+        quality_flag = request.get_int_arg('qualityFlag', default=None)
+        if quality_flag not in [1, 2, 3, 4, 9, None]:
+            raise NexusProcessingException(
+                reason="Quality flag not a IODE primary level flag value", code=400)
 
         time_tolerance = request.get_int_arg('tt', default=86400)
         radius_tolerance = request.get_decimal_arg('rt', default=1000.0)
@@ -239,7 +239,8 @@ class Matchup(SparkHandler):
         self.log.debug("Calling Spark Driver")
         try:
             spark_result = spark_matchup_driver(tile_ids, wkt.dumps(bounding_polygon), primary_ds_name,
-                                                matchup_ds_names, parameter_s, depth_min, depth_max,quality_flag, time_tolerance,
+                                                matchup_ds_names, parameter_s, depth_min, depth_max, quality_flag,
+                                                time_tolerance,
                                                 radius_tolerance, platforms, match_once, sc=self._sc)
         except Exception as e:
             self.log.exception(e)
@@ -321,7 +322,7 @@ class Matchup(SparkHandler):
             "wind_speed": domspoint.wind_speed,
             "wind_direction": domspoint.wind_direction,
             "wind_speed_quality": domspoint.wind_speed_quality,
-            "wind_direction_quality": domspoint.wind_direction_quality,
+            "wind_component_quality": domspoint.wind_component_quality,
             "wind_u": domspoint.wind_u,
             "wind_v": domspoint.wind_v,
             "platform": doms_values.getPlatformById(domspoint.platform),
@@ -350,7 +351,7 @@ class DomsPoint(object):
         self.wind_direction = None
         self.wind_speed = None
         self.wind_speed_quality = None
-        self.wind_direction_quality = None
+        self.wind_component_quality = None
         self.sst = None
         self.sst_depth = None
         self.sst_quality = None
@@ -436,7 +437,7 @@ class DomsPoint(object):
         point.wind_direction = edge_point.get('wind_direction')
         point.wind_speed = edge_point.get('wind_speed')
         point.wind_speed_quality = edge_point.get('wind_speed_quality')
-        point.wind_direction_quality = edge_point.get('wind_direction_quality')
+        point.wind_component_quality = edge_point.get('wind_component_quality')
         point.sst = edge_point.get('sea_water_temperature')
         point.sst_depth = edge_point.get('sea_water_temperature_depth')
         point.sst_quality = edge_point.get('sea_water_temperature_quality')
@@ -461,7 +462,8 @@ from threading import Lock
 DRIVER_LOCK = Lock()
 
 
-def spark_matchup_driver(tile_ids, bounding_wkt, primary_ds_name, matchup_ds_names, parameter, depth_min, depth_max, quality_flag,
+def spark_matchup_driver(tile_ids, bounding_wkt, primary_ds_name, matchup_ds_names, parameter, depth_min, depth_max,
+                         quality_flag,
                          time_tolerance, radius_tolerance, platforms, match_once, sc=None):
     from functools import partial
 
@@ -588,7 +590,8 @@ def match_satellite_to_insitu(tile_ids, primary_b, matchup_b, parameter_b, tt_b,
             bbox = ','.join(
                 [str(matchup_min_lon), str(matchup_min_lat), str(matchup_max_lon), str(matchup_max_lat)])
             edge_response = query_edge(insitudata_name, parameter_b.value, matchup_min_time, matchup_max_time, bbox,
-                                       platforms_b.value, depth_min_b.value, depth_max_b.value, quality_flag_b.value, session=edge_session)
+                                       platforms_b.value, depth_min_b.value, depth_max_b.value, quality_flag_b.value,
+                                       session=edge_session)
             if edge_response['totalResults'] == 0:
                 continue
             r = edge_response['results']
@@ -672,7 +675,8 @@ def match_tile_to_point_generator(tile_service, tile_id, m_tree, edge_results, s
                 yield p_doms_point, m_doms_point
 
 
-def query_edge(dataset, variable, startTime, endTime, bbox, platform, depth_min, depth_max, quality_flag, itemsPerPage=1000,
+def query_edge(dataset, variable, startTime, endTime, bbox, platform, depth_min, depth_max, quality_flag,
+               itemsPerPage=1000,
                startIndex=0, stats=True, session=None):
     try:
         startTime = datetime.utcfromtimestamp(startTime).strftime('%Y-%m-%dT%H:%M:%SZ')

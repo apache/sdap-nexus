@@ -124,7 +124,7 @@ class DomsInitializer:
               source_dataset text,
               measurement_time timestamp,
               wind_speed_quality int,
-              wind_direction_quality int,
+              wind_component_quality int,
               sst_quality int,
               sss_quality int,
               platform text,
