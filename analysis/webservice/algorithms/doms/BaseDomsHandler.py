@@ -20,6 +20,7 @@ import json
 from datetime import datetime
 import time
 from decimal import Decimal
+import itertools
 
 import numpy as np
 from pytz import timezone, UTC
@@ -139,36 +140,72 @@ class DomsCSVFormatter:
 
         writer.writerow(headers)
 
-        #
-        # Only include the depth variable related to the match-up parameter. If the match-up parameter
-        # is not sss or sst then do not include any depth data, just fill values.
-        #
-        if params["parameter"] == "sss":
-            depth = "sea_water_salinity_depth"
-        elif params["parameter"] == "sst":
-            depth = "sea_water_temperature_depth"
-        else:
-            depth = "NO_DEPTH"
-
         for primaryValue in results:
-            for matchup in primaryValue["matches"]:
-                row = [
-                    # Primary
-                    primaryValue["id"], primaryValue["source"], str(primaryValue["x"]), str(primaryValue["y"]),
-                    primaryValue["time"].strftime(ISO_8601), primaryValue["platform"],
-                    primaryValue.get("sea_water_salinity", ""), primaryValue.get("sea_water_temperature", ""),
-                    primaryValue.get("wind_speed", ""), primaryValue.get("wind_direction", ""),
-                    primaryValue.get("wind_u", ""), primaryValue.get("wind_v", ""),
 
-                    # Matchup
-                    matchup["id"], matchup["source"], matchup["x"], matchup["y"],
-                    matchup["time"].strftime(ISO_8601), matchup["platform"],
-                    matchup.get(depth, ""), matchup.get("sea_water_salinity", ""),
-                    matchup.get("sea_water_temperature", ""),
-                    matchup.get("wind_speed", ""), matchup.get("wind_direction", ""),
-                    matchup.get("wind_u", ""), matchup.get("wind_v", ""),
-                ]
-                writer.writerow(row)
+            row = [
+                # Primary
+                primaryValue["id"], primaryValue["source"], str(primaryValue["x"]), str(primaryValue["y"]),
+                primaryValue["time"].strftime(ISO_8601), primaryValue["platform"],
+                primaryValue.get("sea_water_salinity", ""), primaryValue.get("sea_water_temperature", ""),
+                primaryValue.get("wind_speed", ""), primaryValue.get("wind_direction", ""),
+                primaryValue.get("wind_u", ""), primaryValue.get("wind_v", "")
+            ]
+
+            for matchup in primaryValue["matches"]:
+
+                # Create array of measurements and their corresponding depths
+                depths = [{"val": "sea_water_salinity", "depth": matchup.get("sea_water_salinity_depth", None)},
+                          {"val": "sea_water_temperature", "depth": matchup.get("sea_water_temperature_depth", None)},
+                          {"val": "wind", "depth": None}]
+
+                # For each unique depth, create a new line in csv
+                for depth, var_list in itertools.groupby(depths, key=lambda x: x['depth']):
+
+                    # Add information that applies to this entry, regardless of variable
+                    matchup_vars = [
+                        # Matchup
+                        matchup["id"], matchup["source"], matchup["x"], matchup["y"],
+                        matchup["time"].strftime(ISO_8601), matchup["platform"],
+                        depth
+                    ]
+
+                    # Pull out just the variable names from the objects into a simpler array that is easier to
+                    # search
+                    just_vars = []
+                    for x in var_list:
+                        just_vars.append(x['val'])
+
+                    # Add each of the variables that have this depth attribute, add None values for the variables that
+                    # don't have this depth measurement
+
+                    if "sea_water_salinity" in just_vars:
+                        matchup_vars.append(matchup.get("sea_water_salinity", ""))
+                    else:
+                        matchup_vars.append("")
+
+                    if "sea_water_temperature" in just_vars:
+                        matchup_vars.append(matchup.get("sea_water_temperature", ""))
+                    else:
+                        matchup_vars.append("")
+
+                    if "wind" in just_vars:
+                        matchup_vars.append(matchup.get("wind_speed", ""))
+                    else:
+                        matchup_vars.append("")
+
+                    # We are not currently tracking the depth for these variables, only include their values
+                    # when depth is None
+                    if depth == None:
+                        matchup_vars.append(matchup.get("wind_direction", ""))
+                        matchup_vars.append(matchup.get("wind_u", ""))
+                        matchup_vars.append(matchup.get("wind_v", ""))
+                    else:
+                        matchup_vars.append("")
+                        matchup_vars.append("")
+                        matchup_vars.append("")
+
+                    print_row = row + matchup_vars
+                    writer.writerow(print_row)
 
     @staticmethod
     def __addConstants(csvfile):
@@ -210,12 +247,15 @@ class DomsCSVFormatter:
 
         platforms = set()
         for primaryValue in results:
-            platforms.add(primaryValue['platform'])
+            platforms.add(primaryValue.get('platform', ""))
             for match in primaryValue['matches']:
-                platforms.add(match['platform'])
+                platforms.add(match.get('platform', ""))
 
-        # insituDatasets = params["matchup"].split(",")
-        insituDatasets = params["matchup"]
+        if type(params["matchup"]) == list:
+            insituDatasets = params["matchup"]
+        else:
+            insituDatasets = params["matchup"].split(",")
+
         insituLinks = set()
         for insitu in insituDatasets:
             insituLinks.add(config.METADATA_LINKS[insitu])
@@ -320,7 +360,11 @@ class DomsNetCDFFormatter:
         dataset.DOMS_time_to_complete = details["timeToComplete"]
         dataset.DOMS_time_to_complete_units = "seconds"
 
-        insituDatasets = params["matchup"]
+        if type(params["matchup"]) == list:
+            insituDatasets = params["matchup"]
+        else:
+            insituDatasets = params["matchup"].split(",")
+
         insituLinks = set()
         for insitu in insituDatasets:
             insituLinks.add(config.METADATA_LINKS[insitu])
@@ -328,9 +372,9 @@ class DomsNetCDFFormatter:
 
         platforms = set()
         for primaryValue in results:
-            platforms.add(primaryValue['platform'])
+            platforms.add(primaryValue.get('platform', None))
             for match in primaryValue['matches']:
-                platforms.add(match['platform'])
+                platforms.add(match.get('platform', None))
         dataset.platform = ', '.join(platforms)
 
         satellite_group_name = "SatelliteData"
@@ -338,11 +382,11 @@ class DomsNetCDFFormatter:
 
         #Create Satellite group, variables, and attributes
         satelliteGroup = dataset.createGroup(satellite_group_name)
-        satelliteWriter = DomsNetCDFValueWriter(satelliteGroup, params["parameter"])
+        satelliteWriter = DomsNetCDFValueWriter(satelliteGroup)
 
         # Create InSitu group, variables, and attributes
         insituGroup = dataset.createGroup(insitu_group_name)
-        insituWriter = DomsNetCDFValueWriter(insituGroup, params["parameter"])
+        insituWriter = DomsNetCDFValueWriter(insituGroup)
 
         # Add data to Insitu and Satellite groups, generate array of match ID pairs
         matches = DomsNetCDFFormatter.__writeResults(results, satelliteWriter, insituWriter)
@@ -412,7 +456,7 @@ class DomsNetCDFFormatter:
 
 
 class DomsNetCDFValueWriter:
-    def __init__(self, group, matchup_parameter):
+    def __init__(self, group):
         group.createDimension("dim", size=None)
         self.group = group
 
@@ -430,28 +474,56 @@ class DomsNetCDFValueWriter:
         self.satellite_group_name = "SatelliteData"
         self.insitu_group_name = "InsituData"
 
-        #
-        # Only include the depth variable related to the match-up parameter. If the match-up parameter is
-        # not sss or sst then do not include any depth data, just fill values.
-        #
-        if matchup_parameter == "sss":
-            self.matchup_depth = "sea_water_salinity_depth"
-        elif matchup_parameter == "sst":
-            self.matchup_depth = "sea_water_temperature_depth"
-        else:
-            self.matchup_depth = "NO_DEPTH"
 
     def addData(self, value):
-        self.lat.append(value.get("y", None))
-        self.lon.append(value.get("x", None))
-        self.time.append(time.mktime(value.get("time").timetuple()))
-        self.sea_water_salinity.append(value.get("sea_water_salinity", None))
-        self.wind_speed.append(value.get("wind_speed", None))
-        self.wind_u.append(value.get("wind_u", None))
-        self.wind_v.append(value.get("wind_v", None))
-        self.wind_direction.append(value.get("wind_direction", None))
-        self.sea_water_temperature.append(value.get("sea_water_temperature", None))
-        self.depth.append(value.get(self.matchup_depth, None))
+
+        # Create array of measurements and their corresponding depths
+        depths = [{"val": "sea_water_salinity", "depth": value.get("sea_water_salinity_depth", None)},
+                  {"val": "sea_water_temperature", "depth": value.get("sea_water_temperature_depth", None)},
+                  {"val": "wind", "depth": None}]
+
+        # For each unique depth, create a new entry in the netcdf file
+        for depth, var_list in itertools.groupby(depths, key=lambda x: x['depth']):
+
+            # Add information that applies to this entry, regardless of variable
+            self.lat.append(value.get("y", None))
+            self.lon.append(value.get("x", None))
+            t = (value.get("time") - datetime(1970, 1, 1).replace(tzinfo=UTC)).total_seconds()
+            self.time.append(t)
+            self.depth.append(depth)
+
+            # Pull out just the variable names from the objects into a simpler array that is easier to
+            # search
+            just_vars = []
+            for x in var_list:
+                just_vars.append(x['val'])
+
+            # Add each of the variables that have this depth attribute, add None values for the variables that
+            # don't have this depth measurement
+            if "sea_water_salinity" in just_vars:
+                self.sea_water_salinity.append(value.get("sea_water_salinity", None))
+            else:
+                self.sea_water_salinity.append(None)
+
+            if "sea_water_temperature" in just_vars:
+                self.sea_water_temperature.append(value.get("sea_water_temperature", None))
+            else:
+                self.sea_water_temperature.append(None)
+
+            if "wind" in just_vars:
+                self.wind_speed.append(value.get("wind_speed", None))
+            else:
+                self.wind_speed.append(None)
+
+            # We are not currently tracking the depth for these variables, only include their values when depth is None
+            if depth is None:
+                self.wind_u.append(value.get("wind_u", None))
+                self.wind_v.append(value.get("wind_v", None))
+                self.wind_direction.append(value.get("wind_direction", None))
+            else:
+                self.wind_u.append(None)
+                self.wind_v.append(None)
+                self.wind_direction.append(None)
 
     def writeGroup(self):
         #
@@ -472,10 +544,10 @@ class DomsNetCDFValueWriter:
         if self.sea_water_salinity.count(None) != len(self.sea_water_salinity):
             if self.group.name == self.satellite_group_name:
                 sssVar = self.group.createVariable("SeaSurfaceSalinity", "f4", ("dim",), fill_value=-32767.0)
-                self.__enrichSSSMeasurements(sssVar, min(self.sea_water_salinity), max(self.sea_water_salinity))
+                self.__enrichSSSMeasurements(sssVar, self.__calcMin(self.sea_water_salinity), max(self.sea_water_salinity))
             else:  # group.name == self.insitu_group_name
                 sssVar = self.group.createVariable("SeaWaterSalinity", "f4", ("dim",), fill_value=-32767.0)
-                self.__enrichSWSMeasurements(sssVar, min(self.sea_water_salinity), max(self.sea_water_salinity))
+                self.__enrichSWSMeasurements(sssVar, self.__calcMin(self.sea_water_salinity), max(self.sea_water_salinity))
             sssVar[:] = self.sea_water_salinity
 
         if self.wind_speed.count(None) != len(self.wind_speed):
