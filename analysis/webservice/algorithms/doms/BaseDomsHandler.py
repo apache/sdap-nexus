@@ -151,6 +151,7 @@ class DomsCSVFormatter:
                 primaryValue.get("sea_water_temperature", ""),
                 primaryValue.get("wind_speed", ""),
                 primaryValue.get("wind_direction", ""), primaryValue.get("wind_u", ""), primaryValue.get("wind_v", ""),
+
             ]
 
             for matchup in primaryValue["matches"]:
@@ -616,6 +617,7 @@ class DomsNetCDFValueWriter:
         if self.wind_component_quality.count(None) != len(self.wind_component_quality):
             windComponentQualVar = self.group.createVariable("WindComponentQuality", "f4", ("dim",), fill_value=9)
             self.__enrichQuality(windComponentQualVar, "Wind component quality", wind=True)
+
             windComponentQualVar[:] = self.wind_component_quality
 
         if self.sea_water_temperature.count(None) != len(self.sea_water_temperature):
@@ -776,3 +778,4 @@ class DomsNetCDFValueWriter:
 
         if wind:
             var.comment = "this status_flag applies to WindU and WindV"
+

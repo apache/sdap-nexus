@@ -103,7 +103,8 @@ class DomsInitializer:
               end_time timestamp,
               platforms text,
               bounding_box text,
-              parameter text
+              parameter text,
+              quality_flag int
             );
         """
         session.execute(cql)
@@ -122,6 +123,10 @@ class DomsInitializer:
               y decimal,
               source_dataset text,
               measurement_time timestamp,
+              wind_speed_quality int,
+              wind_component_quality int,
+              sst_quality int,
+              sss_quality int,
               platform text,
               device text,
               measurement_values map<text, decimal>,
