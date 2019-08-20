@@ -30,7 +30,7 @@ class TestMatch_Points(unittest.TestCase):
         primary_points = [primary]
         matchup_points = [matchup]
 
-        matches = list(match_points_generator(primary_points, matchup_points, 0))
+        matches = list(match_tile_to_point_generator(primary_points, matchup_points, 0))
 
         self.assertEquals(1, len(matches))
 
@@ -46,7 +46,7 @@ class TestMatch_Points(unittest.TestCase):
         primary_points = [primary]
         matchup_points = [matchup]
 
-        matches = list(match_points_generator(primary_points, matchup_points, 150000))  # tolerance 150 km
+        matches = list(match_tile_to_point_generator(primary_points, matchup_points, 150000))  # tolerance 150 km
 
         self.assertEquals(1, len(matches))
 
@@ -62,7 +62,7 @@ class TestMatch_Points(unittest.TestCase):
         primary_points = [primary]
         matchup_points = [matchup]
 
-        matches = list(match_points_generator(primary_points, matchup_points, 200))  # tolerance 200 m
+        matches = list(match_tile_to_point_generator(primary_points, matchup_points, 200))  # tolerance 200 m
 
         self.assertEquals(1, len(matches))
 
@@ -78,7 +78,7 @@ class TestMatch_Points(unittest.TestCase):
         primary_points = [primary]
         matchup_points = [matchup]
 
-        matches = list(match_points_generator(primary_points, matchup_points, 150000))  # tolerance 150 km
+        matches = list(match_tile_to_point_generator(primary_points, matchup_points, 150000))  # tolerance 150 km
 
         self.assertEquals(0, len(matches))
 
@@ -89,7 +89,7 @@ class TestMatch_Points(unittest.TestCase):
         primary_points = [primary]
         matchup_points = [matchup]
 
-        matches = list(match_points_generator(primary_points, matchup_points, 100))  # tolerance 100 m
+        matches = list(match_tile_to_point_generator(primary_points, matchup_points, 100))  # tolerance 100 m
 
         self.assertEquals(0, len(matches))
 
@@ -103,7 +103,7 @@ class TestMatch_Points(unittest.TestCase):
             DomsPoint(longitude=0.5, latitude=1.5, time=1000, depth=3.0, data_id=4)
         ]
 
-        matches = list(match_points_generator(primary_points, matchup_points, 150000))  # tolerance 150 km
+        matches = list(match_tile_to_point_generator(primary_points, matchup_points, 150000))  # tolerance 150 km
 
         self.assertEquals(3, len(matches))
 
@@ -126,7 +126,7 @@ class TestMatch_Points(unittest.TestCase):
             DomsPoint(longitude=0.5, latitude=1.5, time=1000, depth=3.0, data_id=5)
         ]
 
-        matches = list(match_points_generator(primary_points, matchup_points, 150000))  # tolerance 150 km
+        matches = list(match_tile_to_point_generator(primary_points, matchup_points, 150000))  # tolerance 150 km
 
         self.assertEquals(5, len(matches))
 
@@ -152,7 +152,7 @@ class TestMatch_Points(unittest.TestCase):
             DomsPoint(longitude=-31.121, latitude=31.256, time=1351519892, depth=4.07, data_id=5)
         ]
 
-        matches = list(match_points_generator(primary_points, matchup_points, 110000))  # tolerance 110 km
+        matches = list(match_tile_to_point_generator(primary_points, matchup_points, 110000))  # tolerance 110 km
 
         self.assertEquals(1, len(matches))
 
@@ -187,7 +187,7 @@ class TestMatch_Points(unittest.TestCase):
 
         log.info("Starting matchup")
         log.info("Best of repeat(3, 2) matchups: %s seconds" % min(
-            timeit.repeat(lambda: list(match_points_generator(primary_points, matchup_points, 1500)), repeat=3,
+            timeit.repeat(lambda: list(match_tile_to_point_generator(primary_points, matchup_points, 1500)), repeat=3,
                           number=2)))
 
 

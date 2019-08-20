@@ -15,10 +15,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-set -e
+set -ebx
 
 if [ -n "$TORNADO_HOST" ]; then
-  sed -i "s/server.socket_host = .*/server.socket_host = '${TORNADO_HOST}'/g" ${NEXUS_SRC}/analysis/webservice/config/web.ini
+  sed -i "s/server.socket_host.*/server.socket_host=${TORNADO_HOST}/g" ${NEXUS_SRC}/analysis/webservice/config/web.ini
+fi
+if [ -n "$MAX_PROCESSES" ]; then
+  sed -i "s/server.num_sub_processes.*/server.num_sub_processes=${MAX_PROCESSES}/g" ${NEXUS_SRC}/analysis/webservice/config/web.ini
 fi
 sed -i "s/host=127.0.0.1/host=$CASSANDRA_CONTACT_POINTS/g" ${NEXUS_SRC}/data-access/nexustiles/config/datastores.ini && \
 sed -i "s/port=9042/port=$CASSANDRA_PORT/g" ${NEXUS_SRC}/data-access/nexustiles/config/datastores.ini && \

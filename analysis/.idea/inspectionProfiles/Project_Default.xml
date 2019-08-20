@@ -1,0 +1,53 @@
+<component name="InspectionProjectProfileManager">
+  <profile version="1.0">
+    <option name="myName" value="Project Default" />
+    <inspection_tool class="PyPackageRequirementsInspection" enabled="true" level="WARNING" enabled_by_default="true">
+      <option name="ignoredPackages">
+        <value>
+          <list size="40">
+            <item index="0" class="java.lang.String" itemvalue="pbr" />
+            <item index="1" class="java.lang.String" itemvalue="protobuf" />
+            <item index="2" class="java.lang.String" itemvalue="traits" />
+            <item index="3" class="java.lang.String" itemvalue="basemap" />
+            <item index="4" class="java.lang.String" itemvalue="python-dateutil" />
+            <item index="5" class="java.lang.String" itemvalue="awscli" />
+            <item index="6" class="java.lang.String" itemvalue="MarkupSafe" />
+            <item index="7" class="java.lang.String" itemvalue="numpy" />
+            <item index="8" class="java.lang.String" itemvalue="pyasn1" />
+            <item index="9" class="java.lang.String" itemvalue="requests" />
+            <item index="10" class="java.lang.String" itemvalue="mpld3" />
+            <item index="11" class="java.lang.String" itemvalue="Jinja2" />
+            <item index="12" class="java.lang.String" itemvalue="pyface" />
+            <item index="13" class="java.lang.String" itemvalue="backports.ssl-match-hostname" />
+            <item index="14" class="java.lang.String" itemvalue="Pygments" />
+            <item index="15" class="java.lang.String" itemvalue="certifi" />
+            <item index="16" class="java.lang.String" itemvalue="descartes" />
+            <item index="17" class="java.lang.String" itemvalue="pyparsing" />
+            <item index="18" class="java.lang.String" itemvalue="Cython" />
+            <item index="19" class="java.lang.String" itemvalue="scipy" />
+            <item index="20" class="java.lang.String" itemvalue="cassandra-driver" />
+            <item index="21" class="java.lang.String" itemvalue="six" />
+            <item index="22" class="java.lang.String" itemvalue="tornado" />
+            <item index="23" class="java.lang.String" itemvalue="botocore" />
+            <item index="24" class="java.lang.String" itemvalue="netCDF4" />
+            <item index="25" class="java.lang.String" itemvalue="solrpy" />
+            <item index="26" class="java.lang.String" itemvalue="GDAL" />
+            <item index="27" class="java.lang.String" itemvalue="traitsui" />
+            <item index="28" class="java.lang.String" itemvalue="nexus-data-access" />
+            <item index="29" class="java.lang.String" itemvalue="utm" />
+            <item index="30" class="java.lang.String" itemvalue="backports-abc" />
+            <item index="31" class="java.lang.String" itemvalue="pyshp" />
+            <item index="32" class="java.lang.String" itemvalue="boto3" />
+            <item index="33" class="java.lang.String" itemvalue="s3transfer" />
+            <item index="34" class="java.lang.String" itemvalue="backports.functools-lru-cache" />
+            <item index="35" class="java.lang.String" itemvalue="matplotlib" />
+            <item index="36" class="java.lang.String" itemvalue="configobj" />
+            <item index="37" class="java.lang.String" itemvalue="nexusproto" />
+            <item index="38" class="java.lang.String" itemvalue="pytz" />
+            <item index="39" class="java.lang.String" itemvalue="Cartopy" />
+          </list>
+        </value>
+      </option>
+    </inspection_tool>
+  </profile>
+</component>

@@ -14,7 +14,6 @@
 # limitations under the License.
 
 
-
 import json
 import logging
 import threading
@@ -478,9 +477,18 @@ def spark_matchup_driver(tile_ids, bounding_wkt, primary_ds_name, matchup_ds_nam
             az12, az21, distance = wgs84_geod.inv(lon1, lat1, lon2, lat2)
             return distance
 
+        # If points are equidistant, determine closest by time
+        def time_diff(primary, matchup):
+            primary_time = iso_time_to_epoch(primary.time)
+            matchup_time = iso_time_to_epoch(matchup.time)
+            return abs(primary_time - matchup_time)
+
         rdd_filtered = rdd_filtered \
-            .map(lambda (primary, matchup): tuple([primary, tuple([matchup, dist(primary, matchup)])])) \
-            .reduceByKey(lambda match_1, match_2: match_1 if match_1[1] < match_2[1] else match_2) \
+            .map(lambda (primary, matchup):
+                 tuple([primary, tuple([matchup, dist(primary, matchup), time_diff(primary, matchup)])])) \
+            .reduceByKey(lambda match_1, match_2:
+                         match_1 if match_1[1] < match_2[1] or (
+                                     match_1[1] == match_2[1] and match_1[2] < match_2[2]) else match_2) \
             .mapValues(lambda x: [x[0]])
     else:
         rdd_filtered = rdd_filtered \
