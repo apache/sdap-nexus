@@ -32,38 +32,38 @@ def module_exists(module_name):
 if module_exists("pyspark"):
     try:
         import CorrMapSpark
-    except ImportError:
-        pass
+    except ImportError as e:
+        log.warning("Error importing CorrMapSpark", exc_info=e)
 
     try:
         import Matchup
-    except ImportError:
-        pass
+    except ImportError as e:
+        log.warning("Error importing Matchup", exc_info=e)
 
     try:
         import TimeAvgMapSpark
-    except ImportError:
-        pass
+    except ImportError as e:
+        log.warning("Error importing TimeAvgMapSpark", exc_info=e)
 
     try:
         import TimeSeriesSpark
-    except ImportError:
-        pass
+    except ImportError as e:
+        log.warning("Error importing TimeSeriesSpark", exc_info=e)
 
     try:
         import ClimMapSpark
-    except ImportError:
-        pass
+    except ImportError as e:
+        log.warning("Error importing ClimMapSpark", exc_info=e)
 
     try:
         import DailyDifferenceAverageSpark
-    except ImportError:
-        pass
+    except ImportError as e:
+        log.warning("Error importing DailyDifferenceAverageSpark", exc_info=e)
 
     try:
         import HofMoellerSpark
-    except ImportError:
-        pass
+    except ImportError as e:
+        log.warning("Error importing HofMoellerSpark", exc_info=e)
 
 
 else:

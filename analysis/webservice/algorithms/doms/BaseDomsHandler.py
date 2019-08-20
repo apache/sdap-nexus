@@ -573,7 +573,6 @@ class DomsNetCDFValueWriter:
             if self.group.name == self.satellite_group_name:
                 sssVar = self.group.createVariable("SeaSurfaceSalinity", "f4", ("dim",), fill_value=-32767.0)
                 self.__enrichSSSMeasurements(sssVar, self.__calcMin(self.sea_water_salinity), max(self.sea_water_salinity))
-
             else:  # group.name == self.insitu_group_name
                 sssVar = self.group.createVariable("SeaWaterSalinity", "f4", ("dim",), fill_value=-32767.0)
                 self.__enrichSWSMeasurements(sssVar, self.__calcMin(self.sea_water_salinity), max(self.sea_water_salinity))
