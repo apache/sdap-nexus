@@ -129,9 +129,9 @@ class DomsCSVFormatter:
         headers = [
             # Primary
             "id", "source", "lon (degrees_east)", "lat (degrees_north)", "time", "platform",
-            "sea_surface_salinity (1e-3)", "sea_surface_salinity_quality", "sea_surface_temperature (degree_C)",
-            "sea_surface_temperature_quality", "wind_speed (m s-1)", "wind_speed_quality", "wind_direction",
-            "wind_u (m s-1)", "wind_v (m s-1)", "wind_component_quality",
+            "sea_surface_salinity (1e-3)", "sea_surface_temperature (degree_C)",
+            "wind_speed (m s-1)", "wind_direction",
+            "wind_u (m s-1)", "wind_v (m s-1)",
             # Match
             "id", "source", "lon (degrees_east)", "lat (degrees_north)", "time", "platform",
             "depth (m)", "sea_water_salinity (1e-3)", "sea_water_salinity_quality",
@@ -147,11 +147,11 @@ class DomsCSVFormatter:
                 # Primary
                 primaryValue["id"], primaryValue["source"], str(primaryValue["x"]), str(primaryValue["y"]),
                 primaryValue["time"].strftime(ISO_8601), primaryValue["platform"],
-                primaryValue.get("sea_water_salinity", ""), primaryValue.get("sea_water_salinity_quality", ""),
-                primaryValue.get("sea_water_temperature", ""), primaryValue.get("sea_water_temperature_quality", ""),
-                primaryValue.get("wind_speed", ""), primaryValue.get("wind_speed_quality", ""),
+                primaryValue.get("sea_water_salinity", ""),
+                primaryValue.get("sea_water_temperature", ""),
+                primaryValue.get("wind_speed", ""),
                 primaryValue.get("wind_direction", ""), primaryValue.get("wind_u", ""), primaryValue.get("wind_v", ""),
-                primaryValue.get("wind_component_quality", "")
+
             ]
 
             for matchup in primaryValue["matches"]:
@@ -307,6 +307,8 @@ class DomsCSVFormatter:
             {"Global Attribute": "DOMS_primary", "Value": params["primary"]},
             {"Global Attribute": "DOMS_match_up", "Value": params["matchup"]},
             {"Global Attribute": "DOMS_ParameterPrimary", "Value": params.get("parameter", "")},
+            {"Global Attribute": "DOMS_QualityFlag", "Value": params.get("qualityFlag", "")},
+
 
             {"Global Attribute": "DOMS_time_to_complete", "Value": details["timeToComplete"]},
             {"Global Attribute": "DOMS_time_to_complete_units", "Value": "seconds"},
@@ -366,6 +368,7 @@ class DomsNetCDFFormatter:
         # dataset.URI_Subset = "http://webservice subsetting query request"
         dataset.URI_Matchup = "http://{webservice}/domsresults?id=" + executionId + "&output=NETCDF"
         dataset.DOMS_ParameterPrimary = params["parameter"] if "parameter" in params else ""
+        dataset.DOMS_QualityFlag = params["qualityFlag"] if "qualityFlag" in params else ""
         dataset.DOMS_platforms = params["platforms"]
         dataset.DOMS_primary = params["primary"]
         dataset.DOMS_time_to_complete = details["timeToComplete"]
@@ -613,7 +616,8 @@ class DomsNetCDFValueWriter:
 
         if self.wind_component_quality.count(None) != len(self.wind_component_quality):
             windComponentQualVar = self.group.createVariable("WindComponentQuality", "f4", ("dim",), fill_value=9)
-            self.__enrichQuality(windComponentQualVar, "Wind component quality")
+            self.__enrichQuality(windComponentQualVar, "Wind component quality", wind=True)
+
             windComponentQualVar[:] = self.wind_component_quality
 
         if self.sea_water_temperature.count(None) != len(self.sea_water_temperature):
@@ -764,10 +768,13 @@ class DomsNetCDFValueWriter:
         var.coordinates = "lon lat depth time"
 
     @staticmethod
-    def __enrichQuality(var, long_name):
+    def __enrichQuality(var, long_name, wind=False):
         var.long_name = long_name
         var.standard_name = "status_flag"
         var.valid_min = 1
         var.valid_max = 4
         var.flag_values = 1, 2, 3, 4
         var.flag_meanings = "good unknown_unavailable_notevaluated questionable_suspect bad"
+
+        if wind:
+            var.comment = "this status_flag applies to WindU and WindV"
