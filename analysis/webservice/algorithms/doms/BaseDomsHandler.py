@@ -559,8 +559,8 @@ class DomsNetCDFValueWriter:
         latVar = self.group.createVariable("lat", "f4", ("dim",), fill_value=-32767.0)
         timeVar = self.group.createVariable("time", "f4", ("dim",), fill_value=-32767.0)
 
-        self.__enrichLon(lonVar, min(self.lon), max(self.lon))
-        self.__enrichLat(latVar, min(self.lat), max(self.lat))
+        self.__enrichLon(lonVar, self.__calcMin(self.lon), self.__calcMax(self.lon))
+        self.__enrichLat(latVar, self.__calcMin(self.lat), self.__calcMax(self.lat))
         self.__enrichTime(timeVar)
 
         latVar[:] = self.lat
@@ -652,12 +652,18 @@ class DomsNetCDFValueWriter:
                 depthVar[:] = tempDepth
 
     #
-    # Lists may include 'None" values, to calc min these must be filtered out
+    # Lists may include 'None" values, to calc min these must be filtered out. Cast as float.
     #
     @staticmethod
     def __calcMin(var):
-        return min(x for x in var if x is not None)
+        return min(float(x) for x in var if x is not None)
 
+    #
+    # Lists may include 'None" values, to calc max these must be filtered out. Cast as float.
+    #
+    @staticmethod
+    def __calcMax(var):
+        return max(float(x) for x in var if x is not None)
 
     #
     # Add attributes to each variable
