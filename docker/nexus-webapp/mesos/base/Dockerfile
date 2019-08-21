@@ -67,7 +67,7 @@ ENV PYTHONPATH=${PYTHONPATH}:${SPARK_HOME}/python:${SPARK_HOME}/python/lib/py4j-
 
 # Install Oracle JDK
 COPY install_java.sh ./install_java.sh
-RUN ./install_java.sh "https://download.oracle.com/otn-pub/java/jdk/8u201-b09/42970487e3af4f5aa5bca3f542482c60/jdk-8u201-linux-x64.rpm"
+RUN ./install_java.sh
 
 # Set up Mesos
 COPY mesos/base/install_mesos.sh ./install_mesos.sh

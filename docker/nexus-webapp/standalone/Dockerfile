@@ -48,9 +48,9 @@ ENV SPARK_LOCAL_IP=127.0.0.1 \
 
 WORKDIR /tmp
 
-# Install Oracle JDK
+# Install Open JDK
 COPY install_java.sh ./install_java.sh
-RUN ./install_java.sh "https://download.oracle.com/otn-pub/java/jdk/8u201-b09/42970487e3af4f5aa5bca3f542482c60/jdk-8u201-linux-x64.rpm"
+RUN ./install_java.sh
 
 # Install Spark
 COPY install_spark.sh ./install_spark.sh

@@ -63,6 +63,7 @@ mkdir -p ${MESOS_HOME}
 pushd ${MESOS_HOME}
 mkdir build
 pushd build
+echo ${JAVA_HOME}
 ../configure
 make
 # Can't run make check until this is fixed: https://issues.apache.org/jira/browse/MESOS-8608

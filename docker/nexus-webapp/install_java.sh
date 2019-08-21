@@ -16,10 +16,18 @@
 
 set -ebx
 
-URL=${1:-"http://download.oracle.com/otn-pub/java/jdk/8u191-b12/2787e4a523244c269598db4e85c51e0c/jdk-8u191-linux-x64.rpm"}
-RPM_PACKAGE=${URL##*/}
 
-# Install Oracle JDK
-wget -q --no-cookies --no-check-certificate --header "Cookie: gpw_e24=http%3A%2F%2Fwww.oracle.com%2F; oraclelicense=accept-securebackup-cookie" ${URL}
-yum install -y ${RPM_PACKAGE}
-rm ${RPM_PACKAGE}
+yum -y install \
+ java-1.8.0-openjdk \
+ java-1.8.0-openjdk-devel
+yum clean all
+
+export JAVA_HOME=/usr/lib/jvm/java-1.8.0-openjdk
+
+cat >> /etc/profile.d/openjdk_path.sh << EOF
+  JAVA_HOME=${JAVA_HOME}
+  PATH=${JAVA_HOME}/bin:${PATH}
+EOF
+
+mkdir -p /usr/java
+ln -s ${JAVA_HOME} /usr/java/default
