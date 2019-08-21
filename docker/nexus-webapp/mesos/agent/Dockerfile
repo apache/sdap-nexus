@@ -14,7 +14,7 @@
 # limitations under the License.
 ARG repo=sdap
 ARG tag_version=1.0.0-SNAPSHOT
-FROM ${repo}//spark-mesos-base:${tag_version}
+FROM ${repo}/spark-mesos-base:${tag_version}
 
 MAINTAINER Apache SDAP "dev@sdap.apache.org"
 
