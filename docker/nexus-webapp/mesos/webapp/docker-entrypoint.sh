@@ -17,6 +17,8 @@
 
 set -ebx
 
+source activate ${CONDA_ENV_NAME}
+
 if [ -n "$TORNADO_HOST" ]; then
   sed -i "s/server.socket_host.*/server.socket_host=${TORNADO_HOST}/g" ${NEXUS_SRC}/analysis/webservice/config/web.ini
 fi

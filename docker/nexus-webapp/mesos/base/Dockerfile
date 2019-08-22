@@ -46,7 +46,8 @@ ENV INSTALL_LOC=/usr/local \
     JAVA_HOME=/usr/java/default \
     NEXUS_SRC=/tmp/incubator-sdap-nexus
 
-ENV CONDA_HOME=${INSTALL_LOC}/anaconda2 \
+ENV CONDA_HOME=${INSTALL_LOC}/anaconda3 \
+    CONDA_ENV_NAME=nexus-webapp \
     MESOS_HOME=${INSTALL_LOC}/mesos-${MESOS_VER} \
     SPARK_DIR=spark-${SPARK_VERSION} \
     SPARK_PACKAGE=spark-${SPARK_VERSION}-bin-hadoop2.7 \
@@ -54,11 +55,9 @@ ENV CONDA_HOME=${INSTALL_LOC}/anaconda2 \
     MESOS_PACKAGE=mesos-${MESOS_VER}.tar.gz
 
 ENV SPARK_HOME=${INSTALL_LOC}/${SPARK_DIR} \
-    PYSPARK_DRIVER_PYTHON=${CONDA_HOME}/bin/python \
-    PYSPARK_PYTHON=${CONDA_HOME}/bin/python \
-    PYSPARK_SUBMIT_ARGS="--driver-memory=4g pyspark-shell" \
-    # Workaround for missing environment variable for basemap https://github.com/conda-forge/basemap-feedstock/issues/30
-    PROJ_LIB=${CONDA_HOME}/share/proj
+    PYSPARK_DRIVER_PYTHON=${CONDA_HOME}/envs/${CONDA_ENV_NAME}/bin/python \
+    PYSPARK_PYTHON=${CONDA_HOME}/envs/${CONDA_ENV_NAME}/bin/python \
+    PYSPARK_SUBMIT_ARGS="--driver-memory=4g pyspark-shell"
 
 ENV PYTHONPATH=${PYTHONPATH}:${SPARK_HOME}/python:${SPARK_HOME}/python/lib/py4j-0.10.4-src.zip:${SPARK_HOME}/python/lib/pyspark.zip \
     MESOS_NATIVE_JAVA_LIBRARY=${INSTALL_LOC}/lib/libmesos.so \
@@ -79,10 +78,10 @@ RUN ./install_spark.sh "http://d3kbcqa49mib13.cloudfront.net" ${SPARK_VERSION} $
 
 # Install Anaconda
 COPY install_conda.sh ./install_conda.sh
-RUN ./install_conda.sh "https://repo.continuum.io/miniconda/Miniconda2-latest-Linux-x86_64.sh" ${CONDA_HOME}
+RUN ./install_conda.sh "https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh" ${CONDA}
 
 # Conda dependencies for nexus
-RUN conda config --add channels conda-forge && \
+RUN source activate ${CONDA_ENV_NAME} && \
     conda install -y netCDF4 \
                      backports.functools_lru_cache \
                      numpy \
@@ -102,7 +101,8 @@ ARG APACHE_NEXUS_BRANCH=master
 ARG REBUILD_CODE=1
 COPY install_nexusproto.sh ./install_nexusproto.sh
 COPY install_nexus.sh ./install_nexus.sh
-RUN /tmp/install_nexusproto.sh $APACHE_NEXUSPROTO $APACHE_NEXUSPROTO_BRANCH && \
+RUN source activate ${CONDA_ENV_NAME} && \
+    /tmp/install_nexusproto.sh $APACHE_NEXUSPROTO $APACHE_NEXUSPROTO_BRANCH && \
     /tmp/install_nexus.sh $APACHE_NEXUS $APACHE_NEXUS_BRANCH $NEXUS_SRC
 
 CMD ["/bin/bash"]
