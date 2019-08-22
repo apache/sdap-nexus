@@ -17,6 +17,8 @@
 
 set -ebx
 
+source activate ${CONDA_ENV_NAME}
+
 if [ -n "$TORNADO_HOST" ]; then
   sed -i "s/server.socket_host.*/server.socket_host=${TORNADO_HOST}/g" ${NEXUS_SRC}/analysis/webservice/config/web.ini
 fi
@@ -39,4 +41,4 @@ cd ${NEXUS_SRC}/analysis
 python setup.py install --force
 
 # Set PROJ_LIB env var as workaround for missing environment variable for basemap https://github.com/conda-forge/basemap-feedstock/issues/30
-${MESOS_HOME}/build/bin/mesos-agent.sh --no-systemd_enable_support --launcher=posix --no-switch_user --executor_environment_variables='{"PYTHON_EGG_CACHE": "/tmp", "PROJ_LIB":"/usr/local/anaconda2/share/proj"}' "$@"
+${MESOS_HOME}/build/bin/mesos-agent.sh --no-systemd_enable_support --launcher=posix --no-switch_user --executor_environment_variables="{\"PYTHON_EGG_CACHE\": \"/tmp\", \"PROJ_LIB\": \"${CONDA_HOME}/envs/${CONDA_ENV_NAME}/share/proj\"}" "$@"

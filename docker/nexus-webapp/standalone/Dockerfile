@@ -29,22 +29,23 @@ RUN yum -y update && \
     yum clean all
 
 ARG SPARK_VERSION=2.2.0
+ENV CONDA=/usr/local/anaconda3 \
+    CONDA_ENV_NAME=nexus-webapp
 ENV SPARK_LOCAL_IP=127.0.0.1 \
     CASSANDRA_CONTACT_POINTS=127.0.0.1 \
+    CASSANDRA_PORT=9042 \
     CASSANDRA_LOCAL_DATACENTER=datacenter1 \
     SOLR_URL_PORT=127.0.0.1:8983 \
     SPARK_DIR=spark-${SPARK_VERSION} \
     SPARK_PACKAGE=spark-${SPARK_VERSION}-bin-hadoop2.7 \
     SPARK_HOME=/usr/local/spark-${SPARK_VERSION} \
-    PYSPARK_DRIVER_PYTHON=/usr/local/anaconda2/bin/python \
-    PYSPARK_PYTHON=/usr/local/anaconda2/bin/python \
+    PYSPARK_DRIVER_PYTHON=${CONDA}/envs/${CONDA_ENV_NAME}/bin/python \
+    PYSPARK_PYTHON=${CONDA}/envs/${CONDA_ENV_NAME}/bin/python \
     PYSPARK_SUBMIT_ARGS="--driver-memory=4g pyspark-shell" \
     PYTHONPATH=${PYTHONPATH}:/usr/local/spark-${SPARK_VERSION}/python:/usr/local/spark-${SPARK_VERSION}/python/lib/py4j-0.10.4-src.zip:/usr/local/spark-${SPARK_VERSION}/python/lib/pyspark.zip \
     SPARK_EXECUTOR_URI=/usr/local/spark-${SPARK_VERSION}-bin-hadoop2.7.tgz \
-    NEXUS_SRC=/tmp/incubator-sdap-nexus \
-    PATH=/usr/local/anaconda2/bin:$PATH \
-    # Workaround for missing environment variable for basemap https://github.com/conda-forge/basemap-feedstock/issues/30
-    PROJ_LIB=/usr/local/anaconda2/share/proj
+    NEXUS_SRC=/usr/local/incubator-sdap-nexus \
+    PATH=${CONDA}/bin:${PATH}
 
 WORKDIR /tmp
 
@@ -58,11 +59,10 @@ RUN ./install_spark.sh "http://d3kbcqa49mib13.cloudfront.net" ${SPARK_VERSION} $
 
 # Install Anaconda
 COPY install_conda.sh ./install_conda.sh
-RUN ./install_conda.sh "https://repo.continuum.io/miniconda/Miniconda2-latest-Linux-x86_64.sh" /usr/local/anaconda2
+RUN ./install_conda.sh "https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh" ${CONDA}
 
 # Conda dependencies for nexus
-# RUN conda install -c conda-forge -y netCDF4 backports.functools_lru_cache=1.3 && \
-RUN conda config --add channels conda-forge && \
+RUN source activate ${CONDA_ENV_NAME} && \
     conda install -y netCDF4 \
                      backports.functools_lru_cache \
                      numpy \
@@ -82,7 +82,8 @@ ARG APACHE_NEXUS_BRANCH=master
 ARG REBUILD_CODE=1
 COPY install_nexusproto.sh ./install_nexusproto.sh
 COPY install_nexus.sh ./install_nexus.sh
-RUN /tmp/install_nexusproto.sh $APACHE_NEXUSPROTO $APACHE_NEXUSPROTO_BRANCH && \
+RUN source activate ${CONDA_ENV_NAME} && \
+    /tmp/install_nexusproto.sh $APACHE_NEXUSPROTO $APACHE_NEXUSPROTO_BRANCH && \
     /tmp/install_nexus.sh $APACHE_NEXUS $APACHE_NEXUS_BRANCH $NEXUS_SRC
 
 COPY standalone/docker-entrypoint.sh ./docker-entrypoint.sh

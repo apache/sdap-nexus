@@ -16,12 +16,21 @@
 
 set -ebx
 
-URL=${1:-"https://repo.continuum.io/miniconda/Miniconda2-latest-Linux-x86_64.sh"}
-CONDA=${2:-"/usr/local/anaconda2"}
+URL=${1:-"https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh"}
+CONDA=${2:-"/usr/local/anaconda3"}
+
+CONDA_ENV_NAME=${CONDA_ENV_NAME:-"nexus-webapp"}
 
 pushd /tmp
 wget -q ${URL} -O install_anaconda.sh
 /bin/bash install_anaconda.sh -b -p ${CONDA}
 rm install_anaconda.sh
-${CONDA}/bin/conda update -n base conda
+ln -s ${CONDA}/etc/profile.d/conda.sh /etc/profile.d/conda.sh
+chmod +x /usr/local/anaconda3/etc/profile.d/conda.sh
+
+conda update -n base conda
+conda config --set channel_priority strict
+conda config --prepend channels conda-forge
+conda create -y --name ${CONDA_ENV_NAME} python=2
+
 popd
