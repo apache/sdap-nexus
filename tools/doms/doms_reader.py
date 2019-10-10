@@ -27,16 +27,20 @@ def assemble_matches(filename):
     """
     Read a DOMS netCDF file and return a list of matches.
     
-    Arguments: 
-        filename (string): the DOMS netCDF file name.
+    Parameters
+    ----------
+    filename : str
+        The DOMS netCDF file name.
     
-    Returns:
-        matches (list): List of matches. Each list element is a dictionary:
-            For netCDF group GROUP (SatelliteData or InsituData) and group
-                variable VARIABLE:
-            matches[GROUP]['matchID']: MatchedRecords dimension ID for the match
-            matches[GROUP]['GROUPID']: GROUP dim dimension ID for the record
-            matches[GROUP][VARIABLE]: variable value 
+    Returns
+    -------
+    matches : list
+        List of matches. Each list element is a dictionary.
+        For match m, netCDF group GROUP (SatelliteData or InsituData), and
+        group variable VARIABLE:
+        matches[m][GROUP]['matchID']: MatchedRecords dimension ID for the match
+        matches[m][GROUP]['GROUPID']: GROUP dim dimension ID for the record
+        matches[m][GROUP][VARIABLE]: variable value 
     """
     
     try:
@@ -74,16 +78,18 @@ def assemble_matches(filename):
         LOGGER.exception("Error reading netCDF file " + filename)
         raise err
     
-def matches_to_csv(matches, filename):
+def matches_to_csv(matches, csvfile):
     """
     Write the DOMS matches to a CSV file. Include a header of column names
     which are based on the group and variable names from the netCDF file.
     
-    Arguments:
-        matches (list): the list of dictionaries containing the DOMS matches as
-            returned from assemble_matches.
-            
-        filename (string): the name of the CSV output file.
+    Parameters
+    ----------
+    matches : list
+        The list of dictionaries containing the DOMS matches as returned from
+        assemble_matches.      
+    csvfile : str
+        The name of the CSV output file.
     """
     # Create a header for the CSV. Column names are GROUP_VARIABLE or
     # GROUP_GROUPID.
@@ -94,7 +100,7 @@ def matches_to_csv(matches, filename):
     
     try:
         # Write the CSV file
-        with open(filename, 'w') as output_file:
+        with open(csvfile, 'w') as output_file:
             csv_writer = csv.writer(output_file)
             csv_writer.writerow(header)
             for match in matches:
@@ -104,7 +110,7 @@ def matches_to_csv(matches, filename):
                         row.append(value)
                 csv_writer.writerow(row)
     except (OSError, IOError) as err:
-        LOGGER.exception("Error writing CSV file " + filename)
+        LOGGER.exception("Error writing CSV file " + csvfile)
         raise err
 
 if __name__ == '__main__':
