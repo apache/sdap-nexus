@@ -26,7 +26,7 @@ pyasn1==0.3.3
 Pygments==2.2.0
 python-dateutil==2.6.1
 pytz==2016.6.1
-PyYAML==3.12
+PyYAML==5.1
 requests==2.13.0
 rsa==3.4.2
 s3transfer==0.1.10
