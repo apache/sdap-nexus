@@ -38,7 +38,7 @@ pyproj==1.9.5.1
 pyshp==1.2.10
 python-dateutil==2.6.1
 pytz==2016.6.1
-PyYAML==3.12
+PyYAML==5.1
 requests==2.11.0
 rsa==3.4.2
 s3transfer==0.1.10
