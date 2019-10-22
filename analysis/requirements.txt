@@ -28,7 +28,7 @@ nexus-data-access==0.32
 nexusproto==0.3
 numpy==1.11.2
 pbr==1.10.0
-pillow==5.0.0
+pillow==6.2.0
 protobuf==2.6.1
 pyasn1==0.3.3
 pyface==4.5.2

@@ -50,7 +50,7 @@ setuptools.setup(
         'netcdf4',
         'boto3',
         'pyproj==1.9.5.1',
-        'pillow==5.0.0'
+        'pillow==6.2.0'
     ],
 
     classifiers=[
