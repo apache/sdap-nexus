@@ -1,0 +1,13 @@
+{{ if ne .Values.onEarthProxyIP "" }}
+
+kind: Service
+apiVersion: v1
+metadata:
+    name: onearth
+spec:
+    type: ExternalName
+    externalName: {{ .Values.onEarthProxyIP }}
+    ports:
+    - port: 80
+
+{{ end}}
