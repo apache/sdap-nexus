@@ -1,0 +1,48 @@
+apiVersion: "sparkoperator.k8s.io/v1beta2"
+kind: SparkApplication
+metadata:
+  name: nexus-webapp
+spec:
+  type: Python
+  pythonVersion: "2"
+  mode: cluster
+  image: {{ .Values.webapp.distributed.image }}
+  imagePullPolicy: Always 
+  mainApplicationFile: local:///incubator-sdap-nexus/analysis/webservice/webapp.py
+  sparkVersion: "2.4.4"
+  restartPolicy:
+    type: OnFailure
+    onFailureRetries: 10
+    onFailureRetryInterval: 10
+    onSubmissionFailureRetries: 10
+    onSubmissionFailureRetryInterval: 10
+  driver:
+    cores: {{ .Values.webapp.distributed.driver.cores }}
+    coreLimit: {{ .Values.webapp.distributed.driver.coreLimit }}
+    memory: {{ .Values.webapp.distributed.driver.memory }} 
+    labels:
+      version: 2.4.4
+    serviceAccount: spark-serviceaccount
+  executor:
+    cores: {{ .Values.webapp.distributed.executor.cores }}
+    instances: {{ .Values.webapp.distributed.executor.instances }} 
+    memory: {{ .Values.webapp.distributed.executor.memory }}
+    labels:
+      version: 2.4.4
+      
+---
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: nexus-webapp
+spec:
+  selector:
+    spark-role: driver
+    sparkoperator.k8s.io/app-name: nexus-webapp
+  type: ClusterIP
+  ports:
+  - name: webapp
+    protocol: TCP
+    port: 8083
+    targetPort: 8083

@@ -13,15 +13,18 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import setuptools
-from Cython.Build import cythonize
+from setuptools import setup
 
 __version__ = '0.33'
 
-setuptools.setup(
+
+with open('requirements.txt') as f:
+    pip_requirements = f.readlines()
+
+setup(
     name="nexus-data-access",
     version=__version__,
-    url="https://github.jpl.nasa.gov/thuang/nexus",
+    url="https://github.com/apache/incubator-sdap-nexus",
 
     author="Team Nexus",
 
@@ -31,22 +34,13 @@ setuptools.setup(
     packages=['nexustiles', 'nexustiles.model', 'nexustiles.dao'],
     package_data={'nexustiles': ['config/datastores.ini']},
     platforms='any',
-    setup_requires=['cython'],
-    install_requires=[
-        'cassandra-driver==3.5.0',
-        'pysolr==3.7.0',
-        'requests',
-        'nexusproto==1.0.0',
-        'shapely'
-    ],
-
+    python_requires='~=2.7',
+    install_requires=pip_requirements,
     classifiers=[
         'Development Status :: 1 - Pre-Alpha',
         'Intended Audience :: Developers',
         'Operating System :: OS Independent',
         'Programming Language :: Python :: 2.7',
     ],
-
-    ext_modules=cythonize(["**/*.pyx"]),
     zip_safe=False
 )

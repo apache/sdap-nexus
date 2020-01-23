@@ -1,0 +1,30 @@
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+  name: nexus-webapp
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /$1
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "180"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "180"
+    nginx.ingress.kubernetes.io/enable-cors: "true"
+    nginx.ingress.kubernetes.io/cors-allow-methods: "PUT, GET, POST, OPTIONS"
+    nginx.ingress.kubernetes.io/cors-allow-origin: "*"
+spec:
+  rules:
+  - http:
+      paths:
+      - path: /
+        backend:
+          serviceName: root-webpage
+          servicePort: http
+      - path: /nexus/?(.*)
+        backend:
+          serviceName: nexus-webapp
+          servicePort: webapp
+      {{ if ne .Values.onEarthProxyIP "" }}
+      - path: /onearth/?(.*)
+        backend:
+          serviceName: onearth
+          servicePort: 80
+      {{ end }}
+      

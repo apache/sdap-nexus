@@ -1,0 +1,15 @@
+tornado
+singledispatch
+pytz
+utm
+Shapely
+mock
+backports.functools_lru_cache
+netCDF4
+boto3
+pyproj<1.9.5
+Pillow
+GDAL>=3.0.2
+basemap
+scipy
+mpld3

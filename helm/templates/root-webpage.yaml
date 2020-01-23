@@ -1,0 +1,42 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: root-webpage
+spec:
+  type: ClusterIP
+  ports:
+  - port: 8080
+    name: http
+  selector:
+    app: root-webpage
+
+---
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: root-webpage
+  name: root-webpage
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: root-webpage
+  template:
+    metadata:
+      labels:
+        app: root-webpage
+    spec:
+      containers:
+      - image: busybox
+        command:
+          # Tiny HTTP server that simply returns 200 OK on port 8080
+          - sh
+          - -c
+          - |
+            while true; do
+              { echo -e 'HTTP/1.1 200 OK\r\n'; } | nc -l -p  8080
+            done
+        name: root-webpage
+      restartPolicy: Always
