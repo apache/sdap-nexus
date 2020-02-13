@@ -205,7 +205,6 @@ Save this configuration to a file on your local laptop that can be mounted into 
           contactPoints: cassandra
         solr:
           host: http://solr:8983/solr/
-
   datasource:
     solrStore:
       collection: nexustiles
@@ -285,8 +284,11 @@ Click on the ``Quickstart`` directory to open it. You should see a notebook call
 
 Add a cell at the top of the notebook:
 
+.. code-block:: Python
+
  import os
  os.environ["PROJ_LIB"] = "/opt/conda/share/proj"
+
 
 .. image:: images/Jupyter_Quickstart.png
 
