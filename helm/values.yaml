@@ -39,15 +39,16 @@ zookeeper:
   cpu: 0.5
   storage: 8Gi
 
-ingress:
-  namespace: ingress-nginx-local
+ingressEnabled: false
 
 onEarthProxyIP: ""
 
 nginx-ingress:
   controller:
+    scope:
+      enabled: true
     kind: DaemonSet
     service:
-      enabled: false
+      enabled: true
   defaultBackend:
     enabled: false
