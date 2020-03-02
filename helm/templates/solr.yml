@@ -28,6 +28,14 @@ spec:
         app: sdap-solr # has to match .spec.selector.matchLabels
     spec:
       terminationGracePeriodSeconds: 10
+      {{ if .Values.solr.tolerations }}
+      tolerations:
+{{ .Values.solr.tolerations | toYaml | indent 6 }}
+      {{ end }}
+      {{ if .Values.solr.nodeSelector }}
+      nodeSelector:
+{{ .Values.solr.nodeSelector | toYaml | indent 8 }}
+      {{ end }}
       affinity:
         podAntiAffinity:
           # Prefer spreading over all hosts

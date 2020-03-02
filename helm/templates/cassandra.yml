@@ -29,6 +29,14 @@ spec:
         app: sdap-cassandra
     spec:
       terminationGracePeriodSeconds: 120
+      {{ if .Values.cassandra.tolerations }}
+      tolerations:
+{{ .Values.cassandra.tolerations | toYaml | indent 6 }}
+      {{ end }}
+      {{ if .Values.cassandra.nodeSelector }}
+      nodeSelector:
+{{ .Values.cassandra.nodeSelector | toYaml | indent 8 }}
+      {{ end }}
       affinity:
         podAntiAffinity:
           # Prefer spreading over all hosts
