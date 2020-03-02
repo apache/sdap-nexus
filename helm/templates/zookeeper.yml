@@ -55,6 +55,14 @@ spec:
       labels:
         app: zk
     spec:
+      {{ if .Values.zookeeper.tolerations }}
+      tolerations:
+{{ .Values.zookeeper.tolerations | toYaml | indent 6 }}
+      {{ end }}
+      {{ if .Values.zookeeper.nodeSelector }}
+      nodeSelector:
+{{ .Values.zookeeper.nodeSelector | toYaml | indent 8 }}
+      {{ end }}
       affinity:
         podAntiAffinity:
           preferredDuringSchedulingIgnoredDuringExecution:
