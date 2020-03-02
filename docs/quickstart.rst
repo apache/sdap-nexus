@@ -38,7 +38,7 @@ Pull the necessary Docker images from the `SDAP repository <https://hub.docker.c
 
 .. code-block:: bash
 
-  export VERSION=1.0.0-SNAPSHOT
+  export VERSION=1.0.0-rc1
 
 .. code-block:: bash
 
@@ -205,11 +205,11 @@ Save this configuration to a file on your local laptop that can be mounted into 
           contactPoints: cassandra
         solr:
           host: http://solr:8983/solr/
-
   datasource:
     solrStore:
       collection: nexustiles
   EOF
+
 
 Data files
 -----------
@@ -247,7 +247,7 @@ Now that the data is being (has been) ingested, we need to start the webapp that
 
 .. code-block:: bash
 
-  docker run -d --name nexus-webapp --network sdap-net -p 8083:8083 -e SPARK_LOCAL_IP=127.0.0.1 -e MASTER=local[4] -e CASSANDRA_CONTACT_POINTS=cassandra -e SOLR_URL_PORT=solr:8983 sdap/nexus-webapp:${VERSION}
+  docker run -d --name nexus-webapp --network sdap-net -p 8083:8083 -e SPARK_LOCAL_IP=127.0.0.1 -e MASTER=local[4] -e CASSANDRA_CONTACT_POINTS=cassandra -e SOLR_URL_PORT=solr:8983 sdap/nexus-webapp:standalone.${VERSION}
 
 .. note:: If you see a messasge like ``docker: invalid reference format`` it likely means you need to re-export the ``VERSION`` environment variable again. This can happen when you open a new terminal window or tab.
 
@@ -271,7 +271,7 @@ To launch the Jupyter notebook use the following command:
 
 .. code-block:: bash
 
-  docker run -it --rm --name jupyter --network sdap-net -p 8888:8888 sdap/jupyter:${VERSION} start-notebook.sh --NotebookApp.password='sha1:a0d7f85e5fc4:0c173bb35c7dc0445b13865a38d25263db592938'
+  docker run -it --rm --name jupyter --network sdap-net -p 8888:8888 nexusjpl/jupyter:${VERSION} start-notebook.sh --NotebookApp.password='sha1:a0d7f85e5fc4:0c173bb35c7dc0445b13865a38d25263db592938'
 
 This command launches a Juypter container and exposes it on port 8888.
 
@@ -282,6 +282,14 @@ Once the container starts, navigate to http://localhost:8888/. You will be promp
 .. image:: images/Jupyter_Home.png
 
 Click on the ``Quickstart`` directory to open it. You should see a notebook called ``Time Series Example``:
+
+Add a cell at the top of the notebook:
+
+.. code-block:: Python
+
+ import os
+ os.environ["PROJ_LIB"] = "/opt/conda/share/proj"
+
 
 .. image:: images/Jupyter_Quickstart.png
 

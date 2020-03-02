@@ -1,0 +1,53 @@
+storageClass: hostpath
+
+webapp:
+  distributed:
+    image: nexusjpl/nexus-webapp:distributed.0.1.3
+    driver:
+      cores: 1
+      coreLimit: "1200m"
+      memory: "512m"
+    executor:
+      cores: 1
+      instances: 2
+      memory: "512m"
+
+cassandra:
+  replicas: 2
+  storage: 13Gi
+  requests:
+    cpu: 1
+    memory: 3Gi
+  limits:
+    cpu: 1
+    memory: 3Gi
+
+solr:
+  replicas: 2
+  storage: 10Gi
+  heap: 4g
+  requests:
+    memory: 5Gi
+    cpu: 1 
+  limits:
+    memory: 5Gi
+    cpu: 1
+
+zookeeper:
+  replicas: 2
+  memory: 1Gi
+  cpu: 0.5
+  storage: 8Gi
+
+ingress:
+  namespace: ingress-nginx-local
+
+onEarthProxyIP: ""
+
+nginx-ingress:
+  controller:
+    kind: DaemonSet
+    service:
+      enabled: false
+  defaultBackend:
+    enabled: false

@@ -87,8 +87,8 @@ def dataset_list():
 
     list_response = []
     for dataset in data:
-        dataset['start'] = datetime.utcfromtimestamp(dataset['start'] / 1000).strftime(ISO_FORMAT)
-        dataset['end'] = datetime.utcfromtimestamp(dataset['end'] / 1000).strftime(ISO_FORMAT)
+        dataset['start'] = dataset['iso_start']
+        dataset['end'] = dataset['iso_end']
 
         ordered_dict = OrderedDict()
         ordered_dict['shortName'] = dataset['shortName']
