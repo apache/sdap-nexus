@@ -46,6 +46,11 @@ if module_exists("pyspark"):
         pass
 
     try:
+        import DataAnomalySpark
+    except ImportError:
+        pass
+
+    try:
         import TimeSeriesSpark
     except ImportError:
         pass
