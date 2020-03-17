@@ -94,7 +94,7 @@ spec:
         - sh
         - -c
         - "start-zookeeper \
-          --servers=3 \
+          --servers={{ .Values.zookeeper.replicas }} \
           --data_dir=/var/lib/zookeeper/data \
           --data_log_dir=/var/lib/zookeeper/data/log \
           --conf_dir=/opt/zookeeper/conf \
