@@ -13,10 +13,12 @@ spec:
   rules:
   - http:
       paths:
+      {{ if .Values.rootWebpage.enabled }}
       - path: /
         backend:
           serviceName: root-webpage
           servicePort: http
+      {{ end }}
       - path: /nexus/?(.*)
         backend:
           serviceName: nexus-webapp
