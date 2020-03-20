@@ -2,6 +2,9 @@
 
 storageClass: hostpath
 
+rootWebpage:
+  enabled: true
+
 webapp:
   distributed:
     image: nexusjpl/nexus-webapp:distributed.0.1.3
