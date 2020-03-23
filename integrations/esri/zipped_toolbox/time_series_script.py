@@ -27,8 +27,8 @@ startTime = pd.to_datetime(arcpy.GetParameterAsText(5)).strftime('%Y-%m-%dT%H:%M
 endTime = pd.to_datetime(arcpy.GetParameterAsText(6)).strftime('%Y-%m-%dT%H:%M:%SZ')
 
 # Build the HTTP request
-url = 'https://oceanworks.jpl.nasa.gov/timeSeriesSpark?spark=mesos,16,32&ds={}&minLat={}&minLon={}&maxLat={}&maxLon={}&startTime={}&endTime={}'.format(ds, minLat, minLon, maxLat, maxLon, startTime, endTime)
-#url = 'https://oceanworks.jpl.nasa.gov/timeSeriesSpark?spark=mesos,16,32&ds=AVHRR_OI_L4_GHRSST_NCEI&minLat=45&minLon=-150&maxLat=60&maxLon=-120&startTime=2008-09-01T00:00:00Z&endTime=2015-10-01T23:59:59Z'
+url = 'https://oceanworks.jpl.nasa.gov/timeSeriesSpark?ds={}&minLat={}&minLon={}&maxLat={}&maxLon={}&startTime={}&endTime={}'.format(ds, minLat, minLon, maxLat, maxLon, startTime, endTime)
+#url = 'https://oceanworks.jpl.nasa.gov/timeSeriesSpark?ds=AVHRR_OI_L4_GHRSST_NCEI&minLat=45&minLon=-150&maxLat=60&maxLon=-120&startTime=2008-09-01T00:00:00Z&endTime=2015-10-01T23:59:59Z'
 arcpy.AddMessage('{}'.format(url))
 
 # Report a success message

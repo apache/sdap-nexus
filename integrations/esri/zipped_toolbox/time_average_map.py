@@ -30,9 +30,9 @@ endTime = pd.to_datetime(arcpy.GetParameterAsText(6)).strftime('%Y-%m-%dT%H:%M:%
 # Build the HTTP request
 # ToDO: make host url a parameter
 host = "https://oceanworks.jpl.nasa.gov"
-request = "{}/timeAvgMapSpark?ds={}&startTime={}&endTime={}&minLon={}&minLat={}&maxLon={}&maxLat={}&spark=local,16,32" \
+request = "{}/timeAvgMapSpark?ds={}&startTime={}&endTime={}&minLon={}&minLat={}&maxLon={}&maxLat={}" \
          .format(host, ds, startTime, endTime, minLon, minLat, maxLon, maxLat)
-#request = 'https://oceanworks.jpl.nasa.gov/timeAvgMapSpark?local,16,32&ds=AVHRR_OI_L4_GHRSST_NCEI&minLat=-5&minLon=-170&maxLat=5&maxLon=-120&startTime=1356998400&endTime=1383091200'
+#request = 'https://oceanworks.jpl.nasa.gov/timeAvgMapSpark?ds=AVHRR_OI_L4_GHRSST_NCEI&minLat=-5&minLon=-170&maxLat=5&maxLon=-120&startTime=1356998400&endTime=1383091200'
 arcpy.AddMessage('{}'.format(request))
 
 # Report a success message
