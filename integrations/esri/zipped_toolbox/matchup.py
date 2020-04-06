@@ -35,25 +35,33 @@ def show_plot(x_data, y_data, x_label, y_label):
     plt.show()
 
 # Get the input parameters
-# ToDO: make lat/time interactive
-primary = arcpy.GetParameterAsText(0)
-secondary = arcpy.GetParameterAsText(1)
-parameter = arcpy.GetParameterAsText(2)
-startTime = pd.to_datetime(arcpy.GetParameterAsText(3)).strftime('%Y-%m-%dT%H:%M:%SZ')
-endTime = pd.to_datetime(arcpy.GetParameterAsText(4)).strftime('%Y-%m-%dT%H:%M:%SZ')
-minLat = arcpy.GetParameterAsText(5)
-maxLat = arcpy.GetParameterAsText(6)
-minLon = arcpy.GetParameterAsText(7)
-maxLon = arcpy.GetParameterAsText(8)
-depthMin = arcpy.GetParameterAsText(9)
-depthMax = arcpy.GetParameterAsText(10)
-tt = arcpy.GetParameterAsText(11)
-rt = arcpy.GetParameterAsText(12)
-platforms = arcpy.GetParameterAsText(13)
+host_url = arcpy.GetParameterAsText(0)
+primary = arcpy.GetParameterAsText(1)
+secondary = arcpy.GetParameterAsText(2)
+input_feature = arcpy.GetParameter(3)
+start_time = pd.to_datetime(arcpy.GetParameterAsText(4)).strftime('%Y-%m-%dT%H:%M:%SZ')
+end_time = pd.to_datetime(arcpy.GetParameterAsText(5)).strftime('%Y-%m-%dT%H:%M:%SZ')
+parameter = arcpy.GetParameterAsText(6)
+depth_min = arcpy.GetParameterAsText(7)
+depth_max = arcpy.GetParameterAsText(8)
+tt = arcpy.GetParameterAsText(9)
+rt = arcpy.GetParameterAsText(10)
+platforms = arcpy.GetParameterAsText(11)
+
+# get coordinates by calculating geometric attributes
+arcpy.MakeFeatureLayer_management(input_feature, "layer")
+arcpy.AddGeometryAttributes_management("layer", "EXTENT")
+
+rows = arcpy.SearchCursor("layer", fields="EXT_MIN_X;EXT_MIN_Y;EXT_MAX_X;EXT_MAX_Y")
+row = rows.next()
+min_lon = row.getValue("EXT_MIN_X")
+max_lon = row.getValue("EXT_MAX_X")
+min_lat = row.getValue("EXT_MIN_Y")
+max_lat = row.getValue("EXT_MAX_Y")
 
 # Build the HTTP request
-url = f"https://oceanworks.jpl.nasa.gov/match_spark?primary={primary}&matchup={secondary}&startTime={startTime}&endTime={endTime}&tt={tt}&rt={rt}&b={maxLat},{minLon},{minLat},{maxLon}&platforms={platforms}&parameter={parameter}&matchOne=true&depthMin={depthMin}&depthMax={depthMax}"
-# url = "https://oceanworks.jpl.nasa.gov/match_spark?primary=AVHRR_OI_L4_GHRSST_NCEI&matchup=spurs&startTime=2013-10-01T00:00:00Z&endTime=2013-10-30T23:59:59Z&tt=86400&rt=10000.0&b=-30,15,-45,30&platforms=1,2,3,4,5,6,7,8,9&parameter=sst&matchOne=true&depthMin=0&depthMax=5"
+url = f"https://{host_url}/match_spark?primary={primary}&matchup={secondary}&startTime={start_time}&endTime={end_time}&tt={tt}&rt={rt}&b={max_lat},{min_lon},{min_lat},{max_lon}&platforms={platforms}&parameter={parameter}&matchOne=true&depthMin={depth_min}&depthMax={depth_max}"
+# url = "https://{}/match_spark?primary=AVHRR_OI_L4_GHRSST_NCEI&matchup=spurs&startTime=2013-10-01T00:00:00Z&endTime=2013-10-30T23:59:59Z&tt=86400&rt=10000.0&b=-30,15,-45,30&platforms=1,2,3,4,5,6,7,8,9&parameter=sst&matchOne=true&depthMin=0&depthMax=5"
 
 # Report a success message
 arcpy.AddMessage("Url received, getting json")

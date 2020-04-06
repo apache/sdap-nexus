@@ -17,19 +17,27 @@ import pandas as pd
 arcpy.env.overwriteOutput = True
 
 # Get the input parameters
-# ToDO: make lat/time interactive
-ds = arcpy.GetParameterAsText(0)
-ds2 = arcpy.GetParameterAsText(1)
-minLat = arcpy.GetParameterAsText(2)
-maxLat = arcpy.GetParameterAsText(3)
-minLon = arcpy.GetParameterAsText(4)
-maxLon = arcpy.GetParameterAsText(5)
-startTime = pd.to_datetime(arcpy.GetParameterAsText(6)).strftime('%Y-%m-%dT%H:%M:%SZ')
-endTime = pd.to_datetime(arcpy.GetParameterAsText(7)).strftime('%Y-%m-%dT%H:%M:%SZ')
+host_url = arcpy.GetParameterAsText(0)
+ds = arcpy.GetParameterAsText(1)
+ds2 = arcpy.GetParameterAsText(2)
+input_feature = arcpy.GetParameter(3)
+start_time = pd.to_datetime(arcpy.GetParameterAsText(4)).strftime('%Y-%m-%dT%H:%M:%SZ')
+end_time = pd.to_datetime(arcpy.GetParameterAsText(5)).strftime('%Y-%m-%dT%H:%M:%SZ')
+
+# get coordinates by calculating geometric attributes
+arcpy.MakeFeatureLayer_management(input_feature, "layer")
+arcpy.AddGeometryAttributes_management("layer", "EXTENT")
+
+rows = arcpy.SearchCursor("layer", fields="EXT_MIN_X;EXT_MIN_Y;EXT_MAX_X;EXT_MAX_Y")
+row = rows.next()
+min_lon = row.getValue("EXT_MIN_X")
+max_lon = row.getValue("EXT_MAX_X")
+min_lat = row.getValue("EXT_MIN_Y")
+max_lat = row.getValue("EXT_MAX_Y")
 
 # Build the HTTP request
-url = 'https://oceanworks.jpl.nasa.gov/dailydifferenceaverage_spark?dataset={}&climatology={}&b={},{},{},{}&startTime={}&endTime={}'.format(ds, ds2, minLat, minLon, maxLat, maxLon, startTime, endTime)
-#url = 'https://oceanworks.jpl.nasa.gov/dailydifferenceaverage_spark?dataset=SMAP_SSS_L3_MONTHLY_500&climatology=SMAP_SSS_L3_MONTHLY_500_CLIM&b=-150,45,-120,60&startTime=2015-04-16T00:00:00Z&endTime=2018-04-14T00:00:00Z'
+url = 'https://{}/dailydifferenceaverage_spark?dataset={}&climatology={}&b={},{},{},{}&startTime={}&endTime={}'.format(host_url,ds, ds2, min_lat, min_lon, max_lat, max_lon, start_time, end_time)
+#url = 'https://{}/dailydifferenceaverage_spark?dataset=SMAP_SSS_L3_MONTHLY_500&climatology=SMAP_SSS_L3_MONTHLY_500_CLIM&b=-150,45,-120,60&startTime=2015-04-16T00:00:00Z&endTime=2018-04-14T00:00:00Z'
 arcpy.AddMessage('{}'.format(url))
 
 # Report a success message

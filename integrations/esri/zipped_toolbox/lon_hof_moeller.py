@@ -73,19 +73,26 @@ def createLongitudeHoffmueller(res, meta):
                              interpolate='nearest')
 
 # Get the input parameters
-# ToDO: make lat/time interactive
-dataset = arcpy.GetParameterAsText(0)
-minLat = arcpy.GetParameterAsText(1)
-maxLat = arcpy.GetParameterAsText(2)
-minLon = arcpy.GetParameterAsText(3)
-maxLon = arcpy.GetParameterAsText(4)
-startTime = pd.to_datetime(arcpy.GetParameterAsText(5)).strftime('%Y-%m-%dT%H:%M:%SZ')
-endTime = pd.to_datetime(arcpy.GetParameterAsText(6)).strftime('%Y-%m-%dT%H:%M:%SZ')
+host_url = arcpy.GetParameterAsText(0)
+dataset = arcpy.GetParameterAsText(1)
+input_feature = arcpy.GetParameter(2)
+start_time = pd.to_datetime(arcpy.GetParameterAsText(3)).strftime('%Y-%m-%dT%H:%M:%SZ')
+end_time = pd.to_datetime(arcpy.GetParameterAsText(4)).strftime('%Y-%m-%dT%H:%M:%SZ')
 
+# get coordinates by calculating geometric attributes
+arcpy.MakeFeatureLayer_management(input_feature, "layer")
+arcpy.AddGeometryAttributes_management("layer", "EXTENT")
+
+rows = arcpy.SearchCursor("layer", fields="EXT_MIN_X;EXT_MIN_Y;EXT_MAX_X;EXT_MAX_Y")
+row = rows.next()
+min_lon = row.getValue("EXT_MIN_X")
+max_lon = row.getValue("EXT_MAX_X")
+min_lat = row.getValue("EXT_MIN_Y")
+max_lat = row.getValue("EXT_MAX_Y")
 
 # Build the HTTP request
-url = f"https://oceanworks.jpl.nasa.gov/longitudeTimeHofMoellerSpark?ds={dataset}&b={maxLat},{minLon},{minLat},{maxLon}&startTime={startTime}&endTime={endTime}"
-#url = "https://oceanworks.jpl.nasa.gov/longitudeTimeHofMoellerSpark?ds=TELLUS_GRACE_MASCON_CRI_GRID_RL06_V1_OCEAN&b=-30,15,-45,30&startTime=2010-02-01T00:00:00Z&endTime=2014-01-01T00:00:00Z"
+url = f"https://{host_url}/longitudeTimeHofMoellerSpark?ds={dataset}&b={max_lat},{min_lon},{min_lat},{max_lon}&startTime={start_time}&endTime={end_time}"
+#url = "https://{}/longitudeTimeHofMoellerSpark?ds=TELLUS_GRACE_MASCON_CRI_GRID_RL06_V1_OCEAN&b=-30,15,-45,30&startTime=2010-02-01T00:00:00Z&endTime=2014-01-01T00:00:00Z"
 arcpy.AddMessage('{}'.format(url))
 
 # Report a success message
