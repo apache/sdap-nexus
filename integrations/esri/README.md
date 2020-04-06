@@ -29,8 +29,13 @@ To fix this, you will right click on the script within the toolbox, ie `DailyDif
 `properties`. A window will pop and you will see a path pointing to the `daily_difference_average.py`. Ensure that this 
 is the correct path for the script. 
 
+When creating an interactive polygon in the toolbox, click on the pencil, create your shape within the ArcGIS pro map,
+and double click on the red dot when finished drawing the shape. You may also right click on the final red dot and click
+Finish.
+
 ### User
-For usage purposes please use `nexus_toolbox_embedded.tbx`. This toolbox has the python scripts embeedded within which
-means that you cannot change the underlying script codes for the tools. If you are a developer, please refer to the section
-above.
+For usage purposes please use `nexus_toolbox_embedded.tbx`. This toolbox has the python scripts embedded within which
+means that you cannot change the underlying script codes for the tools. To use, you can simply make a connection to this 
+toolbox (after downloading) in the Catalog by right clicking Toolboxes > Add Toolbox > and identifying `nexus_toolbox_embedded.tbx`. 
+If you are a developer, please refer to the section above.
 
