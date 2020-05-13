@@ -17,6 +17,7 @@ import itertools
 import logging
 from cStringIO import StringIO
 from datetime import datetime
+from functools import partial
 
 import matplotlib.pyplot as plt
 import mpld3
@@ -26,7 +27,6 @@ from matplotlib import cm
 from matplotlib.ticker import FuncFormatter
 from nexustiles.nexustiles import NexusTileService
 from pytz import timezone
-
 from webservice.NexusHandler import SparkHandler, nexus_handler
 from webservice.webmodel import NexusResults, NoDataException, NexusProcessingException
 
@@ -40,7 +40,7 @@ LONGITUDE = 1
 
 class HofMoellerCalculator(object):
     @staticmethod
-    def hofmoeller_stats(tile_in_spark):
+    def hofmoeller_stats(metrics_callback, tile_in_spark):
 
         (latlon, tile_id, index,
          min_lat, max_lat, min_lon, max_lon) = tile_in_spark
@@ -48,7 +48,8 @@ class HofMoellerCalculator(object):
         tile_service = NexusTileService()
         try:
             # Load the dataset tile
-            tile = tile_service.find_tile_by_id(tile_id)[0]
+            tile = tile_service.find_tile_by_id(tile_id, metrics_callback=metrics_callback)[0]
+            calculation_start = datetime.now()
             # Mask it to the search domain
             tile = tile_service.mask_tiles_to_bbox(min_lat, max_lat,
                                                    min_lon, max_lon, [tile])[0]
@@ -93,6 +94,9 @@ class HofMoellerCalculator(object):
                                               np.max(vals).item(),
                                               np.min(vals).item(),
                                               np.var(vals).item())))
+        calculation_duration = (datetime.now() - calculation_start).total_seconds()
+        metrics_callback(calculation=calculation_duration)
+
         return stats
 
 
@@ -261,7 +265,8 @@ def hof_tuple_to_dict(t, avg_var_name):
             'max': t[6],
             'min': t[7]}
 
-def spark_driver(sc, latlon, nexus_tiles_spark):
+
+def spark_driver(sc, latlon, nexus_tiles_spark, metrics_callback):
     # Parallelize list of tile ids
     rdd = sc.parallelize(nexus_tiles_spark, determine_parllelism(len(nexus_tiles_spark)))
     if latlon == 0:
@@ -276,10 +281,12 @@ def spark_driver(sc, latlon, nexus_tiles_spark):
     # Create a set of key-value pairs where the key is (time, lat|lon) and
     # the value is a tuple of intermediate statistics for the specified
     # coordinate within a single NEXUS tile.
-    results = rdd.flatMap(HofMoellerCalculator.hofmoeller_stats)
+    metrics_callback(partitions=rdd.getNumPartitions())
+    results = rdd.flatMap(partial(HofMoellerCalculator.hofmoeller_stats, metrics_callback))
 
     # Combine tuples across tiles with input key = (time, lat|lon)
     # Output a key value pair with key = (time)
+    reduce_start = datetime.now()
     results = results.combineByKey(lambda val: (hof_tuple_time(val), val),
                                    lambda x, val: (hof_tuple_time(x),
                                                    hof_tuple_combine(x[1],
@@ -317,6 +324,9 @@ def spark_driver(sc, latlon, nexus_tiles_spark):
         values(). \
         collect()
 
+    reduce_duration = (datetime.now() - reduce_start).total_seconds()
+    metrics_callback(reduce=reduce_duration)
+
     return results
 
 
@@ -335,18 +345,22 @@ class LatitudeTimeHoffMoellerSparkHandlerImpl(BaseHoffMoellerHandlerImpl):
     def calc(self, compute_options, **args):
         ds, bbox, start_time, end_time = self.parse_arguments(compute_options)
 
+        metrics_record = self._create_metrics_record()
+        calculation_start = datetime.now()
+
         min_lon, min_lat, max_lon, max_lat = bbox.bounds
 
         nexus_tiles_spark = [(self._latlon, tile.tile_id, x, min_lat, max_lat, min_lon, max_lon) for x, tile in
                              enumerate(self._tile_service.find_tiles_in_box(min_lat, max_lat, min_lon, max_lon,
                                                                             ds, start_time, end_time,
+                                                                            metrics_callback=metrics_record.record_metrics,
                                                                             fetch_data=False))]
 
         print ("Got {} tiles".format(len(nexus_tiles_spark)))
         if len(nexus_tiles_spark) == 0:
             raise NoDataException(reason="No data found for selected timeframe")
 
-        results = spark_driver(self._sc, self._latlon, nexus_tiles_spark)
+        results = spark_driver(self._sc, self._latlon, nexus_tiles_spark, metrics_record.record_metrics)
         results = filter(None, results)
         results = sorted(results, key=lambda entry: entry['time'])
         for i in range(len(results)):
@@ -359,6 +373,11 @@ class LatitudeTimeHoffMoellerSparkHandlerImpl(BaseHoffMoellerHandlerImpl):
         result = HoffMoellerResults(results=results, compute_options=None, type=HoffMoellerResults.LATITUDE,
                                     minLat=min_lat, maxLat=max_lat, minLon=min_lon,
                                     maxLon=max_lon, ds=ds, startTime=start_time, endTime=end_time)
+
+        duration = (datetime.now() - calculation_start).total_seconds()
+        metrics_record.record_metrics(actual_time=duration)
+        metrics_record.print_metrics(self.log)
+
         return result
 
 
@@ -377,18 +396,22 @@ class LongitudeTimeHoffMoellerSparkHandlerImpl(BaseHoffMoellerHandlerImpl):
     def calc(self, compute_options, **args):
         ds, bbox, start_time, end_time = self.parse_arguments(compute_options)
 
+        metrics_record = self._create_metrics_record()
+        calculation_start = datetime.now()
+
         min_lon, min_lat, max_lon, max_lat = bbox.bounds
 
         nexus_tiles_spark = [(self._latlon, tile.tile_id, x, min_lat, max_lat, min_lon, max_lon) for x, tile in
                              enumerate(self._tile_service.find_tiles_in_box(min_lat, max_lat, min_lon, max_lon,
                                                                             ds, start_time, end_time,
+                                                                            metrics_callback=metrics_record.record_metrics,
                                                                             fetch_data=False))]
 
         print ("Got {} tiles".format(len(nexus_tiles_spark)))
         if len(nexus_tiles_spark) == 0:
             raise NoDataException(reason="No data found for selected timeframe")
 
-        results = spark_driver(self._sc, self._latlon, nexus_tiles_spark)
+        results = spark_driver(self._sc, self._latlon, nexus_tiles_spark, metrics_record.record_metrics)
 
         results = filter(None, results)
         results = sorted(results, key=lambda entry: entry["time"])
@@ -402,6 +425,11 @@ class LongitudeTimeHoffMoellerSparkHandlerImpl(BaseHoffMoellerHandlerImpl):
         result = HoffMoellerResults(results=results, compute_options=None, type=HoffMoellerResults.LONGITUDE,
                                     minLat=min_lat, maxLat=max_lat, minLon=min_lon,
                                     maxLon=max_lon, ds=ds, startTime=start_time, endTime=end_time)
+
+        duration = (datetime.now() - calculation_start).total_seconds()
+        metrics_record.record_metrics(actual_time=duration)
+        metrics_record.print_metrics(self.log)
+
         return result
 
 
