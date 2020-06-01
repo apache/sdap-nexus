@@ -45,7 +45,7 @@ setuptools.setup(
     ],
     package_data={
         'webservice': ['config/web.ini', 'config/algorithms.ini'],
-        'webservice.algorithms.doms': ['domsconfig.ini']
+        'webservice.algorithms.doms': ['domsconfig.ini', 'domsconfig.ini.default']
     },
     data_files=[
         ('static', ['static/index.html'])

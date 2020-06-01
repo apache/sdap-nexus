@@ -21,6 +21,7 @@ import re
 import time
 from datetime import datetime
 from decimal import Decimal
+import logging
 
 import numpy as np
 from pytz import UTC, timezone
@@ -146,12 +147,112 @@ class StatsComputeOptions(object):
     def get_nparts(self):
         raise Exception("Please implement")
 
+class NexusRequestObjectTornadoFree(StatsComputeOptions):
+    shortNamePattern = re.compile("^[a-zA-Z0-9_\-,\.]+$")
+    floatingPointPattern = re.compile('[+-]?(\d+(\.\d*)?|\.\d+)([eE][+-]?\d+)?')
+
+    def __init__(self, reqHandler):
+        self.__log = logging.getLogger(__name__)
+        if reqHandler is None:
+            raise Exception("Request handler cannot be null")
+        StatsComputeOptions.__init__(self)
+
+        self._dataset = self._parse_dataset(reqHandler)
+
+        self._bounding_box = self._parse_bounding_box(reqHandler)
+
+        self._start_time = self._parse_start_time(reqHandler)
+        self._end_time = self._parse_end_time(reqHandler)
+
+        self._nparts = self._parse_nparts(reqHandler)
+
+        self._content_type = self._parse_content_type(reqHandler)
+
+    def get_dataset(self):
+        return self._dataset
+
+    def get_bounding_box(self):
+        return self._bounding_box
+
+    def get_start_datetime(self):
+        return self._start_time
+
+    def get_end_datetime(self):
+        return self._end_time
+
+    def get_nparts(self):
+        return self._nparts
+
+    def get_content_type(self):
+        return self._content_type
+
+    def _parse_dataset(self, reqHandler):
+        ds = reqHandler.get_argument(RequestParameters.DATASET, None)
+        if ds is not None and not self.__validate_is_shortname(ds):
+            raise Exception("Invalid shortname")
+        else:
+            return ds
+
+    def _parse_bounding_box(self, reqHandler):
+
+        b = reqHandler.get_argument("b", '')
+        if b:
+            min_lon, min_lat, max_lon, max_lat = [float(e) for e in b.split(",")]
+        else:
+            max_lat = reqHandler.get_argument("maxLat", 90)
+            max_lat = Decimal(max_lat) if self.__validate_is_number(max_lat) else 90
+
+            min_lat = reqHandler.get_argument("minLat", -90)
+            min_lat = Decimal(min_lat) if self.__validate_is_number(min_lat) else -90
+
+            max_lon = reqHandler.get_argument("maxLon", 180)
+            max_lon = Decimal(max_lon) if self.__validate_is_number(max_lon) else 180
+
+            min_lon = reqHandler.get_argument("minLon", -90)
+            min_lon = Decimal(min_lon) if self.__validate_is_number(min_lon) else -90
+
+        return min_lon, min_lat, max_lon, max_lat
+
+    def _parse_start_time(self, reqHandler):
+        return self._parse_time(reqHandler, RequestParameters.START_TIME, default=0)
+
+    def _parse_end_time(self, reqHandler):
+        return self._parse_time(reqHandler, RequestParameters.END_TIME, default=-1)
+
+    def _parse_time(self, reqHandler, arg_name, default=None):
+        time_str = reqHandler.get_argument(arg_name, default)
+        try:
+            dt = datetime.strptime(time_str, "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=UTC)
+        except ValueError:
+            dt = datetime.utcfromtimestamp(int(time_str)).replace(tzinfo=UTC)
+        return dt
+
+    def _parse_nparts(self, reqHandler):
+        return int(reqHandler.get_argument(RequestParameters.NPARTS, 0))
+
+    def _parse_content_type(self, reqHandler):
+        return reqHandler.get_argument(RequestParameters.OUTPUT, "JSON")
+
+    def __validate_is_shortname(self, v):
+        if v is None or len(v) == 0:
+            return False
+        return self.shortNamePattern.match(v) is not None
+
+    def __validate_is_number(self, v):
+        if v is None or (type(v) == str and len(v) == 0):
+            return False
+        elif type(v) == int or type(v) == float:
+            return True
+        else:
+            return self.floatingPointPattern.match(v) is not None
+
 
 class NexusRequestObject(StatsComputeOptions):
     shortNamePattern = re.compile("^[a-zA-Z0-9_\-,\.]+$")
     floatingPointPattern = re.compile('[+-]?(\d+(\.\d*)?|\.\d+)([eE][+-]?\d+)?')
 
     def __init__(self, reqHandler):
+        self.__log = logging.getLogger(__name__)
         if reqHandler is None:
             raise Exception("Request handler cannot be null")
         self.requestHandler = reqHandler
@@ -230,6 +331,28 @@ class NexusRequestObject(StatsComputeOptions):
     def get_min_lon(self, default=Decimal(-180)):
         return self.get_decimal_arg("minLon", default)
 
+    # added to fit the simplified version of TimeAvgMapSpark parse_argumemt
+    def get_bounding_box(self):
+
+        b = self.get_argument("b", '')
+        if b:
+            min_lon, min_lat, max_lon, max_lat = [float(e) for e in b.split(",")]
+        else:
+            max_lat = self.get_argument("maxLat", 90)
+            max_lat = Decimal(max_lat) if self.__validate_is_number(max_lat) else 90
+
+            min_lat = self.get_argument("minLat", -90)
+            min_lat = Decimal(min_lat) if self.__validate_is_number(min_lat) else -90
+
+            max_lon = self.get_argument("maxLon", 180)
+            max_lon = Decimal(max_lon) if self.__validate_is_number(max_lon) else 180
+
+            min_lon = self.get_argument("minLon", -90)
+            min_lon = Decimal(min_lon) if self.__validate_is_number(min_lon) else -90
+
+        return min_lon, min_lat, max_lon, max_lat
+
+
     def get_bounding_polygon(self):
         west, south, east, north = [float(b) for b in self.get_argument("b").split(",")]
         polygon = Polygon([(west, south), (east, south), (east, north), (west, north), (west, south)])
@@ -279,6 +402,7 @@ class NexusRequestObject(StatsComputeOptions):
         return self.get_int_arg(RequestParameters.CLIM_MONTH, -1)
 
     def get_start_datetime(self):
+        #self.__log("get start datetime as {}".format(RequestParameters.START_TIME))
         time_str = self.get_argument(RequestParameters.START_TIME)
         try:
             dt = datetime.strptime(time_str, "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=UTC)

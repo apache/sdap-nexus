@@ -17,6 +17,7 @@
 import logging
 import time
 import types
+import threading
 
 import numpy as np
 from netCDF4 import Dataset
@@ -127,7 +128,9 @@ class NexusInitializerWrapper:
 
 
 class AlgorithmModuleWrapper:
+
     def __init__(self, clazz):
+        self.__log = logging.getLogger(__name__)
         self.__instance = None
         self.__clazz = clazz
         self.validate()
@@ -165,20 +168,9 @@ class AlgorithmModuleWrapper:
 
     def instance(self, algorithm_config=None, sc=None):
         if "singleton" in self.__clazz.__dict__ and self.__clazz.__dict__["singleton"] is True:
-            if self.__instance is None:
-                self.__instance = self.__clazz()
-
-                try:
-                    self.__instance.set_config(algorithm_config)
-                except AttributeError:
-                    pass
-
-                try:
-                    self.__instance.set_spark_context(sc)
-                except AttributeError:
-                    pass
-
-            return self.__instance
+                self.__log.info("get algorithm class instance")
+                self.__instance = self.__clazz.instance(algorithm_config, sc)
+                return self.__instance
         else:
             instance = self.__clazz()
 

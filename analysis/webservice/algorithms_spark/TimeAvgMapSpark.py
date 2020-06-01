@@ -87,39 +87,12 @@ class TimeAvgMapSparkHandlerImpl(SparkHandler):
             raise NexusProcessingException(
                 reason="Cannot compute Latitude/Longitude Time Average plot on a climatology", code=400)
 
-        try:
-            bounding_polygon = request.get_bounding_polygon()
-            request.get_min_lon = lambda: bounding_polygon.bounds[0]
-            request.get_min_lat = lambda: bounding_polygon.bounds[1]
-            request.get_max_lon = lambda: bounding_polygon.bounds[2]
-            request.get_max_lat = lambda: bounding_polygon.bounds[3]
-        except:
-            try:
-                west, south, east, north = request.get_min_lon(), request.get_min_lat(), \
-                                           request.get_max_lon(), request.get_max_lat()
-                bounding_polygon = shapely.geometry.Polygon(
-                    [(west, south), (east, south), (east, north), (west, north), (west, south)])
-            except:
-                raise NexusProcessingException(
-                    reason="'b' argument is required. Must be comma-delimited float formatted as "
-                           "Minimum (Western) Longitude, Minimum (Southern) Latitude, "
-                           "Maximum (Eastern) Longitude, Maximum (Northern) Latitude",
-                    code=400)
+        west, south, east, north = request.get_bounding_box()
+        bounding_polygon = shapely.geometry.Polygon(
+            [(west, south), (east, south), (east, north), (west, north), (west, south)])
 
-        try:
-            start_time = request.get_start_datetime()
-        except:
-            raise NexusProcessingException(
-                reason="'startTime' argument is required. Can be int value seconds from epoch or "
-                       "string format YYYY-MM-DDTHH:mm:ssZ",
-                code=400)
-        try:
-            end_time = request.get_end_datetime()
-        except:
-            raise NexusProcessingException(
-                reason="'endTime' argument is required. Can be int value seconds from epoch or "
-                       "string format YYYY-MM-DDTHH:mm:ssZ",
-                code=400)
+        start_time = request.get_start_datetime()
+        end_time = request.get_end_datetime()
 
         if start_time > end_time:
             raise NexusProcessingException(

@@ -20,13 +20,16 @@ import json
 import logging
 import sys
 import traceback
+import os
 
 import matplotlib
 import pkg_resources
 import tornado.web
 from tornado.options import define, options, parse_command_line
+from tornado.concurrent import Future
+
 from webservice import NexusHandler
-from webservice.webmodel import NexusRequestObject, NexusProcessingException
+from webservice.webmodel import NexusRequestObject, NexusRequestObjectTornadoFree, NexusProcessingException
 
 matplotlib.use('Agg')
 
@@ -50,18 +53,21 @@ class BaseHandler(tornado.web.RequestHandler):
     @tornado.gen.coroutine
     def get(self):
         self.logger.info("Received request %s" % self._request_summary())
-        yield self.run()
 
-    @tornado.concurrent.run_on_executor
-    def run(self):
-        reqObject = NexusRequestObject(self)
-        try:
-            result = self.do_get(reqObject)
-            self.async_callback(result)
-        except NexusProcessingException as e:
-            self.async_onerror_callback(e.reason, e.code)
-        except Exception as e:
-            self.async_onerror_callback(str(e), 500)
+        reqObject = NexusRequestObjectTornadoFree(self)
+        yield self.do_get(reqObject)
+
+
+
+    # def run(self):
+    #
+    #     try:
+    #         result = self.do_get(reqObject)
+    #         return result
+    #     except NexusProcessingException as e:
+    #         self.async_onerror_callback(e.reason, e.code)
+    #     except Exception as e:
+    #         self.async_onerror_callback(str(e), 500)
 
     def async_onerror_callback(self, reason, code=500):
         self.logger.error("Error processing request", exc_info=True)
@@ -77,42 +83,28 @@ class BaseHandler(tornado.web.RequestHandler):
         self.write(json.dumps(response, indent=5))
         self.finish()
 
-    def async_callback(self, result):
+    def async_callback(self, args):
         pass
 
-    ''' Override me for standard handlers! '''
+    # def do_get(self, reqObject):
+    #     license = ''
+    #     for root, dirs, files in os.walk("."):
+    #         for pyfile in [afile for afile in files if afile.endswith(".py")]:
+    #             print(os.path.join(root, pyfile))
+    #             with open(os.path.join(root, pyfile), 'r') as original: data = original.read()
+    #             with open(os.path.join(root, pyfile), 'w') as modified: modified.write(license + "\n" + data)
+    #     pass
 
-    def do_get(self, reqObject):
-
-        for root, dirs, files in os.walk("."):
-            for pyfile in [afile for afile in files if afile.endswith(".py")]:
-                print(os.path.join(root, pyfile))
-                with open(os.path.join(root, pyfile), 'r') as original: data = original.read()
-                with open(os.path.join(root, pyfile), 'w') as modified: modified.write(license + "\n" + data)
-        pass
-
-
-class ModularNexusHandlerWrapper(BaseHandler):
-    def initialize(self, thread_pool, clazz=None, algorithm_config=None, sc=None):
-        BaseHandler.initialize(self, thread_pool)
-        self.__algorithm_config = algorithm_config
-        self.__clazz = clazz
-        self.__sc = sc
-
-    def do_get(self, request):
-        instance = self.__clazz.instance(algorithm_config=self.__algorithm_config, sc=self.__sc)
-
-        results = instance.calc(request)
-
-        try:
-            self.set_status(results.status_code)
-        except AttributeError:
-            pass
-
+    def render_nexus_response(self, result_arg):
+        request = result_arg['request']
+        results = result_arg['result']
         if request.get_content_type() == ContentTypes.JSON:
             self.set_header("Content-Type", "application/json")
             try:
-                self.write(results.toJson())
+                result_str = results.toJson()
+                self.logger.info("request result {}".format(json.loads(result_str)['data'][0:3]))
+                self.write(result_str)
+                self.finish()
             except AttributeError:
                 traceback.print_exc(file=sys.stdout)
                 self.write(json.dumps(results, indent=4))
@@ -148,7 +140,39 @@ class ModularNexusHandlerWrapper(BaseHandler):
                 traceback.print_exc(file=sys.stdout)
                 raise NexusProcessingException(reason="Unable to convert results to Zip.")
 
-        return results
+
+class ModularNexusHandlerWrapper(BaseHandler):
+    def initialize(self, thread_pool, clazz=None, algorithm_config=None, sc=None):
+        BaseHandler.initialize(self, thread_pool)
+        self.__algorithm_config = algorithm_config
+        self.__clazz = clazz
+        self.__sc = sc
+
+    @tornado.gen.coroutine
+    def do_get(self, request):
+        log.info("do_get function called in ModularNexusHandlerWrapper")
+        instance = self.__clazz.instance(algorithm_config=self.__algorithm_config, sc=self.__sc)
+
+        try:
+            results = yield tornado.ioloop.IOLoop.current().run_in_executor(None, instance.calc, request)
+            #results = yield instance.calc(request)
+
+            try:
+                self.set_status(results.status_code)
+            except AttributeError:
+                pass
+
+            result = {'request': request,
+                      'result': results}
+            self.render_nexus_response(result)
+
+        except NexusProcessingException as e:
+            self.async_onerror_callback(e.reason, e.code)
+
+        except Exception as e:
+            self.async_onerror_callback(str(e), 500)
+
+
 
     def async_callback(self, result):
         super(ModularNexusHandlerWrapper, self).async_callback(result)

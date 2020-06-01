@@ -20,7 +20,7 @@ import logging
 
 import pkg_resources
 from cassandra.cluster import Cluster
-from cassandra.policies import TokenAwarePolicy, DCAwareRoundRobinPolicy
+from cassandra.policies import TokenAwarePolicy, DCAwareRoundRobinPolicy, WhiteListRoundRobinPolicy
 
 from webservice.NexusHandler import nexus_initializer
 
@@ -35,20 +35,26 @@ class DomsInitializer:
         log.info("*** STARTING DOMS INITIALIZATION ***")
 
         domsconfig = ConfigParser.RawConfigParser()
-        domsconfig.readfp(pkg_resources.resource_stream(__name__, "domsconfig.ini"), filename='domsconfig.ini')
+        domsconfig.read([pkg_resources.resource_filename(__name__, "domsconfig.ini.default"),
+                        pkg_resources.resource_filename(__name__, "domsconfig.ini")])
 
         cassHost = domsconfig.get("cassandra", "host")
         cassPort = domsconfig.get("cassandra", "port")
         cassKeyspace = domsconfig.get("cassandra", "keyspace")
         cassDatacenter = domsconfig.get("cassandra", "local_datacenter")
         cassVersion = int(domsconfig.get("cassandra", "protocol_version"))
+        cassPolicy = domsconfig.get("cassandra", "dc_policy")
 
         log.info("Cassandra Host(s): %s" % (cassHost))
         log.info("Cassandra Keyspace: %s" % (cassKeyspace))
         log.info("Cassandra Datacenter: %s" % (cassDatacenter))
         log.info("Cassandra Protocol Version: %s" % (cassVersion))
+        log.info("Cassandra DC Policy: %s" % (cassPolicy))
 
-        dc_policy = DCAwareRoundRobinPolicy(cassDatacenter)
+        if cassPolicy == 'DCAwareRoundRobinPolicy':
+            dc_policy = DCAwareRoundRobinPolicy(cassDatacenter)
+        elif cassPolicy == 'WhiteListRoundRobinPolicy':
+            dc_policy = WhiteListRoundRobinPolicy([cassHost])
         token_policy = TokenAwarePolicy(dc_policy)
 
         with Cluster([host for host in cassHost.split(',')], port=cassPort, load_balancing_policy=token_policy,
