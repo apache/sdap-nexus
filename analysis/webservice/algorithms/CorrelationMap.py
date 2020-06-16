@@ -56,9 +56,9 @@ class LongitudeLatitudeMapHandlerImpl(NexusHandler):
         if not len(ds) == 2:
             raise Exception("Requires two datasets for comparison. Specify request parameter ds=Dataset_1,Dataset_2")
 
-        ds1tiles = self._tile_service.find_tiles_in_polygon(box(minLon, minLat, maxLon, maxLat), ds[0], startTime,
+        ds1tiles = self._get_tile_service().find_tiles_in_polygon(box(minLon, minLat, maxLon, maxLat), ds[0], startTime,
                                                             endTime)
-        ds2tiles = self._tile_service.find_tiles_in_polygon(box(minLon, minLat, maxLon, maxLat), ds[1], startTime,
+        ds2tiles = self._get_tile_service().find_tiles_in_polygon(box(minLon, minLat, maxLon, maxLat), ds[1], startTime,
                                                             endTime)
 
         matches = self._match_tiles(ds1tiles, ds2tiles)

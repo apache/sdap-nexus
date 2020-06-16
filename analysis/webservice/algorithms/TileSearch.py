@@ -75,7 +75,7 @@ class ChunkSearchHandlerImpl(NexusHandler):
         endTime = computeOptions.get_end_time()
         # TODO update to expect tile objects back
         res = [tile.get_summary() for tile in
-               self._tile_service.find_tiles_in_box(minLat, maxLat, minLon, maxLon, ds, startTime, endTime,
+               self._get_tile_service().find_tiles_in_box(minLat, maxLat, minLon, maxLon, ds, startTime, endTime,
                                                     fetch_data=False)]
 
         res = NexusResults(results=res)

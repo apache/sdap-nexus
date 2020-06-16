@@ -25,7 +25,6 @@ import matplotlib
 import pkg_resources
 import tornado.web
 from tornado.options import define, options, parse_command_line
-
 from webservice import NexusHandler
 from webservice.webmodel import NexusRequestObject, NexusProcessingException
 
@@ -156,6 +155,23 @@ class ModularNexusHandlerWrapper(BaseHandler):
         if hasattr(result, 'cleanup'):
             result.cleanup()
 
+def inject_args_in_config(args, config):
+    """
+        Takes command argparse arguments and push them in the config
+         with syntax args.<section>_<option>
+    """
+    for _, t_opt in args._options.items():
+        n = t_opt.name
+        first_ = n.find('_')
+        if first_ > 0:
+            s, o = n[:first_], n[first_+1:]
+            v = t_opt.value()
+            log.info('inject argument {} = {} in configuration section {}, option {}'.format(n, v , s, o))
+            if not config.has_section(s):
+                config.add_section(s)
+            config.set(s, o, v)
+    return config
+
 
 if __name__ == "__main__":
     logging.basicConfig(
@@ -174,7 +190,12 @@ if __name__ == "__main__":
     define("debug", default=False, help="run in debug mode")
     define("port", default=webconfig.get("global", "server.socket_port"), help="run on the given port", type=int)
     define("address", default=webconfig.get("global", "server.socket_host"), help="Bind to the given address")
+    define('solr_time_out', default=60,
+           help='time out for solr requests in seconds, default (60) is ok for most deployments'
+                ' when solr performances are not good this might need to be increased')
+
     parse_command_line()
+    algorithm_config = inject_args_in_config(options, algorithm_config)
 
     moduleDirs = webconfig.get("modules", "module_dirs").split(",")
     for moduleDir in moduleDirs:

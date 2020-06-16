@@ -211,10 +211,20 @@ class NexusHandler(CalcHandler):
         CalcHandler.__init__(self)
 
         self.algorithm_config = None
-        self._tile_service = NexusTileService(skipCassandra, skipSolr)
+        self._skipCassandra = skipCassandra
+        self._skipSolr = skipSolr
+        self.__tile_service = None  # instantiate the tile service after config is fully loaded
 
     def set_config(self, algorithm_config):
         self.algorithm_config = algorithm_config
+
+    def _get_tile_service(self):
+        if self.__tile_service is None:
+            self.__tile_service = NexusTileService(skipDatastore=self._skipCassandra,
+                                                   skipMetadatastore=self._skipSolr,
+                                                   config=self.algorithm_config)
+        return self.__tile_service
+
 
     def _mergeDicts(self, x, y):
         z = x.copy()
@@ -377,7 +387,7 @@ class SparkHandler(NexusHandler):
             ds = self._ds
 
         # See what time stamps are in the specified range.
-        t_in_range = self._tile_service.find_days_in_range_asc(self._minLat,
+        t_in_range = self._get_tile_service().find_days_in_range_asc(self._minLat,
                                                                self._maxLat,
                                                                self._minLon,
                                                                self._maxLon,
@@ -393,7 +403,7 @@ class SparkHandler(NexusHandler):
         # Check one time stamp at a time and attempt to extract the global
         # tile set.
         for t in t_in_range:
-            nexus_tiles = self._tile_service.get_tiles_bounded_by_box(self._minLat, self._maxLat, self._minLon,
+            nexus_tiles = self._get_tile_service().get_tiles_bounded_by_box(self._minLat, self._maxLat, self._minLon,
                                                                       self._maxLon, ds=ds, start_time=t, end_time=t,
                                                                       metrics_callback=metrics_callback)
             if self._set_info_from_tile_set(nexus_tiles):
