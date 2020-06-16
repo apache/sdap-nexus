@@ -161,7 +161,7 @@ class TimeAvgMapSparkHandlerImpl(SparkHandler):
         self.log.debug('Found {0} tiles'.format(len(nexus_tiles)))
         print('Found {} tiles'.format(len(nexus_tiles)))
 
-        daysinrange = self._tile_service.find_days_in_range_asc(bbox.bounds[1],
+        daysinrange = self._get_tile_service().find_days_in_range_asc(bbox.bounds[1],
                                                                 bbox.bounds[3],
                                                                 bbox.bounds[0],
                                                                 bbox.bounds[2],

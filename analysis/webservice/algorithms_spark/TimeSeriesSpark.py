@@ -176,7 +176,7 @@ class TimeSeriesHandlerImpl(SparkHandler):
         for shortName in ds:
 
             the_time = datetime.now()
-            daysinrange = self._tile_service.find_days_in_range_asc(bounding_polygon.bounds[1],
+            daysinrange = self._get_tile_service().find_days_in_range_asc(bounding_polygon.bounds[1],
                                                                     bounding_polygon.bounds[3],
                                                                     bounding_polygon.bounds[0],
                                                                     bounding_polygon.bounds[2],
@@ -283,7 +283,7 @@ class TimeSeriesHandlerImpl(SparkHandler):
             end_of_month = datetime(year, month, calendar.monthrange(year, month)[1], 23, 59, 59)
             start = (pytz.UTC.localize(beginning_of_month) - EPOCH).total_seconds()
             end = (pytz.UTC.localize(end_of_month) - EPOCH).total_seconds()
-            tile_stats = self._tile_service.find_tiles_in_polygon(bounding_polygon, ds, start, end,
+            tile_stats = self._get_tile_service().find_tiles_in_polygon(bounding_polygon, ds, start, end,
                                                                   fl=('id,'
                                                                       'tile_avg_val_d,tile_count_i,'
                                                                       'tile_min_val_d,tile_max_val_d,'
@@ -309,8 +309,8 @@ class TimeSeriesHandlerImpl(SparkHandler):
             tile_counts = [tile.tile_stats.count for tile in inner_tiles]
 
             # Border tiles need have the data loaded, masked, and stats recalculated
-            border_tiles = list(self._tile_service.fetch_data_for_tiles(*border_tiles))
-            border_tiles = self._tile_service.mask_tiles_to_polygon(bounding_polygon, border_tiles)
+            border_tiles = list(self._get_tile_service().fetch_data_for_tiles(*border_tiles))
+            border_tiles = self._get_tile_service().mask_tiles_to_polygon(bounding_polygon, border_tiles)
             for tile in border_tiles:
                 tile.update_stats()
                 tile_means.append(tile.tile_stats.mean)
@@ -340,9 +340,9 @@ class TimeSeriesHandlerImpl(SparkHandler):
     @lru_cache()
     def get_min_max_date(self, ds=None):
         min_date = pytz.timezone('UTC').localize(
-            datetime.utcfromtimestamp(self._tile_service.get_min_time([], ds=ds)))
+            datetime.utcfromtimestamp(self._get_tile_service().get_min_time([], ds=ds)))
         max_date = pytz.timezone('UTC').localize(
-            datetime.utcfromtimestamp(self._tile_service.get_max_time([], ds=ds)))
+            datetime.utcfromtimestamp(self._get_tile_service().get_max_time([], ds=ds)))
 
         return min_date.date(), max_date.date()
 

@@ -338,7 +338,7 @@ class LatitudeTimeHoffMoellerSparkHandlerImpl(BaseHoffMoellerHandlerImpl):
         min_lon, min_lat, max_lon, max_lat = bbox.bounds
 
         nexus_tiles_spark = [(self._latlon, tile.tile_id, x, min_lat, max_lat, min_lon, max_lon) for x, tile in
-                             enumerate(self._tile_service.find_tiles_in_box(min_lat, max_lat, min_lon, max_lon,
+                             enumerate(self._get_tile_service().find_tiles_in_box(min_lat, max_lat, min_lon, max_lon,
                                                                             ds, start_time, end_time,
                                                                             fetch_data=False))]
 
@@ -380,7 +380,7 @@ class LongitudeTimeHoffMoellerSparkHandlerImpl(BaseHoffMoellerHandlerImpl):
         min_lon, min_lat, max_lon, max_lat = bbox.bounds
 
         nexus_tiles_spark = [(self._latlon, tile.tile_id, x, min_lat, max_lat, min_lon, max_lon) for x, tile in
-                             enumerate(self._tile_service.find_tiles_in_box(min_lat, max_lat, min_lon, max_lon,
+                             enumerate(self._get_tile_service().find_tiles_in_box(min_lat, max_lat, min_lon, max_lon,
                                                                             ds, start_time, end_time,
                                                                             fetch_data=False))]
 

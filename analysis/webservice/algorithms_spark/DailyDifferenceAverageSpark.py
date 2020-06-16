@@ -132,7 +132,7 @@ class DailyDifferenceAverageSparkImpl(SparkHandler):
         self.log.debug("Querying for tiles in search domain")
         # Get tile ids in box
         tile_ids = [tile.tile_id for tile in
-                    self._tile_service.find_tiles_in_polygon(bounding_polygon, dataset,
+                    self._get_tile_service().find_tiles_in_polygon(bounding_polygon, dataset,
                                                              start_seconds_from_epoch, end_seconds_from_epoch,
                                                              fetch_data=False, fl='id',
                                                              sort=['tile_min_time_dt asc', 'tile_min_lon asc',

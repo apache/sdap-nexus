@@ -20,7 +20,7 @@ import logging
 
 import pkg_resources
 from cassandra.cluster import Cluster
-from cassandra.policies import TokenAwarePolicy, DCAwareRoundRobinPolicy
+from cassandra.policies import TokenAwarePolicy, DCAwareRoundRobinPolicy, WhiteListRoundRobinPolicy
 
 from webservice.NexusHandler import nexus_initializer
 
@@ -49,6 +49,7 @@ class DomsInitializer:
         log.info("Cassandra Protocol Version: %s" % (cassVersion))
 
         dc_policy = DCAwareRoundRobinPolicy(cassDatacenter)
+        #dc_policy = WhiteListRoundRobinPolicy([cassHost])
         token_policy = TokenAwarePolicy(dc_policy)
 
         with Cluster([host for host in cassHost.split(',')], port=cassPort, load_balancing_policy=token_policy,

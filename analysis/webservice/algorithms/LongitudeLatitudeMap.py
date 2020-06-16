@@ -115,7 +115,7 @@ class LongitudeLatitudeMapHandlerImpl(NexusHandler):
 
         ds, bounding_polygon, start_seconds_from_epoch, end_seconds_from_epoch = self.parse_arguments(request)
 
-        boxes = self._tile_service.get_distinct_bounding_boxes_in_polygon(bounding_polygon, ds,
+        boxes = self._get_tile_service().get_distinct_bounding_boxes_in_polygon(bounding_polygon, ds,
                                                                           start_seconds_from_epoch,
                                                                           end_seconds_from_epoch)
         point_avg_over_time = lat_lon_map_driver(bounding_polygon, start_seconds_from_epoch, end_seconds_from_epoch, ds,

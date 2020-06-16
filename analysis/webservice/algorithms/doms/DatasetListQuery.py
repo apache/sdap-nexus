@@ -91,7 +91,7 @@ class DomsDatasetListQueryHandler(BaseDomsHandler.BaseDomsQueryHandler):
     @cached(ttl=(60 * 60 * 1000))  # 1 hour cached
     def calc(self, computeOptions, **args):
 
-        satellitesList = self._tile_service.get_dataseries_list(simple=True)
+        satellitesList = self._get_tile_service().get_dataseries_list(simple=True)
 
         insituList = []
 

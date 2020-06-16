@@ -63,12 +63,12 @@ class NexusTileService(object):
         self._datastore = None
         self._metadatastore = None
 
-        if config is None:
-            self._config = ConfigParser.RawConfigParser()
-            self._config.readfp(pkg_resources.resource_stream(__name__, "config/datastores.ini"),
-                                filename='datastores.ini')
-        else:
-            self._config = config
+        self._config = ConfigParser.RawConfigParser()
+        self._config.readfp(pkg_resources.resource_stream(__name__, "config/datastores.ini"),
+                            filename='datastores.ini')
+        if config:
+            self.override_config(config)
+
 
         if not skipDatastore:
             datastore = self._config.get("datastore", "store")
@@ -83,6 +83,13 @@ class NexusTileService(object):
 
         if not skipMetadatastore:
             self._metadatastore = dao.SolrProxy.SolrProxy(self._config)
+
+    def override_config(self, config):
+        for section in config.sections():
+            if self._config.has_section(section): # only override preexisting section, ignores the other
+                for option in config.options(section):
+                    self._config.set(section, option, config.get(section, option))
+
 
     def get_dataseries_list(self, simple=False):
         if simple:

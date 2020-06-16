@@ -131,10 +131,10 @@ class DataInBoundsSearchHandlerImpl(NexusHandler):
             min_lon = bounding_polygon.bounds[0]
             max_lon = bounding_polygon.bounds[2]
 
-            tiles = self._tile_service.get_tiles_bounded_by_box(min_lat, max_lat, min_lon, max_lon, ds, start_time,
+            tiles = self._get_tile_service().get_tiles_bounded_by_box(min_lat, max_lat, min_lon, max_lon, ds, start_time,
                                                                 end_time)
         else:
-            tiles = self._tile_service.get_tiles_by_metadata(metadata_filter, ds, start_time, end_time)
+            tiles = self._get_tile_service().get_tiles_by_metadata(metadata_filter, ds, start_time, end_time)
 
         data = []
         for tile in tiles:

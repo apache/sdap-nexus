@@ -228,13 +228,13 @@ class MapFetchHandler(BaseHandler):
         width = np.min([8192, computeOptions.get_int_arg("width", 1024)])
         height = np.min([8192, computeOptions.get_int_arg("height", 512)])
 
-        stats = self._tile_service.get_dataset_overall_stats(ds)
+        stats = self._get_tile_service().get_dataset_overall_stats(ds)
 
-        daysinrange = self._tile_service.find_days_in_range_asc(-90.0, 90.0, -180.0, 180.0, ds, dataTimeStart,
+        daysinrange = self._get_tile_service().find_days_in_range_asc(-90.0, 90.0, -180.0, 180.0, ds, dataTimeStart,
                                                                 dataTimeEnd)
 
         if len(daysinrange) > 0:
-            ds1_nexus_tiles = self._tile_service.get_tiles_bounded_by_box_at_time(-90.0, 90.0, -180.0, 180.0,
+            ds1_nexus_tiles = self._get_tile_service().get_tiles_bounded_by_box_at_time(-90.0, 90.0, -180.0, 180.0,
                                                                                   ds,
                                                                                   daysinrange[0])
 
@@ -289,9 +289,9 @@ class MapFetchHandler(BaseHandler):
         else:
             time_interval = relativedelta(months=+1)
 
-        stats = self._tile_service.get_dataset_overall_stats(ds)
+        stats = self._get_tile_service().get_dataset_overall_stats(ds)
 
-        start_time, end_time = self._tile_service.get_min_max_time_by_granule(ds, granule_name)
+        start_time, end_time = self._get_tile_service().get_min_max_time_by_granule(ds, granule_name)
 
         MRF.create_all(ds, prefix)
 
@@ -306,7 +306,7 @@ class MapFetchHandler(BaseHandler):
         while start_time <= end_time:
             one_interval_later = start_time + time_interval
             temp_end_time = one_interval_later - relativedelta(minutes=+1)  # prevent getting tiles for 2 intervals
-            ds1_nexus_tiles = self._tile_service.find_tiles_in_box(-90.0, 90.0, -180.0, 180.0, ds, start_time,
+            ds1_nexus_tiles = self._get_tile_service().find_tiles_in_box(-90.0, 90.0, -180.0, 180.0, ds, start_time,
                                                                    temp_end_time)
 
             if ds1_nexus_tiles is not None:

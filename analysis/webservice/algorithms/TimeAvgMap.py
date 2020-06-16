@@ -47,7 +47,7 @@ class TimeAvgMapHandlerImpl(NexusHandler):
         t = self._endTime
         t_incr = 86400
         while ntiles == 0:
-            nexus_tiles = self._tile_service.get_tiles_bounded_by_box(midLat - 0.5, midLat + 0.5, midLon - 0.5,
+            nexus_tiles = self._get_tile_service().get_tiles_bounded_by_box(midLat - 0.5, midLat + 0.5, midLon - 0.5,
                                                                       midLon + 0.5, ds=self._ds, start_time=t - t_incr,
                                                                       end_time=t)
             ntiles = len(nexus_tiles)
@@ -78,7 +78,7 @@ class TimeAvgMapHandlerImpl(NexusHandler):
         t = self._endTime
         t_incr = 86400
         while ntiles == 0:
-            nexus_tiles = self._tile_service.get_tiles_bounded_by_box(self._minLat, self._maxLat, self._minLon,
+            nexus_tiles = self._get_tile_service().get_tiles_bounded_by_box(self._minLat, self._maxLat, self._minLon,
                                                                       self._maxLon, ds=self._ds, start_time=t - t_incr,
                                                                       end_time=t)
             ntiles = len(nexus_tiles)
@@ -126,7 +126,7 @@ class TimeAvgMapHandlerImpl(NexusHandler):
                 t1 = time()
                 print 'nexus call start at time %f' % t1
                 sys.stdout.flush()
-                nexus_tiles = self._tile_service.get_tiles_bounded_by_box(min_lat - self._latRes / 2,
+                nexus_tiles = self._get_tile_service().get_tiles_bounded_by_box(min_lat - self._latRes / 2,
                                                                           max_lat + self._latRes / 2,
                                                                           min_lon - self._lonRes / 2,
                                                                           max_lon + self._lonRes / 2, ds=self._ds,

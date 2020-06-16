@@ -128,7 +128,7 @@ class LatitudeTimeHoffMoellerHandlerImpl(BaseHoffMoellerHandlerImpl):
         BaseHoffMoellerHandlerImpl.__init__(self)
 
     def calc(self, computeOptions, **args):
-        tiles = self._tile_service.get_tiles_bounded_by_box(computeOptions.get_min_lat(), computeOptions.get_max_lat(),
+        tiles = self._get_tile_service().get_tiles_bounded_by_box(computeOptions.get_min_lat(), computeOptions.get_max_lat(),
                                                             computeOptions.get_min_lon(), computeOptions.get_max_lon(),
                                                             computeOptions.get_dataset()[0],
                                                             computeOptions.get_start_time(),
@@ -194,7 +194,7 @@ class LongitudeTimeHoffMoellerHandlerImpl(BaseHoffMoellerHandlerImpl):
         BaseHoffMoellerHandlerImpl.__init__(self)
 
     def calc(self, computeOptions, **args):
-        tiles = self._tile_service.get_tiles_bounded_by_box(computeOptions.get_min_lat(), computeOptions.get_max_lat(),
+        tiles = self._get_tile_service().get_tiles_bounded_by_box(computeOptions.get_min_lat(), computeOptions.get_max_lat(),
                                                             computeOptions.get_min_lon(), computeOptions.get_max_lon(),
                                                             computeOptions.get_dataset()[0],
                                                             computeOptions.get_start_time(),

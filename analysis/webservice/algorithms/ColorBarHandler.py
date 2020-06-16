@@ -65,10 +65,10 @@ class ColorBarHandler(BaseHandler):
         dataTimeStart = dataTime - 86400.0  # computeOptions.get_datetime_arg("t", None)
         dataTimeEnd = dataTime
 
-        daysinrange = self._tile_service.find_days_in_range_asc(-90.0, 90.0, -180.0, 180.0, ds, dataTimeStart,
+        daysinrange = self._get_tile_service().find_days_in_range_asc(-90.0, 90.0, -180.0, 180.0, ds, dataTimeStart,
                                                                 dataTimeEnd)
 
-        ds1_nexus_tiles = self._tile_service.get_tiles_bounded_by_box_at_time(-90.0, 90.0, -180.0, 180.0,
+        ds1_nexus_tiles = self._get_tile_service().get_tiles_bounded_by_box_at_time(-90.0, 90.0, -180.0, 180.0,
                                                                               ds,
                                                                               daysinrange[0])
 

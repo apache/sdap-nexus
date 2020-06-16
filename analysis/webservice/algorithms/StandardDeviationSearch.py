@@ -114,10 +114,10 @@ class StandardDeviationSearchHandlerImpl(NexusHandler):
         ds, longitude, latitude, day_of_year, return_all = self.parse_arguments(request)
 
         if return_all:
-            func = partial(get_all_std_dev, tile_service=self._tile_service, ds=ds, longitude=longitude,
+            func = partial(get_all_std_dev, tile_service=self._get_tile_service(), ds=ds, longitude=longitude,
                            latitude=latitude, day_of_year=day_of_year)
         else:
-            func = partial(get_single_std_dev, tile_service=self._tile_service, ds=ds, longitude=longitude,
+            func = partial(get_single_std_dev, tile_service=self._get_tile_service(), ds=ds, longitude=longitude,
                            latitude=latitude, day_of_year=day_of_year)
 
         try:

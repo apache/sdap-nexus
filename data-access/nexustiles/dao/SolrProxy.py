@@ -36,12 +36,18 @@ class SolrProxy(object):
     def __init__(self, config):
         self.solrUrl = config.get("solr", "host")
         self.solrCore = config.get("solr", "core")
+        solr_kargs = {}
+        if config.has_option("solr", "time_out"):
+            solr_kargs["timeout"] = config.get("solr", "time_out")
         self.logger = logging.getLogger('nexus')
 
         with SOLR_CON_LOCK:
             solrcon = getattr(thread_local, 'solrcon', None)
             if solrcon is None:
-                solrcon = pysolr.Solr('http://%s/solr/%s' % (self.solrUrl, self.solrCore))
+                solr_url = 'http://%s/solr/%s' % (self.solrUrl, self.solrCore)
+                self.logger.info("connect to solr, url {}".format(solr_url))
+                self.logger.info("with option(s) = {}".format(solr_kargs))
+                solrcon = pysolr.Solr(solr_url, **solr_kargs)
                 thread_local.solrcon = solrcon
 
             self.solrcon = solrcon
