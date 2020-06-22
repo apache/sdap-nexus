@@ -21,7 +21,8 @@ import types
 import numpy as np
 from netCDF4 import Dataset
 from nexustiles.nexustiles import NexusTileService
-
+from webservice.metrics.MetricsField import NumberMetricsField, SparkAccumulatorMetricsField
+from webservice.metrics.MetricsRecord import MetricsRecord
 from webservice.webmodel import NexusProcessingException
 
 AVAILABLE_HANDLERS = []
@@ -329,10 +330,10 @@ class SparkHandler(NexusHandler):
         self._endYear = end_year
         self._climMonth = clim_month
         self._fill = fill
-        
+
     def _set_info_from_tile_set(self, nexus_tiles):
         ntiles = len(nexus_tiles)
-        self.log.debug('Attempting to extract info from {0} tiles'.\
+        self.log.debug('Attempting to extract info from {0} tiles'. \
                        format(ntiles))
         status = False
         self._latRes = None
@@ -350,7 +351,7 @@ class SparkHandler(NexusHandler):
                 if (len(lons) > 1):
                     self._lonRes = abs(lons[1] - lons[0])
             if ((self._latRes is not None) and
-                (self._lonRes is not None)):
+                    (self._lonRes is not None)):
                 lats_agg = np.concatenate([tile.latitudes.compressed()
                                            for tile in nexus_tiles])
                 lons_agg = np.concatenate([tile.longitudes.compressed()
@@ -367,7 +368,7 @@ class SparkHandler(NexusHandler):
                 break
         return status
 
-    def _find_global_tile_set(self):
+    def _find_global_tile_set(self, metrics_callback=None):
         # This only works for a single dataset.  If more than one is provided,
         # we use the first one and ignore the rest.
         if type(self._ds) in (list, tuple):
@@ -382,7 +383,8 @@ class SparkHandler(NexusHandler):
                                                                self._maxLon,
                                                                ds,
                                                                self._startTime,
-                                                               self._endTime)
+                                                               self._endTime,
+                                                               metrics_callback=metrics_callback)
 
         # Empty tile set will be returned upon failure to find the global
         # tile set.
@@ -391,7 +393,9 @@ class SparkHandler(NexusHandler):
         # Check one time stamp at a time and attempt to extract the global
         # tile set.
         for t in t_in_range:
-            nexus_tiles = self._tile_service.get_tiles_bounded_by_box(self._minLat, self._maxLat, self._minLon, self._maxLon, ds=ds, start_time=t, end_time=t)
+            nexus_tiles = self._tile_service.get_tiles_bounded_by_box(self._minLat, self._maxLat, self._minLon,
+                                                                      self._maxLon, ds=ds, start_time=t, end_time=t,
+                                                                      metrics_callback=metrics_callback)
             if self._set_info_from_tile_set(nexus_tiles):
                 # Successfully retrieved global tile set from nexus_tiles,
                 # so no need to check any other time stamps.
@@ -580,6 +584,27 @@ class SparkHandler(NexusHandler):
                              else self._sc.defaultParallelism,
                              max_parallelism)
         return num_partitions
+
+    def _create_metrics_record(self):
+        return MetricsRecord([
+            SparkAccumulatorMetricsField(key='num_tiles',
+                                         description='Number of tiles fetched',
+                                         accumulator=self._sc.accumulator(0)),
+            SparkAccumulatorMetricsField(key='partitions',
+                                         description='Number of Spark partitions',
+                                         accumulator=self._sc.accumulator(0)),
+            SparkAccumulatorMetricsField(key='cassandra',
+                                         description='Cumulative time to fetch data from Cassandra',
+                                         accumulator=self._sc.accumulator(0)),
+            SparkAccumulatorMetricsField(key='solr',
+                                         description='Cumulative time to fetch data from Solr',
+                                         accumulator=self._sc.accumulator(0)),
+            SparkAccumulatorMetricsField(key='calculation',
+                                         description='Cumulative time to do calculations',
+                                         accumulator=self._sc.accumulator(0)),
+            NumberMetricsField(key='reduce', description='Actual time to reduce results'),
+            NumberMetricsField(key="actual_time", description="Total (actual) time")
+        ])
 
 
 def executeInitializers(config):

@@ -40,7 +40,8 @@ setuptools.setup(
         'webservice',
         'webservice.algorithms',
         'webservice.algorithms.doms',
-        'webservice.algorithms_spark'
+        'webservice.algorithms_spark',
+        'webservice.metrics'
     ],
     package_data={
         'webservice': ['config/web.ini', 'config/algorithms.ini'],

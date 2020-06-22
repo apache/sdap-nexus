@@ -18,6 +18,10 @@ FROM nexusjpl/alpine-pyspark:2.4.4
 MAINTAINER Apache SDAP "dev@sdap.apache.org"
 
 
+ARG CONDA_VERSION="4.7.12.1"
+ARG CONDA_MD5="81c773ff87af5cfac79ab862942ab6b3"
+ARG CONDA_DIR="/opt/conda"
+
 ENV PYTHONPATH=${PYTHONPATH}:/opt/spark/python:/opt/spark/python/lib/py4j-0.10.7-src.zip:/opt/spark/python/lib/pyspark.zip/python:/usr/lib \
     NEXUS_SRC=/tmp/incubator-sdap-nexus \
     PROJ_LIB=/opt/conda/lib/python2.7/site-packages/pyproj/data	\
@@ -51,10 +55,6 @@ RUN apk --no-cache add wget zlib && \
     ln -s /lib/libz.so.1 /usr/glibc-compat/lib/ && \
     ln -s /lib/libc.musl-x86_64.so.1 /usr/glibc-compat/lib && \
     ln -s /usr/lib/libgcc_s.so.1 /usr/glibc-compat/lib
-
-ARG CONDA_VERSION="4.7.12.1"
-ARG CONDA_MD5="81c773ff87af5cfac79ab862942ab6b3"
-ARG CONDA_DIR="/opt/conda"
 
 COPY docker/nexus-webapp/install_conda.sh ./install_conda.sh
 RUN /tmp/install_conda.sh 
