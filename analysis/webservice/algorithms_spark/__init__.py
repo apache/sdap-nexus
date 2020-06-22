@@ -51,6 +51,11 @@ if module_exists("pyspark"):
         pass
 
     try:
+        import MaximaMinimaSpark
+    except ImportError:
+        pass
+
+    try:
         import TimeSeriesSpark
     except ImportError:
         pass
