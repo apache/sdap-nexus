@@ -17,16 +17,12 @@ spec:
     onSubmissionFailureRetries: 10
     onSubmissionFailureRetryInterval: 10
   driver:
-    cores: {{ .Values.webapp.distributed.driver.cores }}
-    coreLimit: {{ .Values.webapp.distributed.driver.coreLimit }}
-    memory: {{ .Values.webapp.distributed.driver.memory }} 
+{{ .Values.webapp.distributed.driver | toYaml | indent 4 }}
     labels:
       version: 2.4.4
     serviceAccount: spark-serviceaccount
   executor:
-    cores: {{ .Values.webapp.distributed.executor.cores }}
-    instances: {{ .Values.webapp.distributed.executor.instances }} 
-    memory: {{ .Values.webapp.distributed.executor.memory }}
+{{ .Values.webapp.distributed.executor| toYaml | indent 4 }}
     labels:
       version: 2.4.4
       

@@ -1,13 +1,20 @@
+# Duplicate this file and put your customization here
+
 storageClass: hostpath
+
+rootWebpage:
+  enabled: true
 
 webapp:
   distributed:
     image: nexusjpl/nexus-webapp:distributed.0.1.3
     driver:
+      # Refer to the configuration options available at https://github.com/GoogleCloudPlatform/spark-on-k8s-operator/blob/master/docs/user-guide.md
       cores: 1
       coreLimit: "1200m"
       memory: "512m"
     executor:
+      # Refer to the configuration options available at https://github.com/GoogleCloudPlatform/spark-on-k8s-operator/blob/master/docs/user-guide.md
       cores: 1
       instances: 2
       memory: "512m"
@@ -34,20 +41,25 @@ solr:
     cpu: 1
 
 zookeeper:
-  replicas: 2
+  replicas: 3 
   memory: 1Gi
   cpu: 0.5
   storage: 8Gi
 
-ingress:
-  namespace: ingress-nginx-local
+ingressEnabled: false
 
 onEarthProxyIP: ""
 
+##
+## Configuration values for the nginx-ingress dependency.
+## ref: https://github.com/helm/charts/tree/master/stable/nginx-ingress
 nginx-ingress:
   controller:
+    scope:
+      enabled: true
     kind: DaemonSet
     service:
-      enabled: false
+      enabled: true
+      type: LoadBalancer
   defaultBackend:
     enabled: false
