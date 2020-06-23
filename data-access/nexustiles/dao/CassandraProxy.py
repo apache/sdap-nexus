@@ -21,7 +21,7 @@ import nexusproto.DataTile_pb2 as nexusproto
 import numpy as np
 from cassandra.cqlengine import columns, connection, CQLEngineException
 from cassandra.cqlengine.models import Model
-from cassandra.policies import TokenAwarePolicy, DCAwareRoundRobinPolicy, WhiteListRoundRobinPolicy
+from cassandra.policies import TokenAwarePolicy, DCAwareRoundRobinPolicy
 from nexusproto.serialization import from_shaped_array
 
 INIT_LOCK = Lock()
@@ -168,7 +168,6 @@ class CassandraProxy(object):
     def __open(self):
 
         dc_policy = DCAwareRoundRobinPolicy(self.__cass_local_DC)
-        #dc_policy = WhiteListRoundRobinPolicy([self.__cass_url ])
         token_policy = TokenAwarePolicy(dc_policy)
         connection.setup([host for host in self.__cass_url.split(',')], self.__cass_keyspace,
                          protocol_version=self.__cass_protocol_version, load_balancing_policy=token_policy,
