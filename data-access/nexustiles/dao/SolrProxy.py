@@ -45,8 +45,7 @@ class SolrProxy(object):
             solrcon = getattr(thread_local, 'solrcon', None)
             if solrcon is None:
                 solr_url = 'http://%s/solr/%s' % (self.solrUrl, self.solrCore)
-                self.logger.info("connect to solr, url {}".format(solr_url))
-                self.logger.info("with option(s) = {}".format(solr_kargs))
+                self.logger.info("connect to solr, url {} with option(s) = {}".format(solr_url, solr_kargs))
                 solrcon = pysolr.Solr(solr_url, **solr_kargs)
                 thread_local.solrcon = solrcon
 

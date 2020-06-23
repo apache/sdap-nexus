@@ -28,6 +28,13 @@ from tornado.options import define, options, parse_command_line
 from webservice import NexusHandler
 from webservice.webmodel import NexusRequestObject, NexusProcessingException
 
+logging.basicConfig(
+    level=logging.DEBUG,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    datefmt="%Y-%m-%dT%H:%M:%S", stream=sys.stdout)
+
+log = logging.getLogger(__name__)
+
 matplotlib.use('Agg')
 
 
@@ -160,7 +167,7 @@ def inject_args_in_config(args, config):
         Takes command argparse arguments and push them in the config
          with syntax args.<section>_<option>
     """
-    for _, t_opt in args._options.items():
+    for t_opt in args._options.values():
         n = t_opt.name
         first_ = n.find('_')
         if first_ > 0:
@@ -174,12 +181,6 @@ def inject_args_in_config(args, config):
 
 
 if __name__ == "__main__":
-    logging.basicConfig(
-        level=logging.DEBUG,
-        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-        datefmt="%Y-%m-%dT%H:%M:%S", stream=sys.stdout)
-
-    log = logging.getLogger(__name__)
 
     webconfig = ConfigParser.RawConfigParser()
     webconfig.readfp(pkg_resources.resource_stream(__name__, "config/web.ini"), filename='web.ini')
