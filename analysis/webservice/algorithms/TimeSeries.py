@@ -33,7 +33,8 @@ from pytz import timezone
 from scipy import stats
 
 from webservice import Filtering as filtering
-from webservice.NexusHandler import NexusHandler, nexus_handler
+from webservice.NexusHandler import nexus_handler
+from webservice.algorithms.NexusCalcHandler import NexusCalcHandler
 from webservice.webmodel import NexusResults, NexusProcessingException, NoDataException
 
 SENTINEL = 'STOP'
@@ -42,7 +43,7 @@ ISO_8601 = '%Y-%m-%dT%H:%M:%S%z'
 
 
 @nexus_handler
-class TimeSeriesHandlerImpl(NexusHandler):
+class TimeSeriesCalcHandlerImpl(NexusCalcHandler):
     name = "Time Series"
     path = "/stats"
     description = "Computes a time series plot between one or more datasets given an arbitrary geographical area and time range"
@@ -84,7 +85,7 @@ class TimeSeriesHandlerImpl(NexusHandler):
     singleton = True
 
     def __init__(self):
-        NexusHandler.__init__(self)
+        NexusCalcHandler.__init__(self)
         self.log = logging.getLogger(__name__)
 
     def parse_arguments(self, request):
@@ -180,7 +181,7 @@ class TimeSeriesHandlerImpl(NexusHandler):
 
         if len(ds) == 2:
             try:
-                stats = TimeSeriesHandlerImpl.calculate_comparison_stats(results)
+                stats = TimeSeriesCalcHandlerImpl.calculate_comparison_stats(results)
             except Exception:
                 stats = {}
                 tb = traceback.format_exc()

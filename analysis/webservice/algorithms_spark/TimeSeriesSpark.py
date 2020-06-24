@@ -32,7 +32,8 @@ from nexustiles.nexustiles import NexusTileService
 from pytz import timezone
 from scipy import stats
 from webservice import Filtering as filtering
-from webservice.NexusHandler import nexus_handler, SparkHandler
+from webservice.NexusHandler import nexus_handler
+from webservice.algorithms_spark.NexusCalcSparkHandler import NexusCalcSparkHandler
 from webservice.webmodel import NexusResults, NoDataException, NexusProcessingException
 
 EPOCH = timezone('UTC').localize(datetime(1970, 1, 1))
@@ -42,7 +43,7 @@ logger = logging.getLogger(__name__)
 
 
 @nexus_handler
-class TimeSeriesHandlerImpl(SparkHandler):
+class TimeSeriesSparkHandlerImpl(NexusCalcSparkHandler):
     name = "Time Series Spark"
     path = "/timeSeriesSpark"
     description = "Computes a time series plot between one or more datasets given an arbitrary geographical area and time range"
@@ -89,10 +90,6 @@ class TimeSeriesHandlerImpl(SparkHandler):
         }
     }
     singleton = True
-
-    def __init__(self):
-        SparkHandler.__init__(self)
-        self.log = logging.getLogger(__name__)
 
     def parse_arguments(self, request):
         # Parse input arguments
@@ -249,7 +246,7 @@ class TimeSeriesHandlerImpl(SparkHandler):
 
         if len(ds) == 2:
             try:
-                stats = TimeSeriesHandlerImpl.calculate_comparison_stats(results)
+                stats = TimeSeriesSparkHandlerImpl.calculate_comparison_stats(results)
             except Exception:
                 stats = {}
                 tb = traceback.format_exc()

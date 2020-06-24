@@ -31,12 +31,12 @@ from dateutil.relativedelta import *
 
 import colortables
 import webservice.GenerateImageMRF as MRF
-from webservice.NexusHandler import NexusHandler as BaseHandler
+from webservice.algorithms.NexusCalcHandler import NexusCalcHandler as BaseHandler
 from webservice.NexusHandler import nexus_handler
 
 
 @nexus_handler
-class MapFetchHandler(BaseHandler):
+class MapFetchCalcHandler(BaseHandler):
     name = "MapFetchHandler"
     path = "/map"
     description = "Creates a map image"
@@ -114,7 +114,7 @@ class MapFetchHandler(BaseHandler):
                     value = np.max((min, value))
                     value = np.min((max, value))
                     value255 = int(round((value - min) / (max - min) * 255.0))
-                    rgba = MapFetchHandler.__get_color(value255, table)
+                    rgba = MapFetchCalcHandler.__get_color(value255, table)
                     img_data.putpixel((pixel_x, pixel_y), (rgba[0], rgba[1], rgba[2], 255))
 
     @staticmethod
@@ -148,7 +148,7 @@ class MapFetchHandler(BaseHandler):
         data_min = stats["minValue"] if np.isnan(force_min) else force_min
         data_max = stats["maxValue"] if np.isnan(force_max) else force_max
 
-        x_res, y_res = MapFetchHandler.__get_xy_resolution(nexus_tiles[0])
+        x_res, y_res = MapFetchCalcHandler.__get_xy_resolution(nexus_tiles[0])
         x_res = 1
         y_res = 1
 
@@ -158,9 +158,9 @@ class MapFetchHandler(BaseHandler):
         img_data = img.getdata()
 
         for tile in nexus_tiles:
-            MapFetchHandler.__tile_to_image(img_data, tile, data_min, data_max, table, x_res, y_res)
+            MapFetchCalcHandler.__tile_to_image(img_data, tile, data_min, data_max, table, x_res, y_res)
 
-        final_image = img.resize((width, height), MapFetchHandler.__translate_interpolation(interpolation))
+        final_image = img.resize((width, height), MapFetchCalcHandler.__translate_interpolation(interpolation))
 
         return final_image
 
@@ -188,13 +188,13 @@ class MapFetchHandler(BaseHandler):
             for y in range(0, img.height):
                 if data[x + (y * img.width)][3] == 255:
                     value = data[x + (y * img.width)][0]
-                    rgba = MapFetchHandler.__get_color(value, table)
+                    rgba = MapFetchCalcHandler.__get_color(value, table)
                     data.putpixel((x, y), (rgba[0], rgba[1], rgba[2], 255))
 
     @staticmethod
     def __create_no_data(width, height):
 
-        if MapFetchHandler.NO_DATA_IMAGE is None:
+        if MapFetchCalcHandler.NO_DATA_IMAGE is None:
             img = Image.new("RGBA", (width, height), (0, 0, 0, 0))
             draw = ImageDraw.Draw(img)
 
@@ -203,9 +203,9 @@ class MapFetchHandler(BaseHandler):
             for x in range(10, width, 100):
                 for y in range(10, height, 100):
                     draw.text((x, y), "NO DATA", (180, 180, 180), font=fnt)
-            MapFetchHandler.NO_DATA_IMAGE = img
+            MapFetchCalcHandler.NO_DATA_IMAGE = img
 
-        return MapFetchHandler.NO_DATA_IMAGE
+        return MapFetchCalcHandler.NO_DATA_IMAGE
 
     def calc(self, computeOptions, **args):
         ds = computeOptions.get_argument("ds", None)

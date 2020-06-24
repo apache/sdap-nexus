@@ -24,14 +24,15 @@ import pytz
 from nexustiles.nexustiles import NexusTileService, NexusTileServiceException
 from shapely.geometry import box
 
-from webservice.NexusHandler import NexusHandler, nexus_handler
+from webservice.NexusHandler import nexus_handler
+from webservice.algorithms.NexusCalcHandler import NexusCalcHandler
 from webservice.webmodel import NexusResults, NexusProcessingException
 
 SENTINEL = 'STOP'
 
 
 @nexus_handler
-class DailyDifferenceAverageImpl(NexusHandler):
+class DailyDifferenceAverageImpl(NexusCalcHandler):
     name = "Daily Difference Average"
     path = "/dailydifferenceaverage"
     description = "Subtracts data in box in Dataset 1 from Dataset 2, then averages the difference per day."
@@ -80,7 +81,7 @@ class DailyDifferenceAverageImpl(NexusHandler):
     singleton = True
 
     def __init__(self):
-        NexusHandler.__init__(self, skipCassandra=True)
+        NexusCalcHandler.__init__(self, skipCassandra=True)
 
     def calc(self, request, **args):
         min_lat, max_lat, min_lon, max_lon = request.get_min_lat(), request.get_max_lat(), request.get_min_lon(), request.get_max_lon()

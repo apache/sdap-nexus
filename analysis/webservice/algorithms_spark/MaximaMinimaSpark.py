@@ -23,7 +23,8 @@ import shapely.geometry
 from nexustiles.nexustiles import NexusTileService
 from pytz import timezone
 
-from webservice.NexusHandler import nexus_handler, SparkHandler
+from webservice.NexusHandler import nexus_handler
+from webservice.algorithms_spark.NexusCalcSparkHandler import NexusCalcSparkHandler
 from webservice.webmodel import NexusResults, NexusProcessingException, NoDataException
 
 EPOCH = timezone('UTC').localize(datetime(1970, 1, 1))
@@ -31,7 +32,7 @@ ISO_8601 = '%Y-%m-%dT%H:%M:%S%z'
 
 
 @nexus_handler
-class MaximaMinimaSparkHandlerImpl(SparkHandler):
+class MaximaMinimaSparkHandlerImpl(NexusCalcSparkHandler):
     name = "Maxima and Minima Map Spark"
     path = "/maxMinMapSpark"
     description = "Computes a map of maxmima and minima of a field given an arbitrary geographical area and time range"
@@ -65,11 +66,6 @@ class MaximaMinimaSparkHandlerImpl(SparkHandler):
                            "Number of Spark Partitions is used by this function. Optional (Default: local,1,1)"
         }
     }
-    singleton = True
-
-    def __init__(self):
-        SparkHandler.__init__(self)
-        self.log = logging.getLogger(__name__)
 
     def parse_arguments(self, request):
         # Parse input arguments

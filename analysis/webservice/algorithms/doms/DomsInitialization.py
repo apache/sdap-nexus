@@ -24,7 +24,6 @@ from cassandra.policies import TokenAwarePolicy, DCAwareRoundRobinPolicy, WhiteL
 
 from webservice.NexusHandler import nexus_initializer
 
-
 @nexus_initializer
 class DomsInitializer:
     def __init__(self):
@@ -34,9 +33,8 @@ class DomsInitializer:
         log = logging.getLogger(__name__)
         log.info("*** STARTING DOMS INITIALIZATION ***")
 
-        domsconfig = ConfigParser.RawConfigParser()
-        domsconfig.read([pkg_resources.resource_filename(__name__, "domsconfig.ini.default"),
-                        pkg_resources.resource_filename(__name__, "domsconfig.ini")])
+        domsconfig = ConfigParser.SafeConfigParser()
+        domsconfig.read(DomsInitializer._get_config_files('domsconfig.ini'))
 
         cassHost = domsconfig.get("cassandra", "host")
         cassPort = domsconfig.get("cassandra", "port")
@@ -57,7 +55,7 @@ class DomsInitializer:
             dc_policy = WhiteListRoundRobinPolicy([cassHost])
         token_policy = TokenAwarePolicy(dc_policy)
 
-        with Cluster([host for host in cassHost.split(',')], port=cassPort, load_balancing_policy=token_policy,
+        with Cluster([host for host in cassHost.split(',')], port=int(cassPort), load_balancing_policy=token_policy,
                      protocol_version=cassVersion) as cluster:
             session = cluster.connect()
 
@@ -150,3 +148,17 @@ class DomsInitializer:
             );
         """
         session.execute(cql)
+
+    @staticmethod
+    def _get_config_files(filename):
+        log = logging.getLogger(__name__)
+        candidates = []
+        extensions = ['.default', '']
+        for extension in extensions:
+            try:
+                candidate = pkg_resources.resource_filename(__name__, filename + extension)
+                candidates.append(candidate)
+            except KeyError as ke:
+                log.warning('configuration file {} not found'.format(filename + extension))
+
+        return candidates

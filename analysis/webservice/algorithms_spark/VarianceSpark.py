@@ -23,7 +23,8 @@ import shapely.geometry
 from nexustiles.nexustiles import NexusTileService
 from pytz import timezone
 
-from webservice.NexusHandler import nexus_handler, SparkHandler
+from webservice.NexusHandler import nexus_handler
+from webservice.algorithms_spark.NexusCalcSparkHandler import NexusCalcSparkHandler
 from webservice.webmodel import NexusResults, NexusProcessingException, NoDataException
 
 EPOCH = timezone('UTC').localize(datetime(1970, 1, 1))
@@ -31,7 +32,7 @@ ISO_8601 = '%Y-%m-%dT%H:%M:%S%z'
 
 
 @nexus_handler
-class VarianceSparkHandlerImpl(SparkHandler):
+class VarianceNexusSparkHandlerImpl(NexusCalcSparkHandler):
     name = "Temporal Variance Spark"
     path = "/varianceSpark"
     description = "Computes a map of the temporal variance"
@@ -67,9 +68,6 @@ class VarianceSparkHandlerImpl(SparkHandler):
     }
     singleton = True
 
-    def __init__(self):
-        SparkHandler.__init__(self)
-        self.log = logging.getLogger(__name__)
 
     def parse_arguments(self, request):
         # Parse input arguments

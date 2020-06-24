@@ -22,7 +22,7 @@ from webservice.webmodel import NexusProcessingException
 
 
 @nexus_handler
-class DomsResultsRetrievalHandler(BaseDomsHandler.BaseDomsQueryHandler):
+class DomsResultsRetrievalHandler(BaseDomsHandler.BaseDomsQueryCalcHandler):
     name = "DOMS Resultset Retrieval"
     path = "/domsresults"
     description = ""
@@ -30,7 +30,7 @@ class DomsResultsRetrievalHandler(BaseDomsHandler.BaseDomsQueryHandler):
     singleton = True
 
     def __init__(self):
-        BaseDomsHandler.BaseDomsQueryHandler.__init__(self)
+        BaseDomsHandler.BaseDomsQueryCalcHandler.__init__(self)
 
     def calc(self, computeOptions, **args):
         execution_id = computeOptions.get_argument("id", None)

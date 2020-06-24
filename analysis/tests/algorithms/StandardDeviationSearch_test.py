@@ -17,7 +17,7 @@
 import json
 import unittest
 import urllib
-from multiprocessing.pool import ThreadPool
+#from multiprocessing.pool import ThreadPool
 from unittest import skip
 
 import numpy as np
@@ -25,25 +25,25 @@ from mock import Mock
 from nexustiles.model.nexusmodel import Tile, BBox
 from nexustiles.nexustiles import NexusTileService
 from tornado.testing import AsyncHTTPTestCase, bind_unused_port
-from tornado.web import Application
+import tornado.web
 
-from webservice.NexusHandler import AlgorithmModuleWrapper
 from webservice.algorithms import StandardDeviationSearch
-from webservice.webapp import ModularNexusHandlerWrapper
+from webservice.nexus_tornado.request.handlers.NexusRequestHandler import NexusRequestHandler
 
 
 class HttpParametersTest(AsyncHTTPTestCase):
     def get_app(self):
-        path = StandardDeviationSearch.StandardDeviationSearchHandlerImpl.path
-        algorithm = AlgorithmModuleWrapper(StandardDeviationSearch.StandardDeviationSearchHandlerImpl)
-        thread_pool = ThreadPool(processes=1)
-        return Application(
-            [(path, ModularNexusHandlerWrapper, dict(clazz=algorithm, algorithm_config=None, thread_pool=thread_pool))],
+        path = StandardDeviationSearch.StandardDeviationSearchCalcHandlerImpl.path
+        algorithm = StandardDeviationSearch.StandardDeviationSearchCalcHandlerImpl
+        thread_pool = tornado.concurrent.futures.ThreadPoolExecutor(1)
+        #thread_pool = ThreadPool(processes=1)
+        return tornado.web.Application(
+            [(path, NexusRequestHandler, dict(clazz=algorithm, thread_pool=thread_pool))],
             default_host=bind_unused_port()
         )
 
     def test_no_ds_400(self):
-        response = self.fetch(StandardDeviationSearch.StandardDeviationSearchHandlerImpl.path)
+        response = self.fetch(StandardDeviationSearch.StandardDeviationSearchCalcHandlerImpl.path)
         self.assertEqual(400, response.code)
         body = json.loads(response.body)
         self.assertEqual("'ds' argument is required", body['error'])
@@ -52,7 +52,7 @@ class HttpParametersTest(AsyncHTTPTestCase):
         params = {
             "ds": "dataset"
         }
-        path = StandardDeviationSearch.StandardDeviationSearchHandlerImpl.path + '?' + urllib.urlencode(params)
+        path = StandardDeviationSearch.StandardDeviationSearchCalcHandlerImpl.path + '?' + urllib.urlencode(params)
         response = self.fetch(path)
         self.assertEqual(400, response.code)
         body = json.loads(response.body)
@@ -63,7 +63,7 @@ class HttpParametersTest(AsyncHTTPTestCase):
             "ds": "dataset",
             "longitude": "22.4"
         }
-        path = StandardDeviationSearch.StandardDeviationSearchHandlerImpl.path + '?' + urllib.urlencode(params)
+        path = StandardDeviationSearch.StandardDeviationSearchCalcHandlerImpl.path + '?' + urllib.urlencode(params)
         response = self.fetch(path)
         self.assertEqual(400, response.code)
         body = json.loads(response.body)
@@ -75,7 +75,7 @@ class HttpParametersTest(AsyncHTTPTestCase):
             "longitude": "22.4",
             "latitude": "-84.32"
         }
-        path = StandardDeviationSearch.StandardDeviationSearchHandlerImpl.path + '?' + urllib.urlencode(params)
+        path = StandardDeviationSearch.StandardDeviationSearchCalcHandlerImpl.path + '?' + urllib.urlencode(params)
         response = self.fetch(path)
         self.assertEqual(400, response.code)
         body = json.loads(response.body)
@@ -88,7 +88,7 @@ class HttpParametersTest(AsyncHTTPTestCase):
             "latitude": "-84.32",
             "day": "yayday"
         }
-        path = StandardDeviationSearch.StandardDeviationSearchHandlerImpl.path + '?' + urllib.urlencode(params)
+        path = StandardDeviationSearch.StandardDeviationSearchCalcHandlerImpl.path + '?' + urllib.urlencode(params)
         response = self.fetch(path)
         self.assertEqual(400, response.code)
         body = json.loads(response.body)
@@ -102,7 +102,7 @@ class HttpParametersTest(AsyncHTTPTestCase):
             "day": "35",
             "date": "1992-01-01T00:00:00Z"
         }
-        path = StandardDeviationSearch.StandardDeviationSearchHandlerImpl.path + '?' + urllib.urlencode(params)
+        path = StandardDeviationSearch.StandardDeviationSearchCalcHandlerImpl.path + '?' + urllib.urlencode(params)
         response = self.fetch(path)
         self.assertEqual(400, response.code)
         body = json.loads(response.body)
@@ -115,7 +115,7 @@ class HttpParametersTest(AsyncHTTPTestCase):
             "latitude": "-84.32",
             "day": "35"
         }
-        path = StandardDeviationSearch.StandardDeviationSearchHandlerImpl.path + '?' + urllib.urlencode(params)
+        path = StandardDeviationSearch.StandardDeviationSearchCalcHandlerImpl.path + '?' + urllib.urlencode(params)
         response = self.fetch(path)
         self.assertEqual(200, response.code)
 
@@ -127,7 +127,7 @@ class HttpParametersTest(AsyncHTTPTestCase):
             "date": "1992-01-01T00:00:00Z",
             "allInTile": "false"
         }
-        path = StandardDeviationSearch.StandardDeviationSearchHandlerImpl.path + '?' + urllib.urlencode(params)
+        path = StandardDeviationSearch.StandardDeviationSearchCalcHandlerImpl.path + '?' + urllib.urlencode(params)
         response = self.fetch(path)
         self.assertEqual(200, response.code)
 
@@ -139,7 +139,7 @@ class HttpParametersTest(AsyncHTTPTestCase):
             "latitude": "-78.225",
             "day": "1"
         }
-        path = StandardDeviationSearch.StandardDeviationSearchHandlerImpl.path + '?' + urllib.urlencode(params)
+        path = StandardDeviationSearch.StandardDeviationSearchCalcHandlerImpl.path + '?' + urllib.urlencode(params)
         response = self.fetch(path)
         self.assertEqual(200, response.code)
         print response.body
@@ -155,7 +155,7 @@ class HttpParametersTest(AsyncHTTPTestCase):
             "date": "2016-01-01T00:00:00Z",
             "allInTile": "false"
         }
-        path = StandardDeviationSearch.StandardDeviationSearchHandlerImpl.path + '?' + urllib.urlencode(params)
+        path = StandardDeviationSearch.StandardDeviationSearchCalcHandlerImpl.path + '?' + urllib.urlencode(params)
         # Increase timeouts when debugging
         # self.http_client.fetch(self.get_url(path), self.stop, connect_timeout=99999999, request_timeout=999999999)
         # response = self.wait(timeout=9999999999)

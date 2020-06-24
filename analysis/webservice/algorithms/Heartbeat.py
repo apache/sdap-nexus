@@ -16,11 +16,12 @@
 
 import json
 
-from webservice.NexusHandler import NexusHandler, nexus_handler
+from webservice.NexusHandler import nexus_handler
+from webservice.algorithms.NexusCalcHandler import NexusCalcHandler
 
 
 @nexus_handler
-class HeartbeatHandlerImpl(NexusHandler):
+class HeartbeatCalcHandlerImpl(NexusCalcHandler):
     name = "Backend Services Status"
     path = "/heartbeat"
     description = "Returns health status of Nexus backend services"
@@ -28,7 +29,7 @@ class HeartbeatHandlerImpl(NexusHandler):
     singleton = True
 
     def __init__(self):
-        NexusHandler.__init__(self, skipCassandra=True)
+        NexusCalcHandler.__init__(self, skipCassandra=True)
 
     def calc(self, computeOptions, **args):
         solrOnline = self._get_tile_service().pingSolr()

@@ -20,12 +20,12 @@ import time
 import numpy as np
 
 import colortables
-from webservice.NexusHandler import NexusHandler as BaseHandler
+from webservice.algorithms.NexusCalcHandler import NexusCalcHandler as BaseHandler
 from webservice.NexusHandler import nexus_handler
 
 
 @nexus_handler
-class ColorBarHandler(BaseHandler):
+class ColorBarCalcHandler(BaseHandler):
     name = "ColorBarHandler"
     path = "/colorbar"
     description = "Creates a CMC colorbar spec for a dataset"

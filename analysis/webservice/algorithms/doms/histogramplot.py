@@ -25,7 +25,8 @@ import numpy as np
 import BaseDomsHandler
 import ResultsStorage
 
-matplotlib.use('Agg')
+if not matplotlib.get_backend():
+    matplotlib.use('Agg')
 
 PARAMETER_TO_FIELD = {
     "sst": "sea_water_temperature",

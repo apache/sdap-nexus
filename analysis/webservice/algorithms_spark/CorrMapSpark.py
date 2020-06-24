@@ -22,22 +22,17 @@ import numpy as np
 from nexustiles.nexustiles import NexusTileService
 
 # from time import time
-from webservice.NexusHandler import nexus_handler, SparkHandler, DEFAULT_PARAMETERS_SPEC
+from webservice.NexusHandler import nexus_handler, DEFAULT_PARAMETERS_SPEC
+from webservice.algorithms_spark.NexusCalcSparkHandler import NexusCalcSparkHandler
 from webservice.webmodel import NexusProcessingException, NexusResults, NoDataException
 
 
 @nexus_handler
-class CorrMapSparkHandlerImpl(SparkHandler):
+class CorrMapNexusSparkHandlerImpl(NexusCalcSparkHandler):
     name = "Correlation Map Spark"
     path = "/corrMapSpark"
     description = "Computes a correlation map between two datasets given an arbitrary geographical area and time range"
     params = DEFAULT_PARAMETERS_SPEC
-    singleton = True
-
-    def __init__(self):
-        SparkHandler.__init__(self)
-        self.log = logging.getLogger(__name__)
-        # self.log.setLevel(logging.DEBUG)
 
     @staticmethod
     def _map(tile_in):

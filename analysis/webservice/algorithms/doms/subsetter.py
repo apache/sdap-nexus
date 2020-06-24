@@ -33,7 +33,7 @@ def is_blank(my_string):
 
 
 @nexus_handler
-class DomsResultsRetrievalHandler(BaseDomsHandler.BaseDomsQueryHandler):
+class DomsResultsRetrievalHandler(BaseDomsHandler.BaseDomsQueryCalcHandler):
     name = "DOMS Subsetter"
     path = "/domssubset"
     description = "Subset DOMS sources given the search domain"
@@ -94,7 +94,7 @@ class DomsResultsRetrievalHandler(BaseDomsHandler.BaseDomsQueryHandler):
     singleton = True
 
     def __init__(self):
-        BaseDomsHandler.BaseDomsQueryHandler.__init__(self)
+        BaseDomsHandler.BaseDomsQueryCalcHandler.__init__(self)
         self.log = logging.getLogger(__name__)
 
     def parse_arguments(self, request):

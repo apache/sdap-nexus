@@ -2,3 +2,6 @@
 *.code-workspace
 *.idea
 *.DS_Store
+analysis/webservice/algorithms/doms/domsconfig.ini
+data-access/nexustiles/config/datastores.ini
+venv/

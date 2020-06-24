@@ -21,19 +21,23 @@ from cStringIO import StringIO
 from datetime import datetime
 from multiprocessing.dummy import Pool, Manager
 
+import matplotlib
 import matplotlib.pyplot as plt
 import mpld3
 import numpy as np
 from matplotlib import cm
 from matplotlib.ticker import FuncFormatter
 
-from webservice.NexusHandler import NexusHandler, nexus_handler, DEFAULT_PARAMETERS_SPEC
+from webservice.NexusHandler import nexus_handler, DEFAULT_PARAMETERS_SPEC
+from webservice.algorithms.NexusCalcHandler import NexusCalcHandler
 from webservice.webmodel import NexusProcessingException, NexusResults
 
 SENTINEL = 'STOP'
 LATITUDE = 0
 LONGITUDE = 1
 
+if not matplotlib.get_backend():
+    matplotlib.use('Agg')
 
 class LongitudeHofMoellerCalculator(object):
     def longitude_time_hofmoeller_stats(self, tile, index):
@@ -88,9 +92,9 @@ class LatitudeHofMoellerCalculator(object):
         return stat
 
 
-class BaseHoffMoellerHandlerImpl(NexusHandler):
+class BaseHoffMoellerCalcHandlerImpl(NexusCalcHandler):
     def __init__(self):
-        NexusHandler.__init__(self)
+        NexusCalcHandler.__init__(self)
         self.log = logging.getLogger(__name__)
 
     def applyDeseasonToHofMoellerByField(self, results, pivot="lats", field="avg", append=True):
@@ -117,7 +121,7 @@ class BaseHoffMoellerHandlerImpl(NexusHandler):
 
 
 @nexus_handler
-class LatitudeTimeHoffMoellerHandlerImpl(BaseHoffMoellerHandlerImpl):
+class LatitudeTimeHoffMoellerHandlerImpl(BaseHoffMoellerCalcHandlerImpl):
     name = "Latitude/Time HofMoeller"
     path = "/latitudeTimeHofMoeller"
     description = "Computes a latitude/time HofMoeller plot given an arbitrary geographical area and time range"
@@ -125,7 +129,7 @@ class LatitudeTimeHoffMoellerHandlerImpl(BaseHoffMoellerHandlerImpl):
     singleton = True
 
     def __init__(self):
-        BaseHoffMoellerHandlerImpl.__init__(self)
+        BaseHoffMoellerCalcHandlerImpl.__init__(self)
 
     def calc(self, computeOptions, **args):
         tiles = self._get_tile_service().get_tiles_bounded_by_box(computeOptions.get_min_lat(), computeOptions.get_max_lat(),
@@ -183,7 +187,7 @@ class LatitudeTimeHoffMoellerHandlerImpl(BaseHoffMoellerHandlerImpl):
 
 
 @nexus_handler
-class LongitudeTimeHoffMoellerHandlerImpl(BaseHoffMoellerHandlerImpl):
+class LongitudeTimeHoffMoellerHandlerImpl(BaseHoffMoellerCalcHandlerImpl):
     name = "Longitude/Time HofMoeller"
     path = "/longitudeTimeHofMoeller"
     description = "Computes a longitude/time HofMoeller plot given an arbitrary geographical area and time range"
@@ -191,7 +195,7 @@ class LongitudeTimeHoffMoellerHandlerImpl(BaseHoffMoellerHandlerImpl):
     singleton = True
 
     def __init__(self):
-        BaseHoffMoellerHandlerImpl.__init__(self)
+        BaseHoffMoellerCalcHandlerImpl.__init__(self)
 
     def calc(self, computeOptions, **args):
         tiles = self._get_tile_service().get_tiles_bounded_by_box(computeOptions.get_min_lat(), computeOptions.get_max_lat(),

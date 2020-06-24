@@ -35,17 +35,23 @@ setuptools.setup(
 
     description="NEXUS API.",
     long_description=open('README.md').read(),
-
-    packages=[
-        'webservice',
-        'webservice.algorithms',
-        'webservice.algorithms.doms',
-        'webservice.algorithms_spark',
-        'webservice.metrics'
-    ],
+    packages=setuptools.find_packages(),
+    #packages=[
+    #    'webservice',
+    #    'webservice.algorithms',
+    #    'webservice.algorithms.doms',
+    #    'webservice.algorithms_spark',
+    #    'webservice.metrics',
+    #    'webservice.webmodel',
+    #    'webservice.tornado_nexus',
+    #    'webservice.nexus_tornado',
+    #    'webservice.nexus_tornado.request',
+    #    'webservice.nexus_tornado.request.handlers',
+    #    'webservice.nexus_tornado.request.renderers'
+    #],
     package_data={
         'webservice': ['config/web.ini', 'config/algorithms.ini'],
-        'webservice.algorithms.doms': ['domsconfig.ini', 'domsconfig.ini.default']
+        'webservice.algorithms.doms': ['domsconfig.ini.default']
     },
     data_files=[
         ('static', ['static/index.html'])

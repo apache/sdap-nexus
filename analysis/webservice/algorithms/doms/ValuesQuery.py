@@ -19,14 +19,14 @@ from pytz import timezone
 
 import BaseDomsHandler
 import datafetch
-from webservice.NexusHandler import NexusHandler as BaseHandler
+from webservice.algorithms.NexusCalcHandler import NexusCalcHandler as BaseHandler
 from webservice.NexusHandler import nexus_handler
 
 EPOCH = timezone('UTC').localize(datetime(1970, 1, 1))
 
 
 @nexus_handler
-class DomsValuesQueryHandler(BaseDomsHandler.BaseDomsQueryHandler):
+class DomsValuesQueryHandler(BaseDomsHandler.BaseDomsQueryCalcHandler):
     name = "DOMS In-Situ Value Lookup"
     path = "/domsvalues"
     description = ""

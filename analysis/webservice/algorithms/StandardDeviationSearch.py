@@ -22,7 +22,8 @@ from functools import partial
 from nexustiles.nexustiles import NexusTileServiceException
 from pytz import timezone
 
-from webservice.NexusHandler import NexusHandler, nexus_handler
+from webservice.NexusHandler import nexus_handler
+from webservice.algorithms.NexusCalcHandler import NexusCalcHandler
 from webservice.webmodel import NexusProcessingException, CustomEncoder
 
 SENTINEL = 'STOP'
@@ -30,7 +31,7 @@ EPOCH = timezone('UTC').localize(datetime(1970, 1, 1))
 
 
 @nexus_handler
-class StandardDeviationSearchHandlerImpl(NexusHandler):
+class StandardDeviationSearchCalcHandlerImpl(NexusCalcHandler):
     name = "Standard Deviation Search"
     path = "/standardDeviation"
     description = "Retrieves the pixel standard deviation if it exists for a given longitude and latitude"
@@ -73,7 +74,7 @@ class StandardDeviationSearchHandlerImpl(NexusHandler):
     singleton = True
 
     def __init__(self):
-        NexusHandler.__init__(self)
+        NexusCalcHandler.__init__(self)
         self.log = logging.getLogger(__name__)
 
     def parse_arguments(self, request):
@@ -121,7 +122,7 @@ class StandardDeviationSearchHandlerImpl(NexusHandler):
                            latitude=latitude, day_of_year=day_of_year)
 
         try:
-            results = StandardDeviationSearchHandlerImpl.to_result_dict(func())
+            results = StandardDeviationSearchCalcHandlerImpl.to_result_dict(func())
         except (NoTileException, NoStandardDeviationException):
             return StandardDeviationSearchResult(raw_args_dict, [])
 

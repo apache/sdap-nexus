@@ -16,12 +16,12 @@
 
 import time
 
-from webservice.NexusHandler import CalcHandler
+from webservice.algorithms.NexusCalcHandler import NexusCalcHandler
 from webservice.NexusHandler import nexus_handler
 
 
 @nexus_handler
-class DelayHandlerImpl(CalcHandler):
+class DelayCalcHandlerImpl(NexusCalcHandler):
     name = "Delay"
     path = "/delay"
     description = "Waits a little while"
@@ -29,7 +29,7 @@ class DelayHandlerImpl(CalcHandler):
     singleton = True
 
     def __init__(self):
-        CalcHandler.__init__(self)
+        NexusCalcHandler.__init__(self)
 
     def calc(self, computeOptions, **args):
         time.sleep(10)
