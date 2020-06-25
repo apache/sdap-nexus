@@ -72,7 +72,7 @@ RUN cd /usr/lib && ln -s libcom_err.so.2 libcom_err.so.3 && \
     ln -s libjpeg.so.9 libjpeg.so.8
 
 # Change REBUILD_CODE if you want tell Docker not to use cached layers from this line on
-ARG REBUILD_CODE=1
+ARG REBUILD_CODE=0
 
 ARG APACHE_NEXUSPROTO=https://github.com/apache/incubator-sdap-nexusproto.git
 ARG APACHE_NEXUSPROTO_BRANCH=master
