@@ -1,0 +1,67 @@
+{{- if .Values.ingestion.enabled }}
+{{- $history := .Values.ingestion.history | default dict }}
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: collection-manager
+  name: collection-manager
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: collection-manager
+  template:
+    metadata:
+      labels:
+        app: collection-manager
+    spec:
+      containers:
+        - image: {{ .Values.ingestion.collectionManager.image }}
+          imagePullPolicy: Always
+          name: collection-manager
+          env:
+            - name: RABBITMQ_USERNAME
+              value: {{ .Values.rabbitmq.auth.username }}
+            - name: RABBITMQ_PASSWORD
+              value: {{ .Values.rabbitmq.auth.password }}
+            - name: RABBITMQ_HOST
+              value: {{ .Values.rabbitmq.fullnameOverride }}
+            - name: COLLECTIONS_PATH
+              value: {{ include "nexus.collectionsConfig.mountPath" . }}/collections.yml
+            {{- if $history.url }}
+            - name: HISTORY_URL
+              value: {{ .Values.ingestion.history.url}}
+            {{- else }}
+            - name: HISTORY_PATH
+              value: {{ include "nexus.history.mountPath" . }}
+            {{- end }}
+          resources:
+            requests:
+              cpu: {{ .Values.ingestion.collectionManager.cpu }}
+              memory: {{ .Values.ingestion.collectionManager.memory }}
+            limits:
+              cpu: {{ .Values.ingestion.collectionManager.cpu }}
+              memory: {{ .Values.ingestion.collectionManager.memory }}
+          volumeMounts:
+{{ include "nexus.ingestion.dataVolumeMount" . | indent 12 }}
+            {{- if not $history.url }}
+            - name: history-volume
+              mountPath: {{ include "nexus.history.mountPath" . }}
+            {{- end }}
+            - name: collections-config-volume
+              mountPath: {{ include "nexus.collectionsConfig.mountPath" . }}
+      volumes:
+{{ include "nexus.ingestion.dataVolume" . | indent 8 }}
+        - name: collections-config-volume
+          configMap:
+            name: {{ include "nexus.collectionsConfig.configmapName" . }}
+        {{- if not $history.url }}
+        - name: history-volume
+          persistentVolumeClaim:
+            claimName: history-volume-claim
+        {{- end }}
+      restartPolicy: Always
+{{- end }}
+
