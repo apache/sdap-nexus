@@ -1,23 +1,103 @@
-# Duplicate this file and put your customization here
-
+## This is the StorageClass that will be used for Cassandra, Solr, Zookeeper,
+## and ingestion history (if ingestion history is not configured to use Solr)
 storageClass: hostpath
 
 rootWebpage:
   enabled: true
 
 webapp:
+  enabled: true
   distributed:
-    image: nexusjpl/nexus-webapp:distributed.0.1.3
+    image: nexusjpl/nexus-webapp:distributed.0.1.5
+
+    ## Use any of the driver configuration options available at
+    ## https://github.com/GoogleCloudPlatform/spark-on-k8s-operator/blob/master/docs/user-guide.md
     driver:
-      # Refer to the configuration options available at https://github.com/GoogleCloudPlatform/spark-on-k8s-operator/blob/master/docs/user-guide.md
       cores: 1
       coreLimit: "1200m"
       memory: "512m"
+
+    ## Use any of the executor configuration options available at
+    ## https://github.com/GoogleCloudPlatform/spark-on-k8s-operator/blob/master/docs/user-guide.md
     executor:
-      # Refer to the configuration options available at https://github.com/GoogleCloudPlatform/spark-on-k8s-operator/blob/master/docs/user-guide.md
       cores: 1
       instances: 2
       memory: "512m"
+
+## This section deals with the ingestion components of SDAP
+ingestion:
+
+  enabled: true
+
+  granuleIngester:
+    replicas: 2
+    image: nexusjpl/granule-ingester:0.0.1
+
+    ## cpu refers to both request and limit
+    cpu: 1
+
+    ## memory refers to both request and limit
+    memory: 1Gi
+
+  collectionManager:
+    image: nexusjpl/collection-manager:0.0.2
+
+    ## cpu refers to both request and limit
+    cpu: 0.5
+
+    ## memory refers to both request and limit
+    memory: 0.5Gi
+
+  configOperator:
+    image: nexusjpl/config-operator:0.0.1
+
+  ## How to mount the granule files to ingest
+  granules:
+    ## Enable nfsServer if you want to mount the granules from an NFS server,
+    ## otherwise they will be loaded from the local filesystem.
+    ## mountPath and path should be set whether or not nfsServer is enabled.
+    # nfsServer: nfs-server.com
+
+    ## mountPath is the path in the Collection Manager and Granule Ingester pods
+    ## where the granule files will be mounted.
+    ## IMPORTANT: the `path` property on all collections in the Collections Config file
+    ## should match this value.
+    ## Example: if mountPath is set to /data, then every collection in the Collections
+    ## Config file should have something like
+    ## path: /data/<some-directory>/<some-file-pattern>
+    mountPath: /data
+
+    ## path is the path on either local filesystem or NFS mount at which
+    ## the granule files are stored.
+    path: /var/lib/sdap/granules
+
+  ## Where to find the Collections Config file
+  ## ref: https://github.com/apache/incubator-sdap-ingester/tree/dev/collection_manager#the-collections-configuration-file
+  ## Either localDir should be set, or the git options, but not both.
+  collections:
+
+    ## Load the Collections Config file from a local path
+    ## This is a future option that is not yet supported!
+    # localDir: /Users/edford/Desktop/collections.yml
+
+    ## Load the Collections Config file from a git repository
+    ## Until localDir is supported, this configuration is mandatory
+    git:
+
+
+      ## This should be an https repository url of the form https://github.com/username/repo.git
+      url:
+
+      branch: master
+
+      ## token is not yet supported!
+      # token: someToken
+
+  ## Where to store ingestion history
+  ## Defaults to a using a history directory, stored on a PVC using the storageClass defined in this file above
+  history:
+    ## Store ingestion history in a solr database instead of a filesystem directory
+    # url: http://history-solr
 
 cassandra:
   replicas: 2
@@ -35,13 +115,13 @@ solr:
   heap: 4g
   requests:
     memory: 5Gi
-    cpu: 1 
+    cpu: 1
   limits:
     memory: 5Gi
     cpu: 1
 
 zookeeper:
-  replicas: 3 
+  replicas: 3
   memory: 1Gi
   cpu: 0.5
   storage: 8Gi
@@ -50,8 +130,8 @@ ingressEnabled: false
 
 onEarthProxyIP: ""
 
-##
-## Configuration values for the nginx-ingress dependency.
+
+## Configuration values for the nginx-ingress dependency
 ## ref: https://github.com/helm/charts/tree/master/stable/nginx-ingress
 nginx-ingress:
   controller:
@@ -63,3 +143,17 @@ nginx-ingress:
       type: LoadBalancer
   defaultBackend:
     enabled: false
+
+
+## Configuration values for the rabbitmq dependency
+## ref: https://github.com/bitnami/charts/tree/master/bitnami/rabbitmq
+rabbitmq:
+  ## fullnameOverride sets the name of the RabbitMQ service
+  ## with which the ingestion components will communicate.
+  fullnameOverride: rabbitmq
+  replicaCount: 1
+  auth:
+    username: guest
+    password: guest
+  ingress:
+    enabled: true

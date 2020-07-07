@@ -116,7 +116,7 @@ The following table lists the configurable parameters of the NEXUS chart and the
 |             Parameter                 |            Description             |                    Default                  |
 |---------------------------------------|------------------------------------|---------------------------------------------|
 | `storageClass`                        | Storage class to use for Cassandra, Solr, and Zookeeper. (Note that `hostpath` should only be used in local deployments.) |`hostpath`|
-| `webapp.distributed.image`            | Docker image for the webapp        | `nexusjpl/nexus-webapp:distributed.0.1.3`   |
+| `webapp.distributed.image`            | Docker image and tag for the webapp| `nexusjpl/nexus-webapp:distributed.0.1.5`   |
 | `webapp.distributed.driver.cores`     | Number of cores on Spark driver    | `1`                                         |
 | `webapp.distributed.driver.coreLimit` | Maximum cores on Spark driver, in millicpus| `1200m`                             |
 | `webapp.distributed.driver.memory`    | Memory on Spark driver             | `512m`                                      |
@@ -153,11 +153,29 @@ The following table lists the configurable parameters of the NEXUS chart and the
 | `onEarthProxyIP`                      | IP or hostname to proxy `/onearth` to (leave blank to disable the proxy)| `""`   |
 | `ingressEnabled`                      | Enable nginx-ingress               | `false`                                     |
 | `nginx-ingress.controller.scope.enabled`|Limit the scope of the ingress controller to this namespace | `true`            |
-| `nginx-ingress.controller.kind`       | Install ingress controller as Deployment, DaemonSet or Both	 | `DaemonSet`       |
+| `nginx-ingress.controller.kind`       | Install ingress controller as Deployment, DaemonSet or Both  | `DaemonSet`       |
 | `nginx-ingress.controller.service.enabled`| Create a front-facing controller service (this might be used for local or on-prem deployments) | `true` |
 | `nginx-ingress.controller.service.type`|Type of controller service to create| `LoadBalancer`                             |
 | `nginx-ingress.defaultBackend.enabled`| Use default backend component	     | `false`                                     |
-
+| `rabbitmq.replicaCount`               | Number of RabbitMQ replicas        | `2`                                         |
+| `rabbitmq.auth.username`              | RabbitMQ username                  | `guest`                                     |
+| `rabbitmq.auth.password`              | RabbitMQ password                  | `guest`                                     |
+| `rabbitmq.ingress.enabled`            | Enable ingress resource for RabbitMQ Management console | `true`                 |
+| `ingestion.enabled`                   | Enable ingestion by deploying the Config Operator, Collection Manager, Granule Ingestion, and RabbitMQ | `true` |
+| `ingestion.granuleIngester.replicas`  | Number of Granule Ingester replicas | `2`                                        |
+| `ingestion.granuleIngester.image`     | Docker image and tag for Granule Ingester| `nexusjpl/granule-ingester:0.0.1`     |
+| `ingestion.granuleIngester.cpu`       | CPUs (request and limit) for each Granule Ingester replica| `1`                  |
+| `ingestion.granuleIngester.memory`    | Memory (request and limit) for each Granule Ingester replica| `1Gi`              |
+| `ingestion.collectionManager.image`   | Docker image and tag for Collection Manager| `nexusjpl/collection-manager:0.0.2` |
+| `ingestion.collectionManager.cpu`     | CPUs (request and limit) for the Collection Manager | `0.5`                      |
+| `ingestion.collectionManager.memory`  | Memory (request and limit) for the Collection Manager | `0.5Gi`                  |
+| `ingestion.configOperator.image`      | Docker image and tag for Config Operator | `nexusjpl/config-operator:0.0.1`      |
+| `ingestion.granules.nfsServer`        | An optional URL to an NFS server containing a directory where granule files are stored. If set, this NFS server will be mounted in the Collection Manager and Granule Ingester pods.| `nil` |
+| `ingestion.granules.mountPath`        | The path in the Collection Manager and Granule Ingester pods where granule files will be mounted. *Important:* the `path` property on all collections in the Collections Config file should match this value. | `/data` |
+| `ingestion.granules.path`             | Directory on either the local filesystem or an NFS mount where granule files are located. This directory will be mounted onto the Collection Manager and Granule Ingester at `ingestion.granules.mountPath`. | `/var/lib/sdap/granules` |
+| `ingestion.collections.git.url`       | URL to a Git repository containing a [Collections Config](https://github.com/apache/incubator-sdap-ingester/tree/dev/collection_manager#the-collections-configuration-file) file. The file should be at the root of the repository. The repository URL should be of the form `https://github.com/username/repo.git`. This property must be configured if ingestion is enabled! | `nil`|
+| `ingestion.collections.git.branch`    | Branch to use when loading a Collections Config file from a Git repository.| `master`|
+| `ingestion.history.url`               | An optional URL to a Solr database in which to store ingestion history. If this is not set, ingestion history will be stored in a directory instead, with the storage class configured by `storageClass` above.| `nil`|
 
 ## Restricting Pods to Specific Nodes
 

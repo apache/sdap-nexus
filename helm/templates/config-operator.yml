@@ -1,0 +1,24 @@
+{{ if .Values.ingestion.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: config-operator
+  labels:
+    app: config-operator
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: config-operator
+  template:
+    metadata:
+      labels:
+        app: config-operator
+    spec:
+      serviceAccountName: config-operator
+      containers:
+        - name: config-operator
+          image: {{ .Values.ingestion.configOperator.image }}
+          imagePullPolicy: Always
+{{ end }}
+

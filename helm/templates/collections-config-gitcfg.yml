@@ -1,0 +1,13 @@
+apiVersion: sdap.apache.org/v1
+kind: GitBasedConfig
+metadata:
+  name: collections-config-gitcfg
+spec:
+  {{ if .Values.ingestion.collections.git }}
+  git-url: {{ .Values.ingestion.collections.git.url }}
+  git-branch: {{ .Values.ingestion.collections.git.branch }}
+  git-token: {{ .Values.ingestion.collections.token }}
+  {{ else }}
+  local-dir: {{ .Values.ingestion.collections.localDir }}
+  {{ end }}
+  config-map: {{ include "nexus.collectionsConfig.configmapName" . }}

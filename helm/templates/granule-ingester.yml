@@ -1,0 +1,45 @@
+{{- if .Values.ingestion.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: granule-ingester
+  name: granule-ingester
+spec:
+  replicas: {{ .Values.ingestion.granuleIngester.replicas }}
+  selector:
+    matchLabels:
+      app: granule-ingester
+  template:
+    metadata:
+      labels:
+        app: granule-ingester
+    spec:
+      containers:
+        - image: {{ .Values.ingestion.granuleIngester.image }}
+          name: granule-ingester
+          env:
+            - name: RABBITMQ_USERNAME
+              value: {{ .Values.rabbitmq.auth.username }}
+            - name: RABBITMQ_PASSWORD
+              value: {{ .Values.rabbitmq.auth.password }}
+            - name: RABBITMQ_HOST
+              value: {{ .Values.rabbitmq.fullnameOverride }}
+            - name: CASSANDRA_CONTACT_POINTS
+              value: sdap-cassandra
+            - name: SOLR_HOST_AND_PORT
+              value: http://sdap-solr:8983
+          resources:
+            requests:
+              cpu: {{ .Values.ingestion.granuleIngester.cpu }}
+              memory: {{ .Values.ingestion.granuleIngester.memory }}
+            limits:
+              cpu: {{ .Values.ingestion.granuleIngester.cpu }}
+              memory: {{ .Values.ingestion.granuleIngester.memory }}
+          volumeMounts:
+{{ include "nexus.ingestion.dataVolumeMount" . | indent 12 }}
+      volumes:
+{{ include "nexus.ingestion.dataVolume" . | indent 8 }}
+      restartPolicy: Always
+{{- end }}
+
