@@ -18,14 +18,14 @@ import time
 import unittest
 from multiprocessing.pool import ThreadPool
 
-from NexusHandler import AlgorithmModuleWrapper
+from webservice.NexusHandler import AlgorithmModuleWrapper
 from mock import MagicMock
 from nexustiles.nexustiles import NexusTileService
 from shapely.geometry import box
 from tornado.testing import bind_unused_port
 from tornado.web import Application
-from webapp import ModularNexusHandlerWrapper
-from webmodel import NexusRequestObject
+from webservice.webapp import ModularNexusHandlerWrapper
+from webservice.webmodel import NexusRequestObject
 
 from webservice.algorithms import LongitudeLatitudeMap
 
