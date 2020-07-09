@@ -40,4 +40,4 @@ class DataSeriesListHandlerImpl(NexusHandler):
             def toJson(self):
                 return json.dumps(self.result)
 
-        return SimpleResult(self._tile_service.get_dataseries_list())
+        return SimpleResult(self._get_tile_service().get_dataseries_list())

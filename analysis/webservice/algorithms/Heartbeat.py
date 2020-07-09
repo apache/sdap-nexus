@@ -31,7 +31,7 @@ class HeartbeatHandlerImpl(NexusHandler):
         NexusHandler.__init__(self, skipCassandra=True)
 
     def calc(self, computeOptions, **args):
-        solrOnline = self._tile_service.pingSolr()
+        solrOnline = self._get_tile_service().pingSolr()
 
         # Not sure how to best check cassandra cluster status so just return True for now
         cassOnline = True

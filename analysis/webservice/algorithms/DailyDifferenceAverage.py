@@ -143,7 +143,7 @@ class DailyDifferenceAverageImpl(NexusHandler):
                                              start_time,
                                              end_time):
 
-        daysinrange = self._tile_service.find_days_in_range_asc(min_lat, max_lat, min_lon, max_lon, dataset1,
+        daysinrange = self._get_tile_service().find_days_in_range_asc(min_lat, max_lat, min_lon, max_lon, dataset1,
                                                                 start_time, end_time)
 
         maxprocesses = int(self.algorithm_config.get("multiprocessing", "maxprocesses"))

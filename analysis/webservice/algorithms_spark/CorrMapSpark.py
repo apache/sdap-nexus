@@ -198,7 +198,7 @@ class CorrMapSparkHandlerImpl(SparkHandler):
         self.log.debug('Using Native resolution: lat_res={0}, lon_res={1}'.format(self._latRes, self._lonRes))
         self.log.debug('nlats={0}, nlons={1}'.format(self._nlats, self._nlons))
 
-        daysinrange = self._tile_service.find_days_in_range_asc(self._minLat,
+        daysinrange = self._get_tile_service().find_days_in_range_asc(self._minLat,
                                                                 self._maxLat,
                                                                 self._minLon,
                                                                 self._maxLon,

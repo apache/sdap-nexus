@@ -98,7 +98,7 @@ class TimeSeriesHandlerImpl(NexusHandler):
     def getTimeSeriesStatsForBoxSingleDataSet(self, min_lat, max_lat, min_lon, max_lon, ds, start_time=0, end_time=-1,
                                               applySeasonalFilter=True, applyLowPass=True):
 
-        daysinrange = self._tile_service.find_days_in_range_asc(min_lat, max_lat, min_lon, max_lon, ds, start_time,
+        daysinrange = self._get_tile_service().find_days_in_range_asc(min_lat, max_lat, min_lon, max_lon, ds, start_time,
                                                                 end_time)
 
         if len(daysinrange) == 0:

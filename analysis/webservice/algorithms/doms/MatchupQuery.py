@@ -109,14 +109,14 @@ class CombinedDomsMatchupQueryHandler(BaseDomsHandler.BaseDomsQueryHandler):
                 '''
                 Single Threaded at the moment...
                 '''
-                daysinrange = self._tile_service.find_days_in_range_asc(bounds.south, bounds.north, bounds.west,
+                daysinrange = self._get_tile_service().find_days_in_range_asc(bounds.south, bounds.north, bounds.west,
                                                                         bounds.east, matchupId,
                                                                         self.__parseDatetime(startTime) / 1000,
                                                                         self.__parseDatetime(endTime) / 1000)
 
                 tilesByDay = {}
                 for dayTimestamp in daysinrange:
-                    ds1_nexus_tiles = self._tile_service.get_tiles_bounded_by_box_at_time(bounds.south, bounds.north,
+                    ds1_nexus_tiles = self._get_tile_service().get_tiles_bounded_by_box_at_time(bounds.south, bounds.north,
                                                                                           bounds.west, bounds.east,
                                                                                           matchupId, dayTimestamp)
 
