@@ -35,10 +35,12 @@ class NexusCalcSparkHandler(NexusCalcHandler):
     def __init__(self, algorithm_config=None, sc=None, **kwargs):
         import inspect
 
-        NexusCalcHandler.__init__(self, **kwargs)
+        NexusCalcHandler.__init__(self, algorithm_config=algorithm_config, **kwargs)
         self.spark_job_stack = []
-        self.set_spark_context(sc)
-        self.set_config(algorithm_config)
+        self._sc = sc
+        max_concurrent_jobs = algorithm_config.getint("spark", "maxconcurrentjobs") if algorithm_config.has_section(
+            "spark") and algorithm_config.has_option("spark", "maxconcurrentjobs") else 10
+        self.spark_job_stack = list(["Job %s" % x for x in xrange(1, max_concurrent_jobs + 1)])
         self.log = logging.getLogger(__name__)
 
         def with_spark_job_context(calc_func):
@@ -61,15 +63,6 @@ class NexusCalcSparkHandler(NexusCalcHandler):
         for member in inspect.getmembers(self, predicate=inspect.ismethod):
             if member[0] == "calc":
                 setattr(self, member[0], with_spark_job_context(member[1]))
-
-    def set_spark_context(self, sc):
-        self._sc = sc
-
-    def set_config(self, algorithm_config):
-        max_concurrent_jobs = algorithm_config.getint("spark", "maxconcurrentjobs") if algorithm_config.has_section(
-            "spark") and algorithm_config.has_option("spark", "maxconcurrentjobs") else 10
-        self.spark_job_stack = list(["Job %s" % x for x in xrange(1, max_concurrent_jobs + 1)])
-        self.algorithm_config = algorithm_config
 
     def _setQueryParams(self, ds, bounds, start_time=None, end_time=None,
                         start_year=None, end_year=None, clim_month=None,

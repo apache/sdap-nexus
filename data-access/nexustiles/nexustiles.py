@@ -80,11 +80,11 @@ class NexusTileService(object):
         self._datastore = None
         self._metadatastore = None
 
-        if config is None:
-            self._config = ConfigParser.RawConfigParser()
-            self._config.read(NexusTileService._get_config_files('config/datastores.ini'))
-        else:
-            self._config = config
+        self._config = ConfigParser.RawConfigParser()
+        self._config.read(NexusTileService._get_config_files('config/datastores.ini'))
+
+        if config:
+            self.override_config(config)
 
         if not skipDatastore:
             datastore = self._config.get("datastore", "store")
@@ -525,6 +525,7 @@ class NexusTileService(object):
         for extension in extensions:
             try:
                 candidate = pkg_resources.resource_filename(__name__, filename + extension)
+                log.info('use config file {}'.format(filename + extension))
                 candidates.append(candidate)
             except KeyError as ke:
                 log.warning('configuration file {} not found'.format(filename + extension))
