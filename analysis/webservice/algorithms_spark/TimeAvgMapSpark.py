@@ -21,7 +21,8 @@ import numpy as np
 import shapely.geometry
 from nexustiles.nexustiles import NexusTileService
 from pytz import timezone
-from webservice.NexusHandler import nexus_handler, SparkHandler
+from webservice.NexusHandler import nexus_handler
+from webservice.algorithms_spark.NexusCalcSparkHandler import NexusCalcSparkHandler
 from webservice.webmodel import NexusResults, NexusProcessingException, NoDataException
 
 EPOCH = timezone('UTC').localize(datetime(1970, 1, 1))
@@ -29,7 +30,9 @@ ISO_8601 = '%Y-%m-%dT%H:%M:%S%z'
 
 
 @nexus_handler
-class TimeAvgMapSparkHandlerImpl(SparkHandler):
+class TimeAvgMapNexusSparkHandlerImpl(NexusCalcSparkHandler):
+    # __singleton_lock = threading.Lock()
+    # __singleton_instance = None
     name = "Time Average Map Spark"
     path = "/timeAvgMapSpark"
     description = "Computes a Latitude/Longitude Time Average plot given an arbitrary geographical area and time range"
@@ -65,9 +68,18 @@ class TimeAvgMapSparkHandlerImpl(SparkHandler):
     }
     singleton = True
 
-    def __init__(self):
-        SparkHandler.__init__(self)
-        self.log = logging.getLogger(__name__)
+    # @classmethod
+    # def instance(cls, algorithm_config=None, sc=None):
+    #     with cls.__singleton_lock:
+    #         if not cls.__singleton_instance:
+    #             try:
+    #                 singleton_instance = cls()
+    #                 singleton_instance.set_config(algorithm_config)
+    #                 singleton_instance.set_spark_context(sc)
+    #                 cls.__singleton_instance = singleton_instance
+    #             except AttributeError:
+    #                 pass
+    #     return cls.__singleton_instance
 
     def parse_arguments(self, request):
         # Parse input arguments
@@ -87,39 +99,12 @@ class TimeAvgMapSparkHandlerImpl(SparkHandler):
             raise NexusProcessingException(
                 reason="Cannot compute Latitude/Longitude Time Average plot on a climatology", code=400)
 
-        try:
-            bounding_polygon = request.get_bounding_polygon()
-            request.get_min_lon = lambda: bounding_polygon.bounds[0]
-            request.get_min_lat = lambda: bounding_polygon.bounds[1]
-            request.get_max_lon = lambda: bounding_polygon.bounds[2]
-            request.get_max_lat = lambda: bounding_polygon.bounds[3]
-        except:
-            try:
-                west, south, east, north = request.get_min_lon(), request.get_min_lat(), \
-                                           request.get_max_lon(), request.get_max_lat()
-                bounding_polygon = shapely.geometry.Polygon(
-                    [(west, south), (east, south), (east, north), (west, north), (west, south)])
-            except:
-                raise NexusProcessingException(
-                    reason="'b' argument is required. Must be comma-delimited float formatted as "
-                           "Minimum (Western) Longitude, Minimum (Southern) Latitude, "
-                           "Maximum (Eastern) Longitude, Maximum (Northern) Latitude",
-                    code=400)
+        west, south, east, north = request.get_bounding_box()
+        bounding_polygon = shapely.geometry.Polygon(
+            [(west, south), (east, south), (east, north), (west, north), (west, south)])
 
-        try:
-            start_time = request.get_start_datetime()
-        except:
-            raise NexusProcessingException(
-                reason="'startTime' argument is required. Can be int value seconds from epoch or "
-                       "string format YYYY-MM-DDTHH:mm:ssZ",
-                code=400)
-        try:
-            end_time = request.get_end_datetime()
-        except:
-            raise NexusProcessingException(
-                reason="'endTime' argument is required. Can be int value seconds from epoch or "
-                       "string format YYYY-MM-DDTHH:mm:ssZ",
-                code=400)
+        start_time = request.get_start_datetime()
+        end_time = request.get_end_datetime()
 
         if start_time > end_time:
             raise NexusProcessingException(
@@ -259,10 +244,9 @@ class TimeAvgMapSparkHandlerImpl(SparkHandler):
                             tile_min_lon, tile_max_lon,
                             y0, y1, x0, x1))
 
-        reduce_duration += (datetime.now() - reduce_start).total_seconds()
-
-        # Store global map in a NetCDF file.
-        self._create_nc_file(a, 'tam.nc', 'val', fill=self._fill)
+        # Store global map in a NetCDF file for debugging purpose
+        # if activated this line is not thread safe and might cause error when concurrent access occurs
+        # self._create_nc_file(a, 'tam.nc', 'val', fill=self._fill)
 
         # Create dict for JSON response
         results = [[{'mean': a[y, x], 'cnt': int(n[y, x]),

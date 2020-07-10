@@ -15,12 +15,12 @@
 
 import BaseDomsHandler
 import datafetch
-from webservice.NexusHandler import NexusHandler as BaseHandler
+from webservice.algorithms.NexusCalcHandler import NexusCalcHandler as BaseHandler
 from webservice.NexusHandler import nexus_handler
 
 
 @nexus_handler
-class DomsStatsQueryHandler(BaseDomsHandler.BaseDomsQueryHandler):
+class DomsStatsQueryHandler(BaseDomsHandler.BaseDomsQueryCalcHandler):
     name = "DOMS In-Situ Stats Lookup"
     path = "/domsstats"
     description = ""

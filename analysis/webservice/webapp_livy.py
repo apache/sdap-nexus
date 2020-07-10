@@ -19,11 +19,11 @@ import logging
 import sys
 import os
 import pkg_resources
-import tornado.web
-from tornado.options import define, options, parse_command_line
+import nexus_tornado.web
+from nexus_tornado.options import define, options, parse_command_line
 from webservice.NexusLivyHandler import LivyHandler
 
-class RunFileHandler(tornado.web.RequestHandler):
+class RunFileHandler(nexus_tornado.web.RequestHandler):
 
     _id = 0
             
@@ -47,7 +47,7 @@ class RunFileHandler(tornado.web.RequestHandler):
         self.write(str(ans))
 
 
-class RunStrHandler(tornado.web.RequestHandler):
+class RunStrHandler(nexus_tornado.web.RequestHandler):
             
     def __init__(self, *args, **kwargs):
         self._lh = kwargs.pop('lh', None)
@@ -91,11 +91,11 @@ if __name__ == "__main__":
     handlers.append((r"/run_str", RunStrHandler, dict(lh=lh)))
 
     # Start listening for job requests.
-    app = tornado.web.Application(
+    app = nexus_tornado.web.Application(
         handlers,
         default_host=options.address,
         debug=options.debug
     )
     app.listen(options.port)
     log.info("Started HTTP listener...")
-    tornado.ioloop.IOLoop.current().start()
+    nexus_tornado.ioloop.IOLoop.current().start()

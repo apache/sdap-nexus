@@ -14,11 +14,12 @@
 # limitations under the License.
 
 
-from webservice.NexusHandler import CalcHandler, nexus_handler
+from webservice.NexusHandler import nexus_handler
+from webservice.algorithms.NexusCalcHandler import NexusCalcHandler
 
 
 @nexus_handler
-class ErrorTosserHandler(CalcHandler):
+class ErrorTosserCalcHandler(NexusCalcHandler):
     name = "MakeError"
     path = "/makeerror"
     description = "Causes an error"
@@ -26,7 +27,7 @@ class ErrorTosserHandler(CalcHandler):
     singleton = True
 
     def __init__(self):
-        CalcHandler.__init__(self)
+        NexusCalcHandler.__init__(self)
 
     def calc(self, computeOptions, **args):
         a = 100 / 0.0

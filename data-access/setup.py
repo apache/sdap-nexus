@@ -32,7 +32,7 @@ setup(
     long_description=open('README.md').read(),
 
     packages=['nexustiles', 'nexustiles.model', 'nexustiles.dao'],
-    package_data={'nexustiles': ['config/datastores.ini']},
+    package_data={'nexustiles': ['config/datastores.ini.default', 'config/datastores.ini']},
     platforms='any',
     python_requires='~=2.7',
     install_requires=pip_requirements,

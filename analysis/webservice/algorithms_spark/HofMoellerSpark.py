@@ -27,7 +27,8 @@ from matplotlib import cm
 from matplotlib.ticker import FuncFormatter
 from nexustiles.nexustiles import NexusTileService
 from pytz import timezone
-from webservice.NexusHandler import SparkHandler, nexus_handler
+from webservice.NexusHandler import nexus_handler
+from webservice.algorithms_spark.NexusCalcSparkHandler import NexusCalcSparkHandler
 from webservice.webmodel import NexusResults, NoDataException, NexusProcessingException
 
 EPOCH = timezone('UTC').localize(datetime(1970, 1, 1))
@@ -100,7 +101,7 @@ class HofMoellerCalculator(object):
         return stats
 
 
-class BaseHoffMoellerHandlerImpl(SparkHandler):
+class BaseHoffMoellerSparkHandlerImpl(NexusCalcSparkHandler):
     params = {
         "ds": {
             "name": "Dataset",
@@ -131,10 +132,6 @@ class BaseHoffMoellerHandlerImpl(SparkHandler):
                            "Number of Spark Partitions is used by this function. Optional (Default: local,1,1)"
         }
     }
-
-    def __init__(self):
-        SparkHandler.__init__(self)
-        self.log = logging.getLogger(__name__)
 
     def parse_arguments(self, request):
         # Parse input arguments
@@ -331,16 +328,16 @@ def spark_driver(sc, latlon, nexus_tiles_spark, metrics_callback):
 
 
 @nexus_handler
-class LatitudeTimeHoffMoellerSparkHandlerImpl(BaseHoffMoellerHandlerImpl):
+class LatitudeTimeHoffMoellerSparkHandlerImpl(BaseHoffMoellerSparkHandlerImpl):
     name = "Latitude/Time HofMoeller Spark"
     path = "/latitudeTimeHofMoellerSpark"
     description = "Computes a latitude/time HofMoeller plot given an arbitrary geographical area and time range"
-    params = BaseHoffMoellerHandlerImpl.params
+    params = BaseHoffMoellerSparkHandlerImpl.params
     singleton = True
 
-    def __init__(self):
+    def __init__(self, **kwargs):
         self._latlon = 0  # 0 for latitude-time map, 1 for longitude-time map
-        BaseHoffMoellerHandlerImpl.__init__(self)
+        BaseHoffMoellerSparkHandlerImpl.__init__(self, **kwargs)
 
     def calc(self, compute_options, **args):
         ds, bbox, start_time, end_time = self.parse_arguments(compute_options)
@@ -382,16 +379,16 @@ class LatitudeTimeHoffMoellerSparkHandlerImpl(BaseHoffMoellerHandlerImpl):
 
 
 @nexus_handler
-class LongitudeTimeHoffMoellerSparkHandlerImpl(BaseHoffMoellerHandlerImpl):
+class LongitudeTimeHoffMoellerSparkHandlerImpl(BaseHoffMoellerSparkHandlerImpl):
     name = "Longitude/Time HofMoeller Spark"
     path = "/longitudeTimeHofMoellerSpark"
     description = "Computes a longitude/time HofMoeller plot given an arbitrary geographical area and time range"
-    params = BaseHoffMoellerHandlerImpl.params
+    params = BaseHoffMoellerSparkHandlerImpl.params
     singleton = True
 
-    def __init__(self):
+    def __init__(self, **kwargs):
         self._latlon = 1  # 0 for latitude-time map; 1 for longitude-time map
-        BaseHoffMoellerHandlerImpl.__init__(self)
+        BaseHoffMoellerSparkHandlerImpl.__init__(self, **kwargs)
 
     def calc(self, compute_options, **args):
         ds, bbox, start_time, end_time = self.parse_arguments(compute_options)

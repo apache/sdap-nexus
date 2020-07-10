@@ -21,7 +21,8 @@ from datetime import datetime
 from pytz import timezone
 from shapely.geometry import box
 
-from webservice.NexusHandler import NexusHandler, nexus_handler
+from webservice.NexusHandler import nexus_handler
+from webservice.algorithms.NexusCalcHandler import NexusCalcHandler
 from webservice.webmodel import NexusResults, NexusProcessingException
 
 SENTINEL = 'STOP'
@@ -30,7 +31,7 @@ tile_service = None
 
 
 @nexus_handler
-class LongitudeLatitudeMapHandlerImpl(NexusHandler):
+class LongitudeLatitudeMapCalcHandlerImpl(NexusCalcHandler):
     name = "Longitude/Latitude Time Average Map"
     path = "/longitudeLatitudeMap"
     description = "Computes a Latitude/Longitude Time Average plot given an arbitrary geographical area and time range"
@@ -74,7 +75,7 @@ class LongitudeLatitudeMapHandlerImpl(NexusHandler):
     singleton = True
 
     def __init__(self):
-        NexusHandler.__init__(self, skipCassandra=True)
+        NexusCalcHandler.__init__(self, skipCassandra=True)
         self.log = logging.getLogger(__name__)
 
     def parse_arguments(self, request):
@@ -131,7 +132,7 @@ class LongitudeLatitudeMapHandlerImpl(NexusHandler):
             "endTime": datetime.utcfromtimestamp(end_seconds_from_epoch).strftime('%Y-%m-%dT%H:%M:%SZ')
         }
         return LongitudeLatitudeMapResults(
-            results=LongitudeLatitudeMapHandlerImpl.results_to_dicts(point_avg_over_time), meta=None,
+            results=LongitudeLatitudeMapCalcHandlerImpl.results_to_dicts(point_avg_over_time), meta=None,
             **kwargs)
 
     @staticmethod

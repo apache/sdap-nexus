@@ -21,13 +21,13 @@ import requests
 import BaseDomsHandler
 import config
 import values
-from webservice.NexusHandler import NexusHandler as BaseHandler
+from webservice.algorithms.NexusCalcHandler import NexusCalcHandler as BaseHandler
 from webservice.NexusHandler import nexus_handler
 from webservice.webmodel import cached
 
 
 @nexus_handler
-class DomsDatasetListQueryHandler(BaseDomsHandler.BaseDomsQueryHandler):
+class DomsDatasetListQueryHandler(BaseDomsHandler.BaseDomsQueryCalcHandler):
     name = "DOMS Dataset Listing"
     path = "/domslist"
     description = ""

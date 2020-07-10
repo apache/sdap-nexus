@@ -27,7 +27,7 @@ class PlotTypes:
 
 
 @nexus_handler
-class DomsResultsPlotHandler(BaseDomsHandler.BaseDomsQueryHandler):
+class DomsResultsPlotHandler(BaseDomsHandler.BaseDomsQueryCalcHandler):
     name = "DOMS Results Plotting"
     path = "/domsplot"
     description = ""
@@ -35,7 +35,7 @@ class DomsResultsPlotHandler(BaseDomsHandler.BaseDomsQueryHandler):
     singleton = True
 
     def __init__(self):
-        BaseDomsHandler.BaseDomsQueryHandler.__init__(self)
+        BaseDomsHandler.BaseDomsQueryCalcHandler.__init__(self)
 
     def calc(self, computeOptions, **args):
         id = computeOptions.get_argument("id", None)

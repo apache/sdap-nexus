@@ -14,12 +14,12 @@
 # limitations under the License.
 
 
-from webservice.NexusHandler import NexusHandler
+from webservice.algorithms.NexusCalcHandler import NexusCalcHandler
 from webservice.webmodel import NexusResults
 
 
 # @nexus_handler
-class ChunkSearchHandlerImpl(NexusHandler):
+class ChunkSearchCalcHandlerImpl(NexusCalcHandler):
     name = "Data Tile Search"
     path = "/tiles"
     description = "Lists dataset tiles given a geographical area and time range"
@@ -63,7 +63,7 @@ class ChunkSearchHandlerImpl(NexusHandler):
     }
 
     def __init__(self):
-        NexusHandler.__init__(self, skipCassandra=True)
+        NexusCalcHandler.__init__(self, skipCassandra=True)
 
     def calc(self, computeOptions, **args):
         minLat = computeOptions.get_min_lat()

@@ -1,5 +1,5 @@
-      cassandra-driver==3.5.0
-      pysolr==3.7.0
-      requests
-      nexusproto
-      Shapely
+cassandra-driver==3.5.0
+pysolr==3.7.0
+requests
+nexusproto
+Shapely

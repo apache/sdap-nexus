@@ -20,7 +20,8 @@
 import sys
 import numpy as np
 from time import time
-from webservice.NexusHandler import NexusHandler, DEFAULT_PARAMETERS_SPEC
+from webservice.NexusHandler import DEFAULT_PARAMETERS_SPEC
+from webservice.algorithms.NexusCalcHandler import NexusCalcHandler
 from webservice.webmodel import NexusResults, NoDataException
 from netCDF4 import Dataset
 
@@ -29,7 +30,7 @@ from netCDF4 import Dataset
 
 
 # @nexus_handler
-class TimeAvgMapHandlerImpl(NexusHandler):
+class TimeAvgMapCalcHandlerImpl(NexusCalcHandler):
     name = "Time Average Map"
     path = "/timeAvgMap"
     description = "Computes a Latitude/Longitude Time Average plot given an arbitrary geographical area and time range"
@@ -37,7 +38,7 @@ class TimeAvgMapHandlerImpl(NexusHandler):
     singleton = True
 
     def __init__(self):
-        NexusHandler.__init__(self, skipCassandra=False)
+        NexusCalcHandler.__init__(self, skipCassandra=False)
 
     def _find_native_resolution(self):
         # Get a quick set of tiles (1 degree at center of box) at 1 time stamp

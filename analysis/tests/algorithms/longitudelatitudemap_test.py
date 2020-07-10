@@ -18,14 +18,14 @@ import time
 import unittest
 from multiprocessing.pool import ThreadPool
 
-from webservice.NexusHandler import AlgorithmModuleWrapper
 from mock import MagicMock
 from nexustiles.nexustiles import NexusTileService
 from shapely.geometry import box
 from tornado.testing import bind_unused_port
 from tornado.web import Application
-from webservice.webapp import ModularNexusHandlerWrapper
+#from webapp import ModularNexusHandlerWrapper
 from webservice.webmodel import NexusRequestObject
+from webservice.nexus_tornado.request.handlers import NexusRequestHandler
 
 from webservice.algorithms import LongitudeLatitudeMap
 
@@ -54,18 +54,18 @@ class TestLongitudeLatitudeMap(unittest.TestCase):
         boxes = self.tile_service.get_distinct_bounding_boxes_in_polygon(bounding, ds,
                                                                          start_seconds_from_epoch,
                                                                          end_seconds_from_epoch)
-        print LongitudeLatitudeMap.LongitudeLatitudeMapHandlerImpl.results_to_dicts(
+        print LongitudeLatitudeMap.LongitudeLatitudeMapCalcHandlerImpl.results_to_dicts(
             LongitudeLatitudeMap.lat_lon_map_driver(bounding, start_seconds_from_epoch, end_seconds_from_epoch, ds,
                                                     [a_box.bounds for a_box in boxes]))
 
 
 class HttpIntegrationTest(unittest.TestCase):
     def get_app(self):
-        path = LongitudeLatitudeMap.LongitudeLatitudeMapHandlerImpl.path
-        algorithm = AlgorithmModuleWrapper(LongitudeLatitudeMap.LongitudeLatitudeMapHandlerImpl)
+        path = LongitudeLatitudeMap.LongitudeLatitudeMapCalcHandlerImpl.path
+        algorithm = LongitudeLatitudeMap.LongitudeLatitudeMapCalcHandlerImpl
         thread_pool = ThreadPool(processes=1)
         return Application(
-            [(path, ModularNexusHandlerWrapper, dict(clazz=algorithm, algorithm_config=None, thread_pool=thread_pool))],
+            [(path, NexusRequestHandler, dict(clazz=algorithm, algorithm_config=None, thread_pool=thread_pool))],
             default_host=bind_unused_port()
         )
 
@@ -86,7 +86,7 @@ class HttpIntegrationTest(unittest.TestCase):
         request_handler_mock = MagicMock()
         request_handler_mock.get_argument.side_effect = get_argument
         request = NexusRequestObject(request_handler_mock)
-        handler_impl = LongitudeLatitudeMap.LongitudeLatitudeMapHandlerImpl()
+        handler_impl = LongitudeLatitudeMap.LongitudeLatitudeMapCalcHandlerImpl()
 
         response = handler_impl.calc(request)
 

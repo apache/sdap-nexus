@@ -19,13 +19,13 @@ import requests
 
 import BaseDomsHandler
 import config
-from webservice.NexusHandler import NexusHandler as BaseHandler
+from webservice.algorithms.NexusCalcHandler import NexusCalcHandler as BaseHandler
 from webservice.NexusHandler import nexus_handler
 from webservice.webmodel import DatasetNotFoundException
 
 
 @nexus_handler
-class DomsMetadataQueryHandler(BaseDomsHandler.BaseDomsQueryHandler):
+class DomsMetadataQueryHandler(BaseDomsHandler.BaseDomsQueryCalcHandler):
     name = "DOMS Metadata Listing"
     path = "/domsmetadata"
     description = ""

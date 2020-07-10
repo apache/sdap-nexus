@@ -26,7 +26,7 @@ from pytz import timezone, UTC
 
 import config
 import geo
-from webservice.NexusHandler import NexusHandler as BaseHandler
+from webservice.algorithms.NexusCalcHandler import NexusCalcHandler as BaseHandler
 from webservice.webmodel import NexusResults
 
 EPOCH = timezone('UTC').localize(datetime(1970, 1, 1))
@@ -44,7 +44,7 @@ import netCDF4
 import tempfile
 
 
-class BaseDomsQueryHandler(BaseHandler):
+class BaseDomsQueryCalcHandler(BaseHandler):
     def __init__(self):
         BaseHandler.__init__(self)
 

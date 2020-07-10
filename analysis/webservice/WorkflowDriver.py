@@ -15,7 +15,7 @@
 
 import argparse
 
-from algorithms.MapFetchHandler import MapFetchHandler
+from algorithms.MapFetchHandler import MapFetchCalcHandler
 
 
 def start(args):
@@ -30,7 +30,7 @@ def start(args):
     interp = args.i
     time_interval = args.t
 
-    map = MapFetchHandler()
+    map = MapFetchCalcHandler()
     map.generate(dataset_shortname, granule_name, prefix, ct, interp, _min, _max, width, height, time_interval)
 
 

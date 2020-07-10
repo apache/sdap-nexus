@@ -22,22 +22,17 @@ from datetime import datetime
 import numpy as np
 from nexustiles.nexustiles import NexusTileService
 
-from webservice.NexusHandler import nexus_handler, SparkHandler, DEFAULT_PARAMETERS_SPEC
+from webservice.NexusHandler import nexus_handler, DEFAULT_PARAMETERS_SPEC
+from webservice.algorithms_spark.NexusCalcSparkHandler import NexusCalcSparkHandler
 from webservice.webmodel import NexusResults, NexusProcessingException, NoDataException
 
 
 @nexus_handler
-class ClimMapSparkHandlerImpl(SparkHandler):
+class ClimMapNexusSparkHandlerImpl(NexusCalcSparkHandler):
     name = "Climatology Map Spark"
     path = "/climMapSpark"
     description = "Computes a Latitude/Longitude Time Average map for a given month given an arbitrary geographical area and year range"
     params = DEFAULT_PARAMETERS_SPEC
-    singleton = True
-
-    def __init__(self):
-        SparkHandler.__init__(self)
-        self.log = logging.getLogger(__name__)
-        # self.log.setLevel(logging.DEBUG)
 
     @staticmethod
     def _map(tile_in_spark):
@@ -66,13 +61,13 @@ class ClimMapSparkHandlerImpl(SparkHandler):
             # print 'nexus call start at time %f' % t1
             # sys.stdout.flush()
             nexus_tiles = \
-                ClimMapSparkHandlerImpl.query_by_parts(tile_service,
-                                                       min_lat, max_lat,
-                                                       min_lon, max_lon,
-                                                       ds,
-                                                       t_start,
-                                                       t_end,
-                                                       part_dim=2)
+                ClimMapNexusSparkHandlerImpl.query_by_parts(tile_service,
+                                                            min_lat, max_lat,
+                                                            min_lon, max_lon,
+                                                            ds,
+                                                            t_start,
+                                                            t_end,
+                                                            part_dim=2)
             # nexus_tiles = \
             #    tile_service.get_tiles_bounded_by_box(min_lat, max_lat, 
             #                                          min_lon, max_lon, 

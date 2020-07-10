@@ -16,6 +16,17 @@
 
 import logging
 import os
+import ClimMapSpark
+import CorrMapSpark
+import DailyDifferenceAverageSpark
+import HofMoellerSpark
+import Matchup
+import MaximaMinimaSpark
+import NexusCalcSparkHandler
+import TimeAvgMapSpark
+import TimeSeriesSpark
+import VarianceSpark
+
 
 log = logging.getLogger(__name__)
 

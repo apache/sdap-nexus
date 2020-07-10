@@ -30,7 +30,7 @@ ISO_8601 = '%Y-%m-%dT%H:%M:%S%z'
 
 
 @nexus_handler
-class DomsResultsRetrievalHandler(BaseDomsHandler.BaseDomsQueryHandler):
+class DomsResultsRetrievalHandler(BaseDomsHandler.BaseDomsQueryCalcHandler):
     name = "DOMS In Situ Subsetter"
     path = "/domsinsitusubset"
     description = "Subset a DOMS in situ source given the search domain."
@@ -109,7 +109,7 @@ class DomsResultsRetrievalHandler(BaseDomsHandler.BaseDomsQueryHandler):
     singleton = True
 
     def __init__(self):
-        BaseDomsHandler.BaseDomsQueryHandler.__init__(self)
+        BaseDomsHandler.BaseDomsQueryCalcHandler.__init__(self)
         self.log = logging.getLogger(__name__)
 
     def parse_arguments(self, request):

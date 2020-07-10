@@ -32,7 +32,7 @@ from webservice.NexusHandler import nexus_handler
 
 
 @nexus_handler
-class CombinedDomsMatchupQueryHandler(BaseDomsHandler.BaseDomsQueryHandler):
+class CombinedDomsMatchupQueryHandler(BaseDomsHandler.BaseDomsQueryCalcHandler):
     name = "Experimental Combined DOMS In-Situ Matchup"
     path = "/domsmatchup"
     description = ""
@@ -40,7 +40,7 @@ class CombinedDomsMatchupQueryHandler(BaseDomsHandler.BaseDomsQueryHandler):
     singleton = True
 
     def __init__(self):
-        BaseDomsHandler.BaseDomsQueryHandler.__init__(self)
+        BaseDomsHandler.BaseDomsQueryCalcHandler.__init__(self)
 
     def fetchData(self, endpoints, startTime, endTime, bbox, depth_min, depth_max, platforms):
 

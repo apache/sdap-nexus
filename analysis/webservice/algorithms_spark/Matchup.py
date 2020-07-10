@@ -33,7 +33,8 @@ from shapely.geometry import Point
 from shapely.geometry import box
 from shapely.geos import WKTReadingError
 
-from webservice.NexusHandler import SparkHandler, nexus_handler
+from webservice.NexusHandler import nexus_handler
+from webservice.algorithms_spark.NexusCalcSparkHandler import NexusCalcSparkHandler
 from webservice.algorithms.doms import config as edge_endpoints
 from webservice.algorithms.doms import values as doms_values
 from webservice.algorithms.doms.BaseDomsHandler import DomsQueryResults
@@ -50,7 +51,7 @@ def iso_time_to_epoch(str_time):
 
 
 @nexus_handler
-class Matchup(SparkHandler):
+class Matchup(NexusCalcSparkHandler):
     name = "Matchup"
     path = "/match_spark"
     description = "Match measurements between two or more datasets"
@@ -130,8 +131,8 @@ class Matchup(SparkHandler):
     }
     singleton = True
 
-    def __init__(self):
-        SparkHandler.__init__(self, skipCassandra=True)
+    def __init__(self, algorithm_config=None, sc=None):
+        NexusCalcSparkHandler.__init__(self, algorithm_config=algorithm_config, sc=sc, skipCassandra=True)
         self.log = logging.getLogger(__name__)
 
     def parse_arguments(self, request):

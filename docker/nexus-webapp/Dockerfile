@@ -14,6 +14,9 @@
 # limitations under the License.
 
 FROM nexusjpl/alpine-pyspark:2.4.4
+#FROM python:2.7
+#FROM alpine:3.12
+
 
 MAINTAINER Apache SDAP "dev@sdap.apache.org"
 
@@ -42,7 +45,8 @@ RUN apk add --update --no-cache \
     python3 \
     bash==4.4.19-r1 \
     libc-dev \
-    libressl2.7-libcrypto 
+    libressl2.7-libcrypto
+
 RUN  apk upgrade musl
 
 WORKDIR /tmp
