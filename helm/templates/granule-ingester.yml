@@ -27,8 +27,8 @@ spec:
               value: {{ .Values.rabbitmq.fullnameOverride }}
             - name: CASSANDRA_CONTACT_POINTS
               value: sdap-cassandra
-            - name: SOLR_HOST_AND_PORT
-              value: http://sdap-solr:8983
+            - name: ZK_HOST_AND_PORT
+              value: zk-cs:2181
           resources:
             requests:
               cpu: {{ .Values.ingestion.granuleIngester.cpu }}
