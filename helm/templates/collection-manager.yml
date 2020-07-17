@@ -19,7 +19,7 @@ spec:
     spec:
       containers:
         - image: {{ .Values.ingestion.collectionManager.image }}
-          imagePullPolicy: Always
+          imagePullPolicy: IfNotPresent 
           name: collection-manager
           env:
             - name: RABBITMQ_USERNAME
@@ -30,9 +30,9 @@ spec:
               value: {{ .Values.rabbitmq.fullnameOverride }}
             - name: COLLECTIONS_PATH
               value: {{ include "nexus.collectionsConfig.mountPath" . }}/collections.yml
-            {{- if $history.url }}
+            {{- if $history.solrEnabled }}
             - name: HISTORY_URL
-              value: {{ .Values.ingestion.history.url}}
+              value: {{ include "nexus.urls.solr" . }}
             {{- else }}
             - name: HISTORY_PATH
               value: {{ include "nexus.history.mountPath" . }}
@@ -46,7 +46,7 @@ spec:
               memory: {{ .Values.ingestion.collectionManager.memory }}
           volumeMounts:
 {{ include "nexus.ingestion.dataVolumeMount" . | indent 12 }}
-            {{- if not $history.url }}
+            {{- if not $history.solrEnabled }}
             - name: history-volume
               mountPath: {{ include "nexus.history.mountPath" . }}
             {{- end }}
@@ -57,7 +57,7 @@ spec:
         - name: collections-config-volume
           configMap:
             name: {{ include "nexus.collectionsConfig.configmapName" . }}
-        {{- if not $history.url }}
+        {{- if not $history.solrEnabled }}
         - name: history-volume
           persistentVolumeClaim:
             claimName: history-volume-claim

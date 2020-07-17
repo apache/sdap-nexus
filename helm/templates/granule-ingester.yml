@@ -17,6 +17,7 @@ spec:
     spec:
       containers:
         - image: {{ .Values.ingestion.granuleIngester.image }}
+          imagePullPolicy: IfNotPresent
           name: granule-ingester
           env:
             - name: RABBITMQ_USERNAME
@@ -26,9 +27,17 @@ spec:
             - name: RABBITMQ_HOST
               value: {{ .Values.rabbitmq.fullnameOverride }}
             - name: CASSANDRA_CONTACT_POINTS
-              value: sdap-cassandra
-            - name: SOLR_HOST_AND_PORT
-              value: http://sdap-solr:8983
+              value: {{ .Release.Name }}-cassandra
+            - name: CASSANDRA_USERNAME
+              value: cassandra
+            - name: CASSANDRA_PASSWORD
+              value: cassandra
+            - name: ZK_HOST_AND_PORT
+              value: {{ include "nexus.urls.zookeeper" . }}
+            {{ if .Values.ingestion.granuleIngester.maxConcurrency }}
+            - name: MAX_CONCURRENCY
+              value: "{{ .Values.ingestion.granuleIngester.maxConcurrency }}"
+            {{ end }}
           resources:
             requests:
               cpu: {{ .Values.ingestion.granuleIngester.cpu }}
