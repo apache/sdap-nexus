@@ -1,0 +1,13 @@
+apiVersion: v1
+data:
+  init.cql: |
+    CREATE KEYSPACE IF NOT EXISTS nexustiles WITH REPLICATION = { 'class': 'SimpleStrategy', 'replication_factor': 1 };
+
+    CREATE TABLE IF NOT EXISTS nexustiles.sea_surface_temp  (
+    tile_id    	uuid PRIMARY KEY,
+    tile_blob  	blob
+    );
+kind: ConfigMap
+metadata:
+  name: init-cassandra
+  namespace: {{ .Release.Namespace }}

@@ -31,7 +31,7 @@ ingestion:
 
   granuleIngester:
     replicas: 2
-    image: nexusjpl/granule-ingester:0.0.1
+    image: nexusjpl/granule-ingester:0.0.3
 
     ## cpu refers to both request and limit
     cpu: 1
@@ -40,7 +40,7 @@ ingestion:
     memory: 1Gi
 
   collectionManager:
-    image: nexusjpl/collection-manager:0.0.2
+    image: nexusjpl/collection-manager:0.0.3
 
     ## cpu refers to both request and limit
     cpu: 0.5
@@ -78,53 +78,55 @@ ingestion:
 
     ## Load the Collections Config file from a local path
     ## This is a future option that is not yet supported!
-    # localDir: /Users/edford/Desktop/collections.yml
+    #configMap: collections-config
 
     ## Load the Collections Config file from a git repository
     ## Until localDir is supported, this configuration is mandatory
     git:
-
 
       ## This should be an https repository url of the form https://github.com/username/repo.git
       url:
 
       branch: master
 
-      ## token is not yet supported!
       # token: someToken
 
   ## Where to store ingestion history
   ## Defaults to a using a history directory, stored on a PVC using the storageClass defined in this file above
   history:
     ## Store ingestion history in a solr database instead of a filesystem directory
-    # url: http://history-solr
+     solrEnabled: true
 
-cassandra:
-  replicas: 2
-  storage: 13Gi
-  requests:
-    cpu: 1
-    memory: 3Gi
-  limits:
-    cpu: 1
-    memory: 3Gi
+external:
+  solrHostAndPort:   
+  zookeeperHostAndPort:
+
+solrInitEnabled: true
 
 solr:
-  replicas: 2
-  storage: 10Gi
-  heap: 4g
-  requests:
-    memory: 5Gi
-    cpu: 1
-  limits:
-    memory: 5Gi
-    cpu: 1
-
-zookeeper:
-  replicas: 3
-  memory: 1Gi
-  cpu: 0.5
-  storage: 8Gi
+  enabled: true
+  replicaCount: 3
+  volumeClaimTemplates:
+    storageClassName: hostpath
+    storageSize: 10Gi
+  resources:
+    requests:
+      memory: 2Gi
+      cpu: 1
+    limits:
+      memory: 2Gi
+      cpu: 1
+  zookeeper:
+    replicaCount: 3
+    persistence:
+      storageClass: hostpath
+    resources:
+      limits:
+        memory: 1Gi
+        cpu: 0.5
+      requests:
+        memory: 1Gi
+        cpu: 0.5
 
 ingressEnabled: false
 
@@ -150,6 +152,9 @@ nginx-ingress:
 rabbitmq:
   ## fullnameOverride sets the name of the RabbitMQ service
   ## with which the ingestion components will communicate.
+  enabled: true
+  persistence:
+    storageClass: hostpath
   fullnameOverride: rabbitmq
   replicaCount: 1
   auth:
@@ -157,3 +162,22 @@ rabbitmq:
     password: guest
   ingress:
     enabled: true
+
+cassandra:
+  enabled: true
+  initDBConfigMap: init-cassandra
+  dbUser:
+    user: cassandra
+    password: cassandra
+  cluster:
+    replicaCount: 1
+  persistence:
+    storageClass: hostpath
+    size: 8Gi
+  resources:
+    requests:
+      cpu: 1
+      memory: 8Gi
+    limits:
+      cpu: 1
+      memory: 8Gi
