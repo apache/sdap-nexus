@@ -110,21 +110,29 @@ cassandra:
     memory: 3Gi
 
 solr:
-  replicas: 2
+  replicaCount: 3
   storage: 10Gi
-  heap: 4g
-  requests:
-    memory: 5Gi
-    cpu: 1
-  limits:
-    memory: 5Gi
-    cpu: 1
-
-zookeeper:
-  replicas: 3
-  memory: 1Gi
-  cpu: 0.5
-  storage: 8Gi
+  volumeClaimTemplates:
+    storageClassName: hostpath
+    storageSize: 10Gi
+  resources:
+    requests:
+      memory: 2Gi
+      cpu: 1
+    limits:
+      memory: 2Gi
+      cpu: 1
+  zookeeper:
+    replicaCount: 3
+    persistence:
+      storageClass: hostpath
+    resources:
+      limits:
+        memory: 1Gi
+        cpu: 0.5
+      requests:
+        memory: 1Gi
+        cpu: 0.5
 
 ingressEnabled: false
 

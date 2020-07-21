@@ -17,6 +17,7 @@ spec:
     spec:
       containers:
         - image: {{ .Values.ingestion.granuleIngester.image }}
+          imagePullPolicy: IfNotPresent
           name: granule-ingester
           env:
             - name: RABBITMQ_USERNAME
@@ -28,7 +29,7 @@ spec:
             - name: CASSANDRA_CONTACT_POINTS
               value: sdap-cassandra
             - name: ZK_HOST_AND_PORT
-              value: zk-cs:2181
+              value: {{ .Release.Namespace }}-zookeeper:2181
           resources:
             requests:
               cpu: {{ .Values.ingestion.granuleIngester.cpu }}
