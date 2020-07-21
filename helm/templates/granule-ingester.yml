@@ -30,6 +30,10 @@ spec:
               value: sdap-cassandra
             - name: ZK_HOST_AND_PORT
               value: {{ .Release.Name }}-zookeeper:2181
+            {{ if .Values.ingestion.granuleIngester.maxConcurrency }}
+            - name: MAX_CONCURRENCY
+              value: "{{ .Values.ingestion.granuleIngester.maxConcurrency }}"
+            {{ end }}
           resources:
             requests:
               cpu: {{ .Values.ingestion.granuleIngester.cpu }}
