@@ -157,6 +157,8 @@ nginx-ingress:
 rabbitmq:
   ## fullnameOverride sets the name of the RabbitMQ service
   ## with which the ingestion components will communicate.
+  persistence:
+    storageClass: hostpath
   fullnameOverride: rabbitmq
   replicaCount: 1
   auth:
