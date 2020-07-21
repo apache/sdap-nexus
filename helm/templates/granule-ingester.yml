@@ -29,7 +29,7 @@ spec:
             - name: CASSANDRA_CONTACT_POINTS
               value: sdap-cassandra
             - name: ZK_HOST_AND_PORT
-              value: {{ .Release.Namespace }}-zookeeper:2181
+              value: {{ .Release.Name }}-zookeeper:2181
           resources:
             requests:
               cpu: {{ .Values.ingestion.granuleIngester.cpu }}

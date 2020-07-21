@@ -111,7 +111,6 @@ cassandra:
 
 solr:
   replicaCount: 3
-  storage: 10Gi
   volumeClaimTemplates:
     storageClassName: hostpath
     storageSize: 10Gi
