@@ -10,7 +10,6 @@ dependencies:
   - name: solr
     version: 1.5.2
     repository: http://storage.googleapis.com/kubernetes-charts-incubator
-    condition: ingestion.enabled
 
   
 
