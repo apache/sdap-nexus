@@ -12,7 +12,7 @@ spec:
   imagePullPolicy: IfNotPresent
   mainApplicationFile: local:///incubator-sdap-nexus/analysis/webservice/webapp.py
   arguments:
-    - "--solr-host={{ .Release.Name }}-solr-svc:8983"
+    - "--cassandra-host=sdap-cassandra --solr-host={{ .Release.Name }}-solr-svc:8983"
   sparkVersion: "2.4.4"
   restartPolicy:
     type: OnFailure
