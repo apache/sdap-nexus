@@ -1,5 +1,5 @@
 [cassandra]
-host=localhost
+host=sdap-cassandra
 port=9042
 keyspace=nexustiles
 local_datacenter=datacenter1

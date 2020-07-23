@@ -17,6 +17,7 @@ import logging
 import uuid
 from ConfigParser import NoOptionError
 
+from cassandra.auth import PlainTextAuthProvider
 import nexusproto.DataTile_pb2 as nexusproto
 import numpy as np
 from cassandra.auth import PlainTextAuthProvider
