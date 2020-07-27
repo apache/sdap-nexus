@@ -10,4 +10,4 @@ data:
 kind: ConfigMap
 metadata:
   name: init-cassandra
-  namespace: sdap
+  namespace: {{ .Release.Namespace }}
