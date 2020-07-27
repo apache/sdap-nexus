@@ -162,6 +162,9 @@ class CassandraProxy(object):
         self.__cass_protocol_version = config.getint("cassandra", "protocol_version")
         self.__cass_dc_policy = config.get("cassandra", "dc_policy")
 
+        logger.info("Setting cassandra host to " + self.__cass_url)
+        logger.info("Setting cassandra username to " + self.__cass_username)
+
         try:
             self.__cass_port = config.getint("cassandra", "port")
         except NoOptionError:
