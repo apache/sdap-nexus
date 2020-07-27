@@ -99,16 +99,6 @@ ingestion:
     ## Store ingestion history in a solr database instead of a filesystem directory
     # url: http://history-solr
 
-cassandra:
-  replicas: 2
-  storage: 13Gi
-  requests:
-    cpu: 1
-    memory: 3Gi
-  limits:
-    cpu: 1
-    memory: 3Gi
-
 solr:
   replicaCount: 3
   volumeClaimTemplates:
@@ -166,3 +156,21 @@ rabbitmq:
     password: guest
   ingress:
     enabled: true
+
+cassandra:
+  initDBConfigMap: init-cassandra
+  dbUser:
+    user: cassandra
+    password: cassandra
+  cluster:
+    replicaCount: 1
+  persistence:
+    storageClass: hostpath
+    size: 8Gi
+  resources:
+    requests:
+      cpu: 1
+      memory: 8Gi
+    limits:
+      cpu: 1
+      memory: 8Gi

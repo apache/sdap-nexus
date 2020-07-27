@@ -28,6 +28,10 @@ spec:
               value: {{ .Values.rabbitmq.fullnameOverride }}
             - name: CASSANDRA_CONTACT_POINTS
               value: sdap-cassandra
+            - name: CASSANDRA_USERNAME
+              value: cassandra
+            - name: CASSANDRA_PASSWORD
+              value: cassandra
             - name: ZK_HOST_AND_PORT
               value: {{ .Release.Name }}-zookeeper:2181
             {{ if .Values.ingestion.granuleIngester.maxConcurrency }}
