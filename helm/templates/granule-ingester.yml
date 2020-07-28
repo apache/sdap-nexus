@@ -27,7 +27,7 @@ spec:
             - name: RABBITMQ_HOST
               value: {{ .Values.rabbitmq.fullnameOverride }}
             - name: CASSANDRA_CONTACT_POINTS
-              value: sdap-cassandra
+              value: {{ .Release.Name }}-cassandra
             - name: CASSANDRA_USERNAME
               value: cassandra
             - name: CASSANDRA_PASSWORD
