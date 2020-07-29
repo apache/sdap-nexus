@@ -97,7 +97,7 @@ ingestion:
   ## Defaults to a using a history directory, stored on a PVC using the storageClass defined in this file above
   history:
     ## Store ingestion history in a solr database instead of a filesystem directory
-    # url: http://history-solr
+     solrEnabled: true
 
 solr:
   replicaCount: 3
