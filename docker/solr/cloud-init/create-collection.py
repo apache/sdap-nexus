@@ -142,5 +142,5 @@ finally:
 
 # We're done, do nothing forever.
 logging.info("Done.")
-# while True:
-#     time.sleep(987654321)
+while True:
+    time.sleep(987654321)

@@ -1,12 +1,12 @@
-apiVersion: batch/v1
-kind: Job
+apiVersion: apps/v1
+kind: Deployment
 metadata:
   name: solr-create-collection
 spec:
-#  selector:
-#    matchLabels:
-#      app: solr-create-collection # has to match .spec.template.metadata.labels
-#  replicas: 1
+  selector:
+    matchLabels:
+      app: solr-create-collection # has to match .spec.template.metadata.labels
+  replicas: 1
   template:
     metadata:
       labels:
@@ -18,7 +18,7 @@ spec:
         image: nexusjpl/solr-cloud-init:1.0.1
         resources:
           requests:
-            memory: "1Gi"
+            memory: "0.5Gi"
             cpu: "0.25"
         env:
         - name: MINIMUM_NODES
@@ -31,4 +31,4 @@ spec:
           value: "{{ .Release.Name }}-zookeeper:2181/solr"
         - name: CREATE_COLLECTION_PARAMS
           value: "name=nexustiles&numShards=$(MINIMUM_NODES)&waitForFinalState=true"
-      restartPolicy: OnFailure
+      restartPolicy: Always
