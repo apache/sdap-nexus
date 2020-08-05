@@ -1,3 +1,4 @@
+{{ if .Values.solrInitEnabled }}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -23,12 +24,11 @@ spec:
         env:
         - name: MINIMUM_NODES
           value: "{{ .Values.solr.replicaCount }}"
-        - name: SOLR_HOST
-          value: "{{ .Release.Name }}-solr-svc"
         - name: SDAP_SOLR_URL
-          value: "http://$(SOLR_HOST):8983/solr/"
+          value: {{ include "nexus.urls.solr" . }}/solr/
         - name: SDAP_ZK_SOLR
-          value: "{{ .Release.Name }}-zookeeper:2181/solr"
+          value: {{ include "nexus.urls.zookeeper" . }}/solr
         - name: CREATE_COLLECTION_PARAMS
           value: "name=nexustiles&numShards=$(MINIMUM_NODES)&waitForFinalState=true"
       restartPolicy: Always
+{{ end }}

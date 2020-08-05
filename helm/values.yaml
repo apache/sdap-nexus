@@ -99,7 +99,14 @@ ingestion:
     ## Store ingestion history in a solr database instead of a filesystem directory
      solrEnabled: true
 
+external:
+  solrHostAndPort:   
+  zookeeperHostAndPort:
+
+solrInitEnabled: true
+
 solr:
+  enabled: true
   replicaCount: 3
   volumeClaimTemplates:
     storageClassName: hostpath
@@ -158,6 +165,7 @@ rabbitmq:
     enabled: true
 
 cassandra:
+  enabled: true
   initDBConfigMap: init-cassandra
   dbUser:
     user: cassandra

@@ -15,7 +15,7 @@ spec:
     - --cassandra-host={{ .Release.Name }}-cassandra
     - --cassandra-username=cassandra
     - --cassandra-password=cassandra
-    - --solr-host={{ .Release.Name }}-solr-svc:8983
+    - --solr-host={{ include "nexus.urls.solr" . }}
   sparkVersion: "2.4.4"
   restartPolicy:
     type: OnFailure

@@ -32,7 +32,7 @@ spec:
               value: {{ include "nexus.collectionsConfig.mountPath" . }}/collections.yml
             {{- if $history.solrEnabled }}
             - name: HISTORY_URL
-              value: http://{{ .Release.Name }}-solr-svc:8983
+              value: {{ include "nexus.urls.solr" . }}
             {{- else }}
             - name: HISTORY_PATH
               value: {{ include "nexus.history.mountPath" . }}

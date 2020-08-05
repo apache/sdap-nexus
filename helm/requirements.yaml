@@ -10,7 +10,9 @@ dependencies:
   - name: solr
     version: 1.5.2
     repository: http://storage.googleapis.com/kubernetes-charts-incubator
+    condition: solr.enabled
   - name: cassandra
     version: 5.5.3
     repository: https://charts.bitnami.com/bitnami
+    condition: cassandra.enabled
 
