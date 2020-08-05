@@ -132,7 +132,7 @@ class Matchup(NexusCalcSparkHandler):
     singleton = True
 
     def __init__(self, algorithm_config=None, sc=None):
-        NexusCalcSparkHandler.__init__(self, algorithm_config=algorithm_config, sc=sc, skipCassandra=True)
+        NexusCalcSparkHandler.__init__(self, algorithm_config=algorithm_config, sc=sc)
         self.log = logging.getLogger(__name__)
 
     def parse_arguments(self, request):

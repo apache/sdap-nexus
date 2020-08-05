@@ -72,7 +72,7 @@ class DailyDifferenceAverageNexusImplSpark(NexusCalcSparkHandler):
     singleton = True
 
     def __init__(self, **kwargs):
-        NexusCalcSparkHandler.__init__(self, skipCassandra=True, **kwargs)
+        NexusCalcSparkHandler.__init__(self, **kwargs)
         self.log = logging.getLogger(__name__)
 
     def parse_arguments(self, request):
