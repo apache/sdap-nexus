@@ -20,6 +20,7 @@ import ClimMapSpark
 import CorrMapSpark
 import DailyDifferenceAverageSpark
 import HofMoellerSpark
+import Matchup
 import MaximaMinimaSpark
 import NexusCalcSparkHandler
 import TimeAvgMapSpark
@@ -42,6 +43,11 @@ def module_exists(module_name):
 if module_exists("pyspark"):
     try:
         import CorrMapSpark
+    except ImportError:
+        pass
+
+    try:
+        import Matchup
     except ImportError:
         pass
 
