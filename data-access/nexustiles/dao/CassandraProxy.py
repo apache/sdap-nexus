@@ -161,9 +161,6 @@ class CassandraProxy(object):
         self.__cass_protocol_version = config.getint("cassandra", "protocol_version")
         self.__cass_dc_policy = config.get("cassandra", "dc_policy")
 
-        logger.info("Setting cassandra host to " + self.__cass_url)
-        logger.info("Setting cassandra username to " + self.__cass_username)
-
         try:
             self.__cass_port = config.getint("cassandra", "port")
         except NoOptionError:
@@ -176,7 +173,6 @@ class CassandraProxy(object):
                 self.__open()
 
     def __open(self):
-        logger.info("Connecting to cassandra at " + self.__cass_url)
         if self.__cass_dc_policy == 'DCAwareRoundRobinPolicy':
             dc_policy = DCAwareRoundRobinPolicy(self.__cass_local_DC)
         elif self.__cass_dc_policy == 'WhiteListRoundRobinPolicy':
