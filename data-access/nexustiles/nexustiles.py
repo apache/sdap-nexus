@@ -102,10 +102,10 @@ class NexusTileService(object):
 
     def override_config(self, config):
         for section in config.sections():
-            if self._config.has_section(section): # only override preexisting section, ignores the other
+            if self._config.has_section(section):  # only override preexisting section, ignores the other
                 for option in config.options(section):
-                    self._config.set(section, option, config.get(section, option))
-
+                    if config.get(section, option) is not None:
+                        self._config.set(section, option, config.get(section, option))
 
     def get_dataseries_list(self, simple=False):
         if simple:

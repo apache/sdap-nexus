@@ -13,18 +13,21 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import os
 import ConfigParser
 import importlib
 import logging
 import sys
+from functools import partial
+
 import pkg_resources
 import tornado.web
-import webservice.algorithms_spark.NexusCalcSparkHandler
 from tornado.options import define, options, parse_command_line
 
+import webservice.algorithms_spark.NexusCalcSparkHandler
+from nexustiles.nexustiles import NexusTileService
 from webservice import NexusHandler
 from webservice.nexus_tornado.request.handlers import NexusRequestHandler
+
 
 def inject_args_in_config(args, config):
     """
@@ -37,9 +40,9 @@ def inject_args_in_config(args, config):
         n = t_opt.name
         first_ = n.find('_')
         if first_ > 0:
-            s, o = n[:first_], n[first_+1:]
+            s, o = n[:first_], n[first_ + 1:]
             v = t_opt.value()
-            log.info('inject argument {} = {} in configuration section {}, option {}'.format(n, v , s, o))
+            log.info('inject argument {} = {} in configuration section {}, option {}'.format(n, v, s, o))
             if not config.has_section(s):
                 config.add_section(s)
             config.set(s, o, v)
@@ -67,6 +70,10 @@ if __name__ == "__main__":
     define('solr_time_out', default=60,
            help='time out for solr requests in seconds, default (60) is ok for most deployments'
                 ' when solr performances are not good this might need to be increased')
+    define('solr_host', help='solr host and port')
+    define('cassandra_host', help='cassandra host')
+    define('cassandra_username', help='cassandra username')
+    define('cassandra_password', help='cassandra password')
 
     parse_command_line()
     algorithm_config = inject_args_in_config(options, algorithm_config)
@@ -96,22 +103,28 @@ if __name__ == "__main__":
     log.info("Initializing request ThreadPool to %s" % max_request_threads)
     request_thread_pool = tornado.concurrent.futures.ThreadPoolExecutor(max_request_threads)
 
+    tile_service_factory = partial(NexusTileService, False, False, algorithm_config)
     spark_context = None
     for clazzWrapper in NexusHandler.AVAILABLE_HANDLERS:
         if issubclass(clazzWrapper, webservice.algorithms_spark.NexusCalcSparkHandler.NexusCalcSparkHandler):
             if spark_context is None:
                 from pyspark.sql import SparkSession
+
                 spark = SparkSession.builder.appName("nexus-analysis").getOrCreate()
                 spark_context = spark.sparkContext
 
-            handlers.append(
-                (clazzWrapper.path, NexusRequestHandler,
-                 dict(clazz=clazzWrapper, algorithm_config=algorithm_config, sc=spark_context,
-                      thread_pool=request_thread_pool)))
+            handlers.append((clazzWrapper.path,
+                             NexusRequestHandler,
+                             dict(clazz=clazzWrapper,
+                                  tile_service_factory=tile_service_factory,
+                                  sc=spark_context,
+                                  thread_pool=request_thread_pool)))
         else:
-            handlers.append(
-                (clazzWrapper.path, NexusRequestHandler,
-                 dict(clazz=clazzWrapper, thread_pool=request_thread_pool)))
+            handlers.append((clazzWrapper.path,
+                             NexusRequestHandler,
+                             dict(clazz=clazzWrapper,
+                                  tile_service_factory=tile_service_factory,
+                                  thread_pool=request_thread_pool)))
 
 
     class VersionHandler(tornado.web.RequestHandler):
