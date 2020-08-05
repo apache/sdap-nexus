@@ -20,6 +20,10 @@ from webservice.algorithms.NexusCalcHandler import NexusCalcHandler
 from webservice.NexusHandler import nexus_handler
 from webservice.webmodel import cached
 
+import logging
+
+
+logger = logging.getLogger(__name__)
 
 @nexus_handler
 class DataSeriesListCalcHandlerImpl(NexusCalcHandler):
@@ -27,9 +31,6 @@ class DataSeriesListCalcHandlerImpl(NexusCalcHandler):
     path = "/list"
     description = "Lists datasets currently available for analysis"
     params = {}
-
-    def __init__(self):
-        NexusCalcHandler.__init__(self, skipCassandra=True)
 
     @cached(ttl=(60 * 60 * 1000))  # 1 hour cached
     def calc(self, computeOptions, **args):

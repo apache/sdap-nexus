@@ -41,9 +41,6 @@ class LongitudeLatitudeMapCalcHandlerImpl(NexusCalcHandler):
     }
     singleton = True
 
-    def __init__(self):
-        NexusCalcHandler.__init__(self)
-
     def calc(self, computeOptions, **args):
         minLat = computeOptions.get_min_lat()
         maxLat = computeOptions.get_max_lat()

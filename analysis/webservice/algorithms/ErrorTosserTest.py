@@ -26,9 +26,6 @@ class ErrorTosserCalcHandler(NexusCalcHandler):
     params = {}
     singleton = True
 
-    def __init__(self):
-        NexusCalcHandler.__init__(self)
-
     def calc(self, computeOptions, **args):
         a = 100 / 0.0
         # raise Exception("I'm Mad!")

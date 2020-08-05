@@ -13,14 +13,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import logging
 from datetime import datetime
 from functools import partial
 
 import numpy as np
 import shapely.geometry
-from nexustiles.nexustiles import NexusTileService
 from pytz import timezone
+
 from webservice.NexusHandler import nexus_handler
 from webservice.algorithms_spark.NexusCalcSparkHandler import NexusCalcSparkHandler
 from webservice.webmodel import NexusResults, NexusProcessingException, NoDataException
@@ -198,7 +197,7 @@ class TimeAvgMapNexusSparkHandlerImpl(NexusCalcSparkHandler):
 
         rdd = self._sc.parallelize(nexus_tiles_spark, spark_nparts)
         metrics_record.record_metrics(partitions=rdd.getNumPartitions())
-        sum_count_part = rdd.map(partial(self._map, metrics_record.record_metrics))
+        sum_count_part = rdd.map(partial(self._map, self._tile_service_factory, metrics_record.record_metrics))
         reduce_duration = 0
         reduce_start = datetime.now()
         sum_count = sum_count_part.combineByKey(lambda val: val,
@@ -264,14 +263,14 @@ class TimeAvgMapNexusSparkHandlerImpl(NexusCalcSparkHandler):
                             endTime=end_time)
 
     @staticmethod
-    def _map(metrics_callback, tile_in_spark):
+    def _map(tile_service_factory, metrics_callback, tile_in_spark):
         tile_bounds = tile_in_spark[0]
         (min_lat, max_lat, min_lon, max_lon,
          min_y, max_y, min_x, max_x) = tile_bounds
         startTime = tile_in_spark[1]
         endTime = tile_in_spark[2]
         ds = tile_in_spark[3]
-        tile_service = NexusTileService()
+        tile_service = tile_service_factory()
 
         tile_inbounds_shape = (max_y - min_y + 1, max_x - min_x + 1)
 

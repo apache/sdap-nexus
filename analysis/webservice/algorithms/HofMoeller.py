@@ -39,6 +39,9 @@ LONGITUDE = 1
 if not matplotlib.get_backend():
     matplotlib.use('Agg')
 
+logger = logging.getLogger(__name__)
+
+
 class LongitudeHofMoellerCalculator(object):
     def longitude_time_hofmoeller_stats(self, tile, index):
         stat = {
@@ -93,9 +96,6 @@ class LatitudeHofMoellerCalculator(object):
 
 
 class BaseHoffMoellerCalcHandlerImpl(NexusCalcHandler):
-    def __init__(self):
-        NexusCalcHandler.__init__(self)
-        self.log = logging.getLogger(__name__)
 
     def applyDeseasonToHofMoellerByField(self, results, pivot="lats", field="avg", append=True):
         shape = (len(results), len(results[0][pivot]))
@@ -168,7 +168,7 @@ class LatitudeTimeHoffMoellerHandlerImpl(BaseHoffMoellerCalcHandlerImpl):
                 result = done_queue.get()
                 try:
                     error_str = result['error']
-                    self.log.error(error_str)
+                    logger.error(error_str)
                     raise NexusProcessingException(reason="Error calculating latitude_time_hofmoeller_stats.")
                 except KeyError:
                     pass
@@ -234,7 +234,7 @@ class LongitudeTimeHoffMoellerHandlerImpl(BaseHoffMoellerCalcHandlerImpl):
                 result = done_queue.get()
                 try:
                     error_str = result['error']
-                    self.log.error(error_str)
+                    logger.error(error_str)
                     raise NexusProcessingException(reason="Error calculating longitude_time_hofmoeller_stats.")
                 except KeyError:
                     pass

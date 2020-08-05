@@ -14,13 +14,11 @@
 # limitations under the License.
 
 
-import math
-import logging
 from datetime import datetime
+from functools import partial
 
 import numpy as np
 import shapely.geometry
-from nexustiles.nexustiles import NexusTileService
 from pytz import timezone
 
 from webservice.NexusHandler import nexus_handler
@@ -207,7 +205,7 @@ class VarianceNexusSparkHandlerImpl(NexusCalcSparkHandler):
         self.log.info('Using {} partitions'.format(spark_nparts))
 
         rdd = self._sc.parallelize(nexus_tiles_spark, spark_nparts)
-        sum_count_part = rdd.map(self._map)
+        sum_count_part = rdd.map(partial(self._map, self._tile_service_factory))
         sum_count = \
             sum_count_part.combineByKey(lambda val: val,
                                         lambda x, val: (x[0] + val[0],
@@ -235,7 +233,7 @@ class VarianceNexusSparkHandlerImpl(NexusCalcSparkHandler):
         self.log.info('Using {} partitions'.format(spark_nparts))
         rdd = self._sc.parallelize(nexus_tiles_spark, spark_nparts)
 
-        anomaly_squared_part = rdd.map(self._calc_variance)
+        anomaly_squared_part = rdd.map(partial(self._calc_variance, self._tile_service_factory))
         anomaly_squared = \
             anomaly_squared_part.combineByKey(lambda val: val,
                                         lambda x, val: (x[0] + val[0],
@@ -303,7 +301,7 @@ class VarianceNexusSparkHandlerImpl(NexusCalcSparkHandler):
                             endTime=end_time)
 
     @staticmethod
-    def _map(tile_in_spark):
+    def _map(tile_service_factory, tile_in_spark):
         # tile_in_spark is a spatial tile that corresponds to nexus tiles of the same area
         tile_bounds = tile_in_spark[0]
         (min_lat, max_lat, min_lon, max_lon,
@@ -311,7 +309,7 @@ class VarianceNexusSparkHandlerImpl(NexusCalcSparkHandler):
         startTime = tile_in_spark[1]
         endTime = tile_in_spark[2]
         ds = tile_in_spark[3]
-        tile_service = NexusTileService()
+        tile_service = tile_service_factory()
 
         tile_inbounds_shape = (max_y - min_y + 1, max_x - min_x + 1)
 
@@ -345,7 +343,7 @@ class VarianceNexusSparkHandlerImpl(NexusCalcSparkHandler):
         return tile_bounds, (sum_tile, cnt_tile)
 
     @staticmethod
-    def _calc_variance(tile_in_spark):
+    def _calc_variance(tile_service_factory, tile_in_spark):
         # tile_in_spark is a spatial tile that corresponds to nexus tiles of the same area
         tile_bounds = tile_in_spark[0]
         (min_lat, max_lat, min_lon, max_lon,
@@ -354,7 +352,7 @@ class VarianceNexusSparkHandlerImpl(NexusCalcSparkHandler):
         endTime = tile_in_spark[2]
         ds = tile_in_spark[3]
         x_bar = tile_in_spark[4]
-        tile_service = NexusTileService()
+        tile_service = tile_service_factory()
 
         tile_inbounds_shape = (max_y - min_y + 1, max_x - min_x + 1)
 

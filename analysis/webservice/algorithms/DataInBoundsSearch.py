@@ -14,7 +14,6 @@
 # limitations under the License.
 
 
-import logging
 from datetime import datetime
 
 from pytz import timezone
@@ -67,13 +66,8 @@ class DataInBoundsSearchCalcHandlerImpl(NexusCalcHandler):
     }
     singleton = True
 
-    def __init__(self):
-        NexusCalcHandler.__init__(self)
-        self.log = logging.getLogger(__name__)
-
     def parse_arguments(self, request):
         # Parse input arguments
-        self.log.debug("Parsing arguments")
 
         try:
             ds = request.get_dataset()[0]

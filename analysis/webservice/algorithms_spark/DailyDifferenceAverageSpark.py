@@ -134,15 +134,18 @@ class DailyDifferenceAverageNexusImplSpark(NexusCalcSparkHandler):
         # Get tile ids in box
         tile_ids = [tile.tile_id for tile in
                     self._get_tile_service().find_tiles_in_polygon(bounding_polygon, dataset,
-                                                             start_seconds_from_epoch, end_seconds_from_epoch,
-                                                             fetch_data=False, fl='id',
-                                                             sort=['tile_min_time_dt asc', 'tile_min_lon asc',
-                                                                   'tile_min_lat asc'], rows=5000)]
+                                                                   start_seconds_from_epoch, end_seconds_from_epoch,
+                                                                   fetch_data=False, fl='id',
+                                                                   sort=['tile_min_time_dt asc', 'tile_min_lon asc',
+                                                                         'tile_min_lat asc'], rows=5000)]
 
         # Call spark_matchup
-        self.log.debug("Calling Spark Driver")
         try:
-            spark_result = spark_anomolies_driver(tile_ids, wkt.dumps(bounding_polygon), dataset, climatology,
+            spark_result = spark_anomalies_driver(self._tile_service_factory,
+                                                  tile_ids,
+                                                  wkt.dumps(bounding_polygon),
+                                                  dataset,
+                                                  climatology,
                                                   sc=self._sc)
         except Exception as e:
             self.log.exception(e)
@@ -264,7 +267,7 @@ def determine_parllelism(num_tiles):
     return num_partitions
 
 
-def spark_anomolies_driver(tile_ids, bounding_wkt, dataset, climatology, sc=None):
+def spark_anomalies_driver(tile_service_driver, tile_ids, bounding_wkt, dataset, climatology, sc=None):
     from functools import partial
 
     with DRIVER_LOCK:
@@ -297,7 +300,7 @@ def spark_anomolies_driver(tile_ids, bounding_wkt, dataset, climatology, sc=None
         return sum_cnt_var_tuple[0] / sum_cnt_var_tuple[1], np.sqrt(sum_cnt_var_tuple[2])
 
     result = rdd \
-        .mapPartitions(partial(calculate_diff, bounding_wkt=bounding_wkt_b, dataset=dataset_b,
+        .mapPartitions(partial(calculate_diff, tile_service_driver, bounding_wkt=bounding_wkt_b, dataset=dataset_b,
                                climatology=climatology_b)) \
         .reduceByKey(add_tuple_elements) \
         .mapValues(compute_avg_and_std) \
@@ -307,7 +310,7 @@ def spark_anomolies_driver(tile_ids, bounding_wkt, dataset, climatology, sc=None
     return result
 
 
-def calculate_diff(tile_ids, bounding_wkt, dataset, climatology):
+def calculate_diff(tile_service_factory, tile_ids, bounding_wkt, dataset, climatology):
     from itertools import chain
 
     # Construct a list of generators that yield (day, sum, count, variance)
@@ -316,7 +319,7 @@ def calculate_diff(tile_ids, bounding_wkt, dataset, climatology):
     tile_ids = list(tile_ids)
     if len(tile_ids) == 0:
         return []
-    tile_service = NexusTileService()
+    tile_service = tile_service_factory()
 
     for tile_id in tile_ids:
         # Get the dataset tile

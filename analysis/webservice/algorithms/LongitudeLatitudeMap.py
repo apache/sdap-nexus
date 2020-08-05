@@ -14,7 +14,6 @@
 # limitations under the License.
 
 
-import logging
 import math
 from datetime import datetime
 
@@ -74,13 +73,8 @@ class LongitudeLatitudeMapCalcHandlerImpl(NexusCalcHandler):
     }
     singleton = True
 
-    def __init__(self):
-        NexusCalcHandler.__init__(self, skipCassandra=True)
-        self.log = logging.getLogger(__name__)
-
     def parse_arguments(self, request):
         # Parse input arguments
-        self.log.debug("Parsing arguments")
         try:
             ds = request.get_dataset()[0]
         except:
