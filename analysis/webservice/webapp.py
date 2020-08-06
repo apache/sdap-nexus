@@ -126,11 +126,9 @@ if __name__ == "__main__":
                                   tile_service_factory=tile_service_factory,
                                   thread_pool=request_thread_pool)))
 
-
     class VersionHandler(tornado.web.RequestHandler):
         def get(self):
             self.write(pkg_resources.get_distribution("nexusanalysis").version)
-
 
     handlers.append((r"/version", VersionHandler))
 
