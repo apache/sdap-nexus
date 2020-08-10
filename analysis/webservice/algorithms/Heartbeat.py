@@ -28,9 +28,6 @@ class HeartbeatCalcHandlerImpl(NexusCalcHandler):
     params = {}
     singleton = True
 
-    def __init__(self):
-        NexusCalcHandler.__init__(self, skipCassandra=True)
-
     def calc(self, computeOptions, **args):
         solrOnline = self._get_tile_service().pingSolr()
 

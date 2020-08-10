@@ -37,9 +37,6 @@ class TimeAvgMapCalcHandlerImpl(NexusCalcHandler):
     params = DEFAULT_PARAMETERS_SPEC
     singleton = True
 
-    def __init__(self):
-        NexusCalcHandler.__init__(self, skipCassandra=False)
-
     def _find_native_resolution(self):
         # Get a quick set of tiles (1 degree at center of box) at 1 time stamp
         midLat = (self._minLat + self._maxLat) / 2

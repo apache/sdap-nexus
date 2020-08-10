@@ -22,13 +22,9 @@ class NexusCalcHandler(object):
         if "params" not in cls.__dict__:
             raise Exception("Property 'params' has not been defined")
 
-    def __init__(self, algorithm_config=None, skipCassandra=False, skipSolr=False):
-        self.algorithm_config = algorithm_config
-        self._skipCassandra = skipCassandra
-        self._skipSolr = skipSolr
-        self._tile_service = NexusTileService(skipDatastore=self._skipCassandra,
-                                              skipMetadatastore=self._skipSolr,
-                                              config=self.algorithm_config)
+    def __init__(self, tile_service_factory, **kwargs):
+        self._tile_service_factory = tile_service_factory
+        self._tile_service = tile_service_factory()
 
     def _get_tile_service(self):
         return self._tile_service

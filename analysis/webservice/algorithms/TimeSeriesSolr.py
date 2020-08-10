@@ -33,6 +33,7 @@ from webservice.webmodel import NexusResults, NexusProcessingException, NoDataEx
 
 SENTINEL = 'STOP'
 
+logger = logging.getLogger(__name__)
 
 @nexus_handler
 class TimeSeriesCalcHandlerImpl(NexusCalcHandler):
@@ -41,10 +42,6 @@ class TimeSeriesCalcHandlerImpl(NexusCalcHandler):
     description = "Computes a time series plot between one or more datasets given an arbitrary geographical area and time range"
     params = DEFAULT_PARAMETERS_SPEC
     singleton = True
-
-    def __init__(self):
-        NexusCalcHandler.__init__(self, skipCassandra=True)
-        self.log = logging.getLogger(__name__)
 
     def calc(self, computeOptions, **args):
         """
@@ -133,7 +130,7 @@ class TimeSeriesCalcHandlerImpl(NexusCalcHandler):
                 result = done_queue.get()
                 try:
                     error_str = result['error']
-                    self.log.error(error_str)
+                    logger.error(error_str)
                     raise NexusProcessingException(reason="Error calculating average by day.")
                 except KeyError:
                     pass

@@ -195,7 +195,10 @@ class TimeSeriesSparkHandlerImpl(NexusCalcSparkHandler):
             spark_nparts = self._spark_nparts(nparts_requested)
             self.log.info('Using {} partitions'.format(spark_nparts))
             results, meta = spark_driver(daysinrange, bounding_polygon,
-                                         shortName, metrics_record.record_metrics, spark_nparts=spark_nparts,
+                                         shortName,
+                                         self._tile_service_factory,
+                                         metrics_record.record_metrics,
+                                         spark_nparts=spark_nparts,
                                          sc=self._sc)
 
             if apply_seasonal_cycle_filter:
@@ -487,7 +490,7 @@ class TimeSeriesResults(NexusResults):
         return sio.getvalue()
 
 
-def spark_driver(daysinrange, bounding_polygon, ds, metrics_callback, fill=-9999.,
+def spark_driver(daysinrange, bounding_polygon, ds, tile_service_factory, metrics_callback, fill=-9999.,
                  spark_nparts=1, sc=None):
     nexus_tiles_spark = [(bounding_polygon.wkt, ds,
                           list(daysinrange_part), fill)
@@ -497,14 +500,14 @@ def spark_driver(daysinrange, bounding_polygon, ds, metrics_callback, fill=-9999
     # Launch Spark computations
     rdd = sc.parallelize(nexus_tiles_spark, spark_nparts)
     metrics_callback(partitions=rdd.getNumPartitions())
-    results = rdd.flatMap(partial(calc_average_on_day, metrics_callback)).collect()
+    results = rdd.flatMap(partial(calc_average_on_day, tile_service_factory, metrics_callback)).collect()
     results = list(itertools.chain.from_iterable(results))
     results = sorted(results, key=lambda entry: entry["time"])
 
     return results, {}
 
 
-def calc_average_on_day(metrics_callback, tile_in_spark):
+def calc_average_on_day(tile_service_factory, metrics_callback, tile_in_spark):
     import shapely.wkt
     from datetime import datetime
     from pytz import timezone
@@ -513,7 +516,7 @@ def calc_average_on_day(metrics_callback, tile_in_spark):
     (bounding_wkt, dataset, timestamps, fill) = tile_in_spark
     if len(timestamps) == 0:
         return []
-    tile_service = NexusTileService()
+    tile_service = tile_service_factory()
     ds1_nexus_tiles = \
         tile_service.get_tiles_bounded_by_polygon(shapely.wkt.loads(bounding_wkt),
                                                   dataset,

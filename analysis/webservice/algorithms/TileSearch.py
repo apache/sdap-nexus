@@ -62,9 +62,6 @@ class ChunkSearchCalcHandlerImpl(NexusCalcHandler):
         }
     }
 
-    def __init__(self):
-        NexusCalcHandler.__init__(self, skipCassandra=True)
-
     def calc(self, computeOptions, **args):
         minLat = computeOptions.get_min_lat()
         maxLat = computeOptions.get_max_lat()

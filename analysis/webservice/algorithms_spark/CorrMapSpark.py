@@ -13,15 +13,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-
 import json
-import math
-import logging
 from datetime import datetime
-import numpy as np
-from nexustiles.nexustiles import NexusTileService
+from functools import partial
 
-# from time import time
+import numpy as np
+
 from webservice.NexusHandler import nexus_handler, DEFAULT_PARAMETERS_SPEC
 from webservice.algorithms_spark.NexusCalcSparkHandler import NexusCalcSparkHandler
 from webservice.webmodel import NexusProcessingException, NexusResults, NoDataException
@@ -35,7 +32,7 @@ class CorrMapNexusSparkHandlerImpl(NexusCalcSparkHandler):
     params = DEFAULT_PARAMETERS_SPEC
 
     @staticmethod
-    def _map(tile_in):
+    def _map(tile_service_factory, tile_in):
         # Unpack input
         tile_bounds, start_time, end_time, ds = tile_in
         (min_lat, max_lat, min_lon, max_lon,
@@ -60,7 +57,7 @@ class CorrMapNexusSparkHandlerImpl(NexusCalcSparkHandler):
         # print 'days_at_a_time = ', days_at_a_time
         t_incr = 86400 * days_at_a_time
 
-        tile_service = NexusTileService()
+        tile_service = tile_service_factory
 
         # Compute the intermediate summations needed for the Pearson 
         # Correlation Coefficient.  We use a one-pass online algorithm
@@ -194,12 +191,12 @@ class CorrMapNexusSparkHandlerImpl(NexusCalcSparkHandler):
         self.log.debug('nlats={0}, nlons={1}'.format(self._nlats, self._nlons))
 
         daysinrange = self._get_tile_service().find_days_in_range_asc(self._minLat,
-                                                                self._maxLat,
-                                                                self._minLon,
-                                                                self._maxLon,
-                                                                self._ds[0],
-                                                                self._startTime,
-                                                                self._endTime)
+                                                                      self._maxLat,
+                                                                      self._minLon,
+                                                                      self._maxLon,
+                                                                      self._ds[0],
+                                                                      self._startTime,
+                                                                      self._endTime)
         ndays = len(daysinrange)
         if ndays == 0:
             raise NoDataException(reason="No data found for selected timeframe")
@@ -224,7 +221,9 @@ class CorrMapNexusSparkHandlerImpl(NexusCalcSparkHandler):
         max_time_parts = 72
         num_time_parts = min(max_time_parts, ndays)
 
-        spark_part_time_ranges = np.tile(np.array([a[[0,-1]] for a in np.array_split(np.array(daysinrange), num_time_parts)]), (len(nexus_tiles_spark),1))
+        spark_part_time_ranges = np.tile(
+            np.array([a[[0, -1]] for a in np.array_split(np.array(daysinrange), num_time_parts)]),
+            (len(nexus_tiles_spark), 1))
         nexus_tiles_spark = np.repeat(nexus_tiles_spark, num_time_parts, axis=0)
         nexus_tiles_spark[:, 1:3] = spark_part_time_ranges
 
@@ -233,7 +232,7 @@ class CorrMapNexusSparkHandlerImpl(NexusCalcSparkHandler):
         self.log.info('Using {} partitions'.format(spark_nparts))
 
         rdd = self._sc.parallelize(nexus_tiles_spark, spark_nparts)
-        sum_tiles_part = rdd.map(self._map)
+        sum_tiles_part = rdd.map(partial(self._map, self._tile_service_factory))
         # print "sum_tiles_part = ",sum_tiles_part.collect()
         sum_tiles = \
             sum_tiles_part.combineByKey(lambda val: val,

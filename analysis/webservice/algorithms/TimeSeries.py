@@ -41,6 +41,7 @@ SENTINEL = 'STOP'
 EPOCH = timezone('UTC').localize(datetime(1970, 1, 1))
 ISO_8601 = '%Y-%m-%dT%H:%M:%S%z'
 
+logger = logging.getLogger(__name__)
 
 @nexus_handler
 class TimeSeriesCalcHandlerImpl(NexusCalcHandler):
@@ -84,13 +85,8 @@ class TimeSeriesCalcHandlerImpl(NexusCalcHandler):
     }
     singleton = True
 
-    def __init__(self):
-        NexusCalcHandler.__init__(self)
-        self.log = logging.getLogger(__name__)
-
     def parse_arguments(self, request):
         # Parse input arguments
-        self.log.debug("Parsing arguments")
 
         try:
             ds = request.get_dataset()
@@ -185,7 +181,7 @@ class TimeSeriesCalcHandlerImpl(NexusCalcHandler):
             except Exception:
                 stats = {}
                 tb = traceback.format_exc()
-                self.log.warn("Error when calculating comparison stats:\n%s" % tb)
+                logger.warn("Error when calculating comparison stats:\n%s" % tb)
         else:
             stats = {}
 
@@ -199,7 +195,7 @@ class TimeSeriesCalcHandlerImpl(NexusCalcHandler):
                                 maxLon=bounding_polygon.bounds[2], ds=ds, startTime=start_seconds_from_epoch,
                                 endTime=end_seconds_from_epoch)
 
-        self.log.info("Merging results and calculating comparisons took %s" % (str(datetime.now() - the_time)))
+        logger.info("Merging results and calculating comparisons took %s" % (str(datetime.now() - the_time)))
         return res
 
     def getTimeSeriesStatsForBoxSingleDataSet(self, bounding_polygon, ds, start_seconds_from_epoch,
@@ -214,7 +210,7 @@ class TimeSeriesCalcHandlerImpl(NexusCalcHandler):
                                                                 ds,
                                                                 start_seconds_from_epoch,
                                                                 end_seconds_from_epoch)
-        self.log.info("Finding days in range took %s for dataset %s" % (str(datetime.now() - the_time), ds))
+        logger.info("Finding days in range took %s for dataset %s" % (str(datetime.now() - the_time), ds))
 
         if len(daysinrange) == 0:
             raise NoDataException(reason="No data found for selected timeframe")
@@ -248,7 +244,7 @@ class TimeSeriesCalcHandlerImpl(NexusCalcHandler):
                 result = done_queue.get()
                 try:
                     error_str = result['error']
-                    self.log.error(error_str)
+                    logger.error(error_str)
                     raise NexusProcessingException(reason="Error calculating average by day.")
                 except KeyError:
                     pass
@@ -259,7 +255,7 @@ class TimeSeriesCalcHandlerImpl(NexusCalcHandler):
             manager.shutdown()
 
         results = sorted(results, key=lambda entry: entry["time"])
-        self.log.info("Time series calculation took %s for dataset %s" % (str(datetime.now() - the_time), ds))
+        logger.info("Time series calculation took %s for dataset %s" % (str(datetime.now() - the_time), ds))
 
         if apply_seasonal_cycle_filter:
             the_time = datetime.now()
@@ -272,7 +268,7 @@ class TimeSeriesCalcHandlerImpl(NexusCalcHandler):
                 result['meanSeasonal'] = seasonal_mean
                 result['minSeasonal'] = seasonal_min
                 result['maxSeasonal'] = seasonal_max
-            self.log.info(
+            logger.info(
                 "Seasonal calculation took %s for dataset %s" % (str(datetime.now() - the_time), ds))
 
         the_time = datetime.now()
@@ -291,9 +287,9 @@ class TimeSeriesCalcHandlerImpl(NexusCalcHandler):
             except Exception as e:
                 # If it doesn't work log the error but ignore it
                 tb = traceback.format_exc()
-                self.log.warn("Error calculating SeasonalLowPass filter:\n%s" % tb)
+                logger.warn("Error calculating SeasonalLowPass filter:\n%s" % tb)
 
-        self.log.info(
+        logger.info(
             "LowPass filter calculation took %s for dataset %s" % (str(datetime.now() - the_time), ds))
 
         return results, {}

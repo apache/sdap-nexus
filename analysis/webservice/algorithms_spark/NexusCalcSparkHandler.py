@@ -6,6 +6,8 @@ from webservice.algorithms.NexusCalcHandler import NexusCalcHandler
 from webservice.metrics import MetricsRecord, SparkAccumulatorMetricsField, NumberMetricsField
 from webservice.webmodel import NexusProcessingException
 
+logger = logging.getLogger(__name__)
+
 
 class NexusCalcSparkHandler(NexusCalcHandler):
     class SparkJobContext(object):
@@ -32,14 +34,15 @@ class NexusCalcSparkHandler(NexusCalcHandler):
                 self.log.debug("Returning %s" % self.job_name)
                 self.spark_job_stack.append(self.job_name)
 
-    def __init__(self, algorithm_config=None, sc=None, **kwargs):
+    def __init__(self, tile_service_factory, sc=None, **kwargs):
         import inspect
 
-        NexusCalcHandler.__init__(self, algorithm_config=algorithm_config, **kwargs)
+        NexusCalcHandler.__init__(self, tile_service_factory=tile_service_factory, **kwargs)
         self.spark_job_stack = []
         self._sc = sc
-        max_concurrent_jobs = algorithm_config.getint("spark", "maxconcurrentjobs") if algorithm_config.has_section(
-            "spark") and algorithm_config.has_option("spark", "maxconcurrentjobs") else 10
+        # max_concurrent_jobs = algorithm_config.getint("spark", "maxconcurrentjobs") if algorithm_config.has_section(
+        #     "spark") and algorithm_config.has_option("spark", "maxconcurrentjobs") else 10
+        max_concurrent_jobs = 10
         self.spark_job_stack = list(["Job %s" % x for x in xrange(1, max_concurrent_jobs + 1)])
         self.log = logging.getLogger(__name__)
 

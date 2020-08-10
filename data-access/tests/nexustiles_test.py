@@ -32,7 +32,7 @@ protocol_version=3
 port=9042
 
 [solr]
-host=localhost:8983
+host=http://localhost:8983
 core=nexustiles
 
 [datastore]

@@ -80,9 +80,6 @@ class DailyDifferenceAverageImpl(NexusCalcHandler):
     }
     singleton = True
 
-    def __init__(self):
-        NexusCalcHandler.__init__(self, skipCassandra=True)
-
     def calc(self, request, **args):
         min_lat, max_lat, min_lon, max_lon = request.get_min_lat(), request.get_max_lat(), request.get_min_lon(), request.get_max_lon()
         dataset1 = request.get_argument("ds1", None)

@@ -29,9 +29,6 @@ class CapabilitiesListCalcHandlerImpl(NexusCalcHandler):
     params = {}
     singleton = True
 
-    def __init__(self):
-        NexusCalcHandler.__init__(self)
-
     def calc(self, computeOptions, **args):
         capabilities = []
 
