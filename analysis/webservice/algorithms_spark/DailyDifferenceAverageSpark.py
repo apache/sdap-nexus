@@ -267,7 +267,7 @@ def determine_parllelism(num_tiles):
     return num_partitions
 
 
-def spark_anomalies_driver(tile_service_driver, tile_ids, bounding_wkt, dataset, climatology, sc=None):
+def spark_anomalies_driver(tile_service_factory, tile_ids, bounding_wkt, dataset, climatology, sc=None):
     from functools import partial
 
     with DRIVER_LOCK:
@@ -300,7 +300,7 @@ def spark_anomalies_driver(tile_service_driver, tile_ids, bounding_wkt, dataset,
         return sum_cnt_var_tuple[0] / sum_cnt_var_tuple[1], np.sqrt(sum_cnt_var_tuple[2])
 
     result = rdd \
-        .mapPartitions(partial(calculate_diff, tile_service_driver, bounding_wkt=bounding_wkt_b, dataset=dataset_b,
+        .mapPartitions(partial(calculate_diff, tile_service_factory, bounding_wkt=bounding_wkt_b, dataset=dataset_b,
                                climatology=climatology_b)) \
         .reduceByKey(add_tuple_elements) \
         .mapValues(compute_avg_and_std) \
