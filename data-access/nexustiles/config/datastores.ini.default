@@ -17,7 +17,7 @@ table=nexus-jpl-table
 region=us-west-2
 
 [solr]
-host=localhost:8983
+host=http://localhost:8983
 core=nexustiles
 
 [datastore]

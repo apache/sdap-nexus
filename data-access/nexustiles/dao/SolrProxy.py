@@ -44,7 +44,7 @@ class SolrProxy(object):
         with SOLR_CON_LOCK:
             solrcon = getattr(thread_local, 'solrcon', None)
             if solrcon is None:
-                solr_url = 'http://%s/solr/%s' % (self.solrUrl, self.solrCore)
+                solr_url = '%s/solr/%s' % (self.solrUrl, self.solrCore)
                 self.logger.info("connect to solr, url {} with option(s) = {}".format(solr_url, solr_kargs))
                 solrcon = pysolr.Solr(solr_url, **solr_kargs)
                 thread_local.solrcon = solrcon
@@ -665,7 +665,7 @@ class SolrProxy(object):
         return (self.convert_iso_to_datetime(date) - EPOCH).total_seconds()
 
     def ping(self):
-        solrAdminPing = 'http://%s/solr/%s/admin/ping' % (self.solrUrl, self.solrCore)
+        solrAdminPing = '%s/solr/%s/admin/ping' % (self.solrUrl, self.solrCore)
         try:
             r = requests.get(solrAdminPing, params={'wt': 'json'})
             results = json.loads(r.text)
