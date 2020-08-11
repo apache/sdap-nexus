@@ -17,6 +17,7 @@ import ConfigParser
 import importlib
 import logging
 import sys
+import os
 from functools import partial
 
 import pkg_resources
@@ -27,6 +28,7 @@ import webservice.algorithms_spark.NexusCalcSparkHandler
 from nexustiles.nexustiles import NexusTileService
 from webservice import NexusHandler
 from webservice.nexus_tornado.request.handlers import NexusRequestHandler
+from nexus_tornado.request.handlers import NexusHandlerManager
 
 
 def inject_args_in_config(args, config):
@@ -78,10 +80,7 @@ if __name__ == "__main__":
     parse_command_line()
     algorithm_config = inject_args_in_config(options, algorithm_config)
 
-    moduleDirs = webconfig.get("modules", "module_dirs").split(",")
-    for moduleDir in moduleDirs:
-        log.info("Loading modules from %s" % moduleDir)
-        importlib.import_module(moduleDir)
+    module_dirs = webconfig.get("modules", "module_dirs").split(",")
 
     staticDir = webconfig.get("static", "static_dir")
     staticEnabled = webconfig.get("static", "static_enabled") == "true"
@@ -94,47 +93,16 @@ if __name__ == "__main__":
     else:
         log.info("Static resources disabled")
 
-    handlers = []
-
-    log.info("Running Nexus Initializers")
-    NexusHandler.executeInitializers(algorithm_config)
-
     max_request_threads = webconfig.getint("global", "server.max_simultaneous_requests")
-    log.info("Initializing request ThreadPool to %s" % max_request_threads)
-    request_thread_pool = tornado.concurrent.futures.ThreadPoolExecutor(max_request_threads)
 
     tile_service_factory = partial(NexusTileService, False, False, algorithm_config)
-    spark_context = None
-    for clazzWrapper in NexusHandler.AVAILABLE_HANDLERS:
-        if issubclass(clazzWrapper, webservice.algorithms_spark.NexusCalcSparkHandler.NexusCalcSparkHandler):
-            if spark_context is None:
-                from pyspark.sql import SparkSession
+    job_pool = {}
 
-                spark = SparkSession.builder.appName("nexus-analysis").getOrCreate()
-                spark_context = spark.sparkContext
-
-            handlers.append((clazzWrapper.path,
-                             NexusRequestHandler,
-                             dict(clazz=clazzWrapper,
-                                  tile_service_factory=tile_service_factory,
-                                  sc=spark_context,
-                                  thread_pool=request_thread_pool)))
-        else:
-            handlers.append((clazzWrapper.path,
-                             NexusRequestHandler,
-                             dict(clazz=clazzWrapper,
-                                  tile_service_factory=tile_service_factory,
-                                  thread_pool=request_thread_pool)))
-
-    class VersionHandler(tornado.web.RequestHandler):
-        def get(self):
-            self.write(pkg_resources.get_distribution("nexusanalysis").version)
-
-    handlers.append((r"/version", VersionHandler))
-
-    if staticEnabled:
-        handlers.append(
-            (r'/(.*)', tornado.web.StaticFileHandler, {'path': staticDir, "default_filename": "index.html"}))
+    nexus_handler_manager = NexusHandlerManager(module_dirs,
+                                                algorithm_config, tile_service_factory,
+                                                max_request_threads=max_request_threads,
+                                                static_dir=staticDir)
+    handlers = nexus_handler_manager.get_handlers()
 
     app = tornado.web.Application(
         handlers,

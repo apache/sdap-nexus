@@ -16,11 +16,12 @@
 from datetime import datetime
 from functools import partial
 
+import uuid
 import numpy as np
 import shapely.geometry
 from pytz import timezone
 
-from webservice.NexusHandler import nexus_handler
+from webservice.NexusHandler import nexus_handler, nexus_restapi_handler
 from webservice.algorithms_spark.NexusCalcSparkHandler import NexusCalcSparkHandler
 from webservice.webmodel import NexusResults, NexusProcessingException, NoDataException
 
@@ -29,6 +30,7 @@ ISO_8601 = '%Y-%m-%dT%H:%M:%S%z'
 
 
 @nexus_handler
+@nexus_restapi_handler
 class TimeAvgMapNexusSparkHandlerImpl(NexusCalcSparkHandler):
     # __singleton_lock = threading.Lock()
     # __singleton_instance = None
@@ -66,19 +68,6 @@ class TimeAvgMapNexusSparkHandlerImpl(NexusCalcSparkHandler):
         }
     }
     singleton = True
-
-    # @classmethod
-    # def instance(cls, algorithm_config=None, sc=None):
-    #     with cls.__singleton_lock:
-    #         if not cls.__singleton_instance:
-    #             try:
-    #                 singleton_instance = cls()
-    #                 singleton_instance.set_config(algorithm_config)
-    #                 singleton_instance.set_spark_context(sc)
-    #                 cls.__singleton_instance = singleton_instance
-    #             except AttributeError:
-    #                 pass
-    #     return cls.__singleton_instance
 
     def parse_arguments(self, request):
         # Parse input arguments
@@ -118,7 +107,8 @@ class TimeAvgMapNexusSparkHandlerImpl(NexusCalcSparkHandler):
 
         return ds, bounding_polygon, start_seconds_from_epoch, end_seconds_from_epoch, nparts_requested
 
-    def calc(self, compute_options, **args):
+    def calc(self, compute_options,
+             **args):
         """
 
         :param compute_options: StatsComputeOptions
@@ -130,6 +120,7 @@ class TimeAvgMapNexusSparkHandlerImpl(NexusCalcSparkHandler):
         metrics_record = self._create_metrics_record()
 
         ds, bbox, start_time, end_time, nparts_requested = self.parse_arguments(compute_options)
+
         self._setQueryParams(ds,
                              (float(bbox.bounds[1]),
                               float(bbox.bounds[3]),
@@ -147,13 +138,13 @@ class TimeAvgMapNexusSparkHandlerImpl(NexusCalcSparkHandler):
         print('Found {} tiles'.format(len(nexus_tiles)))
 
         daysinrange = self._get_tile_service().find_days_in_range_asc(bbox.bounds[1],
-                                                                bbox.bounds[3],
-                                                                bbox.bounds[0],
-                                                                bbox.bounds[2],
-                                                                ds,
-                                                                start_time,
-                                                                end_time,
-                                                                metrics_callback=metrics_record.record_metrics)
+                                                                      bbox.bounds[3],
+                                                                      bbox.bounds[0],
+                                                                      bbox.bounds[2],
+                                                                      ds,
+                                                                      start_time,
+                                                                      end_time,
+                                                                      metrics_callback=metrics_record.record_metrics)
         ndays = len(daysinrange)
         if ndays == 0:
             raise NoDataException(reason="No data found for selected timeframe")
@@ -261,6 +252,8 @@ class TimeAvgMapNexusSparkHandlerImpl(NexusCalcSparkHandler):
                             maxLat=bbox.bounds[3], minLon=bbox.bounds[0],
                             maxLon=bbox.bounds[2], ds=ds, startTime=start_time,
                             endTime=end_time)
+
+
 
     @staticmethod
     def _map(tile_service_factory, metrics_callback, tile_in_spark):

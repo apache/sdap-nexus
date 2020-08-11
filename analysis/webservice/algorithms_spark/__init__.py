@@ -21,11 +21,10 @@ import CorrMapSpark
 import DailyDifferenceAverageSpark
 import HofMoellerSpark
 import MaximaMinimaSpark
-import NexusCalcSparkHandler
 import TimeAvgMapSpark
 import TimeSeriesSpark
 import VarianceSpark
-
+import NexusCalcSparkHandler
 
 log = logging.getLogger(__name__)
 

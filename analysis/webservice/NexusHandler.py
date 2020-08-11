@@ -16,8 +16,11 @@
 
 import logging
 import types
+from functools import partial
 
-AVAILABLE_HANDLERS = []
+AVAILABLE_LEGACY_HANDLERS = []
+AVAILABLE_RESTAPI_HANDLERS = []
+AVAILABLE_WPS_HANDLERS = []
 AVAILABLE_INITIALIZERS = []
 
 
@@ -32,15 +35,20 @@ def nexus_initializer(clazz):
     return clazz
 
 
-def nexus_handler(clazz):
+def nexus_handler(clazz, handler_list=AVAILABLE_LEGACY_HANDLERS):
     log = logging.getLogger(__name__)
     try:
         clazz.validate()
         log.info("Adding algorithm module '%s' with path '%s' (%s)" % (clazz.name, clazz.path, clazz))
-        AVAILABLE_HANDLERS.append(clazz)
+        handler_list.append(clazz)
     except Exception as ex:
         log.warn("Handler '%s' is invalid and will be skipped (reason: %s)" % (clazz, ex.message), exc_info=True)
     return clazz
+
+
+nexus_restapi_handler = partial(nexus_handler, handler_list=AVAILABLE_RESTAPI_HANDLERS)
+nexus_wps_handler = partial(nexus_handler, handler_list=AVAILABLE_WPS_HANDLERS)
+
 
 
 DEFAULT_PARAMETERS_SPEC = {
