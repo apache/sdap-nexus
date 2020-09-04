@@ -105,6 +105,9 @@ solrInitEnabled: true
 
 solr:
   enabled: true
+  image:
+    repository: nexusjpl/solr
+    tag: 8.4.0
   replicaCount: 3
   volumeClaimTemplates:
     storageClassName: hostpath
