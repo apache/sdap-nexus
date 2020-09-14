@@ -34,11 +34,13 @@ ZK_LOCK_GUID = os.environ["ZK_LOCK_GUID"]
 MINIMUM_NODES = int(os.environ["MINIMUM_NODES"])
 CREATE_COLLECTION_PARAMS = os.environ["CREATE_COLLECTION_PARAMS"]
 
+
 def get_cluster_status():
     try:
         return requests.get("{}admin/collections?action=CLUSTERSTATUS".format(SDAP_SOLR_URL)).json()
     except (requests.exceptions.ConnectionError, json.decoder.JSONDecodeError):
         return False
+
 
 logging.info("Attempting to aquire lock from {}".format(SDAP_ZK_SOLR))
 zk_host, zk_chroot = SDAP_ZK_SOLR.split('/')
@@ -101,6 +103,39 @@ try:
             else:
                 # Some error occured while creating the collection
                 raise RuntimeError("Could not create collection. Received response: {}".format(create_response))
+
+            schema_api = "{}nexustiles/schema".format(SDAP_SOLR_URL)
+
+            field_type_payload = json.dumps({
+                "add-field-type": {
+                    "name": "geo",
+                    "class": "solr.SpatialRecursivePrefixTreeFieldType",
+                    "geo": "true",
+                    "precisionModel": "fixed",
+                    "maxDistErr": "0.000009",
+                    "spatialContextFactory": "com.spatial4j.core.context.jts.JtsSpatialContextFactory",
+                    "precisionScale": "1000",
+                    "distErrPct": "0.025",
+                    "distanceUnits": "degrees"}})
+
+            logging.info("Creating field-type 'geo'...")
+            field_type_response = requests.post(url=schema_api, data=field_type_payload)
+            if field_type_response.status_code < 400:
+                logging.info("Success.")
+            else:
+                logging.error("Error creating field type 'geo': {}".format(field_type_response.text))
+
+            field_payload = json.dumps({
+                "add-field": {
+                    "name": "geo",
+                    "type": "geo"}})
+            logging.info("Creating field 'geo'...")
+            field_response = requests.post(url=schema_api, data=field_payload)
+            if field_response.status_code < 400:
+                logging.info("Success.")
+            else:
+                logging.error("Error creating field 'geo': {}".format(field_response.text))
+
 finally:
     zk.stop()
     zk.close()
