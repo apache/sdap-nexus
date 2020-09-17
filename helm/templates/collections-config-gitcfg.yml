@@ -1,3 +1,5 @@
+{{ if .Values.ingestion.enabled }}
+{{ if not .Values.ingestion.collections.configMap }}
 apiVersion: sdap.apache.org/v1
 kind: GitBasedConfig
 metadata:
@@ -11,3 +13,5 @@ spec:
   local-dir: {{ .Values.ingestion.collections.localDir }}
   {{ end }}
   config-map: {{ include "nexus.collectionsConfig.configmapName" . }}
+{{ end }}
+{{ end }}

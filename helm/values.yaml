@@ -77,8 +77,6 @@ ingestion:
   collections:
     createCrd: true
 
-    ## Load the Collections Config file from a local path
-    ## This is a future option that is not yet supported!
     #configMap: collections-config
 
     ## Load the Collections Config file from a git repository
