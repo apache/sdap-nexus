@@ -1,3 +1,5 @@
+{{ if .Values.ingestion.enabled }}
+{{ if not .Values.ingestion.collections.configMap }}
 apiVersion: v1
 kind: ServiceAccount
 metadata:
@@ -17,5 +19,6 @@ subjects:
   - kind: ServiceAccount
     name: config-operator
     namespace: {{ .Release.Namespace }}
-
+{{ end }}
+{{ end }}
 
