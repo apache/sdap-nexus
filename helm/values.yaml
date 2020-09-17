@@ -75,7 +75,7 @@ ingestion:
   ## ref: https://github.com/apache/incubator-sdap-ingester/tree/dev/collection_manager#the-collections-configuration-file
   ## Either localDir should be set, or the git options, but not both.
   collections:
-    createCrd: True
+    createCrd: true
 
     ## Load the Collections Config file from a local path
     ## This is a future option that is not yet supported!
