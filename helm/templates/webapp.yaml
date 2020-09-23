@@ -1,3 +1,4 @@
+{{ if .Values.webapp.enabled }}
 apiVersion: "sparkoperator.k8s.io/v1beta2"
 kind: SparkApplication
 metadata:
@@ -9,6 +10,9 @@ spec:
   image: {{ .Values.webapp.distributed.image }}
   imagePullPolicy: Always 
   mainApplicationFile: local:///incubator-sdap-nexus/analysis/webservice/webapp.py
+  arguments:
+    - --cassandra-host=sdap-cassandra
+    - --solr-host=http://sdap-solr:8983
   sparkVersion: "2.4.4"
   restartPolicy:
     type: OnFailure
@@ -42,3 +46,4 @@ spec:
     protocol: TCP
     port: 8083
     targetPort: 8083
+{{ end }}
