@@ -1,4 +1,3 @@
-{{ if .Values.webapp.enabled }}
 apiVersion: "sparkoperator.k8s.io/v1beta2"
 kind: SparkApplication
 metadata:
@@ -46,4 +45,3 @@ spec:
     protocol: TCP
     port: 8083
     targetPort: 8083
-{{ end }}
