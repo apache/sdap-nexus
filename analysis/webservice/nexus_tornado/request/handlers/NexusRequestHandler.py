@@ -5,7 +5,6 @@ import functools
 import tornado.gen
 import tornado.ioloop
 import tornado.util
-import uuid
 from datetime import datetime, timedelta
 from webservice.jobs import Job
 

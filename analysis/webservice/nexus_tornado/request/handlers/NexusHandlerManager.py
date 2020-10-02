@@ -69,9 +69,6 @@ class NexusHandlerManager(object):
 
         return self.__get_tornado_handlers(NexusHandler.AVAILABLE_RESTAPI_HANDLERS, path_spark_to_restapi)
 
-    def _get_restapi_job_handler(self):
-        pass
-
     def __get_tornado_handlers(self, wrappers, path_func):
         handlers = []
 

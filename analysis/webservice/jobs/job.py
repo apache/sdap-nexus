@@ -1,5 +1,6 @@
 from datetime import datetime
 
+
 class Job():
     def __init__(self):
         self.request = None  # NexusRequestObject
