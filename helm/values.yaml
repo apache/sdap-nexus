@@ -8,7 +8,7 @@ rootWebpage:
 webapp:
   enabled: true
   distributed:
-    image: nexusjpl/nexus-webapp:distributed.0.1.5
+    image: nexusjpl/nexus-webapp:distributed.0.2.0
 
     ## Use any of the driver configuration options available at
     ## https://github.com/GoogleCloudPlatform/spark-on-k8s-operator/blob/master/docs/user-guide.md
