@@ -89,6 +89,8 @@ RUN python setup.py install
 WORKDIR /incubator-sdap-nexus/analysis
 RUN python setup.py install
 
+COPY tools /incubator-sdap-nexus/tools
+
 # Upgrade kubernetes client jar from the default version
 RUN rm /opt/spark/jars/kubernetes-client-4.1.2.jar
 ADD https://repo1.maven.org/maven2/io/fabric8/kubernetes-client/4.4.2/kubernetes-client-4.4.2.jar /opt/spark/jars

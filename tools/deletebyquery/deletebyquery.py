@@ -20,6 +20,7 @@ import logging
 import uuid
 from random import sample
 
+from cassandra.auth import PlainTextAuthProvider
 import cassandra.concurrent
 from cassandra.cluster import Cluster
 from cassandra.policies import RoundRobinPolicy, TokenAwarePolicy
@@ -52,10 +53,16 @@ def init(args):
     dc_policy = RoundRobinPolicy()
     token_policy = TokenAwarePolicy(dc_policy)
 
+    if args.cassandraUsername and args.cassandraPassword:
+        auth_provider = PlainTextAuthProvider(username=args.cassandraUsername, password=args.cassandraPassword)
+    else:
+        auth_provider = None
+
     global cassandra_cluster
     cassandra_cluster = Cluster(contact_points=args.cassandra, port=args.cassandraPort,
                                 protocol_version=int(args.cassandraProtocolVersion),
-                                load_balancing_policy=token_policy)
+                                load_balancing_policy=token_policy,
+                                auth_provider=auth_provider)
     global cassandra_session
     cassandra_session = cassandra_cluster.connect(keyspace=args.cassandraKeyspace)
 
@@ -236,6 +243,14 @@ def parse_args():
                         help='The port used to connect to Cassandra.',
                         required=False,
                         default='9042')
+
+    parser.add_argument('--cassandraUsername',
+                        help='The username used to connect to Cassandra.',
+                        required=False)
+
+    parser.add_argument('--cassandraPassword',
+                        help='The password used to connect to Cassandra.',
+                        required=False)
 
     parser.add_argument('-pv', '--cassandraProtocolVersion',
                         help='The version of the Cassandra protocol the driver should use.',
