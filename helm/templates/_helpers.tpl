@@ -45,3 +45,10 @@ The data volume mount which is used in both the Collection Manager and the Granu
   mountPath: {{ .Values.ingestion.granules.mountPath }}
 {{- end -}}
 
+{{- define "nexus.urls.solr" -}}
+{{ .Values.external.solrHostAndPort | default (print "http://" .Release.Name "-solr-svc:8983") }}
+{{- end -}}
+
+{{- define "nexus.urls.zookeeper" -}}
+{{ .Values.external.zookeeperHostAndPort | default (print .Release.Name "-zookeeper:2181") }}
+{{- end -}}

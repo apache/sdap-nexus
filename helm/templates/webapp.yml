@@ -9,8 +9,13 @@ spec:
   pythonVersion: "2"
   mode: cluster
   image: {{ .Values.webapp.distributed.image }}
-  imagePullPolicy: Always 
+  imagePullPolicy: IfNotPresent
   mainApplicationFile: local:///incubator-sdap-nexus/analysis/webservice/webapp.py
+  arguments:
+    - --cassandra-host={{ .Release.Name }}-cassandra
+    - --cassandra-username=cassandra
+    - --cassandra-password=cassandra
+    - --solr-host={{ include "nexus.urls.solr" . }}
   sparkVersion: "2.4.4"
   restartPolicy:
     type: OnFailure

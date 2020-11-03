@@ -16,7 +16,7 @@
 
 import json
 
-from webservice.NexusHandler import nexus_handler, AVAILABLE_HANDLERS
+from webservice.NexusHandler import nexus_handler, AVAILABLE_LEGACY_HANDLERS
 from webservice.algorithms.NexusCalcHandler import NexusCalcHandler
 from webservice.webmodel import NexusResults
 
@@ -32,7 +32,7 @@ class CapabilitiesListCalcHandlerImpl(NexusCalcHandler):
     def calc(self, computeOptions, **args):
         capabilities = []
 
-        for capability in AVAILABLE_HANDLERS:
+        for capability in AVAILABLE_LEGACY_HANDLERS:
             capabilityDef = {
                 "name": capability.name,
                 "path": capability.path,

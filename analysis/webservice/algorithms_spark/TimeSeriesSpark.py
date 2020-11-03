@@ -32,7 +32,7 @@ from nexustiles.nexustiles import NexusTileService
 from pytz import timezone
 from scipy import stats
 from webservice import Filtering as filtering
-from webservice.NexusHandler import nexus_handler
+from webservice.NexusHandler import nexus_handler, nexus_restapi_handler, nexus_wps_handler
 from webservice.algorithms_spark.NexusCalcSparkHandler import NexusCalcSparkHandler
 from webservice.webmodel import NexusResults, NoDataException, NexusProcessingException
 
@@ -44,6 +44,7 @@ logger = logging.getLogger(__name__)
 
 
 @nexus_handler
+@nexus_restapi_handler
 class TimeSeriesSparkHandlerImpl(NexusCalcSparkHandler):
     name = "Time Series Spark"
     path = "/timeSeriesSpark"

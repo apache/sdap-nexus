@@ -14,10 +14,11 @@ Python module that exposes NEXUS analytical capabilities via a HTTP webservice. 
     conda activate nexus-analysis
     ````
 
-2. Install conda dependencies
+2. Install conda dependencies and other dependencies
 
     ````
     cd analysis
+    pip install asyncio # for asynchronous job management
     conda install pyspark
     conda install -c conda-forge --file conda-requirements.txt
     #conda install numpy matplotlib mpld3 scipy netCDF4 basemap gdal pyproj=1.9.5.1 libnetcdf=4.3.3.1

@@ -17,6 +17,7 @@ import logging
 import uuid
 from ConfigParser import NoOptionError
 
+from cassandra.auth import PlainTextAuthProvider
 import nexusproto.DataTile_pb2 as nexusproto
 import numpy as np
 from cassandra.auth import PlainTextAuthProvider
@@ -160,6 +161,9 @@ class CassandraProxy(object):
         self.__cass_local_DC = config.get("cassandra", "local_datacenter")
         self.__cass_protocol_version = config.getint("cassandra", "protocol_version")
         self.__cass_dc_policy = config.get("cassandra", "dc_policy")
+
+        logger.info("Setting cassandra host to " + self.__cass_url)
+        logger.info("Setting cassandra username to " + self.__cass_username)
 
         try:
             self.__cass_port = config.getint("cassandra", "port")
