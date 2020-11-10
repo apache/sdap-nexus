@@ -8,7 +8,7 @@ rootWebpage:
 webapp:
   enabled: true
   distributed:
-    image: nexusjpl/nexus-webapp:distributed.0.2.0
+    image: nexusjpl/nexus-webapp:distributed.0.2.1
 
     ## Use any of the driver configuration options available at
     ## https://github.com/GoogleCloudPlatform/spark-on-k8s-operator/blob/master/docs/user-guide.md
@@ -31,7 +31,7 @@ ingestion:
 
   granuleIngester:
     replicas: 2
-    image: nexusjpl/granule-ingester:0.0.4
+    image: nexusjpl/granule-ingester:0.1.0a3
 
     ## cpu refers to both request and limit
     cpu: 1
@@ -40,7 +40,7 @@ ingestion:
     memory: 1Gi
 
   collectionManager:
-    image: nexusjpl/collection-manager:0.0.4
+    image: nexusjpl/collection-manager:0.1.0a7
 
     ## cpu refers to both request and limit
     cpu: 0.5
@@ -70,6 +70,15 @@ ingestion:
     ## path is the path on either local filesystem or NFS mount at which
     ## the granule files are stored.
     path: /var/lib/sdap/granules
+
+    # s3:
+    #   bucket: nexus-ingest
+    #   awsCredsEnvs:
+    #     AWS_ACCESS_KEY_ID: secret
+    #     AWS_SECRET_ACCESS_KEY: secret
+    #     AWS_SESSION_TOKEN: secret
+    #     AWS_DEFAULT_REGION: us-west-2
+
 
   ## Where to find the Collections Config file
   ## ref: https://github.com/apache/incubator-sdap-ingester/tree/dev/collection_manager#the-collections-configuration-file

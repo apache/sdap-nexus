@@ -1,4 +1,8 @@
 {{- if .Values.ingestion.enabled }}
+
+{{- $s3 := .Values.ingestion.granules.s3 | default dict }}
+{{ $aws_creds_envs := $s3.awsCredsEnvs | default dict }}
+
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -38,6 +42,10 @@ spec:
             - name: MAX_CONCURRENCY
               value: "{{ .Values.ingestion.granuleIngester.maxConcurrency }}"
             {{ end }}
+            {{- range $name, $value := $aws_creds_envs }}
+            - name: {{ $name }}
+              value: {{ $value }}
+            {{- end }}
           resources:
             requests:
               cpu: {{ .Values.ingestion.granuleIngester.cpu }}

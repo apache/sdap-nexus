@@ -1,5 +1,7 @@
 {{- if .Values.ingestion.enabled }}
 {{- $history := .Values.ingestion.history | default dict }}
+{{- $s3 := .Values.ingestion.granules.s3 | default dict }}
+{{ $aws_creds_envs := $s3.awsCredsEnvs | default dict }}
 
 apiVersion: apps/v1
 kind: Deployment
@@ -37,6 +39,14 @@ spec:
             - name: HISTORY_PATH
               value: {{ include "nexus.history.mountPath" . }}
             {{- end }}
+            {{- if $s3.bucket }}
+            - name: S3_BUCKET
+              value: {{ $s3.bucket }}
+            {{- end }}
+            {{- range $name, $value := $aws_creds_envs }}
+            - name: {{ $name }}
+              value: {{ $value }}
+            {{- end }}
           resources:
             requests:
               cpu: {{ .Values.ingestion.collectionManager.cpu }}
@@ -45,15 +55,19 @@ spec:
               cpu: {{ .Values.ingestion.collectionManager.cpu }}
               memory: {{ .Values.ingestion.collectionManager.memory }}
           volumeMounts:
-{{ include "nexus.ingestion.dataVolumeMount" . | indent 12 }}
             {{- if not $history.solrEnabled }}
             - name: history-volume
               mountPath: {{ include "nexus.history.mountPath" . }}
             {{- end }}
             - name: collections-config-volume
               mountPath: {{ include "nexus.collectionsConfig.mountPath" . }}
+{{- if not $s3.bucket }}
+{{ include "nexus.ingestion.dataVolumeMount" . | indent 12 }}
+{{- end }}
       volumes:
+{{- if not $s3.bucket }}
 {{ include "nexus.ingestion.dataVolume" . | indent 8 }}
+{{- end }}
         - name: collections-config-volume
           configMap:
             name: {{ include "nexus.collectionsConfig.configmapName" . }}
