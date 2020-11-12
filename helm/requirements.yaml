@@ -4,7 +4,7 @@ dependencies:
     repository: https://kubernetes-charts.storage.googleapis.com
     condition: ingressEnabled
   - name: rabbitmq
-    version: 7.1.0
+    version: 8.0.1
     repository: https://charts.bitnami.com/bitnami
     condition: rabbitmq.enabled
   - name: solr
