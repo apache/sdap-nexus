@@ -82,6 +82,7 @@ RUN /tmp/install_nexusproto.sh $APACHE_NEXUSPROTO $APACHE_NEXUSPROTO_BRANCH
 
 COPY data-access /incubator-sdap-nexus/data-access
 COPY analysis /incubator-sdap-nexus/analysis
+COPY tools /incubator-sdap-nexus/tools
 
 WORKDIR /incubator-sdap-nexus/data-access
 RUN python setup.py install
@@ -89,7 +90,9 @@ RUN python setup.py install
 WORKDIR /incubator-sdap-nexus/analysis
 RUN python setup.py install
 
-COPY tools /incubator-sdap-nexus/tools
+WORKDIR /incubator-sdap-nexus/tools/deletebyquery
+RUN pip install -r requirements.txt
+RUN rm requirements.txt
 
 # Upgrade kubernetes client jar from the default version
 RUN rm /opt/spark/jars/kubernetes-client-4.1.2.jar
