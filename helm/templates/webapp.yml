@@ -12,9 +12,9 @@ spec:
   imagePullPolicy: Always
   mainApplicationFile: local:///incubator-sdap-nexus/analysis/webservice/webapp.py
   arguments:
-    - --cassandra-host={{ .Release.Name }}-cassandra
-    - --cassandra-username=cassandra
-    - --cassandra-password=cassandra
+    - --cassandra-host={{ include "nexus.urls.cassandra" . }}
+    - --cassandra-username={{ include "nexus.credentials.cassandra.username" . }}
+    - --cassandra-password={{ include "nexus.credentials.cassandra.password" . }}
     - --solr-host={{ include "nexus.urls.solr" . }}
   sparkVersion: "2.4.4"
   restartPolicy:

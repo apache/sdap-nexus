@@ -52,3 +52,15 @@ The data volume mount which is used in both the Collection Manager and the Granu
 {{- define "nexus.urls.zookeeper" -}}
 {{ .Values.external.zookeeperHostAndPort | default (print .Release.Name "-zookeeper:2181") }}
 {{- end -}}
+
+{{- define "nexus.urls.cassandra" -}}
+{{ .Values.external.cassandraHost | default (print .Release.Name "-cassandra") }}
+{{- end -}}
+
+{{- define "nexus.credentials.cassandra.username" -}}
+{{ .Values.external.cassandraUsername | default "cassandra" }}
+{{- end -}}
+
+{{- define "nexus.credentials.cassandra.password" -}}
+{{ .Values.external.cassandraPassword | default "cassandra" }}
+{{- end -}}

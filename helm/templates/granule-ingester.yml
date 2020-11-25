@@ -31,11 +31,11 @@ spec:
             - name: RABBITMQ_HOST
               value: {{ .Values.rabbitmq.fullnameOverride }}
             - name: CASSANDRA_CONTACT_POINTS
-              value: {{ .Release.Name }}-cassandra
+              value: {{ include "nexus.urls.cassandra" . }}
             - name: CASSANDRA_USERNAME
-              value: cassandra
+              value: {{ include "nexus.credentials.cassandra.username" . }}
             - name: CASSANDRA_PASSWORD
-              value: cassandra
+              value: {{ include "nexus.credentials.cassandra.password" . }}
             - name: ZK_HOST_AND_PORT
               value: {{ include "nexus.urls.zookeeper" . }}
             {{ if .Values.ingestion.granuleIngester.maxConcurrency }}

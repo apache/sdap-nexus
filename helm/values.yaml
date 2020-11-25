@@ -108,11 +108,13 @@ ingestion:
 external:
   solrHostAndPort:   
   zookeeperHostAndPort:
-
-solrInitEnabled: true
+  cassandraHost:
+  cassandraUsername:
+  cassandraPassword:
 
 solr:
   enabled: true
+  initPodEnabled: true
   image:
     repository: nexusjpl/solr
     tag: 8.4.0
