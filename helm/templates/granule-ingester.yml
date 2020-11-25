@@ -21,7 +21,7 @@ spec:
     spec:
       containers:
         - image: {{ .Values.ingestion.granuleIngester.image }}
-          imagePullPolicy: IfNotPresent
+          imagePullPolicy: Always
           name: granule-ingester
           env:
             - name: RABBITMQ_USERNAME

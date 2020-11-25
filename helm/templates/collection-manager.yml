@@ -21,7 +21,7 @@ spec:
     spec:
       containers:
         - image: {{ .Values.ingestion.collectionManager.image }}
-          imagePullPolicy: IfNotPresent 
+          imagePullPolicy: Always
           name: collection-manager
           env:
             - name: RABBITMQ_USERNAME

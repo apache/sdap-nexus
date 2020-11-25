@@ -9,7 +9,7 @@ spec:
   pythonVersion: "2"
   mode: cluster
   image: {{ .Values.webapp.distributed.image }}
-  imagePullPolicy: IfNotPresent
+  imagePullPolicy: Always
   mainApplicationFile: local:///incubator-sdap-nexus/analysis/webservice/webapp.py
   arguments:
     - --cassandra-host={{ .Release.Name }}-cassandra
