@@ -8,16 +8,24 @@ NEXUS is an earth science data analytics application, and a component of the [Ap
 The helm chart deploys all the required components of the NEXUS application (Spark webapp, Solr, Cassandra, Zookeeper, and optionally ingress components).
 
 ## Table of Contents
-- [Prerequisites](#prerequisites)
-  - [Spark Operator](#spark-operator)
-  - [Persistent Volume Provisioner](#persistent-volume-provisioner)
-- [Installing the Chart](#installing-the-chart)
-- [Verifying Successful Installation](#verifying-successful-installation)
-  - [Local Deployment with Ingress Enabled](#option-1-local-deployment-with-ingress-enabled)
-  - [No Ingress Enabled](#option-2-no-ingress-enabled)
-- [Uninstalling the Chart](#uninstalling-the-chart)
-- [Configuration](#configuration)
-- [Restricting Pods to Specific Nodes](#restricting-pods-to-specific-nodes)
+- [NEXUS](#nexus)
+  - [Introduction](#introduction)
+  - [Table of Contents](#table-of-contents)
+  - [Prerequisites](#prerequisites)
+      - [Spark Operator](#spark-operator)
+      - [Persistent Volume Provisioner](#persistent-volume-provisioner)
+  - [Installing the Chart](#installing-the-chart)
+  - [Verifying Successful Installation](#verifying-successful-installation)
+    - [Option 1: Local deployment with ingress enabled](#option-1-local-deployment-with-ingress-enabled)
+    - [Option 2: No ingress enabled](#option-2-no-ingress-enabled)
+  - [Uninstalling the Chart](#uninstalling-the-chart)
+  - [Configuration](#configuration)
+  - [SDAP Parameters](#sdap-parameters)
+  - [Cassandra Parameters](#cassandra-parameters)
+  - [Solr/Zookeeper Parameters](#solrzookeeper-parameters)
+  - [RabbitMQ Parameters](#rabbitmq-parameters)
+  - [Ingress Parameters](#ingress-parameters)
+  - [Restricting Pods to Specific Nodes](#restricting-pods-to-specific-nodes)
 
 ## Prerequisites
 
@@ -113,10 +121,13 @@ $ helm install nexus incubator-sdap-nexus/helm --namespace=sdap --dependency-upd
 The following table lists the configurable parameters of the NEXUS chart and their default values. You can also look at `helm/values.yaml` to see the available options.
 > **Note**: The default configuration values are tuned to run NEXUS in a local environment. Setting `ingressEnabled=true` in addition will create a load balancer and expose NEXUS at `localhost`.
 
+## SDAP Parameters
 |             Parameter                 |            Description             |                    Default                  |
 |---------------------------------------|------------------------------------|---------------------------------------------|
 | `storageClass`                        | Storage class to use for Cassandra, Solr, and Zookeeper. (Note that `hostpath` should only be used in local deployments.) |`hostpath`|
-| `webapp.distributed.image`            | Docker image and tag for the webapp| `nexusjpl/nexus-webapp:distributed.0.1.5`   |
+| `rootWebpage.enabled`                 | Whether to deploy the root webpage (just returns HTTP 200) | `true`              |
+| `webapp.enabled`                      | Whether to deploy the webapp       | `true`                                      |
+| `webapp.distributed.image`            | Docker image and tag for the webapp| `nexusjpl/nexus-webapp:distributed.0.2.2`   |
 | `webapp.distributed.driver.cores`     | Number of cores on Spark driver    | `1`                                         |
 | `webapp.distributed.driver.coreLimit` | Maximum cores on Spark driver, in millicpus| `1200m`                             |
 | `webapp.distributed.driver.memory`    | Memory on Spark driver             | `512m`                                      |
@@ -127,40 +138,7 @@ The following table lists the configurable parameters of the NEXUS chart and the
 | `webapp.distributed.executor.memory`  | Memory on Spark workers            | `512m`                                      |
 | `webapp.distributed.executor.tolerations`| Tolerations for Spark workers   | `nil`                                       |
 | `webapp.distributed.executor.affinity`| Affinity (node or pod) for Spark workers| `nil`                                  |
-| `cassandra.replicas`                  | Number of Cassandra replicas       | `2`                                         |
-| `cassandra.storage`                   | Storage per Cassandra replica      | `13Gi`                                      |
-| `cassandra.requests.cpu`              | CPUs to request per Cassandra replica| `1`                                       |
-| `cassandra.requests.memory`           | Memory to request per Cassandra replica| `3Gi`                                   |
-| `cassandra.limits.cpu`                | CPU limit per Cassandra replica    | `1`                                         |
-| `cassandra.limits.memory`             | Memory limit per Cassandra replica | `3Gi`                                       |
-| `cassandra.tolerations`               | Tolerations for Cassandra instances| `[]`                                        |
-| `cassandra.nodeSelector`              | Node selector for Cassandra instances| `nil`                                     |
-| `solr.replicas`                       | Number of Solr replicas (this should not be less than 2, or else solr-cloud will not be happy)| `2`|
-| `solr.storage`                        | Storage per Solr replica           | `10Gi`                                      |
-| `solr.heap`                           | Heap per Solr replica              | `4g`                                        |
-| `solr.requests.memory`                | Memory to request per Solr replica | `5Gi`                                       |
-| `solr.requests.cpu`                   | CPUs to request per Solr replica   | `1`                                         |
-| `solr.limits.memory`                  | Memory limit per Solr replica      | `5Gi`                                       |
-| `solr.limits.cpu`                     | CPU limit per Solr replica         | `1`                                         |
-| `solr.tolerations`                    | Tolerations for Solr instances     | `nil`                                       |
-| `solr.nodeSelector`                   | Node selector for Solr instances   | `nil`                                       |
-| `zookeeper.replicas`                  | Number of zookeeper replicas. This should be an odd number greater than or equal to 3 in order to form a valid quorum.|`3`|
-| `zookeeper.memory`                    | Memory per zookeeper replica       | `1Gi`                                       |
-| `zookeeper.cpu`                       | CPUs per zookeeper replica         | `0.5`                                       |
-| `zookeeper.storage`                   | Storage per zookeeper replica      | `8Gi`                                       |
-| `zookeeper.tolerations`               | Tolerations for Zookeeper instances| `nil`                                       |
-| `zookeeper.nodeSelector`              | Node selector for Zookeeper instances| `nil`                                     |
 | `onEarthProxyIP`                      | IP or hostname to proxy `/onearth` to (leave blank to disable the proxy)| `""`   |
-| `ingressEnabled`                      | Enable nginx-ingress               | `false`                                     |
-| `nginx-ingress.controller.scope.enabled`|Limit the scope of the ingress controller to this namespace | `true`            |
-| `nginx-ingress.controller.kind`       | Install ingress controller as Deployment, DaemonSet or Both  | `DaemonSet`       |
-| `nginx-ingress.controller.service.enabled`| Create a front-facing controller service (this might be used for local or on-prem deployments) | `true` |
-| `nginx-ingress.controller.service.type`|Type of controller service to create| `LoadBalancer`                             |
-| `nginx-ingress.defaultBackend.enabled`| Use default backend component	     | `false`                                     |
-| `rabbitmq.replicaCount`               | Number of RabbitMQ replicas        | `2`                                         |
-| `rabbitmq.auth.username`              | RabbitMQ username                  | `guest`                                     |
-| `rabbitmq.auth.password`              | RabbitMQ password                  | `guest`                                     |
-| `rabbitmq.ingress.enabled`            | Enable ingress resource for RabbitMQ Management console | `true`                 |
 | `ingestion.enabled`                   | Enable ingestion by deploying the Config Operator, Collection Manager, Granule Ingestion, and RabbitMQ | `true` |
 | `ingestion.granuleIngester.replicas`  | Number of Granule Ingester replicas | `2`                                        |
 | `ingestion.granuleIngester.image`     | Docker image and tag for Granule Ingester| `nexusjpl/granule-ingester:0.0.1`     |
@@ -176,6 +154,66 @@ The following table lists the configurable parameters of the NEXUS chart and the
 | `ingestion.collections.git.url`       | URL to a Git repository containing a [Collections Config](https://github.com/apache/incubator-sdap-ingester/tree/dev/collection_manager#the-collections-configuration-file) file. The file should be at the root of the repository. The repository URL should be of the form `https://github.com/username/repo.git`. This property must be configured if ingestion is enabled! | `nil`|
 | `ingestion.collections.git.branch`    | Branch to use when loading a Collections Config file from a Git repository.| `master`|
 | `ingestion.history.url`               | An optional URL to a Solr database in which to store ingestion history. If this is not set, ingestion history will be stored in a directory instead, with the storage class configured by `storageClass` above.| `nil`|
+
+
+## Cassandra Parameters
+
+|             Parameter                 |            Description             |                    Default                  |
+|---------------------------------------|------------------------------------|---------------------------------------------|
+| `cassandra.enabled`                   | Whether to deploy Cassandra        | `true`                                      |
+| `cassandra.initDBConfigMap`           | Configmap for initialization CQL commands (done in the first node) | `init-cassandra`|
+| `cassandra.dbUser.user`               | Cassandra admin user               | `cassandra`                                 |
+| `cassandra.dbUser.password`           | Password for `dbUser.user`. Randomly generated if empty| `cassandra`             |
+| `cassandra.cluster.replicaCount`      | Number of Cassandra replicas       | `1`                                         |
+| `cassandra.persistence.storageClass`  | PVC Storage Class for Cassandra data volume| `hostpath`                          |
+| `cassandra.persistence.size`          | PVC Storage Request for Cassandra data volume| `8Gi`                             |
+| `cassandra.resources.requests.cpu`    | CPUs to request per Cassandra replica| `1`                                       |
+| `cassandra.resources.requests.memory` | Memory to request per Cassandra replica| `8Gi`                                   |
+| `cassandra.resources.limits.cpu`      | CPU limit per Cassandra replica    | `1`                                         |
+| `cassandra.resources.limits.memory`   | Memory limit per Cassandra replica | `8Gi`                                       |
+
+## Solr/Zookeeper Parameters
+
+|             Parameter                 |            Description             |                    Default                  |
+|---------------------------------------|------------------------------------|---------------------------------------------|
+| `solr.enabled`                        | Whether to deploy Solr and Zookeeper| `true`                                     |
+| `solr.initPodEnabled`                 | Whether to deploy a pod which initializes the Solr database for SDAP (does nothing if the database is alreday initialized)| `true`|
+| `solr.image.repository`               | The repository to pull the Solr docker image from| `nexusjpl/solr`               |
+| `solr.image.tag`                      | The tag on the Solr repository to pull| `8.4.0`                                  |
+| `solr.replicaCount`                   | The number of replicas in the Solr statefulset| `3`                              |
+| `solr.volumeClaimTemplates.storageClassName`| The name of the storage class for the Solr PVC| `hostpath`                 |
+| `solr.volumeClaimTemplates.storageSize`| The size of the PVC               | `10Gi`                                      |
+| `solr.resources.requests.memory`      | Memory to request per Solr replica | `2Gi`                                       |
+| `solr.resources.requests.cpu`         | CPUs to request per Solr replica   | `1`                                         |
+| `solr.resources.limits.memory`        | Memory limit per Solr replica      | `2Gi`                                       |
+| `solr.resources.limits.cpu`           | CPU limit per Solr replica         | `1`                                         |
+| `solr.zookeeper.replicaCount`         | The number of replicas in the Zookeeper statefulset (this should be an odd number)| `3`|
+| `solr.zookeeper.persistence.storageClass`| The name of the storage class for the Zookeeper PVC| `hostpath`               |
+| `solr.zookeeper.resources.requests.memory`| Memory to request per Zookeeper replica| `1Gi`                               |
+| `solr.zookeeper.resources.requests.cpu`| CPUs to request per Zookeeper replica| `0.5`                                    |
+| `solr.zookeeper.resources.limits.memory`| Memory limit per Zookeeper replica| `1Gi`                                      |
+| `solr.zookeeper.resources.limits.cpu` | CPU limit per Zookeeper replica    | `0.5`                                       |
+
+
+## RabbitMQ Parameters
+
+|             Parameter                 |            Description             |                    Default                  |
+|---------------------------------------|------------------------------------|---------------------------------------------|
+| `rabbitmq.replicaCount`               | Number of RabbitMQ replicas        | `2`                                         |
+| `rabbitmq.auth.username`              | RabbitMQ username                  | `guest`                                     |
+| `rabbitmq.auth.password`              | RabbitMQ password                  | `guest`                                     |
+| `rabbitmq.ingress.enabled`            | Enable ingress resource for RabbitMQ Management console | `true`                 |
+
+
+## Ingress Parameters
+|             Parameter                 |            Description             |                    Default                  |
+|---------------------------------------|------------------------------------|---------------------------------------------|
+| `ingressEnabled`                      | Enable nginx-ingress               | `false`                                     |
+| `nginx-ingress.controller.scope.enabled`|Limit the scope of the ingress controller to this namespace | `true`            |
+| `nginx-ingress.controller.kind`       | Install ingress controller as Deployment, DaemonSet or Both  | `DaemonSet`       |
+| `nginx-ingress.controller.service.enabled`| Create a front-facing controller service (this might be used for local or on-prem deployments) | `true` |
+| `nginx-ingress.controller.service.type`|Type of controller service to create| `LoadBalancer`                             |
+| `nginx-ingress.defaultBackend.enabled`| Use default backend component	     | `false`                                     |
 
 ## Restricting Pods to Specific Nodes
 
