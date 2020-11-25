@@ -94,6 +94,8 @@ WORKDIR /incubator-sdap-nexus/tools/deletebyquery
 RUN pip install -r requirements.txt
 RUN rm requirements.txt
 
+WORKDIR /incubator-sdap-nexus
+
 # Upgrade kubernetes client jar from the default version
 RUN rm /opt/spark/jars/kubernetes-client-4.1.2.jar
 ADD https://repo1.maven.org/maven2/io/fabric8/kubernetes-client/4.4.2/kubernetes-client-4.4.2.jar /opt/spark/jars
