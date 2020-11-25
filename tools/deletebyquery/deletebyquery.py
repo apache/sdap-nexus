@@ -201,14 +201,15 @@ def parse_args():
 
     parser.add_argument('--collection',
                         help='The name of the SOLR collection.',
-                        required=True,
+                        required=False,
+                        default='nexustiles',
                         metavar='nexustiles')
 
     parser.add_argument('--solrIdField',
                         help='The name of the unique ID field for this collection.',
                         required=False,
-                        default='solr_id_s',
-                        metavar='solr_id_s')
+                        default='id',
+                        metavar='id')
 
     parser.add_argument('--cassandra',
                         help='The hostname(s) or IP(s) of the Cassandra server(s).',
@@ -218,7 +219,8 @@ def parse_args():
 
     parser.add_argument('-k', '--cassandraKeyspace',
                         help='The Cassandra keyspace.',
-                        required=True,
+                        default='nexustiles',
+                        required=False,
                         metavar='nexustiles')
 
     group = parser.add_mutually_exclusive_group(required=True)
