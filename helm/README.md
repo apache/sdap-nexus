@@ -215,7 +215,7 @@ The following table lists the configurable parameters of the NEXUS chart and the
 |             Parameter                 |            Description             |                    Default                  |
 |---------------------------------------|------------------------------------|---------------------------------------------|
 | `rabbitmq.enabled`                    | Whether to deploy RabbitMQ         | `true`                                      |
-| `rabbitmq.persistence.storageClass`   | Whether to deploy RabbitMQ         | `true`                                      |
+| `rabbitmq.persistence.storageClass`   | Storage class to use for RabbitMQ  | `hostpath`                                  |
 | `rabbitmq.replicaCount`               | Number of RabbitMQ replicas        | `1`                                         |
 | `rabbitmq.auth.username`              | RabbitMQ username                  | `guest`                                     |
 | `rabbitmq.auth.password`              | RabbitMQ password                  | `guest`                                     |
