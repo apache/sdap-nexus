@@ -27,6 +27,8 @@ The helm chart deploys all the required components of the NEXUS application (Spa
     - [RabbitMQ Parameters](#rabbitmq-parameters)
     - [Ingress Parameters](#ingress-parameters)
   - [Restricting Pods to Specific Nodes](#restricting-pods-to-specific-nodes)
+  - [Notes about Persistent Volume Storage Classes](#notes-about-persistent-volume-storage-classes)
+      - [Example](#example)
 
 ## Prerequisites
 
@@ -43,7 +45,7 @@ Follow their instructions to install the Helm chart, or simply run:
     $ helm install incubator/sparkoperator --generate-name --namespace=spark-operator
 
 #### Persistent Volume Provisioner
-NEXUS stores data in Cassandra and Solr. In order to have persistent storage, you need to have a Storage Class defined and have Persistent Volumes provisioned either manually or dynamically. See [Persistent Volumes](https://kubernetes.io/docs/concepts/storage/persistent-volumes/).
+The RabbitMQ, Solr, Zookeeper, Cassandra, and Collection Manager (ingestion) components of SDAP need to be able to store data. In order to have persistent storage, you need to have a Storage Class defined and have Persistent Volumes provisioned either manually or dynamically. See [Persistent Volumes](https://kubernetes.io/docs/concepts/storage/persistent-volumes/).
 > **Tip**: If you are using an NFS server as storage, you can use [nfs-client-provisioner](https://github.com/helm/charts/tree/master/stable/nfs-client-provisioner) to dynamically provision persistent volumes on your NFS server.
 
 
@@ -120,7 +122,7 @@ solr:
 $ helm install nexus incubator-sdap-nexus/helm --namespace=sdap --dependency-update -f ~/overridden-values.yml
 ```
 
-The following table lists the configurable parameters of the NEXUS chart and their default values. You can also look at `helm/values.yaml` to see the available options.
+The following tables list the configurable parameters of the NEXUS chart and their default values. You can also look at `helm/values.yaml` to see the available options.
 > **Note**: The default configuration values are tuned to run NEXUS in a local environment. Setting `ingressEnabled=true` in addition will create a load balancer and expose NEXUS at `localhost`.
 
 ### SDAP Webapp (Analyis) Parameters
@@ -324,4 +326,35 @@ solr:
               operator: In
               values:
               - uat
+```
+
+## Notes about Persistent Volume Storage Classes
+
+The SDAP Helm chart uses [persistent volumes](https://kubernetes.io/docs/concepts/storage/persistent-volumes/) for RabbitMQ, Solr, Zookeeper, Cassandra, and optionally the Collection Manager ingestion component (if Solr ingestion history is disabled).
+In most use cases you will want to use the same storage class for all of these components.
+
+#### Example 
+If you are deploying SDAP on AWS and you want to use
+[EBS GP2](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ebs-volume-types.html#EBSVolumeTypes_gp2) volumes for persistence storage, you would need to use the following configuration values for the SDAP Helm chart:
+
+```yaml
+rabbitmq:
+  persistence:
+    storageClass: gp2
+
+cassandra:
+  persistence:
+    storageClass: gp2 
+
+solr:
+  volumeClaimTemplates:
+    storageClassName: gp2 
+  zookeeper:
+    persistence:
+      storageClass: gp2
+
+ingestion:
+  history:
+    storageClass: hostpath # This is only needed if Solr ingestion history is disabled, as follows:
+    solrEnabled: false 
 ```
