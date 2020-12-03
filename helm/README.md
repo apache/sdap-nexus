@@ -180,7 +180,7 @@ The following table lists the configurable parameters of the NEXUS chart and the
 | `cassandra.resources.requests.memory` | Memory to request per Cassandra replica| `8Gi`                                   |
 | `cassandra.resources.limits.cpu`      | CPU limit per Cassandra replica    | `1`                                         |
 | `cassandra.resources.limits.memory`   | Memory limit per Cassandra replica | `8Gi`                                       |
-| `external.cassandraHost`              | External Cassandra host to for if `cassandra.enabled` is set to `false`. This should be set if connecting SDAP to a Cassandra database that is not deployed by the SDAP Helm chart. | `nil`|
+| `external.cassandraHost`              | External Cassandra host for if `cassandra.enabled` is set to `false`. This should be set if connecting SDAP to a Cassandra database that is not deployed by the SDAP Helm chart. | `nil`|
 | `external.cassandraUsername`          | Optional Cassandra username, only applies if `external.cassandraHost` is set.| `nil`|
 | `external.cassandraPassword`          | Optional Cassandra password, only applies if `external.cassandraHost` is set.| `nil`|
 
