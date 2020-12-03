@@ -28,7 +28,6 @@ The helm chart deploys all the required components of the NEXUS application (Spa
     - [Ingress Parameters](#ingress-parameters)
   - [Restricting Pods to Specific Nodes](#restricting-pods-to-specific-nodes)
   - [Notes about Persistent Volume Storage Classes](#notes-about-persistent-volume-storage-classes)
-      - [Example](#example)
 
 ## Prerequisites
 
@@ -333,7 +332,9 @@ solr:
 The SDAP Helm chart uses [persistent volumes](https://kubernetes.io/docs/concepts/storage/persistent-volumes/) for RabbitMQ, Solr, Zookeeper, Cassandra, and optionally the Collection Manager ingestion component (if Solr ingestion history is disabled).
 In most use cases you will want to use the same storage class for all of these components.
 
-#### Example 
+
+**Example**
+
 If you are deploying SDAP on AWS and you want to use
 [EBS GP2](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ebs-volume-types.html#EBSVolumeTypes_gp2) volumes for persistence storage, you would need to use the following configuration values for the SDAP Helm chart:
 
