@@ -20,12 +20,12 @@ The helm chart deploys all the required components of the NEXUS application (Spa
     - [Option 2: No ingress enabled](#option-2-no-ingress-enabled)
   - [Uninstalling the Chart](#uninstalling-the-chart)
   - [Configuration](#configuration)
-  - [SDAP Webapp (Analyis) Parameters](#sdap-webapp-analyis-parameters)
-  - [SDAP Ingestion Parameters](#sdap-ingestion-parameters)
-  - [Cassandra Parameters](#cassandra-parameters)
-  - [Solr/Zookeeper Parameters](#solrzookeeper-parameters)
-  - [RabbitMQ Parameters](#rabbitmq-parameters)
-  - [Ingress Parameters](#ingress-parameters)
+    - [SDAP Webapp (Analyis) Parameters](#sdap-webapp-analyis-parameters)
+    - [SDAP Ingestion Parameters](#sdap-ingestion-parameters)
+    - [Cassandra Parameters](#cassandra-parameters)
+    - [Solr/Zookeeper Parameters](#solrzookeeper-parameters)
+    - [RabbitMQ Parameters](#rabbitmq-parameters)
+    - [Ingress Parameters](#ingress-parameters)
   - [Restricting Pods to Specific Nodes](#restricting-pods-to-specific-nodes)
 
 ## Prerequisites
@@ -111,9 +111,10 @@ The second way is to create a yaml file with overridden configuration values and
 # overridden-values.yml
 
 cassandra:
-  replicas: 2
+  cluster:
+    replicaCount: 2
 solr:
-  replicas: 2
+  replicaCount: 2
 ```
 ```
 $ helm install nexus incubator-sdap-nexus/helm --namespace=sdap --dependency-update -f ~/overridden-values.yml
@@ -122,7 +123,7 @@ $ helm install nexus incubator-sdap-nexus/helm --namespace=sdap --dependency-upd
 The following table lists the configurable parameters of the NEXUS chart and their default values. You can also look at `helm/values.yaml` to see the available options.
 > **Note**: The default configuration values are tuned to run NEXUS in a local environment. Setting `ingressEnabled=true` in addition will create a load balancer and expose NEXUS at `localhost`.
 
-## SDAP Webapp (Analyis) Parameters
+### SDAP Webapp (Analyis) Parameters
 |             Parameter                 |            Description             |                    Default                  |
 |---------------------------------------|------------------------------------|---------------------------------------------|
 | `onEarthProxyIP`                      | IP or hostname to proxy `/onearth` to (leave blank to disable the proxy)| `""`   |
@@ -141,7 +142,7 @@ The following table lists the configurable parameters of the NEXUS chart and the
 | `webapp.distributed.executor.affinity`| Affinity (node or pod) for Spark workers| `nil`                                  |
 
 
-## SDAP Ingestion Parameters
+### SDAP Ingestion Parameters
 |             Parameter                 |            Description             |                    Default                  |
 |---------------------------------------|------------------------------------|---------------------------------------------|
 | `ingestion.enabled`                   | Enable ingestion by deploying the Config Operator, Collection Manager, Granule Ingestion| `true` |
@@ -165,8 +166,9 @@ The following table lists the configurable parameters of the NEXUS chart and the
 | `ingestion.history.storageClass`       | The storage class to use for storing ingestion history files. This will only be used if `ingestion.history.solrEnabled` is set to `false`. | `hostpath`|
 
 
-## Cassandra Parameters
+### Cassandra Parameters
 
+See the [Cassandra Helm chart docs](https://github.com/bitnami/charts/tree/master/bitnami/cassandra) for full list of options. 
 |             Parameter                 |            Description             |                    Default                  |
 |---------------------------------------|------------------------------------|---------------------------------------------|
 | `cassandra.enabled`                   | Whether to deploy Cassandra        | `true`                                      |
@@ -185,8 +187,9 @@ The following table lists the configurable parameters of the NEXUS chart and the
 | `external.cassandraPassword`          | Optional Cassandra password, only applies if `external.cassandraHost` is set.| `nil`|
 
 
-## Solr/Zookeeper Parameters
+### Solr/Zookeeper Parameters
 
+See the [Solr Helm chart docs](https://github.com/helm/charts/tree/master/incubator/solr) and [Zookeeper Helm chart docs](https://github.com/helm/charts/tree/master/incubator/zookeeper) for full set of options. 
 |             Parameter                 |            Description             |                    Default                  |
 |---------------------------------------|------------------------------------|---------------------------------------------|
 | `solr.enabled`                        | Whether to deploy Solr and Zookeeper| `true`                                     |
@@ -210,8 +213,9 @@ The following table lists the configurable parameters of the NEXUS chart and the
 | `external.zookeeperHostAndPort`       | External Zookeeper host for if `solr.enabled` is set to `false`. This should be set if connecting SDAP to a Solr database and Zookeeper that is not deployed by the SDAP Helm chart. | `nil`|
 
 
-## RabbitMQ Parameters
+### RabbitMQ Parameters
 
+See the [RabbitMQ Helm chart docs](https://github.com/bitnami/charts/tree/master/bitnami/rabbitmq) for full set of options. 
 |             Parameter                 |            Description             |                    Default                  |
 |---------------------------------------|------------------------------------|---------------------------------------------|
 | `rabbitmq.enabled`                    | Whether to deploy RabbitMQ         | `true`                                      |
@@ -222,7 +226,9 @@ The following table lists the configurable parameters of the NEXUS chart and the
 | `rabbitmq.ingress.enabled`            | Enable ingress resource for RabbitMQ Management console | `true`                 |
 
 
-## Ingress Parameters
+### Ingress Parameters
+
+See the [nginx-ingress Helm chart docs](https://github.com/helm/charts/tree/master/stable/nginx-ingress) for full set of options. 
 |             Parameter                 |            Description             |                    Default                  |
 |---------------------------------------|------------------------------------|---------------------------------------------|
 | `nginx-ingress.enabled`               | Whether to deploy nginx ingress controllers| `false`                             |
@@ -236,7 +242,7 @@ The following table lists the configurable parameters of the NEXUS chart and the
 ## Restricting Pods to Specific Nodes
 
 Sometimes you may wish to restrict pods to run on specific nodes, for example if you have "UAT" and "SIT" nodes within the same cluster. You can configure 
-node selectors and tolerations for all the components, as in the following example:
+affinity and tolerations for all the components, as in the following example:
 
 ```yaml
 webapp:
@@ -278,8 +284,15 @@ cassandra:
       operator: Equal
       value: uat
       effect: NoExecute
-  nodeSelector:
-    environment: uat 
+  affinity:
+    nodeAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+        nodeSelectorTerms:
+        - matchExpressions:
+          - key: environment
+            operator: In
+            values:
+            - uat
 
 solr:
   tolerations:
@@ -287,16 +300,28 @@ solr:
       operator: Equal
       value: uat
       effect: NoExecute
-  nodeSelector:
-    environment: uat 
-
-zookeeper:
-  tolerations:
-    - key: environment
-      operator: Equal
-      value: uat
-      effect: NoExecute
-  nodeSelector:
-    environment: uat 
+  affinity:
+    nodeAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+        nodeSelectorTerms:
+        - matchExpressions:
+          - key: environment
+            operator: In
+            values:
+            - uat
+  zookeeper:
+    tolerations:
+      - key: environment
+        operator: Equal
+        value: uat
+        effect: NoExecute
+    affinity:
+      nodeAffinity:
+        requiredDuringSchedulingIgnoredDuringExecution:
+          nodeSelectorTerms:
+          - matchExpressions:
+            - key: environment
+              operator: In
+              values:
+              - uat
 ```
->**Note**: The webapp supports `affinity` instead of `nodeSelector` because the Spark Operator has deprecated `nodeSelector` in favor of `affinity`.
