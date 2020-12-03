@@ -30,6 +30,7 @@ The helm chart deploys all the required components of the NEXUS application (Spa
     - [Restricting Pods to Specific Nodes](#restricting-pods-to-specific-nodes)
     - [Persistence](#persistence)
     - [Ingesting Granules Stored on S3](#ingesting-granules-stored-on-s3)
+    - [Ingesting Granules Stored on an NFS Host](#ingesting-granules-stored-on-an-nfs-host)
 
 ## Prerequisites
 
@@ -400,6 +401,55 @@ collections:
       lon: 60
   - id: "TELLUS_GRAC-GRFO_MASCON_CRI_GRID_RL06_V2_LAND"
     path: "s3://my-nexus-bucket/grace-fo-land/" # S3 prefix
+    priority: 1
+    projection: Grid
+    dimensionNames:
+      latitude: lat
+      longitude: lon
+      time: time
+      variable: lwe_thickness
+    slices:
+      time: 1
+      lat: 60
+      lon: 60
+```
+
+### Ingesting Granules Stored on an NFS Host
+
+SDAP supports ingesting granules that are stored on an NFS host. To enable this, you must provide the NFS host url, and the path to the directory on the NFS server host the granules are located.
+
+The following is an example configuration that enables ingestion from an NFS host: 
+
+```yaml
+ingestion:
+  granules:
+    nfsServer: nfsserver.example.com
+    path: /share/granules
+    mountPath: /data
+```
+
+When ingesting from either NFS or the local filesystem, the `path` property of all collection entries in the collections config should have the value of `ingestion.granules.mountPath` as the root. 
+This is because granules on the NFS host will be mounted into the SDAP ingestion pods at `ingestion.granules.mountPath`, and the `path` property of collections in the collections config tells those
+ingestion pods where to find the granules on these pods.
+The following is an example of a collections config to be used with the NFS ingestion configuration above: 
+
+```yaml
+collections:
+  - id: "CSR-RL06-Mascons_LAND"
+    path: "/data/CSR-RL06-Mascons-land/CSR_GRACE_RL06_Mascons_v01-land.nc" 
+    priority: 1
+    projection: Grid
+    dimensionNames:
+      latitude: lat
+      longitude: lon
+      time: time
+      variable: lwe_thickness
+    slices:
+      time: 1
+      lat: 60
+      lon: 60
+  - id: "TELLUS_GRAC-GRFO_MASCON_CRI_GRID_RL06_V2_LAND"
+    path: "/data/grace-fo-land/"
     priority: 1
     projection: Grid
     dimensionNames:

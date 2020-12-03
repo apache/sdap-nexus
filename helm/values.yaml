@@ -55,7 +55,7 @@ ingestion:
     ## mountPath is the path in the Collection Manager and Granule Ingester pods
     ## where the granule files will be mounted.
     ## IMPORTANT: the `path` property on all collections in the Collections Config file
-    ## should match this value.
+    ## should have mountPath as the root.
     ## Example: if mountPath is set to /data, then every collection in the Collections
     ## Config file should have something like
     ## path: /data/<some-directory>/<some-file-pattern>
@@ -68,7 +68,7 @@ ingestion:
 
     ## path is the path on either local filesystem or NFS mount at which
     ## the granule files are stored.
-    path: /var/lib/sdap/granules
+    path: 
 
     s3:
       bucket: 
