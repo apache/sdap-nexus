@@ -2,7 +2,7 @@ dependencies:
   - name: nginx-ingress
     version: 1.28.2
     repository: https://kubernetes-charts.storage.googleapis.com
-    condition: ingressEnabled
+    condition: nginx-ingress.enabled
   - name: rabbitmq
     version: 8.0.1
     repository: https://charts.bitnami.com/bitnami

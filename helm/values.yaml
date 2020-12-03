@@ -1,6 +1,4 @@
-## This is the StorageClass that will be used for Cassandra, Solr, Zookeeper,
-## and ingestion history (if ingestion history is not configured to use Solr)
-storageClass: hostpath
+onEarthProxyIP: ""
 
 rootWebpage:
   enabled: true
@@ -53,10 +51,6 @@ ingestion:
 
   ## How to mount the granule files to ingest
   granules:
-    ## Enable nfsServer if you want to mount the granules from an NFS server,
-    ## otherwise they will be loaded from the local filesystem.
-    ## mountPath and path should be set whether or not nfsServer is enabled.
-    # nfsServer: nfs-server.com
 
     ## mountPath is the path in the Collection Manager and Granule Ingester pods
     ## where the granule files will be mounted.
@@ -66,6 +60,11 @@ ingestion:
     ## Config file should have something like
     ## path: /data/<some-directory>/<some-file-pattern>
     mountPath: /data
+
+    ## Enable nfsServer if you want to mount the granules from an NFS server,
+    ## otherwise they will be loaded from the local filesystem.
+    ## mountPath and path should be set whether or not nfsServer is enabled.
+    nfsServer:
 
     ## path is the path on either local filesystem or NFS mount at which
     ## the granule files are stored.
@@ -100,10 +99,16 @@ ingestion:
       # token: someToken
 
   ## Where to store ingestion history
-  ## Defaults to a using a history directory, stored on a PVC using the storageClass defined in this file above
+  ## Defaults to Solr for ingestion history storage
   history:
     ## Store ingestion history in a solr database instead of a filesystem directory
-     solrEnabled: true
+    solrEnabled: true
+
+    ## If using a history directory, stored on a PVC using the storageClass defined in this file above
+    ## storage class to use for ingestion history file only if solrEnabled is set to "false".
+    storageClass: hostpath
+
+
 
 external:
   solrHostAndPort:   
@@ -141,14 +146,13 @@ solr:
         memory: 1Gi
         cpu: 0.5
 
-ingressEnabled: false
 
-onEarthProxyIP: ""
 
 
 ## Configuration values for the nginx-ingress dependency
 ## ref: https://github.com/helm/charts/tree/master/stable/nginx-ingress
 nginx-ingress:
+  enabled: false
   controller:
     scope:
       enabled: true

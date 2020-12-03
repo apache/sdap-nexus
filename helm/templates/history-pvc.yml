@@ -10,5 +10,5 @@ spec:
   resources:
     requests:
       storage: 1Gi
-  storageClassName: {{ .Values.storageClass }}
+  storageClassName: {{ .Values.ingestion.history.storageClass }}
 

@@ -20,7 +20,8 @@ The helm chart deploys all the required components of the NEXUS application (Spa
     - [Option 2: No ingress enabled](#option-2-no-ingress-enabled)
   - [Uninstalling the Chart](#uninstalling-the-chart)
   - [Configuration](#configuration)
-  - [SDAP Parameters](#sdap-parameters)
+  - [SDAP Webapp (Analyis) Parameters](#sdap-webapp-analyis-parameters)
+  - [SDAP Ingestion Parameters](#sdap-ingestion-parameters)
   - [Cassandra Parameters](#cassandra-parameters)
   - [Solr/Zookeeper Parameters](#solrzookeeper-parameters)
   - [RabbitMQ Parameters](#rabbitmq-parameters)
@@ -121,10 +122,10 @@ $ helm install nexus incubator-sdap-nexus/helm --namespace=sdap --dependency-upd
 The following table lists the configurable parameters of the NEXUS chart and their default values. You can also look at `helm/values.yaml` to see the available options.
 > **Note**: The default configuration values are tuned to run NEXUS in a local environment. Setting `ingressEnabled=true` in addition will create a load balancer and expose NEXUS at `localhost`.
 
-## SDAP Parameters
+## SDAP Webapp (Analyis) Parameters
 |             Parameter                 |            Description             |                    Default                  |
 |---------------------------------------|------------------------------------|---------------------------------------------|
-| `storageClass`                        | Storage class to use for Cassandra, Solr, and Zookeeper. (Note that `hostpath` should only be used in local deployments.) |`hostpath`|
+| `onEarthProxyIP`                      | IP or hostname to proxy `/onearth` to (leave blank to disable the proxy)| `""`   |
 | `rootWebpage.enabled`                 | Whether to deploy the root webpage (just returns HTTP 200) | `true`              |
 | `webapp.enabled`                      | Whether to deploy the webapp       | `true`                                      |
 | `webapp.distributed.image`            | Docker image and tag for the webapp| `nexusjpl/nexus-webapp:distributed.0.2.2`   |
@@ -138,22 +139,30 @@ The following table lists the configurable parameters of the NEXUS chart and the
 | `webapp.distributed.executor.memory`  | Memory on Spark workers            | `512m`                                      |
 | `webapp.distributed.executor.tolerations`| Tolerations for Spark workers   | `nil`                                       |
 | `webapp.distributed.executor.affinity`| Affinity (node or pod) for Spark workers| `nil`                                  |
-| `onEarthProxyIP`                      | IP or hostname to proxy `/onearth` to (leave blank to disable the proxy)| `""`   |
-| `ingestion.enabled`                   | Enable ingestion by deploying the Config Operator, Collection Manager, Granule Ingestion, and RabbitMQ | `true` |
+
+
+## SDAP Ingestion Parameters
+|             Parameter                 |            Description             |                    Default                  |
+|---------------------------------------|------------------------------------|---------------------------------------------|
+| `ingestion.enabled`                   | Enable ingestion by deploying the Config Operator, Collection Manager, Granule Ingestion| `true` |
 | `ingestion.granuleIngester.replicas`  | Number of Granule Ingester replicas | `2`                                        |
-| `ingestion.granuleIngester.image`     | Docker image and tag for Granule Ingester| `nexusjpl/granule-ingester:0.0.1`     |
+| `ingestion.granuleIngester.image`     | Docker image and tag for Granule Ingester| `nexusjpl/granule-ingester:0.1.2`     |
 | `ingestion.granuleIngester.cpu`       | CPUs (request and limit) for each Granule Ingester replica| `1`                  |
 | `ingestion.granuleIngester.memory`    | Memory (request and limit) for each Granule Ingester replica| `1Gi`              |
-| `ingestion.collectionManager.image`   | Docker image and tag for Collection Manager| `nexusjpl/collection-manager:0.0.2` |
+| `ingestion.collectionManager.image`   | Docker image and tag for Collection Manager| `nexusjpl/collection-manager:0.1.2` |
 | `ingestion.collectionManager.cpu`     | CPUs (request and limit) for the Collection Manager | `0.5`                      |
-| `ingestion.collectionManager.memory`  | Memory (request and limit) for the Collection Manager | `0.5Gi`                  |
+| `ingestion.collectionManager.memory`  | Memory (request and limit) for the Collection Manager | `1Gi`                    |
 | `ingestion.configOperator.image`      | Docker image and tag for Config Operator | `nexusjpl/config-operator:0.0.1`      |
 | `ingestion.granules.nfsServer`        | An optional URL to an NFS server containing a directory where granule files are stored. If set, this NFS server will be mounted in the Collection Manager and Granule Ingester pods.| `nil` |
-| `ingestion.granules.mountPath`        | The path in the Collection Manager and Granule Ingester pods where granule files will be mounted. *Important:* the `path` property on all collections in the Collections Config file should match this value. | `/data` |
+| `ingestion.granules.mountPath`        | The path in the Collection Manager and Granule Ingester pods where granule files will be mounted. *Important:* the `path` property on all collections in the Collections Config file should match this value.| `/data` |
 | `ingestion.granules.path`             | Directory on either the local filesystem or an NFS mount where granule files are located. This directory will be mounted onto the Collection Manager and Granule Ingester at `ingestion.granules.mountPath`. | `/var/lib/sdap/granules` |
+| `ingestion.granules.s3.bucket`        | An optional S3 bucket from which to download granules for ingestion. If this is set, `ingestion.granules.nfsServer` and `ingestion.granules.path` will be ignored.|`nil`|
+| `ingestion.granules.awsCredsEnvs`     | Environment variables containing AWS credentials. This should be populated if `ingestion.granules.s3.bucket` is set. See https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-envvars.html for possible options.|`nil`|
+| `ingestion.collections.createCrd`     | Whether to automatically create the `GitBasedConfig` CRD (custom resource definition). This CRD is only needed if loading the Collections Config from a Git repository is enabled (i.e., only if `ingestion.collections.git.url` is set).
 | `ingestion.collections.git.url`       | URL to a Git repository containing a [Collections Config](https://github.com/apache/incubator-sdap-ingester/tree/dev/collection_manager#the-collections-configuration-file) file. The file should be at the root of the repository. The repository URL should be of the form `https://github.com/username/repo.git`. This property must be configured if ingestion is enabled! | `nil`|
 | `ingestion.collections.git.branch`    | Branch to use when loading a Collections Config file from a Git repository.| `master`|
-| `ingestion.history.url`               | An optional URL to a Solr database in which to store ingestion history. If this is not set, ingestion history will be stored in a directory instead, with the storage class configured by `storageClass` above.| `nil`|
+| `ingestion.history.solrEnabled`       | Whether to store ingestion history in Solr, instead of in a filesystem directory. If this is set to `true`, `ingestion.history.storageClass` will be ignored. | `true`|
+| `ingestion.history.storageClass`       | The storage class to use for storing ingestion history files. This will only be used if `ingestion.history.solrEnabled` is set to `false`. | `hostpath`|
 
 
 ## Cassandra Parameters
@@ -171,6 +180,10 @@ The following table lists the configurable parameters of the NEXUS chart and the
 | `cassandra.resources.requests.memory` | Memory to request per Cassandra replica| `8Gi`                                   |
 | `cassandra.resources.limits.cpu`      | CPU limit per Cassandra replica    | `1`                                         |
 | `cassandra.resources.limits.memory`   | Memory limit per Cassandra replica | `8Gi`                                       |
+| `external.cassandraHost`              | External Cassandra host to for if `cassandra.enabled` is set to `false`. This should be set if connecting SDAP to a Cassandra database that is not deployed by the SDAP Helm chart. | `nil`|
+| `external.cassandraUsername`          | Optional Cassandra username, only applies if `external.cassandraHost` is set.| `nil`|
+| `external.cassandraPassword`          | Optional Cassandra password, only applies if `external.cassandraHost` is set.| `nil`|
+
 
 ## Solr/Zookeeper Parameters
 
@@ -193,13 +206,17 @@ The following table lists the configurable parameters of the NEXUS chart and the
 | `solr.zookeeper.resources.requests.cpu`| CPUs to request per Zookeeper replica| `0.5`                                    |
 | `solr.zookeeper.resources.limits.memory`| Memory limit per Zookeeper replica| `1Gi`                                      |
 | `solr.zookeeper.resources.limits.cpu` | CPU limit per Zookeeper replica    | `0.5`                                       |
+| `external.solrHostAndPort`            | External Solr host for if `solr.enabled` is set to `false`. This should be set if connecting SDAP to a Solr database that is not deployed by the SDAP Helm chart. | `nil`|
+| `external.zookeeperHostAndPort`       | External Zookeeper host for if `solr.enabled` is set to `false`. This should be set if connecting SDAP to a Solr database and Zookeeper that is not deployed by the SDAP Helm chart. | `nil`|
 
 
 ## RabbitMQ Parameters
 
 |             Parameter                 |            Description             |                    Default                  |
 |---------------------------------------|------------------------------------|---------------------------------------------|
-| `rabbitmq.replicaCount`               | Number of RabbitMQ replicas        | `2`                                         |
+| `rabbitmq.enabled`                    | Whether to deploy RabbitMQ         | `true`                                      |
+| `rabbitmq.persistence.storageClass`   | Whether to deploy RabbitMQ         | `true`                                      |
+| `rabbitmq.replicaCount`               | Number of RabbitMQ replicas        | `1`                                         |
 | `rabbitmq.auth.username`              | RabbitMQ username                  | `guest`                                     |
 | `rabbitmq.auth.password`              | RabbitMQ password                  | `guest`                                     |
 | `rabbitmq.ingress.enabled`            | Enable ingress resource for RabbitMQ Management console | `true`                 |
@@ -208,12 +225,13 @@ The following table lists the configurable parameters of the NEXUS chart and the
 ## Ingress Parameters
 |             Parameter                 |            Description             |                    Default                  |
 |---------------------------------------|------------------------------------|---------------------------------------------|
-| `ingressEnabled`                      | Enable nginx-ingress               | `false`                                     |
+| `nginx-ingress.enabled`               | Whether to deploy nginx ingress controllers| `false`                             |
 | `nginx-ingress.controller.scope.enabled`|Limit the scope of the ingress controller to this namespace | `true`            |
 | `nginx-ingress.controller.kind`       | Install ingress controller as Deployment, DaemonSet or Both  | `DaemonSet`       |
 | `nginx-ingress.controller.service.enabled`| Create a front-facing controller service (this might be used for local or on-prem deployments) | `true` |
 | `nginx-ingress.controller.service.type`|Type of controller service to create| `LoadBalancer`                             |
 | `nginx-ingress.defaultBackend.enabled`| Use default backend component	     | `false`                                     |
+
 
 ## Restricting Pods to Specific Nodes
 
