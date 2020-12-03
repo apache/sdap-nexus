@@ -19,15 +19,17 @@ The helm chart deploys all the required components of the NEXUS application (Spa
     - [Option 1: Local deployment with ingress enabled](#option-1-local-deployment-with-ingress-enabled)
     - [Option 2: No ingress enabled](#option-2-no-ingress-enabled)
   - [Uninstalling the Chart](#uninstalling-the-chart)
-  - [Configuration](#configuration)
+  - [Parameters](#parameters)
     - [SDAP Webapp (Analyis) Parameters](#sdap-webapp-analyis-parameters)
     - [SDAP Ingestion Parameters](#sdap-ingestion-parameters)
     - [Cassandra Parameters](#cassandra-parameters)
     - [Solr/Zookeeper Parameters](#solrzookeeper-parameters)
     - [RabbitMQ Parameters](#rabbitmq-parameters)
     - [Ingress Parameters](#ingress-parameters)
-  - [Restricting Pods to Specific Nodes](#restricting-pods-to-specific-nodes)
-  - [Notes about Persistent Volume Storage Classes](#notes-about-persistent-volume-storage-classes)
+  - [Configuration Examples](#configuration-examples)
+    - [Restricting Pods to Specific Nodes](#restricting-pods-to-specific-nodes)
+    - [Persistence](#persistence)
+    - [Ingesting Granules Stored on S3](#ingesting-granules-stored-on-s3)
 
 ## Prerequisites
 
@@ -100,9 +102,9 @@ To uninstall/delete the `nexus` deployment:
 The command removes all the Kubernetes components associated with the chart and deletes the release.
 
 
-## Configuration
+## Parameters
 
-There are two ways to override configuration values for the chart. The first is to use the `--set` flag when installing the chart, for example:
+There are two ways to override configuration parameters for the chart. The first is to use the `--set` flag when installing the chart, for example:
 
     $ helm install nexus incubator-sdap-nexus/helm --namespace=sdap --dependency-update --set cassandra.replicas=3 --set solr.replicas=3
 
@@ -240,7 +242,9 @@ See the [nginx-ingress Helm chart docs](https://github.com/helm/charts/tree/mast
 | `nginx-ingress.defaultBackend.enabled`| Use default backend component	     | `false`                                     |
 
 
-## Restricting Pods to Specific Nodes
+## Configuration Examples
+
+### Restricting Pods to Specific Nodes
 
 Sometimes you may wish to restrict pods to run on specific nodes, for example if you have "UAT" and "SIT" nodes within the same cluster. You can configure 
 affinity and tolerations for all the components, as in the following example:
@@ -327,16 +331,13 @@ solr:
               - uat
 ```
 
-## Notes about Persistent Volume Storage Classes
+### Persistence
 
 The SDAP Helm chart uses [persistent volumes](https://kubernetes.io/docs/concepts/storage/persistent-volumes/) for RabbitMQ, Solr, Zookeeper, Cassandra, and optionally the Collection Manager ingestion component (if Solr ingestion history is disabled).
 In most use cases you will want to use the same storage class for all of these components.
 
-
-**Example**
-
-If you are deploying SDAP on AWS and you want to use
-[EBS GP2](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ebs-volume-types.html#EBSVolumeTypes_gp2) volumes for persistence storage, you would need to use the following configuration values for the SDAP Helm chart:
+For example, if you are deploying SDAP on AWS and you want to use [EBS gp2](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ebs-volume-types.html#EBSVolumeTypes_gp2) volumes for persistence storage, you would need to set the following 
+configuration values for the SDAP Helm chart:
 
 ```yaml
 rabbitmq:
@@ -356,6 +357,58 @@ solr:
 
 ingestion:
   history:
-    storageClass: hostpath # This is only needed if Solr ingestion history is disabled, as follows:
+    storageClass: gp2 # This is only needed if Solr ingestion history is disabled, as follows:
     solrEnabled: false 
+```
+
+### Ingesting Granules Stored on S3
+
+SDAP supports ingesting granules that are stored in an AWS S3 bucket. To enable this, you must provide the name of the S3 bucket to read from, as well as the S3 credentials as environment variables.
+(See the [AWS docs](https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-envvars.html) for the list of possible AWS credentials environment variables.)
+> **Note:** it is not yet possible to configure SDAP to ingest from both S3 and a local or NFS directory simultaneously.
+
+The following is an example configuration that enables ingestion from S3: 
+
+```yaml
+ingestion:
+  granules:
+    s3:
+      bucket: my-nexus-bucket
+      awsCredsEnvs:
+        AWS_ACCESS_KEY_ID: my-secret
+        AWS_SECRET_ACCESS_KEY: my-secret
+        AWS_DEFAULT_REGION: us-west-2
+```
+
+When S3 ingestion is enabled, the `path` property of all collection entries in the collections config must be an S3 path or prefix. Due to S3 limitations, wildcards are not supported. The following
+is an example of a collections config to be used with the S3 ingestion configuration above: 
+
+```yaml
+collections:
+  - id: "CSR-RL06-Mascons_LAND"
+    path: "s3://my-nexus-bucket/CSR-RL06-Mascons-land/CSR_GRACE_RL06_Mascons_v01-land.nc" # full S3 path
+    priority: 1
+    projection: Grid
+    dimensionNames:
+      latitude: lat
+      longitude: lon
+      time: time
+      variable: lwe_thickness
+    slices:
+      time: 1
+      lat: 60
+      lon: 60
+  - id: "TELLUS_GRAC-GRFO_MASCON_CRI_GRID_RL06_V2_LAND"
+    path: "s3://nexus-ingest-grace/grace-fo-land/" # S3 prefix
+    priority: 1
+    projection: Grid
+    dimensionNames:
+      latitude: lat
+      longitude: lon
+      time: time
+      variable: lwe_thickness
+    slices:
+      time: 1
+      lat: 60
+      lon: 60
 ```

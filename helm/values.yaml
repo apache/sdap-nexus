@@ -70,13 +70,13 @@ ingestion:
     ## the granule files are stored.
     path: /var/lib/sdap/granules
 
-    # s3:
-    #   bucket: nexus-ingest
-    #   awsCredsEnvs:
-    #     AWS_ACCESS_KEY_ID: secret
-    #     AWS_SECRET_ACCESS_KEY: secret
-    #     AWS_SESSION_TOKEN: secret
-    #     AWS_DEFAULT_REGION: us-west-2
+    s3:
+      bucket: 
+      awsCredsEnvs:
+      # AWS_ACCESS_KEY_ID: secret
+      # AWS_SECRET_ACCESS_KEY: secret
+      # AWS_SESSION_TOKEN: secret
+      # AWS_DEFAULT_REGION: us-west-2
 
 
   ## Where to find the Collections Config file
