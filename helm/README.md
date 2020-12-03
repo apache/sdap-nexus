@@ -380,7 +380,7 @@ ingestion:
         AWS_DEFAULT_REGION: us-west-2
 ```
 
-When S3 ingestion is enabled, the `path` property of all collection entries in the collections config must be an S3 path or prefix. Due to S3 limitations, wildcards are not supported. The following
+When S3 ingestion is enabled, the `path` property of all collection entries in the collections config must be an S3 path or prefix. (Due to S3 limitations, wildcards are not supported.) The following
 is an example of a collections config to be used with the S3 ingestion configuration above: 
 
 ```yaml
@@ -399,7 +399,7 @@ collections:
       lat: 60
       lon: 60
   - id: "TELLUS_GRAC-GRFO_MASCON_CRI_GRID_RL06_V2_LAND"
-    path: "s3://nexus-ingest-grace/grace-fo-land/" # S3 prefix
+    path: "s3://my-nexus-bucket/grace-fo-land/" # S3 prefix
     priority: 1
     projection: Grid
     dimensionNames:
