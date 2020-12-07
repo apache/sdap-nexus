@@ -27,6 +27,8 @@ The helm chart deploys all the required components of the NEXUS application (Spa
     - [RabbitMQ Parameters](#rabbitmq-parameters)
     - [Ingress Parameters](#ingress-parameters)
   - [The Collections Config](#the-collections-config)
+    - [Option 1: Manually Create a ConfigMap](#option-1-manually-create-a-configmap)
+    - [Option 2: Store a File in Git](#option-2-store-a-file-in-git)
   - [Ingestion Sources](#ingestion-sources)
     - [Ingesting from a Local Directory](#ingesting-from-a-local-directory)
     - [Ingesting from S3](#ingesting-from-s3)
@@ -247,19 +249,27 @@ See the [nginx-ingress Helm chart docs](https://github.com/helm/charts/tree/mast
 
 ## The Collections Config
 
-If you wish to ingest data into SDAP, you must write a Collections Config. There are two ways to manage this: 1) 
+In order to ingest data into SDAP, you must write a Collections Config. This is a YAML-formatted configuration which defines 
+what granules to ingest into which collections (or "datasets"), and how. There are two ways to manage the Collections Config:
+
+### Option 1: Manually Create a ConfigMap
+Create a [ConfigMap](https://kubernetes.io/docs/concepts/configuration/configmap/) by hand, containing the collections config YAML under a key called `collections.yml`. Then set the Chart configuration option `ingestion.collections.configMap` to the name of the ConfigMap.
+
+### Option 2: Store a File in Git
+Write a Collections Config YAML file, save it as `collections.yml`, and check it into a Git repository under the root directory, and let Config Operator create the ConfigMap for you. 
+The Config Operator will periodically read the YAML file from Git, and create or update a ConfigMap with the contents of the file. 
+
+To enable this, set `ingestion.collections.git.url` to the Git URL of the repository containing the Collections Config file.
 
 ## Ingestion Sources
 
-SDAP supports ingesting granules from either a local directory, an AWS S3 bucket, or an NFS server. (It is not yet possible to configure SDAP to ingest from multiple
-of these sources simultanously.)
+SDAP supports ingesting granules from either a local directory, an AWS S3 bucket, or an NFS server. (It is not yet possible to configure SDAP to ingest from multiple of these sources simultanously.)
 
 ### Ingesting from a Local Directory
 
 To ingest granules that are stored on the local filesystem, you must provide the path to the directory where the granules are stored. This directory will be mounted as a volume in the ingestion pods.
 > **Note**: if you are ingesting granules that live on the local filesystem, the granule files must be accessible at the same location on every Kubernetes node
-> where the collections-manager and granule-ingester pods are running. Because of this, it usually only makes sense to use local directory ingestion if a) your 
-> Kubernetes cluster consists of a single node (as in the case of running Kubernetes on a local computer), or b) you have configured nodeAffinity to force 
+> that the collections-manager and granule-ingester pods are running on. Because of this, it usually only makes sense to use local directory ingestion if a) your Kubernetes cluster consists of a single node (as in the case of running Kubernetes on a local computer), or b) you have configured nodeAffinity to force 
 > the collections-manager and granule-ingester pods to run on only one node (see [Restricting Pods to Specific Nodes](#restricting-pods-to-specific-nodes)).
 
 The following is an example configuration for ingesting granules from a local directory: 
