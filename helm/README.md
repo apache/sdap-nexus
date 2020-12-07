@@ -20,7 +20,7 @@ The helm chart deploys all the required components of the NEXUS application (Spa
     - [Option 2: No ingress enabled](#option-2-no-ingress-enabled)
   - [Uninstalling the Chart](#uninstalling-the-chart)
   - [Parameters](#parameters)
-    - [SDAP Webapp (Analyis) Parameters](#sdap-webapp-analyis-parameters)
+    - [SDAP Webapp (Analysis) Parameters](#sdap-webapp-analysis-parameters)
     - [SDAP Ingestion Parameters](#sdap-ingestion-parameters)
     - [Cassandra Parameters](#cassandra-parameters)
     - [Solr/Zookeeper Parameters](#solrzookeeper-parameters)
@@ -127,7 +127,7 @@ $ helm install nexus incubator-sdap-nexus/helm --namespace=sdap --dependency-upd
 The following tables list the configurable parameters of the NEXUS chart and their default values. You can also look at `helm/values.yaml` to see the available options.
 > **Note**: The default configuration values are tuned to run NEXUS in a local environment. Setting `ingressEnabled=true` in addition will create a load balancer and expose NEXUS at `localhost`.
 
-### SDAP Webapp (Analyis) Parameters
+### SDAP Webapp (Analysis) Parameters
 |             Parameter                 |            Description             |                    Default                  |
 |---------------------------------------|------------------------------------|---------------------------------------------|
 | `onEarthProxyIP`                      | IP or hostname to proxy `/onearth` to (leave blank to disable the proxy)| `""`   |
@@ -385,6 +385,8 @@ When S3 ingestion is enabled, the `path` property of all collection entries in t
 is an example of a collections config to be used with the S3 ingestion configuration above: 
 
 ```yaml
+# collections.yml
+
 collections:
   - id: "CSR-RL06-Mascons_LAND"
     path: "s3://my-nexus-bucket/CSR-RL06-Mascons-land/CSR_GRACE_RL06_Mascons_v01-land.nc" # full S3 path
@@ -416,7 +418,7 @@ collections:
 
 ### Ingesting Granules Stored on an NFS Host
 
-SDAP supports ingesting granules that are stored on an NFS host. To enable this, you must provide the NFS host url, and the path to the directory on the NFS server host the granules are located.
+SDAP supports ingesting granules that are stored on an NFS host. To enable this, you must provide the NFS host url, and the path to the directory on the NFS server the granules are located.
 
 The following is an example configuration that enables ingestion from an NFS host: 
 
@@ -428,12 +430,14 @@ ingestion:
     mountPath: /data
 ```
 
-When ingesting from either NFS or the local filesystem, the `path` property of all collection entries in the collections config should have the value of `ingestion.granules.mountPath` as the root. 
-This is because granules on the NFS host will be mounted into the SDAP ingestion pods at `ingestion.granules.mountPath`, and the `path` property of collections in the collections config tells those
-ingestion pods where to find the granules on these pods.
+When ingesting from either NFS or the local filesystem, the `path` property of all collection entries in the collections config should have the value from `ingestion.granules.mountPath` as the root. 
+This is because granule directory on the NFS host will be mounted as a volume onto the SDAP ingestion pods at `ingestion.granules.mountPath`, and the `path` property of collections in the collections config describes to the 
+ingestion pods where to find the mounted granules.
 The following is an example of a collections config to be used with the NFS ingestion configuration above: 
 
 ```yaml
+# collections.yml
+
 collections:
   - id: "CSR-RL06-Mascons_LAND"
     path: "/data/CSR-RL06-Mascons-land/CSR_GRACE_RL06_Mascons_v01-land.nc" 
