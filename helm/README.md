@@ -26,7 +26,8 @@ The helm chart deploys all the required components of the NEXUS application (Spa
     - [Solr/Zookeeper Parameters](#solrzookeeper-parameters)
     - [RabbitMQ Parameters](#rabbitmq-parameters)
     - [Ingress Parameters](#ingress-parameters)
-  - [Ingestion](#ingestion)
+  - [The Collections Config](#the-collections-config)
+  - [Ingestion Sources](#ingestion-sources)
     - [Ingesting from a Local Directory](#ingesting-from-a-local-directory)
     - [Ingesting from S3](#ingesting-from-s3)
     - [Ingesting from an NFS Host](#ingesting-from-an-nfs-host)
@@ -244,15 +245,22 @@ See the [nginx-ingress Helm chart docs](https://github.com/helm/charts/tree/mast
 | `nginx-ingress.controller.service.type`|Type of controller service to create| `LoadBalancer`                             |
 | `nginx-ingress.defaultBackend.enabled`| Use default backend component	     | `false`                                     |
 
-## Ingestion
+## The Collections Config
+
+If you wish to ingest data into SDAP, you must write a Collections Config. There are two ways to manage this: 1) 
+
+## Ingestion Sources
 
 SDAP supports ingesting granules from either a local directory, an AWS S3 bucket, or an NFS server. (It is not yet possible to configure SDAP to ingest from multiple
 of these sources simultanously.)
 
 ### Ingesting from a Local Directory
 
-To ingest granules that are stored on the local filesystem, you must provide the path to the directory where the granules are stored. This directory will be mounted as a volume
-in the ingestion pods.
+To ingest granules that are stored on the local filesystem, you must provide the path to the directory where the granules are stored. This directory will be mounted as a volume in the ingestion pods.
+> **Note**: if you are ingesting granules that live on the local filesystem, the granule files must be accessible at the same location on every Kubernetes node
+> where the collections-manager and granule-ingester pods are running. Because of this, it usually only makes sense to use local directory ingestion if a) your 
+> Kubernetes cluster consists of a single node (as in the case of running Kubernetes on a local computer), or b) you have configured nodeAffinity to force 
+> the collections-manager and granule-ingester pods to run on only one node (see [Restricting Pods to Specific Nodes](#restricting-pods-to-specific-nodes)).
 
 The following is an example configuration for ingesting granules from a local directory: 
 
