@@ -25,6 +25,7 @@ webapp:
 ## This section deals with the ingestion components of SDAP
 ingestion:
 
+  # If ingestion.enabled=true, collections-ingester and granule-ingester will be deployed
   enabled: true
 
   granuleIngester:
@@ -56,22 +57,24 @@ ingestion:
     ## where the granule files will be mounted.
     ## IMPORTANT: the `path` property on all collections in the Collections Config file
     ## should have mountPath as the root.
-    ## Example: if mountPath is set to /data, then every collection in the Collections
-    ## Config file should have something like
+    ## Example: if mountPath = /data, then every collection in the Collections
+    ## Config file should have something like:
     ## path: /data/<some-directory>/<some-file-pattern>
     mountPath: /data
 
-    ## Enable nfsServer if you want to mount the granules from an NFS server,
-    ## otherwise they will be loaded from the local filesystem.
-    ## mountPath and path should be set whether or not nfsServer is enabled.
+    ## Set nfsServer to an NFS host URL if you want to mount the granules from an NFS server.
+    ## For S3 or local filesystem ingestion, leave nfsServer blank.
     nfsServer:
 
     ## path is the path on either local filesystem or NFS mount at which
-    ## the granule files are stored.
+    ## the granule files are stored. This will be ignored if S3 ingestion is enabled.
     path: 
 
     s3:
+      ## If bucket has a value, S3 ingestion will be enabled (and nfsServer will be ignored even if it has a value).
       bucket: 
+
+      ## awsCredsEnvs can include any environment variables that contain AWS credentials
       awsCredsEnvs:
       # AWS_ACCESS_KEY_ID: secret
       # AWS_SECRET_ACCESS_KEY: secret
@@ -85,31 +88,29 @@ ingestion:
   collections:
     createCrd: true
 
-    #configMap: collections-config
+    ## Name of a ConfigMap containing the Collections Config YAML.
+    ## Leave this blank if Git is enabled below.
+    configMap: 
 
-    ## Load the Collections Config file from a git repository
-    ## Until localDir is supported, this configuration is mandatory
+    ## Load the Collections Config file from a git repository.
     git:
 
       ## This should be an https repository url of the form https://github.com/username/repo.git
       url:
-
       branch: master
-
       # token: someToken
 
   ## Where to store ingestion history
   ## Defaults to Solr for ingestion history storage
   history:
-    ## Store ingestion history in a solr database instead of a filesystem directory
+    ## Whether to store ingestion history in a solr database instead of a filesystem directory
     solrEnabled: true
 
-    ## If using a history directory, stored on a PVC using the storageClass defined in this file above
-    ## storage class to use for ingestion history file only if solrEnabled is set to "false".
+    ## storage class to use for ingestion history file only if solrEnabled = false
     storageClass: hostpath
 
 
-
+## The values in this section are relevant if using Solr, Zookeeper, or Cassandra that were not deployed from this Helm chart
 external:
   solrHostAndPort:   
   zookeeperHostAndPort:
@@ -117,6 +118,9 @@ external:
   cassandraUsername:
   cassandraPassword:
 
+## Configuration values for the Solr and Zookeeper dependencies
+## ref: https://github.com/helm/charts/tree/master/incubator/solr
+## ref: https://github.com/helm/charts/tree/master/incubator/zookeeper
 solr:
   enabled: true
   initPodEnabled: true
@@ -145,7 +149,6 @@ solr:
       requests:
         memory: 1Gi
         cpu: 0.5
-
 
 
 
@@ -180,6 +183,8 @@ rabbitmq:
   ingress:
     enabled: true
 
+## Configuration values for the rabbitmq dependency
+## ref: https://github.com/bitnami/charts/tree/master/bitnami/cassandra
 cassandra:
   enabled: true
   initDBConfigMap: init-cassandra
