@@ -26,11 +26,12 @@ The helm chart deploys all the required components of the NEXUS application (Spa
     - [Solr/Zookeeper Parameters](#solrzookeeper-parameters)
     - [RabbitMQ Parameters](#rabbitmq-parameters)
     - [Ingress Parameters](#ingress-parameters)
-  - [Configuration Examples](#configuration-examples)
-    - [Restricting Pods to Specific Nodes](#restricting-pods-to-specific-nodes)
-    - [Persistence](#persistence)
+  - [Ingestion](#ingestion)
     - [Ingesting Granules Stored on S3](#ingesting-granules-stored-on-s3)
     - [Ingesting Granules Stored on an NFS Host](#ingesting-granules-stored-on-an-nfs-host)
+  - [Other Configuration Examples](#other-configuration-examples)
+    - [Restricting Pods to Specific Nodes](#restricting-pods-to-specific-nodes)
+    - [Persistence](#persistence)
 
 ## Prerequisites
 
@@ -242,8 +243,116 @@ See the [nginx-ingress Helm chart docs](https://github.com/helm/charts/tree/mast
 | `nginx-ingress.controller.service.type`|Type of controller service to create| `LoadBalancer`                             |
 | `nginx-ingress.defaultBackend.enabled`| Use default backend component	     | `false`                                     |
 
+## Ingestion
 
-## Configuration Examples
+SDAP supports ingestion granules from the local filesystem, an S3 bucket, or an NFS. 
+> **Note:** it is not yet possible to configure SDAP to ingest from both S3 and a local or NFS directory simultaneously
+
+### Ingesting Granules Stored on S3
+
+SDAP supports ingesting granules that are stored in an AWS S3 bucket. To enable this, you must provide the name of the S3 bucket to read from, as well as the S3 credentials as environment variables.
+(See the [AWS docs](https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-envvars.html) for the list of possible AWS credentials environment variables.)
+
+The following is an example configuration that enables ingestion from S3: 
+
+```yaml
+ingestion:
+  granules:
+    s3:
+      bucket: my-nexus-bucket
+      awsCredsEnvs:
+        AWS_ACCESS_KEY_ID: my-secret
+        AWS_SECRET_ACCESS_KEY: my-secret
+        AWS_DEFAULT_REGION: us-west-2
+```
+
+When S3 ingestion is enabled, the `path` property of all collection entries in the collections config must be an S3 path or prefix. (Due to S3 limitations, wildcards are not supported.) The following
+is an example of a collections config to be used with the S3 ingestion configuration above: 
+
+```yaml
+# collections.yml
+
+collections:
+  - id: "CSR-RL06-Mascons_LAND"
+    path: "s3://my-nexus-bucket/CSR-RL06-Mascons-land/CSR_GRACE_RL06_Mascons_v01-land.nc" # full S3 path
+    priority: 1
+    projection: Grid
+    dimensionNames:
+      latitude: lat
+      longitude: lon
+      time: time
+      variable: lwe_thickness
+    slices:
+      time: 1
+      lat: 60
+      lon: 60
+  - id: "TELLUS_GRAC-GRFO_MASCON_CRI_GRID_RL06_V2_LAND"
+    path: "s3://my-nexus-bucket/grace-fo-land/" # S3 prefix
+    priority: 1
+    projection: Grid
+    dimensionNames:
+      latitude: lat
+      longitude: lon
+      time: time
+      variable: lwe_thickness
+    slices:
+      time: 1
+      lat: 60
+      lon: 60
+```
+
+### Ingesting Granules Stored on an NFS Host
+
+SDAP supports ingesting granules that are stored on an NFS host. To enable this, you must provide the NFS host url, and the path to the directory on the NFS server the granules are located.
+
+The following is an example configuration that enables ingestion from an NFS host: 
+
+```yaml
+ingestion:
+  granules:
+    nfsServer: nfsserver.example.com
+    path: /share/granules
+    mountPath: /data
+```
+
+When ingesting from either NFS or the local filesystem, the `path` property of all collection entries in the collections config should have the value from `ingestion.granules.mountPath` as the root. 
+This is because granule directory on the NFS host will be mounted as a volume onto the SDAP ingestion pods at `ingestion.granules.mountPath`, and the `path` property of collections in the collections config describes to the 
+ingestion pods where to find the mounted granules.
+The following is an example of a collections config to be used with the NFS ingestion configuration above: 
+
+```yaml
+# collections.yml
+
+collections:
+  - id: "CSR-RL06-Mascons_LAND"
+    path: "/data/CSR-RL06-Mascons-land/CSR_GRACE_RL06_Mascons_v01-land.nc" 
+    priority: 1
+    projection: Grid
+    dimensionNames:
+      latitude: lat
+      longitude: lon
+      time: time
+      variable: lwe_thickness
+    slices:
+      time: 1
+      lat: 60
+      lon: 60
+  - id: "TELLUS_GRAC-GRFO_MASCON_CRI_GRID_RL06_V2_LAND"
+    path: "/data/grace-fo-land/"
+    priority: 1
+    projection: Grid
+    dimensionNames:
+      latitude: lat
+      longitude: lon
+      time: time
+      variable: lwe_thickness
+    slices:
+      time: 1
+      lat: 60
+      lon: 60
+```
+
+## Other Configuration Examples
 
 ### Restricting Pods to Specific Nodes
 
@@ -360,109 +469,4 @@ ingestion:
   history:
     storageClass: gp2 # This is only needed if Solr ingestion history is disabled, as follows:
     solrEnabled: false 
-```
-
-### Ingesting Granules Stored on S3
-
-SDAP supports ingesting granules that are stored in an AWS S3 bucket. To enable this, you must provide the name of the S3 bucket to read from, as well as the S3 credentials as environment variables.
-(See the [AWS docs](https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-envvars.html) for the list of possible AWS credentials environment variables.)
-> **Note:** it is not yet possible to configure SDAP to ingest from both S3 and a local or NFS directory simultaneously.
-
-The following is an example configuration that enables ingestion from S3: 
-
-```yaml
-ingestion:
-  granules:
-    s3:
-      bucket: my-nexus-bucket
-      awsCredsEnvs:
-        AWS_ACCESS_KEY_ID: my-secret
-        AWS_SECRET_ACCESS_KEY: my-secret
-        AWS_DEFAULT_REGION: us-west-2
-```
-
-When S3 ingestion is enabled, the `path` property of all collection entries in the collections config must be an S3 path or prefix. (Due to S3 limitations, wildcards are not supported.) The following
-is an example of a collections config to be used with the S3 ingestion configuration above: 
-
-```yaml
-# collections.yml
-
-collections:
-  - id: "CSR-RL06-Mascons_LAND"
-    path: "s3://my-nexus-bucket/CSR-RL06-Mascons-land/CSR_GRACE_RL06_Mascons_v01-land.nc" # full S3 path
-    priority: 1
-    projection: Grid
-    dimensionNames:
-      latitude: lat
-      longitude: lon
-      time: time
-      variable: lwe_thickness
-    slices:
-      time: 1
-      lat: 60
-      lon: 60
-  - id: "TELLUS_GRAC-GRFO_MASCON_CRI_GRID_RL06_V2_LAND"
-    path: "s3://my-nexus-bucket/grace-fo-land/" # S3 prefix
-    priority: 1
-    projection: Grid
-    dimensionNames:
-      latitude: lat
-      longitude: lon
-      time: time
-      variable: lwe_thickness
-    slices:
-      time: 1
-      lat: 60
-      lon: 60
-```
-
-### Ingesting Granules Stored on an NFS Host
-
-SDAP supports ingesting granules that are stored on an NFS host. To enable this, you must provide the NFS host url, and the path to the directory on the NFS server the granules are located.
-
-The following is an example configuration that enables ingestion from an NFS host: 
-
-```yaml
-ingestion:
-  granules:
-    nfsServer: nfsserver.example.com
-    path: /share/granules
-    mountPath: /data
-```
-
-When ingesting from either NFS or the local filesystem, the `path` property of all collection entries in the collections config should have the value from `ingestion.granules.mountPath` as the root. 
-This is because granule directory on the NFS host will be mounted as a volume onto the SDAP ingestion pods at `ingestion.granules.mountPath`, and the `path` property of collections in the collections config describes to the 
-ingestion pods where to find the mounted granules.
-The following is an example of a collections config to be used with the NFS ingestion configuration above: 
-
-```yaml
-# collections.yml
-
-collections:
-  - id: "CSR-RL06-Mascons_LAND"
-    path: "/data/CSR-RL06-Mascons-land/CSR_GRACE_RL06_Mascons_v01-land.nc" 
-    priority: 1
-    projection: Grid
-    dimensionNames:
-      latitude: lat
-      longitude: lon
-      time: time
-      variable: lwe_thickness
-    slices:
-      time: 1
-      lat: 60
-      lon: 60
-  - id: "TELLUS_GRAC-GRFO_MASCON_CRI_GRID_RL06_V2_LAND"
-    path: "/data/grace-fo-land/"
-    priority: 1
-    projection: Grid
-    dimensionNames:
-      latitude: lat
-      longitude: lon
-      time: time
-      variable: lwe_thickness
-    slices:
-      time: 1
-      lat: 60
-      lon: 60
 ```
