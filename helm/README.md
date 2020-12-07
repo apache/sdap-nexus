@@ -256,7 +256,7 @@ what granules to ingest into which collections (or "datasets"), and how. There a
 Create a [ConfigMap](https://kubernetes.io/docs/concepts/configuration/configmap/) by hand, containing the collections config YAML under a key called `collections.yml`. Then set the Chart configuration option `ingestion.collections.configMap` to the name of the ConfigMap.
 
 ### Option 2: Store a File in Git
-Write a Collections Config YAML file, save it as `collections.yml`, and check it into a Git repository under the root directory, and let Config Operator create the ConfigMap for you. 
+Write a Collections Config YAML file, save it as `collections.yml`, check it into a Git repository under the root directory, and let the [Config Operator](https://github.com/apache/incubator-sdap-ingester/tree/dev/config_operator) create the ConfigMap for you. 
 The Config Operator will periodically read the YAML file from Git, and create or update a ConfigMap with the contents of the file. 
 
 To enable this, set `ingestion.collections.git.url` to the Git URL of the repository containing the Collections Config file.
