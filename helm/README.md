@@ -250,7 +250,9 @@ See the [nginx-ingress Helm chart docs](https://github.com/helm/charts/tree/mast
 ## The Collections Config
 
 In order to ingest data into SDAP, you must write a Collections Config. This is a YAML-formatted configuration which defines 
-what granules to ingest into which collections (or "datasets"), and how. There are two ways to manage the Collections Config:
+what granules to ingest into which collections (or "datasets"), and how. See the [Collections Manager docs](https://github.com/apache/incubator-sdap-ingester/tree/dev/collection_manager#the-collections-configuration-file) for information on the proper content and format of the Collections Config.
+
+There are two ways to manage the Collections Config:
 
 ### Option 1: Manually Create a ConfigMap
 Create a [ConfigMap](https://kubernetes.io/docs/concepts/configuration/configmap/) by hand, containing the collections config YAML under a key called `collections.yml`. Then set the Chart configuration option `ingestion.collections.configMap` to the name of the ConfigMap.
