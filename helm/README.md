@@ -27,8 +27,9 @@ The helm chart deploys all the required components of the NEXUS application (Spa
     - [RabbitMQ Parameters](#rabbitmq-parameters)
     - [Ingress Parameters](#ingress-parameters)
   - [Ingestion](#ingestion)
-    - [Ingesting Granules Stored on S3](#ingesting-granules-stored-on-s3)
-    - [Ingesting Granules Stored on an NFS Host](#ingesting-granules-stored-on-an-nfs-host)
+    - [Ingesting from a Local Directory](#ingesting-from-a-local-directory)
+    - [Ingesting from S3](#ingesting-from-s3)
+    - [Ingesting from an NFS Host](#ingesting-from-an-nfs-host)
   - [Other Configuration Examples](#other-configuration-examples)
     - [Restricting Pods to Specific Nodes](#restricting-pods-to-specific-nodes)
     - [Persistence](#persistence)
@@ -245,12 +246,63 @@ See the [nginx-ingress Helm chart docs](https://github.com/helm/charts/tree/mast
 
 ## Ingestion
 
-SDAP supports ingestion granules from the local filesystem, an S3 bucket, or an NFS. 
-> **Note:** it is not yet possible to configure SDAP to ingest from both S3 and a local or NFS directory simultaneously
+SDAP supports ingesting granules from either a local directory, an AWS S3 bucket, or an NFS server. (It is not yet possible to configure SDAP to ingest from multiple
+of these sources simultanously.)
 
-### Ingesting Granules Stored on S3
+### Ingesting from a Local Directory
 
-SDAP supports ingesting granules that are stored in an AWS S3 bucket. To enable this, you must provide the name of the S3 bucket to read from, as well as the S3 credentials as environment variables.
+To ingest granules that are stored on the local filesystem, you must provide the path to the directory where the granules are stored. This directory will be mounted as a volume
+in the ingestion pods.
+
+The following is an example configuration for ingesting granules from a local directory: 
+
+```yaml
+ingestion:
+  granules:
+    path: /share/granules
+    mountPath: /data
+```
+
+The `ingestion.granules.mountPath` property sets the mount path in the ingestion pods where the granule directory will be mounted. **The root directory of the `path` property of all collection entries in the collections config must match this value.** This is because the `path` property of collections in the collections config describes to the 
+ingestion pods where to find the mounted granules.
+
+The following is an example of a collections config to be used with the NFS ingestion configuration above: 
+
+```yaml
+# collections.yml
+
+collections:
+  - id: "CSR-RL06-Mascons_LAND"
+    path: "/data/CSR-RL06-Mascons-land/CSR_GRACE_RL06_Mascons_v01-land.nc" 
+    priority: 1
+    projection: Grid
+    dimensionNames:
+      latitude: lat
+      longitude: lon
+      time: time
+      variable: lwe_thickness
+    slices:
+      time: 1
+      lat: 60
+      lon: 60
+  - id: "TELLUS_GRAC-GRFO_MASCON_CRI_GRID_RL06_V2_LAND"
+    path: "/data/grace-fo-land/"
+    priority: 1
+    projection: Grid
+    dimensionNames:
+      latitude: lat
+      longitude: lon
+      time: time
+      variable: lwe_thickness
+    slices:
+      time: 1
+      lat: 60
+      lon: 60
+```
+
+### Ingesting from S3
+
+To ingest granules that are stored in an S3 bucket, you must provide the name of the S3 bucket to read from, as well as the S3 credentials as environment variables.
 (See the [AWS docs](https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-envvars.html) for the list of possible AWS credentials environment variables.)
 
 The following is an example configuration that enables ingestion from S3: 
@@ -301,9 +353,9 @@ collections:
       lon: 60
 ```
 
-### Ingesting Granules Stored on an NFS Host
+### Ingesting from an NFS Host
 
-SDAP supports ingesting granules that are stored on an NFS host. To enable this, you must provide the NFS host url, and the path to the directory on the NFS server the granules are located.
+To ingest granules that are stored on an NFS host, you must provide the NFS host url, and the path to the directory on the NFS server the granules are located.
 
 The following is an example configuration that enables ingestion from an NFS host: 
 
@@ -315,9 +367,9 @@ ingestion:
     mountPath: /data
 ```
 
-When ingesting from either NFS or the local filesystem, the `path` property of all collection entries in the collections config should have the value from `ingestion.granules.mountPath` as the root. 
-This is because granule directory on the NFS host will be mounted as a volume onto the SDAP ingestion pods at `ingestion.granules.mountPath`, and the `path` property of collections in the collections config describes to the 
+The `ingestion.granules.mountPath` property sets the mount path in the ingestion pods where the granule directory will be mounted. **The root directory of the `path` property of all collection entries in the collections config must match this value.** This is because the `path` property of collections in the collections config describes to the 
 ingestion pods where to find the mounted granules.
+
 The following is an example of a collections config to be used with the NFS ingestion configuration above: 
 
 ```yaml
