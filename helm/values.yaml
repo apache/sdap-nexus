@@ -75,12 +75,7 @@ ingestion:
       bucket: 
 
       ## awsCredsEnvs can include any environment variables that contain AWS credentials
-      awsCredsEnvs:
-      # AWS_ACCESS_KEY_ID: secret
-      # AWS_SECRET_ACCESS_KEY: secret
-      # AWS_SESSION_TOKEN: secret
-      # AWS_DEFAULT_REGION: us-west-2
-
+      awsCredsEnvs: {}
 
   ## Where to find the Collections Config file
   ## ref: https://github.com/apache/incubator-sdap-ingester/tree/dev/collection_manager#the-collections-configuration-file

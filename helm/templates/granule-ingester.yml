@@ -1,8 +1,5 @@
 {{- if .Values.ingestion.enabled }}
 
-{{- $s3 := .Values.ingestion.granules.s3 | default dict }}
-{{ $aws_creds_envs := $s3.awsCredsEnvs | default dict }}
-
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -42,7 +39,7 @@ spec:
             - name: MAX_CONCURRENCY
               value: "{{ .Values.ingestion.granuleIngester.maxConcurrency }}"
             {{ end }}
-            {{- range $name, $value := $aws_creds_envs }}
+            {{- range $name, $value := .Values.ingestion.granules.s3.awsCredsEnvs }}
             - name: {{ $name }}
               value: {{ $value }}
             {{- end }}
@@ -54,9 +51,13 @@ spec:
               cpu: {{ .Values.ingestion.granuleIngester.cpu }}
               memory: {{ .Values.ingestion.granuleIngester.memory }}
           volumeMounts:
+{{- if not .Values.ingestion.granules.s3.bucket }}
 {{ include "nexus.ingestion.dataVolumeMount" . | indent 12 }}
+{{- end }}
       volumes:
+{{- if not .Values.ingestion.granules.s3.bucket }}
 {{ include "nexus.ingestion.dataVolume" . | indent 8 }}
+{{- end }}
       restartPolicy: Always
 {{- end }}
 
