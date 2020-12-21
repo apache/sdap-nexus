@@ -1,12 +1,15 @@
+{{- if not .Values.ingestion.history.solrEnabled }}
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
   name: history-volume-claim
+  annotations:
+    helm.sh/resource-policy: "keep"
 spec:
   accessModes:
     - ReadWriteOnce
   resources:
     requests:
       storage: 1Gi
-  storageClassName: {{ .Values.storageClass }}
-
+  storageClassName: {{ .Values.ingestion.history.storageClass }}
+{{- end }}

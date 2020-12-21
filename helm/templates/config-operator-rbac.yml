@@ -1,3 +1,5 @@
+{{ if .Values.ingestion.enabled }}
+{{ if not .Values.ingestion.collections.configMap }}
 apiVersion: v1
 kind: ServiceAccount
 metadata:
@@ -6,7 +8,7 @@ metadata:
 ---
 
 apiVersion: rbac.authorization.k8s.io/v1
-kind: RoleBinding
+kind: ClusterRoleBinding
 metadata:
   name: config-operator-role-binding
 roleRef:
@@ -16,4 +18,7 @@ roleRef:
 subjects:
   - kind: ServiceAccount
     name: config-operator
+    namespace: {{ .Release.Namespace }}
+{{ end }}
+{{ end }}
 

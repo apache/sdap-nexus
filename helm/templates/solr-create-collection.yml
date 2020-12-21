@@ -1,0 +1,34 @@
+{{ if .Values.solr.initPodEnabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: solr-create-collection
+spec:
+  selector:
+    matchLabels:
+      app: solr-create-collection # has to match .spec.template.metadata.labels
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: solr-create-collection
+    spec:
+      containers:
+      - name: solr-create-collection
+        imagePullPolicy: Always
+        image: nexusjpl/solr-cloud-init:1.0.2
+        resources:
+          requests:
+            memory: "0.5Gi"
+            cpu: "0.25"
+        env:
+        - name: MINIMUM_NODES
+          value: "{{ .Values.solr.replicaCount }}"
+        - name: SDAP_SOLR_URL
+          value: {{ include "nexus.urls.solr" . }}/solr/
+        - name: SDAP_ZK_SOLR
+          value: {{ include "nexus.urls.zookeeper" . }}/solr
+        - name: CREATE_COLLECTION_PARAMS
+          value: "name=nexustiles&numShards=$(MINIMUM_NODES)&waitForFinalState=true"
+      restartPolicy: Always
+{{ end }}

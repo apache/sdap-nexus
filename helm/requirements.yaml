@@ -2,10 +2,17 @@ dependencies:
   - name: nginx-ingress
     version: 1.28.2
     repository: https://kubernetes-charts.storage.googleapis.com
-    condition: ingressEnabled
+    condition: nginx-ingress.enabled
   - name: rabbitmq
-    version: 7.1.0
+    version: 8.0.1
     repository: https://charts.bitnami.com/bitnami
-    condition: ingestion.enabled
-  
+    condition: rabbitmq.enabled
+  - name: solr
+    version: 1.5.2
+    repository: http://storage.googleapis.com/kubernetes-charts-incubator
+    condition: solr.enabled
+  - name: cassandra
+    version: 5.5.3
+    repository: https://charts.bitnami.com/bitnami
+    condition: cassandra.enabled
 

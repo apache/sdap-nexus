@@ -4,7 +4,7 @@
 Name of the generated configmap containing the contents of the collections config file.
 */}}
 {{- define "nexus.collectionsConfig.configmapName" -}}
-collections-config
+{{ .Values.ingestion.collections.configMap | default "collections-config" }}
 {{- end -}}
 
 {{/*
@@ -45,3 +45,22 @@ The data volume mount which is used in both the Collection Manager and the Granu
   mountPath: {{ .Values.ingestion.granules.mountPath }}
 {{- end -}}
 
+{{- define "nexus.urls.solr" -}}
+{{ .Values.external.solrHostAndPort | default (print "http://" .Release.Name "-solr-svc:8983") }}
+{{- end -}}
+
+{{- define "nexus.urls.zookeeper" -}}
+{{ .Values.external.zookeeperHostAndPort | default (print .Release.Name "-zookeeper:2181") }}
+{{- end -}}
+
+{{- define "nexus.urls.cassandra" -}}
+{{ .Values.external.cassandraHost | default (print .Release.Name "-cassandra") }}
+{{- end -}}
+
+{{- define "nexus.credentials.cassandra.username" -}}
+{{ .Values.external.cassandraUsername | default "cassandra" }}
+{{- end -}}
+
+{{- define "nexus.credentials.cassandra.password" -}}
+{{ .Values.external.cassandraPassword | default "cassandra" }}
+{{- end -}}
