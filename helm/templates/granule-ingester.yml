@@ -16,6 +16,7 @@ spec:
       labels:
         app: granule-ingester
     spec:
+      serviceAccountName: {{ .Values.ingestion.serviceAccountName }}
       containers:
         - image: {{ .Values.ingestion.granuleIngester.image }}
           imagePullPolicy: Always

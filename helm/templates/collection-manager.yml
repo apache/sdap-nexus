@@ -16,6 +16,7 @@ spec:
       labels:
         app: collection-manager
     spec:
+      serviceAccountName: {{ .Values.ingestion.serviceAccountName }}
       containers:
         - image: {{ .Values.ingestion.collectionManager.image }}
           imagePullPolicy: Always

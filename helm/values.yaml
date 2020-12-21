@@ -28,6 +28,9 @@ ingestion:
   # If ingestion.enabled=true, collections-ingester and granule-ingester will be deployed
   enabled: true
 
+  ## Optional service account to use for collection-manager and grranule-ingester
+  serviceAccountName:
+
   granuleIngester:
     replicas: 2
     image: nexusjpl/granule-ingester:0.1.2
