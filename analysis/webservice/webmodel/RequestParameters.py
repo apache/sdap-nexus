@@ -21,3 +21,4 @@ class RequestParameters(object):
     PLOT_TYPE = "plotType"
     NPARTS = "nparts"
     METADATA_FILTER = "metadataFilter"
+    NORMALIZE_DATES = "normalizeDates"

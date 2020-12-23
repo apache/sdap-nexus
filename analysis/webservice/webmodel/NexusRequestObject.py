@@ -225,3 +225,6 @@ class NexusRequestObject(StatsComputeOptions):
 
     def get_nparts(self):
         return self.get_int_arg(RequestParameters.NPARTS, 0)
+
+    def get_normalize_dates(self):
+        return self.get_boolean_arg(RequestParameters.NORMALIZE_DATES, False)
