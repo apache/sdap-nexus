@@ -13,14 +13,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import calendar
 import itertools
 import logging
 import traceback
 from cStringIO import StringIO
 from datetime import datetime
 from functools import partial
-import time
 
 import matplotlib.dates as mdates
 import matplotlib.pyplot as plt
@@ -29,12 +27,12 @@ import pytz
 import shapely.geometry
 import shapely.wkt
 from backports.functools_lru_cache import lru_cache
-from nexustiles.nexustiles import NexusTileService
 from pytz import timezone
 from scipy import stats
 from webservice import Filtering as filtering
 from webservice.NexusHandler import nexus_handler
 from webservice.algorithms_spark.NexusCalcSparkHandler import NexusCalcSparkHandler
+from webservice.algorithms_spark import utils
 from webservice.webmodel import NexusResults, NoDataException, NexusProcessingException
 
 EPOCH = timezone('UTC').localize(datetime(1970, 1, 1))
@@ -466,12 +464,6 @@ def spark_driver(daysinrange, bounding_polygon, ds, tile_service_factory, metric
     return results, {}
 
 
-def normalize_date(time_in_seconds):
-    dt = datetime.utcfromtimestamp(time_in_seconds)
-    normalized_dt = dt.replace(day=1)
-    return int(time.mktime(normalized_dt.timetuple()))
-
-
 def calc_average_on_day(tile_service_factory, metrics_callback, normalize_dates, tile_in_spark):
     import shapely.wkt
     from datetime import datetime
@@ -532,7 +524,7 @@ def calc_average_on_day(tile_service_factory, metrics_callback, normalize_dates,
 
         # Return Stats by day
         if normalize_dates:
-            timeinseconds = normalize_date(timeinseconds)
+            timeinseconds = utils.normalize_date(timeinseconds)
 
         stat = {
             'min': data_min,
