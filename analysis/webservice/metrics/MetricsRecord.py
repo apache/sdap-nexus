@@ -11,7 +11,7 @@ class MetricsRecord(object):
             self._fields[field.key] = field
 
     def record_metrics(self, **kwargs):
-        for field_key, addend in kwargs.items():
+        for field_key, addend in list(kwargs.items()):
             if field_key in self._fields:
                 self._fields[field_key].add(addend)
 
@@ -20,7 +20,7 @@ class MetricsRecord(object):
             logger = metrics_logger
 
         logging_lines = []
-        for field in self._fields.values():
+        for field in list(self._fields.values()):
             value = field.value()
             if value > 0 or include_zero_values:
                 line = "{description}: {value}".format(description=field.description, value=field.value())

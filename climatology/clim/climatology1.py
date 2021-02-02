@@ -21,15 +21,15 @@ Simple code to be run on Spark cluster, or using multi-core parallelism on singl
 
 """
 
-import sys, os, calendar, urlparse, urllib
+import sys, os, calendar, urllib.parse, urllib.request, urllib.parse, urllib.error
 from datetime import datetime
 import numpy as N
-from variables import getVariables, close
+from .variables import getVariables, close
 #from timePartitions import partitionFilesByKey
-from split import fixedSplit
+from .split import fixedSplit
 #from stats import Stats
 from pathos.multiprocessing import ProcessingPool as Pool
-from plotlib import imageMap, makeMovie
+from .plotlib import imageMap, makeMovie
 
 #from gaussInterp import gaussInterp
 
@@ -80,10 +80,10 @@ Writes the averaged variable grid, attributes of the primary variable, and the c
         averageFn = averagingFunctions[averager]
     except :
         averageFn = average
-        print >>sys.stderr, 'climatology: Error, Averaging function must be one of: %s' % str(averagingFunctions)
+        print('climatology: Error, Averaging function must be one of: %s' % str(averagingFunctions), file=sys.stderr)
 
     urlSplits = [s for s in fixedSplit(urls, nEpochs)]
-    if VERBOSE: print >>sys.stderr, urlSplits
+    if VERBOSE: print(urlSplits, file=sys.stderr)
 
     def climsContoured(urls):
         n = len(urls)
@@ -91,7 +91,7 @@ Writes the averaged variable grid, attributes of the primary variable, and the c
         return contourMap(var, variable, coordinates, n, urls[0])
 
     if mode == 'sequential':
-        plots = map(climsContoured, urlSplits)
+        plots = list(map(climsContoured, urlSplits))
     elif mode == 'multicore':
         pool = Pool(nWorkers)
         plots = pool.map(climsContoured, urlSplits)        
@@ -100,8 +100,8 @@ Writes the averaged variable grid, attributes of the primary variable, and the c
     elif mode == 'spark':
         pass
 
-    plots = map(climsContoured, urlSplits)
-    print plots
+    plots = list(map(climsContoured, urlSplits))
+    print(plots)
     return plots
 #    return makeMovie(plots, 'clim.mpg')    
 
@@ -121,7 +121,7 @@ Returns the averaged variable grid, attributes of the primary variable, and the 
     varList = [variable, mask]
     for i, url in enumerate(urls):
         fn = retrieveFile(url, '~/cache')
-        if VERBOSE: print >>sys.stderr, 'Read variables and mask ...'
+        if VERBOSE: print('Read variables and mask ...', file=sys.stderr)
         var, fh = getVariables(fn, varList)            # return dict of variable objects by name
         if i == 0:
             dtype = var[variable].dtype
@@ -134,7 +134,7 @@ Returns the averaged variable grid, attributes of the primary variable, and the 
         if i+1 != len(urls):                           # keep var dictionary from last file to grab metadata
             close(fh)                                  # REMEMBER:  closing fh loses in-memory data structures
 
-    if VERBOSE: print >>sys.stderr, 'Averaging ...'
+    if VERBOSE: print('Averaging ...', file=sys.stderr)
     coord, fh = getVariables(fn, coordinates)          # read coordinate arrays and add to dict
     for c in coordinates: var[c] = coord[c][:]
 
@@ -156,7 +156,7 @@ Returns the averaged variable grid, attributes of the primary variable, and the 
 
 
 def contourMap(var, variable, coordinates, n, url):
-    p = urlparse.urlparse(url)
+    p = urllib.parse.urlparse(url)
     filename = os.path.split(p.path)[1]
     return filename
     outFile = filename + '.png'
@@ -167,16 +167,16 @@ def contourMap(var, variable, coordinates, n, url):
     imageMap(var[coordinates[1]][:], var[coordinates[0]][:], var[variable][:],
              vmin=-2., vmax=45., outFile=outFile, autoBorders=False,
              title='%s %d-day Mean from %s' % (variable.upper(), n, filename))
-    print >>sys.stderr, 'Writing contour plot to %s' % outFile
+    print('Writing contour plot to %s' % outFile, file=sys.stderr)
     return outFile
 
 
 def isLocalFile(url):
     '''Check if URL is a local path.'''
-    u = urlparse.urlparse(url)
+    u = urllib.parse.urlparse(url)
     if u.scheme == '' or u.scheme == 'file':
         if not path.exists(u.path):
-            print >>sys.stderr, 'isLocalFile: File at local path does not exist: %s' % u.path
+            print('isLocalFile: File at local path does not exist: %s' % u.path, file=sys.stderr)
         return (True, u.path)
     else:
         return (False, u.path)
@@ -190,13 +190,13 @@ def retrieveFile(url, dir=None):
     outPath = os.path.join(dir, fn)
     if not ok:
         if os.path.exists(outPath):
-            print >>sys.stderr, 'retrieveFile: Using cached file: %s' % outPath
+            print('retrieveFile: Using cached file: %s' % outPath, file=sys.stderr)
         else:
             try:
-                print >>sys.stderr, 'retrieveFile: Retrieving (URL) %s to %s' % (url, outPath)
-                urllib.urlretrieve(url, outPath)
+                print('retrieveFile: Retrieving (URL) %s to %s' % (url, outPath), file=sys.stderr)
+                urllib.request.urlretrieve(url, outPath)
             except:
-                print >>sys.stderr, 'retrieveFile: Cannot retrieve file at URL: %s' % url
+                print('retrieveFile: Cannot retrieve file at URL: %s' % url, file=sys.stderr)
                 return None
     return outPath    
 
@@ -239,7 +239,7 @@ def main(args):
 
     
 if __name__ == '__main__':
-    print main(sys.argv[1:])
+    print(main(sys.argv[1:]))
 
 
 # python climatology.py 5 5 pixelAverage sequential 1 urls_sst_10days.txt

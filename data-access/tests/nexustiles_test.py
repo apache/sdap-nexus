@@ -13,10 +13,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import ConfigParser
+import configparser
 import time
 import unittest
-from StringIO import StringIO
+from io import StringIO
 
 from nexustiles.nexustiles import NexusTileService
 from shapely.geometry import box
@@ -37,7 +37,7 @@ core=nexustiles
 
 [datastore]
 store=cassandra""")
-        cp = ConfigParser.RawConfigParser()
+        cp = configparser.RawConfigParser()
         cp.readfp(config)
 
         self.tile_service = NexusTileService(config=cp)
@@ -47,21 +47,21 @@ store=cassandra""")
                                                                          "MXLDEPTH_ECCO_version4_release1",
                                                                          1, time.time())
         for b in boxes:
-            print b.bounds
+            print(b.bounds)
 
     def test_get_distinct_bounding_boxes_in_polygon_mur(self):
         boxes = self.tile_service.get_distinct_bounding_boxes_in_polygon(box(-180, -90, 180, 90),
                                                                          "JPL-L4_GHRSST-SSTfnd-MUR-GLOB-v02.0-fv04.1",
                                                                          1, time.time())
         for b in boxes:
-            print b.bounds
+            print(b.bounds)
 
     def test_find_tiles_by_exact_bounds(self):
         tiles = self.tile_service.find_tiles_by_exact_bounds((175.01, -42.68, 180.0, -40.2),
                                                              "JPL-L4_GHRSST-SSTfnd-MUR-GLOB-v02.0-fv04.1",
                                                              1, time.time())
         for tile in tiles:
-            print tile.get_summary()
+            print(tile.get_summary())
 
     def test_sorted_box(self):
 
@@ -69,18 +69,18 @@ store=cassandra""")
                                                    "JPL-L4_GHRSST-SSTfnd-MUR-GLOB-v02.0-fv04.1",
                                                    1, time.time())
         for tile in tiles:
-            print tile.min_time
+            print(tile.min_time)
 
     def test_time_series_tile(self):
         tiles = self.tile_service.find_tile_by_id("055c0b51-d0fb-3f39-b48a-4f762bf0c994")
         for tile in tiles:
-            print tile.get_summary()
+            print(tile.get_summary())
 
     def test_get_tiles_by_metadata(self):
         tiles = self.tile_service.get_tiles_by_metadata(['id:60758e00-5721-3a6e-bf57-78448bb0aeeb'],
                                                         "MUR-JPL-L4-GLOB-v4.1", 1514764800, 1514764800)
         for tile in tiles:
-            print tile.get_summary()
+            print(tile.get_summary())
 
 # from nexustiles.model.nexusmodel import get_approximate_value_for_lat_lon
 # import numpy as np

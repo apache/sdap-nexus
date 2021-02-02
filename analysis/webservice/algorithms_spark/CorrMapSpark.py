@@ -252,11 +252,10 @@ class CorrMapNexusSparkHandlerImpl(NexusCalcSparkHandler):
         # NumPy masked array.  That is the last array in the tuple of 
         # intermediate summation arrays.  Set mask to True if count is 0.
         sum_tiles = \
-            sum_tiles.map(lambda (bounds, (sum_x, sum_y, sum_xx,
-            sum_yy, sum_xy, n)):
-                          (bounds, (sum_x, sum_y, sum_xx, sum_yy, sum_xy,
-                                    np.ma.array(n,
-                                                mask=~(n.astype(bool))))))
+            sum_tiles.map(lambda bounds_sum_x_sum_y_sum_xx_sum_yy_sum_xy_n:
+                          (bounds_sum_x_sum_y_sum_xx_sum_yy_sum_xy_n[0], (bounds_sum_x_sum_y_sum_xx_sum_yy_sum_xy_n[1][0], bounds_sum_x_sum_y_sum_xx_sum_yy_sum_xy_n[1][1], bounds_sum_x_sum_y_sum_xx_sum_yy_sum_xy_n[1][2], bounds_sum_x_sum_y_sum_xx_sum_yy_sum_xy_n[1][3], bounds_sum_x_sum_y_sum_xx_sum_yy_sum_xy_n[1][4],
+                                    np.ma.array(bounds_sum_x_sum_y_sum_xx_sum_yy_sum_xy_n[1][5],
+                                                mask=~(bounds_sum_x_sum_y_sum_xx_sum_yy_sum_xy_n[1][5].astype(bool))))))
 
         # print 'sum_tiles = ',sum_tiles.collect()
 
@@ -267,14 +266,13 @@ class CorrMapNexusSparkHandlerImpl(NexusCalcSparkHandler):
         # and n=number of input values that went into each pixel with 
         # any masked values not included).
         corr_tiles = \
-            sum_tiles.map(lambda (bounds, (sum_x, sum_y, sum_xx, sum_yy,
-            sum_xy, n)):
-                          (bounds,
-                           np.ma.array(((sum_xy - sum_x * sum_y / n) /
-                                        np.sqrt((sum_xx - sum_x * sum_x / n) *
-                                                (sum_yy - sum_y * sum_y / n))),
-                                       mask=~(n.astype(bool))),
-                           n)).collect()
+            sum_tiles.map(lambda bounds_sum_x_sum_y_sum_xx_sum_yy_sum_xy_n1:
+                          (bounds_sum_x_sum_y_sum_xx_sum_yy_sum_xy_n1[0],
+                           np.ma.array(((bounds_sum_x_sum_y_sum_xx_sum_yy_sum_xy_n1[1][4] - bounds_sum_x_sum_y_sum_xx_sum_yy_sum_xy_n1[1][0] * bounds_sum_x_sum_y_sum_xx_sum_yy_sum_xy_n1[1][1] / bounds_sum_x_sum_y_sum_xx_sum_yy_sum_xy_n1[1][5]) /
+                                        np.sqrt((bounds_sum_x_sum_y_sum_xx_sum_yy_sum_xy_n1[1][2] - bounds_sum_x_sum_y_sum_xx_sum_yy_sum_xy_n1[1][0] * bounds_sum_x_sum_y_sum_xx_sum_yy_sum_xy_n1[1][0] / bounds_sum_x_sum_y_sum_xx_sum_yy_sum_xy_n1[1][5]) *
+                                                (bounds_sum_x_sum_y_sum_xx_sum_yy_sum_xy_n1[1][3] - bounds_sum_x_sum_y_sum_xx_sum_yy_sum_xy_n1[1][1] * bounds_sum_x_sum_y_sum_xx_sum_yy_sum_xy_n1[1][1] / bounds_sum_x_sum_y_sum_xx_sum_yy_sum_xy_n1[1][5]))),
+                                       mask=~(bounds_sum_x_sum_y_sum_xx_sum_yy_sum_xy_n1[1][5].astype(bool))),
+                           bounds_sum_x_sum_y_sum_xx_sum_yy_sum_xy_n1[1][5])).collect()
 
         r = np.zeros((self._nlats, self._nlons), dtype=np.float64, order='C')
         n = np.zeros((self._nlats, self._nlons), dtype=np.uint32, order='C')

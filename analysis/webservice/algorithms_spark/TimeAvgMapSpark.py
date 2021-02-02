@@ -113,8 +113,8 @@ class TimeAvgMapNexusSparkHandlerImpl(NexusCalcSparkHandler):
 
         nparts_requested = request.get_nparts()
 
-        start_seconds_from_epoch = long((start_time - EPOCH).total_seconds())
-        end_seconds_from_epoch = long((end_time - EPOCH).total_seconds())
+        start_seconds_from_epoch = int((start_time - EPOCH).total_seconds())
+        end_seconds_from_epoch = int((end_time - EPOCH).total_seconds())
 
         return ds, bounding_polygon, start_seconds_from_epoch, end_seconds_from_epoch, nparts_requested
 
@@ -144,7 +144,7 @@ class TimeAvgMapNexusSparkHandlerImpl(NexusCalcSparkHandler):
             raise NoDataException(reason="No data found for selected timeframe")
 
         self.log.debug('Found {0} tiles'.format(len(nexus_tiles)))
-        print('Found {} tiles'.format(len(nexus_tiles)))
+        print(('Found {} tiles'.format(len(nexus_tiles))))
 
         daysinrange = self._get_tile_service().find_days_in_range_asc(bbox.bounds[1],
                                                                 bbox.bounds[3],
@@ -305,7 +305,8 @@ class TimeAvgMapNexusSparkHandlerImpl(NexusCalcSparkHandler):
         return (min_lat, max_lat, min_lon, max_lon), (sum_tile, cnt_tile)
 
 
-def calculate_means(metrics_callback, fill, (bounds, (sum_tile, cnt_tile))):
+def calculate_means(metrics_callback, fill, xxx_todo_changeme):
+    (bounds, (sum_tile, cnt_tile)) = xxx_todo_changeme
     start_time = datetime.now()
 
     outer = []

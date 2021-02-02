@@ -17,7 +17,7 @@
 #
 
 from mrjob.job import MRJob
-from climatology2 import climByAveragingPeriods
+from .climatology2 import climByAveragingPeriods
 
 
 class MRClimatologyByGaussInterp(MRJob):

@@ -55,7 +55,7 @@ class NexusCalcHandler(object):
 
     def _resultsMapToList(self, resultsMap):
         resultsList = []
-        for key, value in resultsMap.iteritems():
+        for key, value in resultsMap.items():
             resultsList.append(value)
 
         resultsList = sorted(resultsList, key=lambda entry: entry[0]["time"])

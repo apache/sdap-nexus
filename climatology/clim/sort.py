@@ -16,7 +16,7 @@
 # sort.py -- Utility routines to sort URL lists into N-day groups for computing climatologies.
 #
 
-import sys, os, urlparse
+import sys, os, urllib.parse
 
 
 def sortByKeys(urls, getKeysFn):
@@ -34,11 +34,11 @@ def sortByKeys(urls, getKeysFn):
 
 
 def main(args):
-    from datasets import ModisSst
+    from .datasets import ModisSst
     urlFile = args[0]
     urls = open(urlFile, 'r').readlines()
     urlsSorted = sortByKeys(urls, ModisSst.getKeys)
-    print '\n'.join(urlsSorted)
+    print('\n'.join(urlsSorted))
 
 
 if __name__ == '__main__':

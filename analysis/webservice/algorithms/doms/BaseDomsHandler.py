@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import StringIO
+import io
 import os
 import csv
 import json
@@ -24,8 +24,8 @@ from decimal import Decimal
 import numpy as np
 from pytz import timezone, UTC
 
-import config
-import geo
+from . import config
+from . import geo
 from webservice.algorithms.NexusCalcHandler import NexusCalcHandler as BaseHandler
 from webservice.webmodel import NexusResults
 
@@ -71,7 +71,7 @@ class DomsEncoder(json.JSONEncoder):
         if obj == np.nan:
             return None  # hard code string for now
         elif isinstance(obj, datetime):
-            return long((obj - EPOCH).total_seconds())
+            return int((obj - EPOCH).total_seconds())
         elif isinstance(obj, Decimal):
             return str(obj)
         else:
@@ -106,7 +106,7 @@ class DomsCSVFormatter:
     @staticmethod
     def create(executionId, results, params, details):
 
-        csv_mem_file = StringIO.StringIO()
+        csv_mem_file = io.StringIO()
         try:
             DomsCSVFormatter.__addConstants(csv_mem_file)
             DomsCSVFormatter.__addDynamicAttrs(csv_mem_file, executionId, results, params, details)

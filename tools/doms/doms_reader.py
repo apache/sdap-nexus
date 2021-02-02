@@ -63,7 +63,7 @@ def assemble_matches(filename):
                     match_dict[group]['matchID'] = match
                     ID = doms_nc.variables['matchIDs'][match][group_num]
                     match_dict[group][group + 'ID'] = ID
-                    for var in doms_nc.groups[group].variables.keys():
+                    for var in list(doms_nc.groups[group].variables.keys()):
                         match_dict[group][var] = doms_nc.groups[group][var][ID]
                     
                     # Create a UTC datetime field from timestamp
@@ -94,8 +94,8 @@ def matches_to_csv(matches, csvfile):
     # Create a header for the CSV. Column names are GROUP_VARIABLE or
     # GROUP_GROUPID.
     header = []
-    for key, value in matches[0].items():
-        for otherkey in value.keys():
+    for key, value in list(matches[0].items()):
+        for otherkey in list(value.keys()):
             header.append(key + "_" + otherkey)
     
     try:
@@ -105,8 +105,8 @@ def matches_to_csv(matches, csvfile):
             csv_writer.writerow(header)
             for match in matches:
                 row = []
-                for group, data in match.items():
-                    for value in data.values():
+                for group, data in list(match.items()):
+                    for value in list(data.values()):
                         row.append(value)
                 csv_writer.writerow(row)
     except (OSError, IOError) as err:

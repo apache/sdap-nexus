@@ -49,7 +49,7 @@ class TimeAvgMapCalcHandlerImpl(NexusCalcHandler):
                                                                       midLon + 0.5, ds=self._ds, start_time=t - t_incr,
                                                                       end_time=t)
             ntiles = len(nexus_tiles)
-            print 'find_native_res: got %d tiles' % len(nexus_tiles)
+            print('find_native_res: got %d tiles' % len(nexus_tiles))
             sys.stdout.flush()
             lat_res = 0.
             lon_res = 0.
@@ -80,7 +80,7 @@ class TimeAvgMapCalcHandlerImpl(NexusCalcHandler):
                                                                       self._maxLon, ds=self._ds, start_time=t - t_incr,
                                                                       end_time=t)
             ntiles = len(nexus_tiles)
-            print 'find_global_tile_set got %d tiles' % ntiles
+            print('find_global_tile_set got %d tiles' % ntiles)
             sys.stdout.flush()
             t -= t_incr
         return nexus_tiles
@@ -93,10 +93,10 @@ class TimeAvgMapCalcHandlerImpl(NexusCalcHandler):
     # @staticmethod
     # def _map(tile_in):
     def _map(self, tile_in):
-        print 'Started tile %s' % tile_in.section_spec
-        print 'tile lats = ', tile_in.latitudes
-        print 'tile lons = ', tile_in.longitudes
-        print 'tile = ', tile_in.data
+        print('Started tile %s' % tile_in.section_spec)
+        print('tile lats = ', tile_in.latitudes)
+        print('tile lons = ', tile_in.longitudes)
+        print('tile = ', tile_in.data)
         sys.stdout.flush()
         lats = tile_in.latitudes
         lons = tile_in.longitudes
@@ -122,7 +122,7 @@ class TimeAvgMapCalcHandlerImpl(NexusCalcHandler):
             while t_start <= self._endTime:
                 t_end = min(t_start + t_incr, self._endTime)
                 t1 = time()
-                print 'nexus call start at time %f' % t1
+                print('nexus call start at time %f' % t1)
                 sys.stdout.flush()
                 nexus_tiles = self._get_tile_service().get_tiles_bounded_by_box(min_lat - self._latRes / 2,
                                                                           max_lat + self._latRes / 2,
@@ -130,12 +130,12 @@ class TimeAvgMapCalcHandlerImpl(NexusCalcHandler):
                                                                           max_lon + self._lonRes / 2, ds=self._ds,
                                                                           start_time=t_start, end_time=t_end)
                 t2 = time()
-                print 'nexus call end at time %f' % t2
-                print 'secs in nexus call: ', t2 - t1
+                print('nexus call end at time %f' % t2)
+                print('secs in nexus call: ', t2 - t1)
                 sys.stdout.flush()
                 self._prune_tiles(nexus_tiles)
-                print 't %d to %d - Got %d tiles' % (t_start, t_end,
-                                                     len(nexus_tiles))
+                print('t %d to %d - Got %d tiles' % (t_start, t_end,
+                                                     len(nexus_tiles)))
                 sys.stdout.flush()
                 for tile in nexus_tiles:
                     tile.data.data[:, :] = np.nan_to_num(tile.data.data)
@@ -147,12 +147,12 @@ class TimeAvgMapCalcHandlerImpl(NexusCalcHandler):
                                              min_x:max_x + 1]).astype(np.uint8)
                 t_start = t_end + 1
 
-            print 'cnt_tile = ', cnt_tile
+            print('cnt_tile = ', cnt_tile)
             cnt_tile.mask = ~(cnt_tile.data.astype(bool))
             avg_tile.mask = cnt_tile.mask
             avg_tile /= cnt_tile
-            print 'Finished tile %s' % tile_in.section_spec
-            print 'Tile avg = ', avg_tile
+            print('Finished tile %s' % tile_in.section_spec)
+            print('Tile avg = ', avg_tile)
             sys.stdout.flush()
         else:
             avg_tile = None
@@ -160,7 +160,7 @@ class TimeAvgMapCalcHandlerImpl(NexusCalcHandler):
             max_lat = None
             min_lon = None
             max_lon = None
-            print 'Tile %s outside of bounding box' % tile_in.section_spec
+            print('Tile %s outside of bounding box' % tile_in.section_spec)
             sys.stdout.flush()
         return (avg_tile, min_lat, max_lat, min_lon, max_lon)
 
@@ -171,8 +171,8 @@ class TimeAvgMapCalcHandlerImpl(NexusCalcHandler):
         return int((lon - self._minLonCent) / self._lonRes)
 
     def _create_nc_file(self, a):
-        print 'a=', a
-        print 'shape a = ', a.shape
+        print('a=', a)
+        print('shape a = ', a.shape)
         sys.stdout.flush()
         lat_dim, lon_dim = a.shape
         rootgrp = Dataset("tam.nc", "w", format="NETCDF4")
@@ -206,18 +206,18 @@ class TimeAvgMapCalcHandlerImpl(NexusCalcHandler):
         self._endTime = computeOptions.get_end_time()
 
         self._find_native_resolution()
-        print 'Using Native resolution: lat_res=%f, lon_res=%f' % (self._latRes, self._lonRes)
+        print('Using Native resolution: lat_res=%f, lon_res=%f' % (self._latRes, self._lonRes))
         self._minLatCent = self._minLat + self._latRes / 2
         self._minLonCent = self._minLon + self._lonRes / 2
         nlats = int((self._maxLat - self._minLatCent) / self._latRes) + 1
         nlons = int((self._maxLon - self._minLonCent) / self._lonRes) + 1
         self._maxLatCent = self._minLatCent + (nlats - 1) * self._latRes
         self._maxLonCent = self._minLonCent + (nlons - 1) * self._lonRes
-        print 'nlats=', nlats, 'nlons=', nlons
-        print 'center lat range = %f to %f' % (self._minLatCent,
-                                               self._maxLatCent)
-        print 'center lon range = %f to %f' % (self._minLonCent,
-                                               self._maxLonCent)
+        print('nlats=', nlats, 'nlons=', nlons)
+        print('center lat range = %f to %f' % (self._minLatCent,
+                                               self._maxLatCent))
+        print('center lon range = %f to %f' % (self._minLonCent,
+                                               self._maxLonCent))
         sys.stdout.flush()
         a = np.zeros((nlats, nlons), dtype=np.float64, order='C')
 
@@ -233,17 +233,17 @@ class TimeAvgMapCalcHandlerImpl(NexusCalcHandler):
         if len(nexus_tiles) == 0:
             raise NoDataException(reason="No data found for selected timeframe")
 
-        print 'Initially found %d tiles' % len(nexus_tiles)
+        print('Initially found %d tiles' % len(nexus_tiles))
         sys.stdout.flush()
         self._prune_tiles(nexus_tiles)
-        print 'Pruned to %d tiles' % len(nexus_tiles)
+        print('Pruned to %d tiles' % len(nexus_tiles))
         sys.stdout.flush()
         # for tile in nexus_tiles:
         #    print 'lats: ', tile.latitudes.compressed()
         #    print 'lons: ', tile.longitudes.compressed()
 
-        avg_tiles = map(self._map, nexus_tiles)
-        print 'shape a = ', a.shape
+        avg_tiles = list(map(self._map, nexus_tiles))
+        print('shape a = ', a.shape)
         sys.stdout.flush()
         # The tiles below are NOT Nexus objects.  They are tuples
         # with the time avg map data and lat-lon bounding box.
@@ -251,23 +251,23 @@ class TimeAvgMapCalcHandlerImpl(NexusCalcHandler):
             if tile is not None:
                 (tile_data, tile_min_lat, tile_max_lat,
                  tile_min_lon, tile_max_lon) = tile
-                print 'shape tile_data = ', tile_data.shape
-                print 'tile data mask = ', tile_data.mask
+                print('shape tile_data = ', tile_data.shape)
+                print('tile data mask = ', tile_data.mask)
                 sys.stdout.flush()
                 if np.any(np.logical_not(tile_data.mask)):
                     y0 = self._lat2ind(tile_min_lat)
                     y1 = self._lat2ind(tile_max_lat)
                     x0 = self._lon2ind(tile_min_lon)
                     x1 = self._lon2ind(tile_max_lon)
-                    print 'writing tile lat %f-%f, lon %f-%f, map y %d-%d, map x %d-%d' % \
+                    print('writing tile lat %f-%f, lon %f-%f, map y %d-%d, map x %d-%d' % \
                           (tile_min_lat, tile_max_lat,
-                           tile_min_lon, tile_max_lon, y0, y1, x0, x1)
+                           tile_min_lon, tile_max_lon, y0, y1, x0, x1))
                     sys.stdout.flush()
                     a[y0:y1 + 1, x0:x1 + 1] = tile_data
                 else:
-                    print 'All pixels masked in tile lat %f-%f, lon %f-%f, map y %d-%d, map x %d-%d' % \
+                    print('All pixels masked in tile lat %f-%f, lon %f-%f, map y %d-%d, map x %d-%d' % \
                           (tile_min_lat, tile_max_lat,
-                           tile_min_lon, tile_max_lon, y0, y1, x0, x1)
+                           tile_min_lon, tile_max_lon, y0, y1, x0, x1))
                     sys.stdout.flush()
 
         self._create_nc_file(a)

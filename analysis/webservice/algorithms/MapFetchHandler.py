@@ -29,7 +29,7 @@ from PIL import ImageDraw
 from PIL import ImageFont
 from dateutil.relativedelta import *
 
-import colortables
+from . import colortables
 import webservice.GenerateImageMRF as MRF
 from webservice.algorithms.NexusCalcHandler import NexusCalcHandler as BaseHandler
 from webservice.NexusHandler import nexus_handler
@@ -358,6 +358,6 @@ class MapFetchCalcHandler(BaseHandler):
             with open(tar_file, 'rb') as data:
                 s3client.upload_fileobj(data, s3bucket, tar_file)
         except Exception as e:
-            print("Unable to add tar.gz to S3: \n" + str(e))
+            print(("Unable to add tar.gz to S3: \n" + str(e)))
 
         call(["rm", "-rf", tar_file])  # Delete the tar.gz from local storage

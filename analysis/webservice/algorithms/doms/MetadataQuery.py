@@ -17,8 +17,8 @@ import json
 
 import requests
 
-import BaseDomsHandler
-import config
+from . import BaseDomsHandler
+from . import config
 from webservice.algorithms.NexusCalcHandler import NexusCalcHandler as BaseHandler
 from webservice.NexusHandler import nexus_handler
 from webservice.webmodel import DatasetNotFoundException

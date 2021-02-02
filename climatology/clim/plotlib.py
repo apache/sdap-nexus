@@ -15,9 +15,9 @@
 #!/bin/env python
 
 import sys, os, math, types, time, datetime
-from urllib import urlopen
-from urllib import urlretrieve
-from urlparse import urlparse
+from urllib.request import urlopen
+from urllib.request import urlretrieve
+from urllib.parse import urlparse
 #import Numeric as N
 import numpy as N
 import numpy.ma as MA
@@ -52,7 +52,7 @@ def imageMap(lons, lats, vals, vmin=None, vmax=None,
     if imageWidth is not None: makeFigure = True
     if projection is None or projection == '': projection = 'cyl'
     if cmap is None or cmap == '': cmap = M.cm.jet
-    if isinstance(cmap, types.StringType) and cmap != '':
+    if isinstance(cmap, bytes) and cmap != '':
         try:
             cmap = eval('M.cm.' + cmap)
         except:
@@ -96,8 +96,8 @@ def imageMap(lons, lats, vals, vmin=None, vmax=None,
     c = m.contourf(x, y, vals, levels, cmap=cmap, colors=None)
 
     m.drawcoastlines()
-    m.drawmeridians(range(meridians[0], meridians[1], meridians[2]), labels=[0,0,0,1])
-    m.drawparallels(range(parallels[0], parallels[1], parallels[2]), labels=[1,1,1,1])
+    m.drawmeridians(list(range(meridians[0], meridians[1], meridians[2])), labels=[0,0,0,1])
+    m.drawparallels(list(range(parallels[0], parallels[1], parallels[2])), labels=[1,1,1,1])
     M.colorbar(c)
     evalKeywordCmds(options)
     if outFile:
@@ -125,7 +125,7 @@ def imageMap2(lons, lats, vals, vmin=None, vmax=None,
     if imageWidth is not None: makeFigure = True
     if projection is None or projection == '': projection = 'cyl'
     if cmap is None or cmap == '': cmap = M.cm.jet
-    if isinstance(cmap, types.StringType) and cmap != '':
+    if isinstance(cmap, bytes) and cmap != '':
         try:
             cmap = eval('M.cm.' + cmap)
         except:
@@ -167,8 +167,8 @@ def imageMap2(lons, lats, vals, vmin=None, vmax=None,
 
     c = m.contourf(lons, lats, vals, levels, cmap=cmap, colors=None)
     m.drawcoastlines()
-    m.drawmeridians(range(meridians[0], meridians[1], meridians[2]), labels=[0,0,0,1])
-    m.drawparallels(range(parallels[0], parallels[1], parallels[2]), labels=[1,1,1,1])
+    m.drawmeridians(list(range(meridians[0], meridians[1], meridians[2])), labels=[0,0,0,1])
+    m.drawparallels(list(range(parallels[0], parallels[1], parallels[2])), labels=[1,1,1,1])
     M.colorbar(c, orientation='horizontal')
     evalKeywordCmds(options)
     if outFile: M.savefig(outFile, **validCmdOptions(options, 'savefig'))
@@ -184,7 +184,7 @@ def image2(vals, vmin=None, vmax=None, outFile=None,
     if vmax == 'auto': vmax = None
     if imageWidth is not None: makeFigure = True
     if cmap is None or cmap == '': cmap = M.cm.jet
-    if isinstance(cmap, types.StringType) and cmap != '':
+    if isinstance(cmap, bytes) and cmap != '':
         try:
             cmap = eval('M.cm.' + cmap)
         except:
@@ -264,7 +264,7 @@ def marksOnMap(lons, lats, vals=None, vmin=None, vmax=None,
 
     if timeDelta is not None:
         if times is not None:
-            times = map(mkTime, times)
+            times = list(map(mkTime, times))
             timeDelta = float(timeDelta) * 60.
             start = roundTime(times[0], 'down', timeDelta)
             end = roundTime(times[-1], 'up', timeDelta)
@@ -277,8 +277,8 @@ def marksOnMap(lons, lats, vals=None, vmin=None, vmax=None,
                   vmin=vmin, vmax=vmax, **validCmdOptions(options, 'map.scatter'))
 
     m.drawcoastlines()
-    m.drawmeridians(range(meridians[0], meridians[1], meridians[2]), labels=[0,0,0,1])
-    m.drawparallels(range(parallels[0], parallels[1], parallels[2]), labels=[1,1,1,1])
+    m.drawmeridians(list(range(meridians[0], meridians[1], meridians[2])), labels=[0,0,0,1])
+    m.drawparallels(list(range(parallels[0], parallels[1], parallels[2])), labels=[1,1,1,1])
     M.colorbar(g)
     evalKeywordCmds(options)
     if outFile: M.savefig(outFile, **validCmdOptions(options, 'savefig'))
@@ -294,7 +294,7 @@ def plotSwathVar(granules, variable, scaleFactor, title, outFile, filterMin=None
     imageFiles = []
 
     for i, file in enumerate(files):
-        print 'plotSwathVar: Reading %s: %s' % (file, variable)
+        print('plotSwathVar: Reading %s: %s' % (file, variable))
         localFile = localize(file, retrieve=False)
         if i == 0:
             swath = hdfeos.swaths(file)[0]
@@ -323,7 +323,7 @@ def plotSwathVar(granules, variable, scaleFactor, title, outFile, filterMin=None
             var = eval('['.join(('vals', slice)))
             var = var * float(scaleFactor)
 
-        print 'plotSwathVar: Variable range: %f -> %f' % (min(min(var)), max(max(var)))
+        print('plotSwathVar: Variable range: %f -> %f' % (min(min(var)), max(max(var))))
         if plotType != 'map' or not useImageMap:
             lat = lat.flat; lon = lon.flat; var = var.flat
 
@@ -375,7 +375,7 @@ def imageSwathVar(granules, variable, scaleFactor, title, outFile, filterMin=Non
     imageFiles = []; lonLatBounds = []
 
     for i, file in enumerate(files):
-        print 'imageSwathVar: Reading %s: %s' % (file, variable)
+        print('imageSwathVar: Reading %s: %s' % (file, variable))
         localFile = localize(file, retrieve=False)
         if i == 0:
             swath = hdfeos.swaths(file)[0]
@@ -404,7 +404,7 @@ def imageSwathVar(granules, variable, scaleFactor, title, outFile, filterMin=Non
             var = eval('['.join(('vals', slice)))
             var = var * float(scaleFactor)
 
-        print 'imageSwathVar: Variable range: %f -> %f' % (min(min(var)), max(max(var)))
+        print('imageSwathVar: Variable range: %f -> %f' % (min(min(var)), max(max(var))))
         if plotType != 'map' or not useImageMap:
             lat = lat.flat; lon = lon.flat; var = var.flat
 
@@ -448,7 +448,7 @@ def imageSwathVar(granules, variable, scaleFactor, title, outFile, filterMin=Non
             die("plotSwathVar: plotType must be 'map' or 'hist'")
 
         imageFiles.append(imageFile)
-    print "imageSwathVar results:", imageFiles
+    print("imageSwathVar results:", imageFiles)
     return (imageFiles, lonLatBounds)
 
 def fliplr(a):
@@ -581,7 +581,7 @@ def plotColumnsSimple(specs, outFile=None, rmsDiffFrom=None, floatFormat=None,
         # Column indices are one-based.
         # Styles are concatenated one-char flags like 'go' for green circles or
         # 'kx-' for black X's with a line.
-        fields = N.array([map(floatOrMiss, line.split()) for line in open(file, 'r')])
+        fields = N.array([list(map(floatOrMiss, line.split())) for line in open(file, 'r')])
         xcol = columns.pop(0)  # first column in list is the x axis
         xlabel, xcol, xstyle = splitColumnSpec(xcol)
         xdata = fields[:,xcol-1]
@@ -596,7 +596,7 @@ def plotColumnsSimple(specs, outFile=None, rmsDiffFrom=None, floatFormat=None,
                     ylabelMaster = ylabel
                 else:
                     s = diffStats(ylabelMaster, ydataMaster, ylabel, ydata)
-                    print >>sys.stderr, s.format(floatFormat)
+                    print(s.format(floatFormat), file=sys.stderr)
                     n, mean, sigma, min, max, rms = s.calc()
                     ylabel = ylabel + ' ' + floatFormat % rms
             M.plot(xdata, ydata, ystyle, label=ylabel)
@@ -621,7 +621,7 @@ def plotColumnsGrouped(specs, groupBy, outFile=None, rmsDiffFrom=None, floatForm
         # Column indices are one-based.
         # Styles are concatenated one-char flags like 'go' for green circles or
         # 'kx-' for black X's with a line.
-        fields = N.array([map(floatOrMiss, line.split()) for line in open(file, 'r')])
+        fields = N.array([list(map(floatOrMiss, line.split())) for line in open(file, 'r')])
         xcol = columns.pop(0)  # first column in list is the x axis
         xlabel, xcol, xstyle = splitColumnSpec(xcol)
         xdata = fields[:,xcol-1]
@@ -636,7 +636,7 @@ def plotColumnsGrouped(specs, groupBy, outFile=None, rmsDiffFrom=None, floatForm
                     ylabelMaster = ylabel
                 else:
                     s = diffStats(ylabelMaster, ydataMaster, ylabel, ydata)
-                    print >>sys.stderr, s.format(floatFormat)
+                    print(s.format(floatFormat), file=sys.stderr)
                     n, mean, sigma, min, max, rms = s.calc()
                     ylabel = ylabel + ' ' + floatFormat % rms
             M.plot(xdata, ydata, ystyle, label=ylabel)
@@ -647,7 +647,7 @@ def plotColumnsGrouped(specs, groupBy, outFile=None, rmsDiffFrom=None, floatForm
 
 def plotTllv(inFile, markerType='kx', outFile=None, groupBy=None, **options):
     """Plot the lat/lon locations of points from a time/lat/lon/value file."""
-    fields = N.array([map(float, line.split()) for line in open(inFile, 'r')])
+    fields = N.array([list(map(float, line.split())) for line in open(inFile, 'r')])
     lons = fields[:,2]; lats = fields[:,1]
     marksOnMap(lons, lats, markerType, outFile, \
                title='Lat/lon plot of '+inFile, **options)
@@ -677,7 +677,7 @@ def plotVtecAndJasonTracks(gtcFiles, outFile=None, names=None, makeFigure=True, 
     
     M.subplot(212)
     options.update({'title': 'JASON Track Plot', 'xlabel': 'Longitude (deg)', 'ylabel': 'Latitude (deg)'})
-    fields = N.array([map(floatOrMiss, line.split()) for line in open(gtcFiles[0], 'r')])
+    fields = N.array([list(map(floatOrMiss, line.split())) for line in open(gtcFiles[0], 'r')])
     lons = fields[:,2]; lats = fields[:,1]
     marksOnMap(lons, lats, show=show, **options)
     if outFile: M.savefig(outFile)
@@ -691,7 +691,7 @@ def diffStats(name1, vals1, name2, vals2):
     return Stats().label(label).addm(diff)
 
 def ensureItems(d1, d2):
-    for key in d2.keys():
+    for key in list(d2.keys()):
         if key not in d1: d1[key] = d2[key]
 
 def splitColumnSpec(s):
@@ -734,7 +734,7 @@ def evalKeywordCmds(options, cmdOptions=CmdOptions):
 #            warn('Invalid keyword option specified" %s=%s' % (option, args))
 
 def validCmdOptions(options, cmd, possibleOptions=CmdOptions):
-    return dict([(option, options[option]) for option in options.keys()
+    return dict([(option, options[option]) for option in list(options.keys())
                     if option in possibleOptions[cmd]])
 
 def dict2kwargs(d):
@@ -759,13 +759,13 @@ def csv2columns(csvFile, columns):
         types.append( eval(type.strip()) )  # get type conversion function from type string
         cols.append([])
 
-    print csvFile
+    print(csvFile)
     for fields in csv.DictReader(urlopen(csvFile).readlines(), skipinitialspace=True):
         tmpColVals = []
         try:
             for i, type in enumerate(types): tmpColVals.append( type(fields[names[i]]) )
-        except Exception, e:
-            print "Got exception coercing values: %s" % e
+        except Exception as e:
+            print("Got exception coercing values: %s" % e)
             continue
         for i in range(len(types)): cols[i].append(tmpColVals[i])
     return [N.array(col) for col in cols]
@@ -784,8 +784,8 @@ def imageSlice(dataFile, lonSlice, latSlice, varSlice, title, vmin=None, vmax=No
 #    if dataFile == []: dataFile = 'http://laits.gmu.edu/NWGISS_Temp_Data/WCSfCays5.hdf'
     if imageFile is None: imageFile = dataFile + '.image.png'
 
-    print dataFile
-    print imageFile
+    print(dataFile)
+    print(imageFile)
     tmpFile, headers = urlretrieve(dataFile)
 #    tmpFile = 'WCSfCays5.hdf'
     try:
@@ -804,25 +804,25 @@ def imageSlice(dataFile, lonSlice, latSlice, varSlice, title, vmin=None, vmax=No
                 fileType = 'hdf_swath'
                 swath = swaths[0]
             except:
-                raise RuntimeError, 'imageSlice: Can only slice & image netCDF or HDF grid/swath files.'
+                raise RuntimeError('imageSlice: Can only slice & image netCDF or HDF grid/swath files.')
     if fileType == 'nc':
         lons = evalSlice(nc, lonSlice)
         lats = evalSlice(nc, latSlice)
         vals = evalSlice(nc, varSlice)
     elif fileType == 'hdf_grid':
-        print grids
+        print(grids)
         fields = hdfeos.grid_fields(tmpFile, grid)
-        print fields
+        print(fields)
         field = fields[0]
         dims = hdfeos.grid_field_dims(tmpFile, grid, field)
-        print dims
+        print(dims)
         lons = hdfeos.grid_field_read(tmpFile, grid, lonSlice)
         lats = hdfeos.grid_field_read(tmpFile, grid, latSlice)
         vals = hdfeos.grid_field_read(tmpFile, grid, field)
     elif fileType == 'hdf_swath':
-        print swaths
-        print hdfeos.swath_geo_fields(tmpFile, swath)
-        print hdfeos.swath_data_fields(tmpFile, swath)
+        print(swaths)
+        print(hdfeos.swath_geo_fields(tmpFile, swath))
+        print(hdfeos.swath_data_fields(tmpFile, swath))
         lons = hdfeos.get_swath_field(tmpFile, swath, 'Longitude')  # assume HDFEOS conventions
         lats = hdfeos.get_swath_field(tmpFile, swath, 'Latitude')
         vals = hdfeos.get_swath_field(tmpFile, swath, varSlice)
@@ -853,5 +853,5 @@ if __name__ == '__main__':
 #    plotVtecAndJasonTracks([argv[1], argv[2]], outFile, show=True, legend=True)
 
     me = argv.pop(0)
-    args = map(floatOrStr, argv)
+    args = list(map(floatOrStr, argv))
     imageSlice(*args)

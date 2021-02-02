@@ -122,7 +122,7 @@ class LongitudeLatitudeMapCalcHandlerImpl(NexusCalcHandler):
                 date_map[tile_start_time] = []
             date_map[tile_start_time].append(list(tiles))
 
-        matches = [tiles for a_time, tiles in date_map.iteritems() if len(tiles) == 2]
+        matches = [tiles for a_time, tiles in date_map.items() if len(tiles) == 2]
 
         return matches
 

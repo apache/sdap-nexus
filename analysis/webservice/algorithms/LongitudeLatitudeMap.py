@@ -101,8 +101,8 @@ class LongitudeLatitudeMapCalcHandlerImpl(NexusCalcHandler):
                 reason="'endTime' argument is required. Can be int value milliseconds from epoch or string format YYYY-MM-DDTHH:mm:ssZ",
                 code=400)
 
-        start_seconds_from_epoch = long((start_time - EPOCH).total_seconds())
-        end_seconds_from_epoch = long((end_time - EPOCH).total_seconds())
+        start_seconds_from_epoch = int((start_time - EPOCH).total_seconds())
+        end_seconds_from_epoch = int((end_time - EPOCH).total_seconds())
 
         return ds, bounding_polygon, start_seconds_from_epoch, end_seconds_from_epoch
 
@@ -172,7 +172,7 @@ def lat_lon_map_driver(search_bounding_polygon, search_start, search_end, ds, di
 
     global tile_service
     tile_service = NexusTileService()
-    map_result = map(func, distinct_boxes)
+    map_result = list(map(func, distinct_boxes))
     return [item for sublist in map_result for item in sublist]
     # TODO Use for multiprocessing:
     # result = pool.map_async(func, distinct_boxes)

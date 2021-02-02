@@ -17,7 +17,7 @@
 import calendar
 import logging
 import traceback
-from cStringIO import StringIO
+from io import StringIO
 from datetime import datetime
 from multiprocessing.dummy import Pool, Manager
 
@@ -144,8 +144,8 @@ class TimeSeriesCalcHandlerImpl(NexusCalcHandler):
         apply_seasonal_cycle_filter = request.get_apply_seasonal_cycle_filter()
         apply_low_pass_filter = request.get_apply_low_pass_filter()
 
-        start_seconds_from_epoch = long((start_time - EPOCH).total_seconds())
-        end_seconds_from_epoch = long((end_time - EPOCH).total_seconds())
+        start_seconds_from_epoch = int((start_time - EPOCH).total_seconds())
+        end_seconds_from_epoch = int((end_time - EPOCH).total_seconds())
 
         return ds, bounding_polygon, start_seconds_from_epoch, end_seconds_from_epoch, \
                apply_seasonal_cycle_filter, apply_low_pass_filter
@@ -232,15 +232,15 @@ class TimeSeriesCalcHandlerImpl(NexusCalcHandler):
             for dayinseconds in daysinrange:
                 work_queue.put(
                     ('calc_average_on_day', bounding_polygon.wkt, ds, dayinseconds))
-            [work_queue.put(SENTINEL) for _ in xrange(0, maxprocesses)]
+            [work_queue.put(SENTINEL) for _ in range(0, maxprocesses)]
 
             # Start new processes to handle the work
             pool = Pool(maxprocesses)
-            [pool.apply_async(pool_worker, (work_queue, done_queue)) for _ in xrange(0, maxprocesses)]
+            [pool.apply_async(pool_worker, (work_queue, done_queue)) for _ in range(0, maxprocesses)]
             pool.close()
 
             # Collect the results as [(day (in ms), average difference for that day)]
-            for i in xrange(0, len(daysinrange)):
+            for i in range(0, len(daysinrange)):
                 result = done_queue.get()
                 try:
                     error_str = result['error']

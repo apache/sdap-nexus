@@ -22,12 +22,12 @@ import utm
 from nexustiles.model.nexusmodel import get_approximate_value_for_lat_lon
 from scipy import spatial
 
-import BaseDomsHandler
-import ResultsStorage
-import datafetch
-import fetchedgeimpl
-import geo
-import workerthread
+from . import BaseDomsHandler
+from . import ResultsStorage
+from . import datafetch
+from . import fetchedgeimpl
+from . import geo
+from . import workerthread
 from webservice.NexusHandler import nexus_handler
 
 

@@ -24,7 +24,7 @@ class LivyHandler:
         data = {'kind': 'pyspark'}
 
         # Create a Spark session
-        print 'Creating Spark session...'
+        print('Creating Spark session...')
         r = requests.post(host + '/sessions', data=json.dumps(data), 
                           headers=self._headers)
 
@@ -37,23 +37,23 @@ class LivyHandler:
         self._lc = HttpClient(self._session_url)
 
     def exec_str (self, code):
-        print 'Submitting code...'
+        print('Submitting code...')
         statements_url = self._session_url + '/statements'
         data = {'code': code}
         r = requests.post(statements_url, data=json.dumps(data), 
                           headers=self._headers)
         
         # Wait until the code completes
-        print 'Running code...'
+        print('Running code...')
         status_url = self._host + r.headers['location']
     
         r = self._wait_for_state(status_url, 'available')
         output = r.json()['output']
-        print 'output=',output
+        print('output=',output)
         if output['status'] == 'error':
-            ans = {u'text/plain': output['traceback']}
+            ans = {'text/plain': output['traceback']}
         else:
-            ans = {u'text/plain': [output['data']['text/plain']]}
+            ans = {'text/plain': [output['data']['text/plain']]}
         return ans
 
     def exec_file(self, py_uri):
@@ -71,7 +71,7 @@ class LivyHandler:
         return self._lc.submit(upload_pyfile_job).result()
 
     def close(self):
-        print 'Closing Spark session...'
+        print('Closing Spark session...')
         requests.delete(self._session_url, headers=self._headers)
 
 
@@ -80,7 +80,7 @@ def main():
         livy_host = environ['LIVY_HOST']
     except:
         livy_host = "http://localhost:8998"
-    print 'Using Livy at {}'.format(livy_host)
+    print('Using Livy at {}'.format(livy_host))
     lh = LivyHandler(host=livy_host)
 
     # Run some pyspark code.
@@ -88,7 +88,7 @@ def main():
     1 + 1
     """)
     ans = lh.exec_str(code)
-    print 'The answer is {}'.format(ans)
+    print('The answer is {}'.format(ans))
 
     # Run some more pyspark code.
     code = textwrap.dedent("""
@@ -102,13 +102,13 @@ def main():
     print "Pi is roughly %f" % (4.0 * count / NUM_SAMPLES)
     """)
     ans = lh.exec_str(code)
-    print 'The answer is {}'.format(ans)
+    print('The answer is {}'.format(ans))
     
     # Run a batch job
     py_uri = 'test_code_nexus_laptop.py'
-    print 'Submitting batch job from {}'.format(py_uri)
+    print('Submitting batch job from {}'.format(py_uri))
     ans = lh.exec_file(py_uri)
-    print 'The answer is {}'.format(ans)
+    print('The answer is {}'.format(ans))
 
     # Close the Spark session.
     lh.close()

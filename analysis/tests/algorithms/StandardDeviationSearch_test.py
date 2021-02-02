@@ -16,7 +16,7 @@
 
 import json
 import unittest
-import urllib
+import urllib.request, urllib.parse, urllib.error
 #from multiprocessing.pool import ThreadPool
 from unittest import skip
 
@@ -52,7 +52,7 @@ class HttpParametersTest(AsyncHTTPTestCase):
         params = {
             "ds": "dataset"
         }
-        path = StandardDeviationSearch.StandardDeviationSearchCalcHandlerImpl.path + '?' + urllib.urlencode(params)
+        path = StandardDeviationSearch.StandardDeviationSearchCalcHandlerImpl.path + '?' + urllib.parse.urlencode(params)
         response = self.fetch(path)
         self.assertEqual(400, response.code)
         body = json.loads(response.body)
@@ -63,7 +63,7 @@ class HttpParametersTest(AsyncHTTPTestCase):
             "ds": "dataset",
             "longitude": "22.4"
         }
-        path = StandardDeviationSearch.StandardDeviationSearchCalcHandlerImpl.path + '?' + urllib.urlencode(params)
+        path = StandardDeviationSearch.StandardDeviationSearchCalcHandlerImpl.path + '?' + urllib.parse.urlencode(params)
         response = self.fetch(path)
         self.assertEqual(400, response.code)
         body = json.loads(response.body)
@@ -75,7 +75,7 @@ class HttpParametersTest(AsyncHTTPTestCase):
             "longitude": "22.4",
             "latitude": "-84.32"
         }
-        path = StandardDeviationSearch.StandardDeviationSearchCalcHandlerImpl.path + '?' + urllib.urlencode(params)
+        path = StandardDeviationSearch.StandardDeviationSearchCalcHandlerImpl.path + '?' + urllib.parse.urlencode(params)
         response = self.fetch(path)
         self.assertEqual(400, response.code)
         body = json.loads(response.body)
@@ -88,7 +88,7 @@ class HttpParametersTest(AsyncHTTPTestCase):
             "latitude": "-84.32",
             "day": "yayday"
         }
-        path = StandardDeviationSearch.StandardDeviationSearchCalcHandlerImpl.path + '?' + urllib.urlencode(params)
+        path = StandardDeviationSearch.StandardDeviationSearchCalcHandlerImpl.path + '?' + urllib.parse.urlencode(params)
         response = self.fetch(path)
         self.assertEqual(400, response.code)
         body = json.loads(response.body)
@@ -102,7 +102,7 @@ class HttpParametersTest(AsyncHTTPTestCase):
             "day": "35",
             "date": "1992-01-01T00:00:00Z"
         }
-        path = StandardDeviationSearch.StandardDeviationSearchCalcHandlerImpl.path + '?' + urllib.urlencode(params)
+        path = StandardDeviationSearch.StandardDeviationSearchCalcHandlerImpl.path + '?' + urllib.parse.urlencode(params)
         response = self.fetch(path)
         self.assertEqual(400, response.code)
         body = json.loads(response.body)
@@ -115,7 +115,7 @@ class HttpParametersTest(AsyncHTTPTestCase):
             "latitude": "-84.32",
             "day": "35"
         }
-        path = StandardDeviationSearch.StandardDeviationSearchCalcHandlerImpl.path + '?' + urllib.urlencode(params)
+        path = StandardDeviationSearch.StandardDeviationSearchCalcHandlerImpl.path + '?' + urllib.parse.urlencode(params)
         response = self.fetch(path)
         self.assertEqual(200, response.code)
 
@@ -127,7 +127,7 @@ class HttpParametersTest(AsyncHTTPTestCase):
             "date": "1992-01-01T00:00:00Z",
             "allInTile": "false"
         }
-        path = StandardDeviationSearch.StandardDeviationSearchCalcHandlerImpl.path + '?' + urllib.urlencode(params)
+        path = StandardDeviationSearch.StandardDeviationSearchCalcHandlerImpl.path + '?' + urllib.parse.urlencode(params)
         response = self.fetch(path)
         self.assertEqual(200, response.code)
 
@@ -139,10 +139,10 @@ class HttpParametersTest(AsyncHTTPTestCase):
             "latitude": "-78.225",
             "day": "1"
         }
-        path = StandardDeviationSearch.StandardDeviationSearchCalcHandlerImpl.path + '?' + urllib.urlencode(params)
+        path = StandardDeviationSearch.StandardDeviationSearchCalcHandlerImpl.path + '?' + urllib.parse.urlencode(params)
         response = self.fetch(path)
         self.assertEqual(200, response.code)
-        print response.body
+        print(response.body)
         body = json.loads(response.body)
         self.assertEqual(560, len(body['data']))
 
@@ -155,13 +155,13 @@ class HttpParametersTest(AsyncHTTPTestCase):
             "date": "2016-01-01T00:00:00Z",
             "allInTile": "false"
         }
-        path = StandardDeviationSearch.StandardDeviationSearchCalcHandlerImpl.path + '?' + urllib.urlencode(params)
+        path = StandardDeviationSearch.StandardDeviationSearchCalcHandlerImpl.path + '?' + urllib.parse.urlencode(params)
         # Increase timeouts when debugging
         # self.http_client.fetch(self.get_url(path), self.stop, connect_timeout=99999999, request_timeout=999999999)
         # response = self.wait(timeout=9999999999)
         response = self.fetch(path)
         self.assertEqual(200, response.code)
-        print response.body
+        print(response.body)
         body = json.loads(response.body)
         self.assertAlmostEqual(-177.875, body['data'][0]['longitude'], 3)
         self.assertAlmostEqual(-78.125, body['data'][0]['latitude'], 3)
@@ -174,7 +174,7 @@ class TestStandardDeviationSearch(unittest.TestCase):
         tile.bbox = BBox(-1.0, 1.0, -2.0, 2.0)
         tile.latitudes = np.ma.array([-1.0, -0.5, 0, .5, 1.0])
         tile.longitudes = np.ma.array([-2.0, -1.0, 0, 1.0, 2.0])
-        tile.times = np.ma.array([0L])
+        tile.times = np.ma.array([0])
         tile.data = np.ma.arange(25.0).reshape((1, 5, 5))
         tile.meta_data = {"std": np.ma.arange(25.0).reshape((1, 5, 5))}
 

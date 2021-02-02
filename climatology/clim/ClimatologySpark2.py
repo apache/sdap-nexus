@@ -21,7 +21,7 @@ Simple code to be run on Spark cluster, or using multi-core parallelism on singl
 
 """
 
-import sys, os, urlparse, urllib, re, time, glob
+import sys, os, urllib.parse, urllib.request, urllib.parse, urllib.error, re, time, glob
 import numpy as N
 import matplotlib
 
@@ -142,7 +142,7 @@ Optionally generates a contour plot of each N-day climatology for verification.
     try:
         averageFn = averagingFunctions[averager]
     except:
-        print >> sys.stderr, 'climatology: Error, Averaging function must be one of: %s' % str(averagingFunctions)
+        print('climatology: Error, Averaging function must be one of: %s' % str(averagingFunctions), file=sys.stderr)
         sys.exit(1)
     if 'accumulators' in averagingConfig:
         accumulators = averagingConfig['accumulators']
@@ -152,8 +152,8 @@ Optionally generates a contour plot of each N-day climatology for verification.
     urls = sortByKeys(urls, datasetInfo.getKeys)
     urlSplits = splitter(urls, nEpochs)
     urlSplits = groupByKeys(urlSplits)
-    print >> sys.stderr, 'Number of URL splits = ', len(urlSplits)
-    if VERBOSE: print >> sys.stderr, urlSplits
+    print('Number of URL splits = ', len(urlSplits), file=sys.stderr)
+    if VERBOSE: print(urlSplits, file=sys.stderr)
     if len(urlSplits) == 0: sys.exit(1)
 
     # Compute per-pixel statistics in parallel
@@ -228,7 +228,7 @@ def parallelStatsDaskSimple(urlSplits, ds, nEpochs, variable, mask, coordinates,
                             accumulators=['count', 'mean', 'M2', 'min', 'max']):
     '''Compute N-day climatology statistics in parallel using PySpark or pysparkling.'''
     if not sparkConfig.startswith('dask,'):
-        print >> sys.stderr, "dask: configuration must be of form 'dask,n'"
+        print("dask: configuration must be of form 'dask,n'", file=sys.stderr)
         sys.exit(1)
     numPartitions = int(sparkConfig.split(',')[1])
 
@@ -236,7 +236,7 @@ def parallelStatsDaskSimple(urlSplits, ds, nEpochs, variable, mask, coordinates,
         from distributed import Client, as_completed
         client = Client(DaskClientEndpoint)
 
-    print >> sys.stderr, 'Starting parallel Stats using Dask . . .'
+    print('Starting parallel Stats using Dask . . .', file=sys.stderr)
     start = time.time()
     futures = client.map(
         lambda urls: parallelStatsPipeline(urls, ds, nEpochs, variable, mask, coordinates, reader, averagingConfig,
@@ -247,7 +247,7 @@ def parallelStatsDaskSimple(urlSplits, ds, nEpochs, variable, mask, coordinates,
         outputFile = future.result()
         outputFiles.append(outputFile)
         end = time.time()
-        print >> sys.stderr, "parallelStats: Completed %s in %0.3f seconds." % (outputFile, (end - start))
+        print("parallelStats: Completed %s in %0.3f seconds." % (outputFile, (end - start)), file=sys.stderr)
     return outputFiles
 
 
@@ -275,15 +275,15 @@ def writeAndPlot(stats, ds, variable, coordinates, nEpochs, averagingConfig, out
 def configureSpark(sparkConfig, appName, memoryPerExecutor='4G', coresPerExecutor=1):
     mode, numExecutors, numPartitions = sparkConfig.split(',')
     numExecutors = int(numExecutors)
-    print >> sys.stderr, 'numExecutors = ', numExecutors
+    print('numExecutors = ', numExecutors, file=sys.stderr)
     numPartitions = int(numPartitions)
-    print >> sys.stderr, 'numPartitions = ', numPartitions
+    print('numPartitions = ', numPartitions, file=sys.stderr)
     if mode == 'multicore':
-        print >> sys.stderr, 'Using pysparkling'
+        print('Using pysparkling', file=sys.stderr)
         import pysparkling
         sc = pysparkling.Context()
     else:
-        print >> sys.stderr, 'Using PySpark'
+        print('Using PySpark', file=sys.stderr)
         sparkMaster = mode
         spConf = SparkConf()
         spConf.setAppName(appName)
@@ -291,7 +291,7 @@ def configureSpark(sparkConfig, appName, memoryPerExecutor='4G', coresPerExecuto
                    os.path.join(os.getenv('HOME'), 'spark_exec_home'))
         spConf.set("spark.executorEnv.PYTHONPATH", os.getcwd())
         spConf.set("spark.executor.memory", memoryPerExecutor)
-        print >> sys.stderr, 'memoryPerExecutor = ', memoryPerExecutor
+        print('memoryPerExecutor = ', memoryPerExecutor, file=sys.stderr)
         try:
             sparkMaster = SparkMasterOverride
         except:
@@ -319,20 +319,20 @@ If the URL is remote or HDFS, first retrieve the file into a cache directory.
     try:
         path = retrieveFile(url, cachePath, hdfsPath)
     except:
-        print >> sys.stderr, 'readAndMask: Error, continuing without file %s' % url
+        print('readAndMask: Error, continuing without file %s' % url, file=sys.stderr)
         return v
 
     try:
-        print >> sys.stderr, 'Reading variable %s from %s' % (variable, path)
+        print('Reading variable %s from %s' % (variable, path), file=sys.stderr)
         var, fh = getVariables(path, variables, arrayOnly=True,
                                set_auto_mask=True)  # return dict of variable objects by name
         v = var[
             variable]  # could be masked array
         if v.shape[0] == 1: v = v[0]  # throw away trivial time dimension for CF-style files
-        if VERBOSE: print >> sys.stderr, 'Variable range: %fs to %f' % (v.min(), v.max())
+        if VERBOSE: print('Variable range: %fs to %f' % (v.min(), v.max()), file=sys.stderr)
         close(fh)
     except:
-        print >> sys.stderr, 'readAndMask: Error, cannot read variable %s from file %s' % (variable, path)
+        print('readAndMask: Error, cannot read variable %s from file %s' % (variable, path), file=sys.stderr)
 
     return v
 
@@ -348,7 +348,7 @@ def accumulate(urls, variable, maskVar, coordinates, reader=readAndMask,
                accumulators=['count', 'mean', 'M2', 'min', 'max'], cachePath=CachePath, hdfsPath=None):
     '''Accumulate data into statistics accumulators like count, sum, sumsq, min, max, M3, M4, etc.'''
     keys, urls = urls
-    print >> sys.stderr, 'Updating accumulators %s for key %s' % (str(accumulators), str(keys))
+    print('Updating accumulators %s for key %s' % (str(accumulators), str(keys)), file=sys.stderr)
     accum = {}
     accum['_meta'] = {'urls': urls, 'coordinates': coordinates}
     for i, url in enumerate(urls):
@@ -402,7 +402,7 @@ def accumulate(urls, variable, maskVar, coordinates, reader=readAndMask,
 
 def combine(a, b):
     '''Combine accumulators by summing.'''
-    print >> sys.stderr, 'Combining accumulators . . .'
+    print('Combining accumulators . . .', file=sys.stderr)
     if 'urls' in a['_meta'] and 'urls' in b['_meta']:
         a['_meta']['urls'].extend(b['_meta']['urls'])
     if 'mean' in a:
@@ -420,7 +420,7 @@ def combine(a, b):
             a['max'] = N.ma.maximum(a['max'], b['max'])
         else:
             a['max'] = N.maximum(a['max'], b['max'])
-    for k in a.keys():
+    for k in list(a.keys()):
         if k[0] == '_': continue
         if k != 'mean' and k != 'min' and k != 'max':
             a[k] += b[k]  # just sum count and other moments
@@ -429,7 +429,7 @@ def combine(a, b):
 
 def statsFromAccumulators(accum):
     '''Compute final statistics from accumulators.'''
-    print >> sys.stderr, 'Computing statistics from accumulators . . .'
+    print('Computing statistics from accumulators . . .', file=sys.stderr)
     keys, accum = accum
 
     # Mask all of the accumulator arrays for zero counts
@@ -468,8 +468,8 @@ def writeStats(stats, inputFile, variable, coordinates, outFile, format='NETCDF4
     '''Write out stats arrays to netCDF with some attributes.'''
     if os.path.exists(outFile): os.unlink(outFile)
     dout = Dataset(outFile, 'w', format=format)
-    print >> sys.stderr, 'Writing stats for variable %s to %s ...' % (variable, outFile)
-    print >> sys.stderr, 'Shape:', stats['mean'].shape
+    print('Writing stats for variable %s to %s ...' % (variable, outFile), file=sys.stderr)
+    print('Shape:', stats['mean'].shape, file=sys.stderr)
     dout.setncattr('variable', variable)
     dout.setncattr('urls', str(stats['_meta']['urls']))
 
@@ -478,7 +478,7 @@ def writeStats(stats, inputFile, variable, coordinates, outFile, format='NETCDF4
     #    for a in din.ncattrs():
     #        dout.setncattr(a, din.getncattr(a))
 
-    print >> sys.stderr, 'Using coordinates & attributes from %s' % inputFile
+    print('Using coordinates & attributes from %s' % inputFile, file=sys.stderr)
     coordinatesSave = coordinates
     try:
         coordinatesFromFile = din.variables[variable].getncattr('coordinates')
@@ -500,7 +500,7 @@ def writeStats(stats, inputFile, variable, coordinates, outFile, format='NETCDF4
         var[:] = din.variables[coord][:]
 
     # Add stats variables                                                                                                 
-    for k, v in stats.items():
+    for k, v in list(stats.items()):
         if k[0] == '_': continue
         var = dout.createVariable(k, stats[k].dtype, coordinates)
         fillVal = default_fillvals[v.dtype.str.strip("<>")]  # remove endian part of dtype to do lookup
@@ -540,7 +540,7 @@ class CollectTimer(object):
         else:
             # what goes here??
             end = time.time()
-            print >> sys.stderr, "timer: " + self.name + ": %0.3f seconds" % (end - self.start)
+            print("timer: " + self.name + ": %0.3f seconds" % (end - self.start), file=sys.stderr)
             sys.stdout.flush()
             return False
 
@@ -557,7 +557,7 @@ class Timer(object):
 
     def __exit__(self, ty, val, tb):
         end = time.time()
-        print >> sys.stderr, "timer: " + self.name + ": %0.3f seconds" % (end - self.start)
+        print("timer: " + self.name + ": %0.3f seconds" % (end - self.start), file=sys.stderr)
         sys.stdout.flush()
         return False
 
@@ -575,7 +575,7 @@ def contourMap(var, variable, coordinates, n, plotFile):
     imageMap(lons, lats, var,
              vmin=-2., vmax=45., outFile=plotFile, autoBorders=False,
              title='%s %d-day Mean from %s' % (variable.upper(), n, os.path.splitext(plotFile)[0]))
-    print >> sys.stderr, 'Writing contour plot to %s' % plotFile
+    print('Writing contour plot to %s' % plotFile, file=sys.stderr)
     return plotFile
 
 
@@ -590,7 +590,7 @@ def histogram(vals, variable, n, outFile):
     M.ylabel('Count')
     M.title('Histogram of %s %d-day Mean from %s' % (variable.upper(), n, outFile))
     M.show()
-    print >> sys.stderr, 'Writing histogram plot to %s' % figFile
+    print('Writing histogram plot to %s' % figFile, file=sys.stderr)
     M.savefig(figFile)
     return figFile
 
@@ -598,13 +598,13 @@ def histogram(vals, variable, n, outFile):
 def computeClimatology(datasetName, nEpochs, nWindow, averager, outHdfsPath, sparkConfig):
     '''Compute an N-day climatology for the specified dataset and write the files to HDFS.'''
     if averager not in AveragingFunctions:
-        print >> sys.stderr, 'computeClimatology: Error, averager %s must be in set %s' % (
-            averager, str(AveragingFunctions.keys()))
+        print('computeClimatology: Error, averager %s must be in set %s' % (
+            averager, str(list(AveragingFunctions.keys()))), file=sys.stderr)
         sys.exit(1)
     try:
         ds = DatasetList[datasetName]  # get dataset metadata class
     except:
-        print >> sys.stderr, 'computeClimatology: Error, %s not in dataset list %s.' % (datasetName, str(DatasetList))
+        print('computeClimatology: Error, %s not in dataset list %s.' % (datasetName, str(DatasetList)), file=sys.stderr)
         sys.exit(1)
     urls = glob.glob(ds.UrlsPath)
     with Timer("climByAveragingPeriods"):
@@ -631,7 +631,7 @@ def main(args):
 
 
 if __name__ == '__main__':
-    print main(sys.argv[1:])
+    print(main(sys.argv[1:]))
 
 
 # Debug Tests:

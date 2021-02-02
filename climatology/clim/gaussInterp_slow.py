@@ -94,26 +94,26 @@ Returns the 2D interpolated variable (masked), the weight array, and a status fo
     dlat = lat[1] - lat[0]
     dlon = lon[1] - lon[0]
 
-    for i in xrange(noutlat):
-        print >>sys.stderr, outlat[i]
-        for j in xrange(noutlon):
-           if VERBOSE: print >>sys.stderr, '\n(i,j) = %d, %d' % (i, j)
-           if VERBOSE: print >>sys.stderr, '\n(outlat,outlon) = %f, %f' % (outlat[i], outlon[j])
+    for i in range(noutlat):
+        print(outlat[i], file=sys.stderr)
+        for j in range(noutlon):
+           if VERBOSE: print('\n(i,j) = %d, %d' % (i, j), file=sys.stderr)
+           if VERBOSE: print('\n(outlat,outlon) = %f, %f' % (outlat[i], outlon[j]), file=sys.stderr)
 
            imin = clamp(int((outlat[i] - wlat2 - lat0)/dlat + 0.5), 0, nlat-1)
            imax = clamp(int((outlat[i] + wlat2 - lat0)/dlat + 0.5), 0, nlat-1)
            if imin > imax: (imin, imax) = (imax, imin)                            # input latitudes could be descending
-           if VERBOSE: print >>sys.stderr, '(imin, imax) = %d, %d' % (imin, imax)
-           if VERBOSE: print >>sys.stderr, '(minlat, maxlat) = %f, %f' % (lat[imin], lat[imax])
+           if VERBOSE: print('(imin, imax) = %d, %d' % (imin, imax), file=sys.stderr)
+           if VERBOSE: print('(minlat, maxlat) = %f, %f' % (lat[imin], lat[imax]), file=sys.stderr)
            jmin = clamp(int((outlon[j] - wlon2 - lon0)/dlon + 0.5), 0, nlon-1)
            jmax = clamp(int((outlon[j] + wlon2 - lon0)/dlon + 0.5), 0, nlon-1)
-           if VERBOSE: print >>sys.stderr, '(jmin, jmax) = %d, %d' % (jmin, jmax)
-           if VERBOSE: print >>sys.stderr, '(minlon, maxlon) = %f, %f' % (lon[jmin], lon[jmax])
+           if VERBOSE: print('(jmin, jmax) = %d, %d' % (jmin, jmax), file=sys.stderr)
+           if VERBOSE: print('(minlon, maxlon) = %f, %f' % (lon[jmin], lon[jmax]), file=sys.stderr)
 #           stencil = np.zeros( (ntime, imax-imin+1, jmax-jmin+1) )
 
-           for kin in xrange(ntime):
-               for iin in xrange(imin, imax+1):
-                   for jin in xrange(jmin, jmax+1):
+           for kin in range(ntime):
+               for iin in range(imin, imax+1):
+                   for jin in range(jmin, jmax+1):
                        if not vmask[kin,iin,jin]:
                            fac = exp( vfactor *
                                      (((outlat[i] - lat[iin])/slat)**2
@@ -121,7 +121,7 @@ Returns the 2D interpolated variable (masked), the weight array, and a status fo
                                     + ((midTime   - vtime[kin])/stime)**2))
 #                           stencil[kin, iin-imin, jin-jmin] = fac
                            val = var[kin, iin, jin]
-                           if VERBOSE > 1: print >>sys.stderr,  kin, iin, jin, vtime[kin], lat[iin], lon[jin], val, fac, val*fac
+                           if VERBOSE > 1: print(kin, iin, jin, vtime[kin], lat[iin], lon[jin], val, fac, val*fac, file=sys.stderr)
 
                            vinterp[i,j] = vinterp[i,j] + val * fac
                            vweight[i,j] = vweight[i,j] + fac

@@ -21,7 +21,7 @@ from datetime import datetime
 
 import requests
 
-import BaseDomsHandler
+from . import BaseDomsHandler
 from webservice.NexusHandler import nexus_handler
 from webservice.webmodel import NexusProcessingException
 
@@ -222,14 +222,14 @@ class DomsResultsRetrievalHandler(BaseDomsHandler.BaseDomsQueryCalcHandler):
             if primary_temp_file_path:
                 my_zip.write(primary_temp_file_path, arcname='%s.%s.%s.csv' % (primary_ds_name, date_range, bounds))
             if matchup_downloads:
-                for matchup_ds, download in matchup_downloads.iteritems():
+                for matchup_ds, download in matchup_downloads.items():
                     my_zip.write(download[1], arcname='%s.%s.%s.csv' % (matchup_ds, date_range, bounds))
 
         # Clean up
         if primary_temp_file_path:
             os.remove(primary_temp_file_path)
         if matchup_downloads:
-            for matchup_ds, download in matchup_downloads.iteritems():
+            for matchup_ds, download in matchup_downloads.items():
                 os.remove(download[1])
 
         return SubsetResult(zip_path)

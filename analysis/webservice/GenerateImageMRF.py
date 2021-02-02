@@ -314,7 +314,7 @@ def write_to_file(filename, data):
         f.write(data)
         f.close()
     except Exception as e:
-        print("Error creating " + filename + ":\n" + str(e))
+        print(("Error creating " + filename + ":\n" + str(e)))
 
 
 def create_path(path):

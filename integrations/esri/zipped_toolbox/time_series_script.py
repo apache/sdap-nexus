@@ -28,7 +28,7 @@ arcpy.MakeFeatureLayer_management(input_feature, "layer")
 arcpy.AddGeometryAttributes_management("layer", "EXTENT")
 
 rows = arcpy.SearchCursor("layer", fields="EXT_MIN_X;EXT_MIN_Y;EXT_MAX_X;EXT_MAX_Y")
-row = rows.next()
+row = next(rows)
 min_lon = row.getValue("EXT_MIN_X")
 max_lon = row.getValue("EXT_MAX_X")
 min_lat = row.getValue("EXT_MIN_Y")

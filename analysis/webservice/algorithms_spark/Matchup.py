@@ -198,8 +198,8 @@ class Matchup(NexusCalcSparkHandler):
 
         result_size_limit = request.get_int_arg("resultSizeLimit", default=500)
 
-        start_seconds_from_epoch = long((start_time - EPOCH).total_seconds())
-        end_seconds_from_epoch = long((end_time - EPOCH).total_seconds())
+        start_seconds_from_epoch = int((start_time - EPOCH).total_seconds())
+        end_seconds_from_epoch = int((end_time - EPOCH).total_seconds())
 
         return bounding_polygon, primary_ds_name, matchup_ds_names, parameter_s, \
                start_time, start_seconds_from_epoch, end_time, end_seconds_from_epoch, \
@@ -258,8 +258,8 @@ class Matchup(NexusCalcSparkHandler):
         if depth_max is not None:
             args["depthMax"] = float(depth_max)
 
-        total_keys = len(spark_result.keys())
-        total_values = sum(len(v) for v in spark_result.itervalues())
+        total_keys = len(list(spark_result.keys()))
+        total_values = sum(len(v) for v in spark_result.values())
         details = {
             "timeToComplete": int((end - start).total_seconds()),
             "numInSituRecords": 0,
@@ -290,7 +290,7 @@ class Matchup(NexusCalcSparkHandler):
     @classmethod
     def convert_to_matches(cls, spark_result):
         matches = []
-        for primary_domspoint, matched_domspoints in spark_result.iteritems():
+        for primary_domspoint, matched_domspoints in spark_result.items():
             p_matched = [cls.domspoint_to_dict(p_match) for p_match in matched_domspoints]
 
             primary = cls.domspoint_to_dict(primary_domspoint)
@@ -426,7 +426,7 @@ class DomsPoint(object):
         point.file_url = edge_point.get('fileurl')
 
         try:
-            point.data_id = unicode(edge_point['id'])
+            point.data_id = str(edge_point['id'])
         except KeyError:
             point.data_id = "%s:%s:%s" % (point.time, point.longitude, point.latitude)
 
@@ -480,7 +480,7 @@ def spark_matchup_driver(tile_ids, bounding_wkt, primary_ds_name, matchup_ds_nam
             return distance
 
         rdd_filtered = rdd_filtered \
-            .map(lambda (primary, matchup): tuple([primary, tuple([matchup, dist(primary, matchup)])])) \
+            .map(lambda primary_matchup: tuple([primary_matchup[0], tuple([primary_matchup[1], dist(primary_matchup[0], primary_matchup[1])])])) \
             .reduceByKey(lambda match_1, match_2: match_1 if match_1[1] < match_2[1] else match_2) \
             .mapValues(lambda x: [x[0]])
     else:
@@ -552,8 +552,8 @@ def match_satellite_to_insitu(tile_ids, primary_b, matchup_b, parameter_b, tt_b,
     # Increase temporal extents by the time tolerance
     matchup_min_time = tiles_min_time - tt_b.value
     matchup_max_time = tiles_max_time + tt_b.value
-    print "%s Time to determine spatial-temporal extents for partition %s to %s" % (
-        str(datetime.now() - the_time), tile_ids[0], tile_ids[-1])
+    print("%s Time to determine spatial-temporal extents for partition %s to %s" % (
+        str(datetime.now() - the_time), tile_ids[0], tile_ids[-1]))
 
     # Query edge for all points within the spatial-temporal extents of this partition
     the_time = datetime.now()
@@ -571,7 +571,7 @@ def match_satellite_to_insitu(tile_ids, primary_b, matchup_b, parameter_b, tt_b,
             for p in r:
                 p['source'] = insitudata_name
             edge_results.extend(r)
-    print "%s Time to call edge for partition %s to %s" % (str(datetime.now() - the_time), tile_ids[0], tile_ids[-1])
+    print("%s Time to call edge for partition %s to %s" % (str(datetime.now() - the_time), tile_ids[0], tile_ids[-1]))
     if len(edge_results) == 0:
         return []
 
@@ -588,13 +588,13 @@ def match_satellite_to_insitu(tile_ids, primary_b, matchup_b, parameter_b, tt_b,
                 y, x = Point(*[float(c) for c in edge_point['point'].split(',')]).coords[0]
 
         matchup_points[n][0], matchup_points[n][1] = pyproj.transform(p1=lonlat_proj, p2=aeqd_proj, x=x, y=y)
-    print "%s Time to convert match points for partition %s to %s" % (
-        str(datetime.now() - the_time), tile_ids[0], tile_ids[-1])
+    print("%s Time to convert match points for partition %s to %s" % (
+        str(datetime.now() - the_time), tile_ids[0], tile_ids[-1]))
 
     # Build kdtree from matchup points
     the_time = datetime.now()
     m_tree = spatial.cKDTree(matchup_points, leafsize=30)
-    print "%s Time to build matchup tree" % (str(datetime.now() - the_time))
+    print("%s Time to build matchup tree" % (str(datetime.now() - the_time)))
 
     # The actual matching happens in the generator. This is so that we only load 1 tile into memory at a time
     match_generators = [match_tile_to_point_generator(tile_service, tile_id, m_tree, edge_results, bounding_wkt_b.value,
@@ -614,7 +614,7 @@ def match_tile_to_point_generator(tile_service, tile_id, m_tree, edge_results, s
         the_time = datetime.now()
         tile = tile_service.mask_tiles_to_polygon(wkt.loads(search_domain_bounding_wkt),
                                                   tile_service.find_tile_by_id(tile_id))[0]
-        print "%s Time to load tile %s" % (str(datetime.now() - the_time), tile_id)
+        print("%s Time to load tile %s" % (str(datetime.now() - the_time), tile_id))
     except IndexError:
         # This should only happen if all measurements in a tile become masked after applying the bounding polygon
         raise StopIteration
@@ -627,15 +627,15 @@ def match_tile_to_point_generator(tile_service, tile_id, m_tree, edge_results, s
         [pyproj.transform(p1=lonlat_proj, p2=aeqd_proj, x=tile.longitudes[aslice[2]], y=tile.latitudes[aslice[1]]) for
          aslice in valid_indices])
 
-    print "%s Time to convert primary points for tile %s" % (str(datetime.now() - the_time), tile_id)
+    print("%s Time to convert primary points for tile %s" % (str(datetime.now() - the_time), tile_id))
 
     a_time = datetime.now()
     p_tree = spatial.cKDTree(primary_points, leafsize=30)
-    print "%s Time to build primary tree" % (str(datetime.now() - a_time))
+    print("%s Time to build primary tree" % (str(datetime.now() - a_time)))
 
     a_time = datetime.now()
     matched_indexes = p_tree.query_ball_tree(m_tree, radius_tolerance)
-    print "%s Time to query primary tree for tile %s" % (str(datetime.now() - a_time), tile_id)
+    print("%s Time to query primary tree for tile %s" % (str(datetime.now() - a_time), tile_id))
     for i, point_matches in enumerate(matched_indexes):
         if len(point_matches) > 0:
             p_nexus_point = NexusPoint(tile.latitudes[valid_indices[i][1]],

@@ -15,7 +15,7 @@
 
 import logging
 import uuid
-from ConfigParser import NoOptionError
+from configparser import NoOptionError
 
 import nexusproto.DataTile_pb2 as nexusproto
 import numpy as np
@@ -190,7 +190,7 @@ class CassandraProxy(object):
 
     def fetch_nexus_tiles(self, *tile_ids):
         tile_ids = [uuid.UUID(str(tile_id)) for tile_id in tile_ids if
-                    (isinstance(tile_id, str) or isinstance(tile_id, unicode))]
+                    (isinstance(tile_id, str) or isinstance(tile_id, str))]
 
         res = []
         for tile_id in tile_ids:

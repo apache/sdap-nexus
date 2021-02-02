@@ -125,8 +125,8 @@ class MaximaMinimaSparkHandlerImpl(NexusCalcSparkHandler):
 
         nparts_requested = request.get_nparts()
 
-        start_seconds_from_epoch = long((start_time - EPOCH).total_seconds())
-        end_seconds_from_epoch = long((end_time - EPOCH).total_seconds())
+        start_seconds_from_epoch = int((start_time - EPOCH).total_seconds())
+        end_seconds_from_epoch = int((end_time - EPOCH).total_seconds())
 
         return ds, bounding_polygon, start_seconds_from_epoch, end_seconds_from_epoch, nparts_requested
 
@@ -155,7 +155,7 @@ class MaximaMinimaSparkHandlerImpl(NexusCalcSparkHandler):
             raise NoDataException(reason="No data found for selected timeframe")
 
         self.log.debug('Found {0} tiles'.format(len(nexus_tiles)))
-        print('Found {} tiles'.format(len(nexus_tiles)))
+        print(('Found {} tiles'.format(len(nexus_tiles))))
 
         daysinrange = self._tile_service.find_days_in_range_asc(bbox.bounds[1],
                                                                 bbox.bounds[3],
@@ -220,14 +220,14 @@ class MaximaMinimaSparkHandlerImpl(NexusCalcSparkHandler):
                                                       (x[4] + y[4])))           # Count
         fill = self._fill
         avg_tiles = \
-            max_min_count.map(lambda (bounds, (max_tile, min_tile, abs_max_tile, abs_min_tile, cnt_tile)):
-                              (bounds, [[{'maxima': max_tile[y, x] if (cnt_tile[y, x] > 0) else fill,
-                                          'minima': min_tile[y, x] if (cnt_tile[y, x] > 0) else fill,
-                                          'absolute_maxima': abs_max_tile[y, x] if (cnt_tile[y, x] > 0) else fill,
-                                          'absolute_minima': abs_min_tile[y, x] if (cnt_tile[y, x] > 0) else fill,
-                                          'cnt': cnt_tile[y, x]}
-                                         for x in range(max_tile.shape[1])]
-                                        for y in range(max_tile.shape[0])])).collect()
+            max_min_count.map(lambda bounds_max_tile_min_tile_abs_max_tile_abs_min_tile_cnt_tile:
+                              (bounds_max_tile_min_tile_abs_max_tile_abs_min_tile_cnt_tile[0], [[{'maxima': bounds_max_tile_min_tile_abs_max_tile_abs_min_tile_cnt_tile[1][0][y, x] if (bounds_max_tile_min_tile_abs_max_tile_abs_min_tile_cnt_tile[1][4][y, x] > 0) else fill,
+                                          'minima': bounds_max_tile_min_tile_abs_max_tile_abs_min_tile_cnt_tile[1][1][y, x] if (bounds_max_tile_min_tile_abs_max_tile_abs_min_tile_cnt_tile[1][4][y, x] > 0) else fill,
+                                          'absolute_maxima': bounds_max_tile_min_tile_abs_max_tile_abs_min_tile_cnt_tile[1][2][y, x] if (bounds_max_tile_min_tile_abs_max_tile_abs_min_tile_cnt_tile[1][4][y, x] > 0) else fill,
+                                          'absolute_minima': bounds_max_tile_min_tile_abs_max_tile_abs_min_tile_cnt_tile[1][3][y, x] if (bounds_max_tile_min_tile_abs_max_tile_abs_min_tile_cnt_tile[1][4][y, x] > 0) else fill,
+                                          'cnt': bounds_max_tile_min_tile_abs_max_tile_abs_min_tile_cnt_tile[1][4][y, x]}
+                                         for x in range(bounds_max_tile_min_tile_abs_max_tile_abs_min_tile_cnt_tile[1][0].shape[1])]
+                                        for y in range(bounds_max_tile_min_tile_abs_max_tile_abs_min_tile_cnt_tile[1][0].shape[0])])).collect()
 
         # Combine subset results to produce global map.
         #

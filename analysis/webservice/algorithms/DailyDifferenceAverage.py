@@ -105,7 +105,7 @@ class DailyDifferenceAverageImpl(NexusCalcHandler):
 
             plt.xlabel('Date')
             plt.xticks(rotation=70)
-            plt.ylabel(u'Difference from 5-Day mean (\u00B0C)')
+            plt.ylabel('Difference from 5-Day mean (\u00B0C)')
             plt.title('Sea Surface Temperature (SST) Anomalies')
             plt.grid(True)
             plt.tight_layout()
@@ -120,7 +120,7 @@ class DailyDifferenceAverageImpl(NexusCalcHandler):
                 meta=self.get_meta())
 
             result.extendMeta(min_lat, max_lat, min_lon, max_lon, "", start_time, end_time)
-            result.meta()['label'] = u'Difference from 5-Day mean (\u00B0C)'
+            result.meta()['label'] = 'Difference from 5-Day mean (\u00B0C)'
 
             return result
 
@@ -133,7 +133,7 @@ class DailyDifferenceAverageImpl(NexusCalcHandler):
         meta = {
             "title": "Sea Surface Temperature (SST) Anomalies",
             "description": "SST anomolies are departures from the 5-day pixel mean",
-            "units": u'\u00B0C',
+            "units": '\u00B0C',
         }
         return meta
 
@@ -161,19 +161,19 @@ class DailyDifferenceAverageImpl(NexusCalcHandler):
             for dayinseconds in daysinrange:
                 work_queue.put(
                     ('calc_average_diff_on_day', min_lat, max_lat, min_lon, max_lon, dataset1, dataset2, dayinseconds))
-            [work_queue.put(SENTINEL) for _ in xrange(0, maxprocesses)]
+            [work_queue.put(SENTINEL) for _ in range(0, maxprocesses)]
 
             # Start new processes to handle the work
             pool = Pool(maxprocesses)
-            [pool.apply_async(pool_worker, (work_queue, done_queue)) for _ in xrange(0, maxprocesses)]
+            [pool.apply_async(pool_worker, (work_queue, done_queue)) for _ in range(0, maxprocesses)]
             pool.close()
 
             # Collect the results as [(day (in ms), average difference for that day)]
             averagebyday = []
-            for i in xrange(0, len(daysinrange)):
+            for i in range(0, len(daysinrange)):
                 result = done_queue.get()
                 if result[0] == 'error':
-                    print >> sys.stderr, result[1]
+                    print(result[1], file=sys.stderr)
                     raise NexusProcessingException(reason="Error calculating average by day.")
                 rdata = result
                 averagebyday.append((rdata[0], rdata[1]))

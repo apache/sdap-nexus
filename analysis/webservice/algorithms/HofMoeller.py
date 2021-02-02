@@ -17,7 +17,7 @@
 import itertools
 import logging
 import traceback
-from cStringIO import StringIO
+from io import StringIO
 from datetime import datetime
 from multiprocessing.dummy import Pool, Manager
 
@@ -156,11 +156,11 @@ class LatitudeTimeHoffMoellerHandlerImpl(BaseHoffMoellerCalcHandlerImpl):
             for x, tile in enumerate(tiles):
                 work_queue.put(
                     ('latitude_time_hofmoeller_stats', tile, x))
-            [work_queue.put(SENTINEL) for _ in xrange(0, maxprocesses)]
+            [work_queue.put(SENTINEL) for _ in range(0, maxprocesses)]
 
             # Start new processes to handle the work
             pool = Pool(maxprocesses)
-            [pool.apply_async(pool_worker, (LATITUDE, work_queue, done_queue)) for _ in xrange(0, maxprocesses)]
+            [pool.apply_async(pool_worker, (LATITUDE, work_queue, done_queue)) for _ in range(0, maxprocesses)]
             pool.close()
 
             # Collect the results
@@ -222,11 +222,11 @@ class LongitudeTimeHoffMoellerHandlerImpl(BaseHoffMoellerCalcHandlerImpl):
             for x, tile in enumerate(tiles):
                 work_queue.put(
                     ('longitude_time_hofmoeller_stats', tile, x))
-            [work_queue.put(SENTINEL) for _ in xrange(0, maxprocesses)]
+            [work_queue.put(SENTINEL) for _ in range(0, maxprocesses)]
 
             # Start new processes to handle the work
             pool = Pool(maxprocesses)
-            [pool.apply_async(pool_worker, (LONGITUDE, work_queue, done_queue)) for _ in xrange(0, maxprocesses)]
+            [pool.apply_async(pool_worker, (LONGITUDE, work_queue, done_queue)) for _ in range(0, maxprocesses)]
             pool.close()
 
             # Collect the results

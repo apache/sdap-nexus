@@ -19,7 +19,7 @@ import time
 
 import numpy as np
 
-import colortables
+from . import colortables
 from webservice.algorithms.NexusCalcHandler import NexusCalcHandler as BaseHandler
 from webservice.NexusHandler import nexus_handler
 

@@ -15,7 +15,7 @@
 
 import argparse
 
-from algorithms.MapFetchHandler import MapFetchCalcHandler
+from .algorithms.MapFetchHandler import MapFetchCalcHandler
 
 
 def start(args):

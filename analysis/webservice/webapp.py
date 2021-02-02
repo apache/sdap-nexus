@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import ConfigParser
+import configparser
 import importlib
 import logging
 import sys
@@ -36,7 +36,7 @@ def inject_args_in_config(args, config):
     """
     log = logging.getLogger(__name__)
 
-    for t_opt in args._options.values():
+    for t_opt in list(args._options.values()):
         n = t_opt.name
         first_ = n.find('_')
         if first_ > 0:
@@ -58,10 +58,10 @@ if __name__ == "__main__":
 
     log = logging.getLogger(__name__)
 
-    webconfig = ConfigParser.RawConfigParser()
+    webconfig = configparser.RawConfigParser()
     webconfig.readfp(pkg_resources.resource_stream(__name__, "config/web.ini"), filename='web.ini')
 
-    algorithm_config = ConfigParser.RawConfigParser()
+    algorithm_config = configparser.RawConfigParser()
     algorithm_config.readfp(pkg_resources.resource_stream(__name__, "config/algorithms.ini"), filename='algorithms.ini')
 
     define("debug", default=False, help="run in debug mode")

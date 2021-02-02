@@ -38,7 +38,7 @@ def filter_outliers( time_series, n_std=6, indices=False ):
     from the median) and return."""
     med = NP.median( time_series )
     std = robust_std( time_series )
-    lhs = zip( *[ (i, x) for i, x in enumerate( time_series ) if abs(x - med) < ( std * n_std ) ] )
+    lhs = list(zip( *[ (i, x) for i, x in enumerate( time_series ) if abs(x - med) < ( std * n_std ) ] ))
     if len( lhs ) == 0:
         # No outliers detected, return the full time series
         return time_series
@@ -149,7 +149,7 @@ class Stats(object):
         if (self.labelStr == None or self.labelStr == ""): self.labelStr = "Stats"
         line = self.labelStr + ": "
         if self.formatStr:
-            a = [self.formatStr for i in xrange(7)]
+            a = [self.formatStr for i in range(7)]
             a.insert(0, '%d')
             format = ' '.join(a)
             line += format % self.calc()

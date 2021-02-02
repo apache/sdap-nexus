@@ -63,7 +63,7 @@ a bundle of variables to a file (e.g. netCDF).
         return self
 
     def createAttributes(self, **kwargs):
-        for key, val in kwargs.iteritems():
+        for key, val in kwargs.items():
             self.createAttribute(key, val)
 
     def createDim(self, name, size):
@@ -145,11 +145,11 @@ a new array bundle.
         out.attributes = self.attributes.copy()
         # Must use copy() here or both bundles will point to same attr/dim/var dictionaries.
         # It is a shallow copy, but this is OK since attr/dim values are immutable.
-        for key, val in out.attributes.iteritems(): setattr(out, key, val)
+        for key, val in out.attributes.items(): setattr(out, key, val)
         out.dimensions = self.dimensions.copy()
         out.variables = self.variables.copy()
         # Again, shallow copy is OK, referred-to arrays are copied when slice/compress called
-        for key, val in out.variables.iteritems(): setattr(out, key, val)
+        for key, val in out.variables.items(): setattr(out, key, val)
         return out
 
     def checkForBadName(self, name):
@@ -167,25 +167,25 @@ Raises exception BadNameError.
 
     def __repr__(self):
         return 'Attributes:  %s\nDimensions:  %s\nVariables:  %s' % tuple(
-                   map(str, (self.attributes, self.dimensions, self.variables.keys())))
+                   map(str, (self.attributes, self.dimensions, list(self.variables.keys()))))
 
 
 def test(args):
     n = 300
     vars = ['obsL', 'errL', 'obsP', 'errP']
-    obsL = N.array(range(n))+1.; errL = N.ones(n)
-    obsP = N.array(range(n))+1.; errP = N.ones(n)
-    obs = BundleOfArrays(name='test', nRecords=n).createVars(*zip(vars, (obsL, errL, obsP, errP)))
-    print obs
-    print len(obs.obsL)
+    obsL = N.array(list(range(n)))+1.; errL = N.ones(n)
+    obsP = N.array(list(range(n)))+1.; errP = N.ones(n)
+    obs = BundleOfArrays(name='test', nRecords=n).createVars(*list(zip(vars, (obsL, errL, obsP, errP))))
+    print(obs)
+    print(len(obs.obsL))
     a = obs.shallowCopy()
-    print a
-    print len(a.obsL)
+    print(a)
+    print(len(a.obsL))
     b = obs.slice(100, 200)
-    print b
-    print len(b.obsL)
-    print len(a.obsL)
-    print len(obs.obsL)
+    print(b)
+    print(len(b.obsL))
+    print(len(a.obsL))
+    print(len(obs.obsL))
 
 def main(args):
     test(args)

@@ -127,8 +127,8 @@ class VarianceNexusSparkHandlerImpl(NexusCalcSparkHandler):
 
         nparts_requested = request.get_nparts()
 
-        start_seconds_from_epoch = long((start_time - EPOCH).total_seconds())
-        end_seconds_from_epoch = long((end_time - EPOCH).total_seconds())
+        start_seconds_from_epoch = int((start_time - EPOCH).total_seconds())
+        end_seconds_from_epoch = int((end_time - EPOCH).total_seconds())
 
         return ds, bounding_polygon, start_seconds_from_epoch, end_seconds_from_epoch, nparts_requested
 
@@ -155,7 +155,7 @@ class VarianceNexusSparkHandlerImpl(NexusCalcSparkHandler):
             raise NoDataException(reason="No data found for selected timeframe")
 
         self.log.debug('Found {0} tiles'.format(len(nexus_tiles)))
-        print('Found {} tiles'.format(len(nexus_tiles)))
+        print(('Found {} tiles'.format(len(nexus_tiles))))
 
         daysinrange = self._get_tile_service().find_days_in_range_asc(bbox.bounds[1],
                                                                 bbox.bounds[3],
@@ -213,14 +213,14 @@ class VarianceNexusSparkHandlerImpl(NexusCalcSparkHandler):
                                         lambda x, y: (x[0] + y[0], x[1] + y[1]))
         fill = self._fill
         avg_tiles = \
-            sum_count.map(lambda (bounds, (sum_tile, cnt_tile)):
-                          (bounds, [[(sum_tile[y, x] / cnt_tile[y, x])
-                          if (cnt_tile[y, x] > 0)
+            sum_count.map(lambda bounds_sum_tile_cnt_tile:
+                          (bounds_sum_tile_cnt_tile[0], [[(bounds_sum_tile_cnt_tile[1][0][y, x] / bounds_sum_tile_cnt_tile[1][1][y, x])
+                          if (bounds_sum_tile_cnt_tile[1][1][y, x] > 0)
                           else fill
                                      for x in
-                                     range(sum_tile.shape[1])]
+                                     range(bounds_sum_tile_cnt_tile[1][0].shape[1])]
                                     for y in
-                                    range(sum_tile.shape[0])])).collect()
+                                    range(bounds_sum_tile_cnt_tile[1][0].shape[0])])).collect()
 
         #
         # Launch a second parallel computation to calculate variance from x_bar
@@ -241,13 +241,13 @@ class VarianceNexusSparkHandlerImpl(NexusCalcSparkHandler):
                                         lambda x, y: (x[0] + y[0], x[1] + y[1]))
 
         variance_tiles = \
-            anomaly_squared.map(lambda (bounds, (anomaly_squared_tile, cnt_tile)):
-                               (bounds, [[{'variance': (anomaly_squared_tile[y, x] / cnt_tile[y, x])
-                               if (cnt_tile[y, x] > 0)
+            anomaly_squared.map(lambda bounds_anomaly_squared_tile_cnt_tile:
+                               (bounds_anomaly_squared_tile_cnt_tile[0], [[{'variance': (bounds_anomaly_squared_tile_cnt_tile[1][0][y, x] / bounds_anomaly_squared_tile_cnt_tile[1][1][y, x])
+                               if (bounds_anomaly_squared_tile_cnt_tile[1][1][y, x] > 0)
                                else fill,
-                                           'cnt': cnt_tile[y, x]}
-                                       for x in range(anomaly_squared_tile.shape[1])]
-                                       for y in range(anomaly_squared_tile.shape[0])])).collect()
+                                           'cnt': bounds_anomaly_squared_tile_cnt_tile[1][1][y, x]}
+                                       for x in range(bounds_anomaly_squared_tile_cnt_tile[1][0].shape[1])]
+                                       for y in range(bounds_anomaly_squared_tile_cnt_tile[1][0].shape[0])])).collect()
 
 
 
@@ -338,8 +338,8 @@ class VarianceNexusSparkHandlerImpl(NexusCalcSparkHandler):
                 cnt_tile += (~tile.data.mask[0, min_y:max_y + 1, min_x:max_x + 1]).astype(np.uint8)
             t_start = t_end + 1
 
-        print("sum tile", sum_tile)
-        print("count tile", cnt_tile)
+        print(("sum tile", sum_tile))
+        print(("count tile", cnt_tile))
         return tile_bounds, (sum_tile, cnt_tile)
 
     @staticmethod

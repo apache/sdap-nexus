@@ -15,7 +15,7 @@
 
 
 
-import ConfigParser
+import configparser
 import logging
 import uuid
 from datetime import datetime
@@ -35,7 +35,7 @@ class AbstractResultsContainer:
         self._session = None
 
     def __enter__(self):
-        domsconfig = ConfigParser.RawConfigParser()
+        domsconfig = configparser.RawConfigParser()
         domsconfig.readfp(pkg_resources.resource_stream(__name__, "domsconfig.ini"), filename='domsconfig.ini')
 
         cassHost = domsconfig.get("cassandra", "host")
@@ -67,7 +67,7 @@ class ResultsStorage(AbstractResultsContainer):
         AbstractResultsContainer.__init__(self)
 
     def insertResults(self, results, params, stats, startTime, completeTime, userEmail, execution_id=None):
-        if isinstance(execution_id, basestring):
+        if isinstance(execution_id, str):
             execution_id = uuid.UUID(execution_id)
 
         execution_id = self.insertExecution(execution_id, startTime, completeTime, userEmail)
@@ -94,8 +94,8 @@ class ResultsStorage(AbstractResultsContainer):
                                     params["primary"],
                                     ",".join(params["matchup"]) if type(params["matchup"]) == list else params[
                                         "matchup"],
-                                    params["depthMin"] if "depthMin" in params.keys() else None,
-                                    params["depthMax"] if "depthMax" in params.keys() else None,
+                                    params["depthMin"] if "depthMin" in list(params.keys()) else None,
+                                    params["depthMax"] if "depthMax" in list(params.keys()) else None,
                                     int(params["timeTolerance"]),
                                     params["radiusTolerance"],
                                     params["startTime"],
@@ -189,7 +189,7 @@ class ResultsRetrieval(AbstractResultsContainer):
         AbstractResultsContainer.__init__(self)
 
     def retrieveResults(self, execution_id, trim_data=False):
-        if isinstance(execution_id, basestring):
+        if isinstance(execution_id, str):
             execution_id = uuid.UUID(execution_id)
 
         params = self.__retrieveParams(execution_id)
@@ -214,7 +214,7 @@ class ResultsRetrieval(AbstractResultsContainer):
                     dataMap[row.primary_value_id]["matches"] = []
                 dataMap[row.primary_value_id]["matches"].append(entry)
             else:
-                print row
+                print(row)
 
     def __retrievePrimaryData(self, id, trim_data=False):
         cql = "SELECT * FROM doms_data where execution_id = %s and is_primary = true"

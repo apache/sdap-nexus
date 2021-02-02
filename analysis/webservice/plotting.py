@@ -21,11 +21,11 @@ pyximport.install()
 import os
 import numpy as np
 import matplotlib.pyplot as plt
-import ConfigParser
+import configparser
 import matplotlib.dates as mdates
 from matplotlib import cm
 import pickle
-from cStringIO import StringIO
+from io import StringIO
 import datetime
 from matplotlib.ticker import FuncFormatter
 from matplotlib.colors import LightSource
@@ -234,7 +234,7 @@ def createLatLonTimeAverageMap(res, meta, startTime=None, endTime=None):
 def __createLatLonTimeAverageMapTest(ds, minLat, minLon, maxLat, maxLon, startTime, endTime, mask, create=False,
                                      delete=True, projection='flat'):
     if create:
-        config = ConfigParser.RawConfigParser()
+        config = configparser.RawConfigParser()
         config.read("sci.ini")
 
         sci = Sci(config)
@@ -332,7 +332,7 @@ def createLongitudeHoffmueller(res, meta):
 def createLongitudeHoffmuellerTest(ds, minLat, minLon, maxLat, maxLon, startTime, endTime, mask, create=False,
                                    delete=True):
     if create:
-        config = ConfigParser.RawConfigParser()
+        config = configparser.RawConfigParser()
         config.read("sci.ini")
 
         sci = Sci(config)
@@ -382,7 +382,7 @@ def createLatitudeHoffmueller(res, meta):
 def createLatitudeHoffmuellerTest(ds, minLat, minLon, maxLat, maxLon, startTime, endTime, mask, create=False,
                                   delete=True):
     if create:
-        config = ConfigParser.RawConfigParser()
+        config = configparser.RawConfigParser()
         config.read("sci.ini")
 
         sci = Sci(config)
@@ -479,7 +479,7 @@ def createScatterPlot(res, meta):
     sources = ', '.join(set([m['source'] for m in meta]))
     dateRange = "%s - %s" % (timeSeries[0].strftime('%b %Y'), timeSeries[-1].strftime('%b %Y'))
 
-    print len(timeSeries), len(series0), len(series1)
+    print(len(timeSeries), len(series0), len(series1))
     fig, ax = plt.subplots()
     fig.set_size_inches(11.0, 8.5)
     ax.scatter(series0, series1, alpha=0.5)
@@ -507,7 +507,7 @@ def createTimeSeriesTest(ds, minLat, minLon, maxLat, maxLon, startTime, endTime,
         ds = (ds,)
 
     if create:
-        config = ConfigParser.RawConfigParser()
+        config = configparser.RawConfigParser()
         config.read("sci.ini")
         sci = Sci(config)
         res, meta = sci.getTimeSeriesStatsForBox(minLat,

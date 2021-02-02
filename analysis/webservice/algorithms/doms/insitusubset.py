@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import StringIO
+import io
 import csv
 import json
 import logging
@@ -21,7 +21,7 @@ from datetime import datetime
 
 import requests
 
-import BaseDomsHandler
+from . import BaseDomsHandler
 from webservice.NexusHandler import nexus_handler
 from webservice.algorithms.doms import config as edge_endpoints
 from webservice.webmodel import NexusProcessingException, NoDataException
@@ -196,7 +196,7 @@ class InSituSubsetResult(object):
     def toCSV(self):
         fieldnames = sorted(next(iter(self.results)).keys())
 
-        csv_mem_file = StringIO.StringIO()
+        csv_mem_file = io.StringIO()
         try:
             writer = csv.DictWriter(csv_mem_file, fieldnames=fieldnames)
 

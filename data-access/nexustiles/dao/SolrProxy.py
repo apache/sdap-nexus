@@ -623,10 +623,10 @@ class SolrProxy(object):
 
     def do_query_raw(self, *args, **params):
 
-        if 'fl' not in params.keys() and args[1]:
+        if 'fl' not in list(params.keys()) and args[1]:
             params['fl'] = args[1]
 
-        if 'sort' not in params.keys() and args[4]:
+        if 'sort' not in list(params.keys()) and args[4]:
             params['sort'] = args[4]
 
         # If dataset_s is specified as the search term,

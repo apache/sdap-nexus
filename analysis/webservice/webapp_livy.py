@@ -14,13 +14,13 @@
 # limitations under the License.
 
 
-import ConfigParser
+import configparser
 import logging
 import sys
 import os
 import pkg_resources
-import nexus_tornado.web
-from nexus_tornado.options import define, options, parse_command_line
+from . import nexus_tornado.web
+from .nexus_tornado.options import define, options, parse_command_line
 from webservice.NexusLivyHandler import LivyHandler
 
 class RunFileHandler(nexus_tornado.web.RequestHandler):
@@ -42,7 +42,7 @@ class RunFileHandler(nexus_tornado.web.RequestHandler):
             f.write(self._upload_file['body'])
         try:
             ans = self._lh.exec_file(upload_fname)
-        except Exception, e:
+        except Exception as e:
             ans = str(e)
         self.write(str(ans))
 
@@ -69,7 +69,7 @@ if __name__ == "__main__":
     log = logging.getLogger(__name__)
 
     # Configure tornado.
-    webconfig = ConfigParser.RawConfigParser()
+    webconfig = configparser.RawConfigParser()
     webconfig.readfp(pkg_resources.resource_stream(__name__, "config/web.ini"), filename='web.ini')
     define("debug", default=False, help="run in debug mode")
     define("port", default=webconfig.get("livy", "server.socket_port"), help="run on the given port", type=int)

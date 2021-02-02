@@ -153,7 +153,7 @@ def find_tile_and_std_name(tile_service, ds, longitude, latitude, day_of_year):
 
     # Check if this tile has any meta data that ends with 'std'. If it doesn't, just return nothing.
     try:
-        st_dev_meta_name = next(iter([key for key in tile.meta_data.keys() if key.endswith('std')]))
+        st_dev_meta_name = next(iter([key for key in list(tile.meta_data.keys()) if key.endswith('std')]))
     except StopIteration:
         raise NoStandardDeviationException
 

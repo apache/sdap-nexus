@@ -25,7 +25,7 @@ class TestApproximateValueMethod(unittest.TestCase):
         tile.bbox = BBox(-1.0, 1.0, -2.0, 2.0)
         tile.latitudes = np.ma.array([-1.0, -0.5, 0, .5, 1.0])
         tile.longitudes = np.ma.array([-2.0, -1.0, 0, 1.0, 2.0])
-        tile.times = np.ma.array([0L])
+        tile.times = np.ma.array([0])
         tile.data = np.ma.arange(25.0).reshape((1, 5, 5))
 
         #         -2   -1   0    1    2
@@ -42,7 +42,7 @@ class TestApproximateValueMethod(unittest.TestCase):
         tile.bbox = BBox(-1.0, 1.0, -2.0, 2.0)
         tile.latitudes = np.ma.array([-1.0, -0.5, 0, .5, 1.0])
         tile.longitudes = np.ma.array([-2.0, -1.0, 0, 1.0, 2.0])
-        tile.times = np.ma.array([0L])
+        tile.times = np.ma.array([0])
         tile.data = np.ma.arange(25.0).reshape((1, 5, 5))
 
         #         -2   -1   0    1    2
@@ -59,7 +59,7 @@ class TestApproximateValueMethod(unittest.TestCase):
         tile.bbox = BBox(-1.0, 1.0, -2.0, 2.0)
         tile.latitudes = np.ma.array([-1.0, -0.5, 0, .5, 1.0])
         tile.longitudes = np.ma.array([-2.0, -1.0, 0, 1.0, 2.0])
-        tile.times = np.ma.array([0L])
+        tile.times = np.ma.array([0])
         tile.data = np.ma.arange(25.0).reshape((1, 5, 5))
 
         #         -2   -1   0    1    2
@@ -76,7 +76,7 @@ class TestApproximateValueMethod(unittest.TestCase):
         tile.bbox = BBox(-1.0, 1.0, -2.0, 2.0)
         tile.latitudes = np.ma.array([-1.0, -0.5, 0, .5, 1.0])
         tile.longitudes = np.ma.array([-2.0, -1.0, 0, 1.0, 2.0])
-        tile.times = np.ma.array([0L])
+        tile.times = np.ma.array([0])
         tile.data = np.ma.arange(25.0).reshape((1, 5, 5))
 
         #         -2   -1   0    1    2
@@ -93,7 +93,7 @@ class TestApproximateValueMethod(unittest.TestCase):
         tile.bbox = BBox(-1.0, 1.0, -2.0, 2.0)
         tile.latitudes = np.ma.array([-1.0, -0.5, 0, .5, 1.0])
         tile.longitudes = np.ma.array([-2.0, -1.0, 0, 1.0, 2.0])
-        tile.times = np.ma.array([0L])
+        tile.times = np.ma.array([0])
         tile.data = np.ma.arange(25.0).reshape((1, 5, 5))
 
         #         -2   -1   0    1    2
@@ -110,7 +110,7 @@ class TestApproximateValueMethod(unittest.TestCase):
         tile.bbox = BBox(-1.0, 1.0, -2.0, 2.0)
         tile.latitudes = np.ma.array([-1.0, -0.5, 0, .5, 1.0])
         tile.longitudes = np.ma.array([-2.0, -1.0, 0, 1.0, 2.0])
-        tile.times = np.ma.array([0L])
+        tile.times = np.ma.array([0])
         tile.data = np.ma.arange(25.0).reshape((1, 5, 5))
 
         #         -2   -1   0    1    2
@@ -127,7 +127,7 @@ class TestApproximateValueMethod(unittest.TestCase):
         tile.bbox = BBox(-1.0, 1.0, -2.0, 2.0)
         tile.latitudes = np.ma.array([-1.0, -0.5, 0, .5, 1.0])
         tile.longitudes = np.ma.array([-2.0, -1.0, 0, 1.0, 2.0])
-        tile.times = np.ma.array([0L])
+        tile.times = np.ma.array([0])
         tile.data = np.ma.arange(25.0).reshape((1, 5, 5))
 
         #         -2   -1   0    1    2
@@ -144,7 +144,7 @@ class TestApproximateValueMethod(unittest.TestCase):
         tile.bbox = BBox(-1.0, 1.0, -2.0, 2.0)
         tile.latitudes = np.ma.array([-1.0, -0.5, 0, .5, 1.0])
         tile.longitudes = np.ma.array([-2.0, -1.0, 0, 1.0, 2.0])
-        tile.times = np.ma.array([0L])
+        tile.times = np.ma.array([0])
         tile.data = np.ma.arange(25.0).reshape((1, 5, 5))
 
         #         -2   -1   0    1    2
@@ -161,7 +161,7 @@ class TestApproximateValueMethod(unittest.TestCase):
         tile.bbox = BBox(-1.0, 1.0, -2.0, 2.0)
         tile.latitudes = np.ma.array([-1.0, -0.5, 0, .5, 1.0])
         tile.longitudes = np.ma.array([-2.0, -1.0, 0, 1.0, 2.0])
-        tile.times = np.ma.array([0L])
+        tile.times = np.ma.array([0])
         tile.data = np.ma.arange(25.0).reshape((1, 5, 5))
 
         #         -2   -1   0    1    2
@@ -178,7 +178,7 @@ class TestApproximateValueMethod(unittest.TestCase):
         tile.bbox = BBox(-1.0, 1.0, -2.0, 2.0)
         tile.latitudes = np.ma.array([-1.0, -0.5, -0.5, .5, 1.0])
         tile.longitudes = np.ma.array([-2.0, -1.0, 0, 1.0, 2.0])
-        tile.times = np.ma.array([0L])
+        tile.times = np.ma.array([0])
         tile.data = np.ma.arange(25.0).reshape((1, 5, 5))
 
         #         -2   -1   0    1    2
@@ -194,13 +194,13 @@ class TestApproximateValueMethod(unittest.TestCase):
         tile1 = Tile()
         tile1.latitudes = np.ma.array([0.0, 1.0, 2.0, 3.0])
         tile1.longitudes = np.ma.array([0.0, -1.0, -2.0])
-        tile1.times = np.ma.array([0L])
+        tile1.times = np.ma.array([0])
         tile1.data = np.ma.arange(12).reshape((1, 4, 3))
 
         tile2 = Tile()
         tile2.latitudes = np.ma.array([4.0, 5.0, 6.0, 7.0])
         tile2.longitudes = np.ma.array([-3.0, -4.0, -5.0])
-        tile2.times = np.ma.array([0L])
+        tile2.times = np.ma.array([0])
         tile2.data = np.ma.arange(12, 24).reshape((1, 4, 3))
 
         self.assertAlmostEqual(1, get_approximate_value_for_lat_lon([tile1, tile2], 0.4, -1))
@@ -209,13 +209,13 @@ class TestApproximateValueMethod(unittest.TestCase):
         tile1 = Tile()
         tile1.latitudes = np.ma.array([0.0, 1.0, 2.0, 3.0])
         tile1.longitudes = np.ma.array([0.0, -1.0, -2.0])
-        tile1.times = np.ma.array([0L])
+        tile1.times = np.ma.array([0])
         tile1.data = np.ma.arange(12).reshape((1, 4, 3))
 
         tile2 = Tile()
         tile2.latitudes = np.ma.array([4.0, 5.0, 6.0, 7.0])
         tile2.longitudes = np.ma.array([0.0, -1.0, -2.0])
-        tile2.times = np.ma.array([0L])
+        tile2.times = np.ma.array([0])
         tile2.data = np.ma.arange(12, 24).reshape((1, 4, 3))
 
         self.assertAlmostEqual(1, get_approximate_value_for_lat_lon([tile1, tile2], 0.4, -1))
@@ -227,7 +227,7 @@ class TestTileContainsMethod(unittest.TestCase):
         tile.bbox = BBox(30.5, 37.5, -51.5, -36.5)
         tile.latitudes = np.ma.arange(30.5, 38.5, 1.0)
         tile.longitudes = np.ma.arange(-51.5, -35.5, 1.0)
-        tile.times = np.ma.array([0L])
+        tile.times = np.ma.array([0])
         tile.data = np.ma.arange(128.0).reshape((1, 8, 16))
 
         # tile.latitudes [ 30.5  31.5  32.5  33.5  34.5  35.5  36.5  37.5]
@@ -248,7 +248,7 @@ class TestTileUpdateStats(unittest.TestCase):
         tile.bbox = BBox(-1.0, 1.0, -2.0, 2.0)
         tile.latitudes = np.ma.array([-1.0, -0.5, 0, .5, 1.0])
         tile.longitudes = np.ma.array([-2.0, -1.0, 0, 1.0, 2.0])
-        tile.times = np.ma.array([0L])
+        tile.times = np.ma.array([0])
         tile.data = np.ma.arange(25.0).reshape((1, 5, 5))
 
         #         -2   -1   0    1    2
@@ -271,20 +271,20 @@ class TestMergeTilesMethod(unittest.TestCase):
         tile1 = Tile()
         tile1.latitudes = np.ma.array([0.0, 1.0, 2.0, 3.0])
         tile1.longitudes = np.ma.array([0.0, -1.0, -2.0])
-        tile1.times = np.ma.array([0L])
+        tile1.times = np.ma.array([0])
         tile1.data = np.ma.arange(12).reshape((1, 4, 3))
 
         tile2 = Tile()
         tile2.latitudes = np.ma.array([4.0, 5.0, 6.0, 7.0])
         tile2.longitudes = np.ma.array([-3.0, -4.0, -5.0])
-        tile2.times = np.ma.array([0L])
+        tile2.times = np.ma.array([0])
         tile2.data = np.ma.arange(12, 24).reshape((1, 4, 3))
 
         from nexustiles.model.nexusmodel import merge_tiles
 
         times, lats, longs, data = merge_tiles([tile1, tile2])
 
-        self.assertTrue(np.ma.allequal(times, np.array([0L])))
+        self.assertTrue(np.ma.allequal(times, np.array([0])))
         self.assertTrue(np.ma.allequal(lats, np.array([0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0])))
         self.assertTrue(np.ma.allequal(longs, np.array([-5.0, -4.0, -3.0, -2.0, -1.0, 0.0])))
         expected = np.ma.array([[[0, 0, 0, 2, 1, 0],
@@ -309,20 +309,20 @@ class TestMergeTilesMethod(unittest.TestCase):
         tile1 = Tile()
         tile1.latitudes = np.ma.array([0.0, 1.0, 2.0, 3.0])
         tile1.longitudes = np.ma.array([0.0, -1.0, -2.0])
-        tile1.times = np.ma.array([0L])
+        tile1.times = np.ma.array([0])
         tile1.data = np.ma.arange(12).reshape((1, 4, 3))
 
         tile2 = Tile()
         tile2.latitudes = np.ma.array([4.0, 5.0, 6.0, 7.0])
         tile2.longitudes = np.ma.array([0.0, -1.0, -2.0])
-        tile2.times = np.ma.array([0L])
+        tile2.times = np.ma.array([0])
         tile2.data = np.ma.arange(12, 24).reshape((1, 4, 3))
 
         from nexustiles.model.nexusmodel import merge_tiles
 
         times, lats, longs, data = merge_tiles([tile1, tile2])
 
-        self.assertTrue(np.ma.allequal(times, np.array([0L])))
+        self.assertTrue(np.ma.allequal(times, np.array([0])))
         self.assertTrue(np.ma.allequal(lats, np.array([0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0])))
         self.assertTrue(np.ma.allequal(longs, np.array([-2.0, -1.0, 0.0])))
         expected = np.ma.array([[[2, 1, 0],
@@ -340,20 +340,20 @@ class TestMergeTilesMethod(unittest.TestCase):
         tile1 = Tile()
         tile1.latitudes = np.ma.array([0.0, 1.0, 2.0, 3.0])
         tile1.longitudes = np.ma.array([0.0, -1.0, -2.0])
-        tile1.times = np.ma.array([0L])
+        tile1.times = np.ma.array([0])
         tile1.data = np.ma.arange(12).reshape((1, 4, 3))
 
         tile2 = Tile()
         tile2.latitudes = np.ma.array([0.0, 1.0, 2.0, 3.0])
         tile2.longitudes = np.ma.array([-3.0, -4.0, -5.0])
-        tile2.times = np.ma.array([0L])
+        tile2.times = np.ma.array([0])
         tile2.data = np.ma.arange(12, 24).reshape((1, 4, 3))
 
         from nexustiles.model.nexusmodel import merge_tiles
 
         times, lats, longs, data = merge_tiles([tile1, tile2])
 
-        self.assertTrue(np.ma.allequal(times, np.array([0L])))
+        self.assertTrue(np.ma.allequal(times, np.array([0])))
         self.assertTrue(np.ma.allequal(lats, np.array([0.0, 1.0, 2.0, 3.0])))
         self.assertTrue(np.ma.allequal(longs, np.array([-5.0, -4.0, -3.0, -2.0, -1.0, 0.0])))
         expected = np.ma.array([[[14, 13, 12, 2, 1, 0],
@@ -367,13 +367,13 @@ class TestMergeTilesMethod(unittest.TestCase):
         tile1 = Tile()
         tile1.latitudes = np.ma.array([0.0, 1.0, 2.0, 3.0])
         tile1.longitudes = np.ma.array([0.0, -1.0, -2.0])
-        tile1.times = np.ma.array([0L])
+        tile1.times = np.ma.array([0])
         tile1.data = np.ma.arange(12).reshape((1, 4, 3))
 
         tile2 = Tile()
         tile2.latitudes = np.ma.array([0.0, 1.0, 2.0, 3.0])
         tile2.longitudes = np.ma.array([0.0, -1.0, -2.0])
-        tile2.times = np.ma.array([0L])
+        tile2.times = np.ma.array([0])
         tile2.data = np.ma.arange(12, 24).reshape((1, 4, 3))
 
         from nexustiles.model.nexusmodel import merge_tiles

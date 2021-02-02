@@ -81,14 +81,14 @@ class DataInBoundsSearchCalcHandlerImpl(NexusCalcHandler):
 
         try:
             start_time = request.get_start_datetime()
-            start_time = long((start_time - EPOCH).total_seconds())
+            start_time = int((start_time - EPOCH).total_seconds())
         except:
             raise NexusProcessingException(
                 reason="'startTime' argument is required. Can be int value seconds from epoch or string format YYYY-MM-DDTHH:mm:ssZ",
                 code=400)
         try:
             end_time = request.get_end_datetime()
-            end_time = long((end_time - EPOCH).total_seconds())
+            end_time = int((end_time - EPOCH).total_seconds())
         except:
             raise NexusProcessingException(
                 reason="'endTime' argument is required. Can be int value seconds from epoch or string format YYYY-MM-DDTHH:mm:ssZ",

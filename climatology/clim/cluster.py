@@ -17,7 +17,7 @@
 #
 
 import os, sys
-from split import fixedSplit
+from .split import fixedSplit
 import pp
 #import dispy
 
@@ -90,7 +90,7 @@ def main(args):
 
 
 if __name__ == '__main__':
-    print main(sys.argv[1:])
+    print(main(sys.argv[1:]))
 
 # python cluster.py 8 '["deepdata-1"]' urls_sst_2015.txt
 # python cluster.py 1 '["deepdata-1", "deepdata-2", "deepdata-3", "deepdata-4"]' urls_sst_2015.txt

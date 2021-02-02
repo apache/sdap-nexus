@@ -16,16 +16,16 @@
 
 import logging
 import os
-import ClimMapSpark
-import CorrMapSpark
-import DailyDifferenceAverageSpark
-import HofMoellerSpark
-import Matchup
-import MaximaMinimaSpark
-import NexusCalcSparkHandler
-import TimeAvgMapSpark
-import TimeSeriesSpark
-import VarianceSpark
+from . import ClimMapSpark
+from . import CorrMapSpark
+from . import DailyDifferenceAverageSpark
+from . import HofMoellerSpark
+from . import Matchup
+from . import MaximaMinimaSpark
+from . import NexusCalcSparkHandler
+from . import TimeAvgMapSpark
+from . import TimeSeriesSpark
+from . import VarianceSpark
 
 
 log = logging.getLogger(__name__)
@@ -42,47 +42,47 @@ def module_exists(module_name):
 
 if module_exists("pyspark"):
     try:
-        import CorrMapSpark
+        from . import CorrMapSpark
     except ImportError:
         pass
 
     try:
-        import Matchup
+        from . import Matchup
     except ImportError:
         pass
 
     try:
-        import TimeAvgMapSpark
+        from . import TimeAvgMapSpark
     except ImportError:
         pass
 
     try:
-        import VarianceSpark
+        from . import VarianceSpark
     except ImportError:
         pass
 
     try:
-        import MaximaMinimaSpark
+        from . import MaximaMinimaSpark
     except ImportError:
         pass
 
     try:
-        import TimeSeriesSpark
+        from . import TimeSeriesSpark
     except ImportError:
         pass
 
     try:
-        import ClimMapSpark
+        from . import ClimMapSpark
     except ImportError:
         pass
 
     try:
-        import DailyDifferenceAverageSpark
+        from . import DailyDifferenceAverageSpark
     except ImportError:
         pass
 
     try:
-        import HofMoellerSpark
+        from . import HofMoellerSpark
     except ImportError:
         pass
 

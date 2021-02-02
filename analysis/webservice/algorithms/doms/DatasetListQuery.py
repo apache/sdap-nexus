@@ -18,9 +18,9 @@ import traceback
 
 import requests
 
-import BaseDomsHandler
-import config
-import values
+from . import BaseDomsHandler
+from . import config
+from . import values
 from webservice.algorithms.NexusCalcHandler import NexusCalcHandler as BaseHandler
 from webservice.NexusHandler import nexus_handler
 from webservice.webmodel import cached

@@ -14,7 +14,7 @@
 # limitations under the License.
 
 import string
-from cStringIO import StringIO
+from io import StringIO
 from multiprocessing import Process, Manager
 
 import matplotlib
@@ -22,8 +22,8 @@ import matplotlib.mlab as mlab
 import matplotlib.pyplot as plt
 import numpy as np
 
-import BaseDomsHandler
-import ResultsStorage
+from . import BaseDomsHandler
+from . import ResultsStorage
 
 if not matplotlib.get_backend():
     matplotlib.use('Agg')
