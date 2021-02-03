@@ -17,6 +17,7 @@ import configparser
 import importlib
 import logging
 import sys
+import os
 from functools import partial
 
 import pkg_resources
@@ -59,10 +60,10 @@ if __name__ == "__main__":
     log = logging.getLogger(__name__)
 
     webconfig = configparser.RawConfigParser()
-    webconfig.readfp(pkg_resources.resource_stream(__name__, "config/web.ini"), filename='web.ini')
+    webconfig.read_file(open(os.path.join(os.path.dirname(__file__), "config", "web.ini")))
 
     algorithm_config = configparser.RawConfigParser()
-    algorithm_config.readfp(pkg_resources.resource_stream(__name__, "config/algorithms.ini"), filename='algorithms.ini')
+    algorithm_config.read_file(open(os.path.join(os.path.dirname(__file__), "config", "algorithms.ini")))
 
     define("debug", default=False, help="run in debug mode")
     define("port", default=webconfig.get("global", "server.socket_port"), help="run on the given port", type=int)

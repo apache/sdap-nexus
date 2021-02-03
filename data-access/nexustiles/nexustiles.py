@@ -25,10 +25,10 @@ import pkg_resources
 from pytz import timezone, UTC
 from shapely.geometry import MultiPolygon, box
 
-from . import dao.CassandraProxy
-from . import dao.DynamoProxy
-from . import dao.S3Proxy
-from . import dao.SolrProxy
+from .dao import CassandraProxy
+from .dao import DynamoProxy
+from .dao import S3Proxy
+from .dao import SolrProxy
 from .model.nexusmodel import Tile, BBox, TileStats
 
 EPOCH = timezone('UTC').localize(datetime(1970, 1, 1))
@@ -89,11 +89,11 @@ class NexusTileService(object):
         if not skipDatastore:
             datastore = self._config.get("datastore", "store")
             if datastore == "cassandra":
-                self._datastore = dao.CassandraProxy.CassandraProxy(self._config)
+                self._datastore = CassandraProxy.CassandraProxy(self._config)
             elif datastore == "s3":
-                self._datastore = dao.S3Proxy.S3Proxy(self._config)
+                self._datastore = S3Proxy.S3Proxy(self._config)
             elif datastore == "dynamo":
-                self._datastore = dao.DynamoProxy.DynamoProxy(self._config)
+                self._datastore = DynamoProxy.DynamoProxy(self._config)
             else:
                 raise ValueError("Error reading datastore from config file")
 

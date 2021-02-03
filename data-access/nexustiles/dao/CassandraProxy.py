@@ -26,7 +26,7 @@ from cassandra.policies import TokenAwarePolicy, DCAwareRoundRobinPolicy, WhiteL
 from multiprocessing.synchronize import Lock
 from nexusproto.serialization import from_shaped_array
 
-INIT_LOCK = Lock()
+INIT_LOCK = Lock(ctx=None)
 
 logger = logging.getLogger(__name__)
 
