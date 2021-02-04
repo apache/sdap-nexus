@@ -98,7 +98,7 @@ class NexusTileService(object):
                 raise ValueError("Error reading datastore from config file")
 
         if not skipMetadatastore:
-            self._metadatastore = dao.SolrProxy.SolrProxy(self._config)
+            self._metadatastore = SolrProxy.SolrProxy(self._config)
 
     def override_config(self, config):
         for section in config.sections():
