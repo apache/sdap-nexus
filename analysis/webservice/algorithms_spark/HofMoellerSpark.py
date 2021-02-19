@@ -324,7 +324,7 @@ def spark_driver(sc, latlon, tile_service_factory, nexus_tiles_spark, metrics_ca
 
     # Convert the tuples to dictionary entries and combine coordinates
     # with the same time stamp.  Here we have input key = (time)
-    results = list(results.values()).combineByKey(create_combiner, merge_value, merge_combiner).values().collect()
+    results = results.values().combineByKey(create_combiner, merge_value, merge_combiner).values().collect()
 
     reduce_duration = (datetime.now() - reduce_start).total_seconds()
     metrics_callback(reduce=reduce_duration)
