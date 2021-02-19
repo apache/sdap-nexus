@@ -19,7 +19,7 @@ import logging
 import sys
 import os
 import pkg_resources
-from . import nexus_tornado.web
+from webservice import nexus_tornado
 from .nexus_tornado.options import define, options, parse_command_line
 from webservice.NexusLivyHandler import LivyHandler
 
