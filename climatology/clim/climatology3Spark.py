@@ -21,20 +21,20 @@ Simple code to be run on Spark cluster, or using multi-core parallelism on singl
 
 """
 
-import sys, os, urlparse, urllib, re, time
+import sys, os, urllib.parse, urllib.request, urllib.parse, urllib.error, re, time
 import numpy as N
 import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pylab as M
 
-from variables import getVariables, close
-from cache import retrieveFile, CachePath
-from split import fixedSplit, splitByNDays
+from .variables import getVariables, close
+from .cache import retrieveFile, CachePath
+from .split import fixedSplit, splitByNDays
 from netCDF4 import Dataset, default_fillvals
-from plotlib import imageMap, makeMovie
+from .plotlib import imageMap, makeMovie
 
-from spatialFilter import spatialFilter
-from gaussInterp import gaussInterp         # calls into Fortran version gaussInterp_f.so
+from .spatialFilter import spatialFilter
+from .gaussInterp import gaussInterp         # calls into Fortran version gaussInterp_f.so
 #from gaussInterp_slow import gaussInterp_slow as gaussInterp       # pure python, slow debuggable version
 
 VERBOSE = 1
@@ -133,7 +133,7 @@ Writes the averaged variable grid, attributes of the primary variable, and the c
     try:
         averageFn = averagingFunctions[averager]
     except:
-        print >>sys.stderr, 'climatology: Error, Averaging function must be one of: %s' % str(averagingFunctions)
+        print('climatology: Error, Averaging function must be one of: %s' % str(averagingFunctions), file=sys.stderr)
         sys.exit(1)
 
     urlSplits = [s for s in splitFn(urls, nEpochs)]
@@ -145,7 +145,7 @@ Writes the averaged variable grid, attributes of the primary variable, and the c
 
     def climsContoured(urls, plot=None, fillValue=default_fillvals['f4'], format='NETCDF4', cachePath=cachePath):
         n = len(urls)
-        if VERBOSE: print >>sys.stderr, urls
+        if VERBOSE: print(urls, file=sys.stderr)
 
         var = climByAveraging(urls, variable, mask, coordinates, maskFn, averageFn, averagingConfig, optimization, cachePath)
 
@@ -194,7 +194,7 @@ def accumulateClim(urls,                    # list of granule URLs for a time pe
 Returns the averaged variable grid, attributes of the primary variable, and the coordinate arrays in a dictionary.
 ***Assumption:  This routine assumes that the N grids will fit in memory.***
     '''
-    print >>sys.stderr, 'accumulateClim: Doing %s ...' % averagingConfig['name']
+    print('accumulateClim: Doing %s ...' % averagingConfig['name'], file=sys.stderr)
     varList = [variable, mask]
     for i, url in enumerate(urls):
         try:
@@ -202,14 +202,14 @@ Returns the averaged variable grid, attributes of the primary variable, and the 
             fn = os.path.split(path)[1]
             vtime = int(fn[5:8])     # KLUDGE: extract DOY from filename
         except:
-            print >>sys.stderr, 'climByAveraging: Error, continuing without file %s' % url
+            print('climByAveraging: Error, continuing without file %s' % url, file=sys.stderr)
             continue
         if path is None: continue
         try:
-            print >>sys.stderr, 'Reading file %s ...' % path
+            print('Reading file %s ...' % path, file=sys.stderr)
             var, fh = getVariables(path, varList, arrayOnly=True, order='F', set_auto_mask=False)   # return dict of variable objects by name
         except:
-            print >>sys.stderr, 'climByAveraging: Error, cannot read file %s' % path
+            print('climByAveraging: Error, cannot read file %s' % path, file=sys.stderr)
             continue
         if i == 0:
             dtype = var[variable].dtype
@@ -219,14 +219,14 @@ Returns the averaged variable grid, attributes of the primary variable, and the 
             vcount = N.ma.empty(shape, dtype, order='F')
             emptyVar = N.array(N.ma.masked_all(var[variable].shape, dtype), order='F')  # totally masked variable array for missing or bad file reads
 
-            print >>sys.stderr, 'Read coordinates ...'
+            print('Read coordinates ...', file=sys.stderr)
             var, fh = getVariables(path, coordinates, var, arrayOnly=True, order='F')   # read coordinate arrays and add to dict
 
         var[variable] = maskFn(var[variable], var[mask])     # apply quality mask variable to get numpy MA, turned off masking done by netCDF4 library
 
         # Echo variable range for sanity check
         vals = var[variable].compressed()
-        print >>sys.stderr, 'Variable Range: min, max:', vals.min(), vals.max()
+        print('Variable Range: min, max:', vals.min(), vals.max(), file=sys.stderr)
 
         if averagingConfig['name'] == 'pixelMean':
             vsum += var[variable]                        # update accumulators
@@ -251,7 +251,7 @@ Returns the averaged variable grid, attributes of the primary variable, and the 
             end = time.time()
             vcount = weight.astype(N.float32)
             vsum = avg
-            print >>sys.stderr, 'gaussInterp execution time:', (end - start)
+            print('gaussInterp execution time:', (end - start), file=sys.stderr)
         elif averagingConfig['name'] == 'spatialFilter':
             var[variable] = accum
             c = averagingConfig
@@ -262,7 +262,7 @@ Returns the averaged variable grid, attributes of the primary variable, and the 
                               c['missingValue'], VERBOSE, optimization)
             vsum = avg
             end = time.time()
-            print >>sys.stderr, 'spatialFilter execution time:', (end - start)
+            print('spatialFilter execution time:', (end - start), file=sys.stderr)
         close(fh)
 
     return (vcount, vsum)
@@ -274,7 +274,7 @@ Output variables and attributes will have same names as the input file.
     '''
     din = Dataset(inFile, 'r')
     dout = Dataset(outFile, 'w', format=format)
-    print >>sys.stderr, 'Writing %s ...' % outFile
+    print('Writing %s ...' % outFile, file=sys.stderr)
 
     # Transfer global attributes from input file
     for a in din.ncattrs():
@@ -291,7 +291,7 @@ Output variables and attributes will have same names as the input file.
     maskVar[:] = var['out'+mask].astype('i1')[:]
 
     # Transfer variable attributes from input file
-    for k,v in dout.variables.iteritems():
+    for k,v in dout.variables.items():
         for a in din.variables[k].ncattrs():
             if a == 'scale_factor' or a == 'add_offset' or a == '_FillValue': continue
             v.setncattr(a, din.variables[k].getncattr(a))
@@ -302,9 +302,9 @@ Output variables and attributes will have same names as the input file.
 #                print >>sys.stderr, default_fillvals
 #                v.setncattr('_FillValue', fillValue)         # set proper _FillValue for climatology array
                 v.setncattr('missing_value', fillValue)
-                print >>sys.stderr, 'Setting missing_value for primary variable %s to %f' % (variable, fillValue)
+                print('Setting missing_value for primary variable %s to %f' % (variable, fillValue), file=sys.stderr)
             except:
-                print >>sys.stderr, 'writeOutNetcdfVars: Warning, for variable %s no fill value specified or derivable from inputs.' % variable
+                print('writeOutNetcdfVars: Warning, for variable %s no fill value specified or derivable from inputs.' % variable, file=sys.stderr)
     din.close()
     dout.close()
     return outFile
@@ -319,7 +319,7 @@ def contourMap(var, variable, coordinates, n, outFile):
     imageMap(var[coordinates[1]][:], var[coordinates[0]][:], var[variable][:],
              vmin=-2., vmax=45., outFile=figFile, autoBorders=False,
              title='%s %d-day Mean from %s' % (variable.upper(), n, outFile))
-    print >>sys.stderr, 'Writing contour plot to %s' % figFile
+    print('Writing contour plot to %s' % figFile, file=sys.stderr)
     return figFile
 
 
@@ -334,7 +334,7 @@ def histogram(vals, variable, n, outFile):
     M.ylabel('Count')
     M.title('Histogram of %s %d-day Mean from %s' % (variable.upper(), n, outFile))
     M.show()
-    print >>sys.stderr, 'Writing histogram plot to %s' % figFile
+    print('Writing histogram plot to %s' % figFile, file=sys.stderr)
     M.savefig(figFile)
     return figFile
 
@@ -387,7 +387,7 @@ def main(args):
                              averager=averager, optimization=optimization, averagingConfig=PixelMeanConfig,
                              mode=mode, nWorkers=nWorkers)
     else:
-        print >>sys.stderr, 'climatology2: Error, averager must be one of', AveragingFunctions.keys()
+        print('climatology2: Error, averager must be one of', list(AveragingFunctions.keys()), file=sys.stderr)
         sys.exit(1)
     
     if results[0][1] is not None:
@@ -396,7 +396,7 @@ def main(args):
 
     
 if __name__ == '__main__':
-    print main(sys.argv[1:])
+    print(main(sys.argv[1:]))
 
 
 # Old Tests:

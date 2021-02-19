@@ -71,7 +71,7 @@ class Tile(object):
             summary['data'] = 'None'
 
         try:
-            summary['meta_data'] = {meta_name: meta_array.shape for meta_name, meta_array in self.meta_data.iteritems()}
+            summary['meta_data'] = {meta_name: meta_array.shape for meta_name, meta_array in self.meta_data.items()}
         except AttributeError:
             summary['meta_data'] = 'None'
 

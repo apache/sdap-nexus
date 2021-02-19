@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import ConfigParser
+import configparser
 import logging
 import sys
 from datetime import datetime
@@ -25,11 +25,11 @@ import pkg_resources
 from pytz import timezone, UTC
 from shapely.geometry import MultiPolygon, box
 
-import dao.CassandraProxy
-import dao.DynamoProxy
-import dao.S3Proxy
-import dao.SolrProxy
-from model.nexusmodel import Tile, BBox, TileStats
+from .dao import CassandraProxy
+from .dao import DynamoProxy
+from .dao import S3Proxy
+from .dao import SolrProxy
+from .model.nexusmodel import Tile, BBox, TileStats
 
 EPOCH = timezone('UTC').localize(datetime(1970, 1, 1))
 
@@ -80,7 +80,7 @@ class NexusTileService(object):
         self._datastore = None
         self._metadatastore = None
 
-        self._config = ConfigParser.RawConfigParser()
+        self._config = configparser.RawConfigParser()
         self._config.read(NexusTileService._get_config_files('config/datastores.ini'))
 
         if config:
@@ -89,16 +89,16 @@ class NexusTileService(object):
         if not skipDatastore:
             datastore = self._config.get("datastore", "store")
             if datastore == "cassandra":
-                self._datastore = dao.CassandraProxy.CassandraProxy(self._config)
+                self._datastore = CassandraProxy.CassandraProxy(self._config)
             elif datastore == "s3":
-                self._datastore = dao.S3Proxy.S3Proxy(self._config)
+                self._datastore = S3Proxy.S3Proxy(self._config)
             elif datastore == "dynamo":
-                self._datastore = dao.DynamoProxy.DynamoProxy(self._config)
+                self._datastore = DynamoProxy.DynamoProxy(self._config)
             else:
                 raise ValueError("Error reading datastore from config file")
 
         if not skipMetadatastore:
-            self._metadatastore = dao.SolrProxy.SolrProxy(self._config)
+            self._metadatastore = SolrProxy.SolrProxy(self._config)
 
     def override_config(self, config):
         for section in config.sections():
@@ -160,7 +160,7 @@ class NexusTileService(object):
             tile = self._metadatastore.find_tile_by_polygon_and_most_recent_day_of_year(bounding_polygon, ds,
                                                                                         day_of_year)
         except IndexError:
-            raise NexusTileServiceException("No tile found."), None, sys.exc_info()[2]
+            raise NexusTileServiceException("No tile found.").with_traceback(sys.exc_info()[2])
 
         return tile
 
@@ -188,7 +188,7 @@ class NexusTileService(object):
     @tile_data()
     def find_tiles_in_polygon(self, bounding_polygon, ds=None, start_time=0, end_time=-1, **kwargs):
         # Find tiles that fall within the polygon in the Solr index
-        if 'sort' in kwargs.keys():
+        if 'sort' in list(kwargs.keys()):
             tiles = self._metadatastore.find_all_tiles_in_polygon(bounding_polygon, ds, start_time, end_time, **kwargs)
         else:
             tiles = self._metadatastore.find_all_tiles_in_polygon_sorttimeasc(bounding_polygon, ds, start_time,
@@ -321,7 +321,7 @@ class NexusTileService(object):
         :return: long time in seconds since epoch
         """
         min_time = self._metadatastore.find_min_date_from_tiles(tile_ids, ds=ds)
-        return long((min_time - EPOCH).total_seconds())
+        return int((min_time - EPOCH).total_seconds())
 
     def get_max_time(self, tile_ids, ds=None):
         """
@@ -331,7 +331,7 @@ class NexusTileService(object):
         :return: long time in seconds since epoch
         """
         max_time = self._metadatastore.find_max_date_from_tiles(tile_ids, ds=ds)
-        return long((max_time - EPOCH).total_seconds())
+        return int((max_time - EPOCH).total_seconds())
 
     def get_distinct_bounding_boxes_in_polygon(self, bounding_polygon, ds, start_time, end_time):
         """
@@ -432,9 +432,9 @@ class NexusTileService(object):
 
         tile_data_by_id = {str(a_tile_data.tile_id): a_tile_data for a_tile_data in matched_tile_data}
 
-        missing_data = nexus_tile_ids.difference(tile_data_by_id.keys())
+        missing_data = nexus_tile_ids.difference(list(tile_data_by_id.keys()))
         if len(missing_data) > 0:
-            raise StandardError("Missing data for tile_id(s) %s." % missing_data)
+            raise Exception("Missing data for tile_id(s) %s." % missing_data)
 
         for a_tile in tiles:
             lats, lons, times, data, meta = tile_data_by_id[a_tile.tile_id].get_lat_lon_time_data_meta()

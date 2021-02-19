@@ -14,7 +14,7 @@
 # limitations under the License.
 
 import unittest
-import ConfigParser
+import configparser
 
 import logging
 import pkg_resources
@@ -26,7 +26,7 @@ from shapely.geometry import box
 
 class TestQuery(unittest.TestCase):
     def setUp(self):
-        config = ConfigParser.RawConfigParser()
+        config = configparser.RawConfigParser()
 
         config.readfp(pkg_resources.resource_stream(__name__, "config/datastores.ini"), filename='datastores.ini')
 
@@ -38,9 +38,9 @@ class TestQuery(unittest.TestCase):
                                                                    "MXLDEPTH_ECCO_version4_release1",
                                                                     1, time.time())
 
-        print len(result)
+        print(len(result))
         for r in sorted(result):
-            print r
+            print(r)
 
     def find_all_tiles_in_polygon_with_spec_test(self):
         result = self.proxy.find_all_tiles_in_polygon(box(-180, -90, 180, 90),
@@ -48,34 +48,34 @@ class TestQuery(unittest.TestCase):
                                                       fq={'sectionSpec_s:\"time:0:1,lat:100:120,lon:0:40\"'},
                                                       rows=1, limit=1)
 
-        print result
+        print(result)
 
     def find_tiles_by_id_test(self):
         result = self.proxy.find_tiles_by_id(['0cc95db3-293b-3553-b7a3-42920c3ffe4d'], ds="AVHRR_OI_L4_GHRSST_NCEI")
 
-        print result
+        print(result)
 
     def find_max_date_from_tiles_test(self):
         result = self.proxy.find_max_date_from_tiles(["a764f12b-ceac-38d6-9d1d-89a6b68db32b"],
                                                      "JPL-L4_GHRSST-SSTfnd-MUR-GLOB-v02.0-fv04.1", rows=1, limit=1)
 
-        print result
+        print(result)
 
     def find_tiles_by_exact_bounds_test(self):
         result = self.proxy.find_tiles_by_exact_bounds(175.01, -42.68, 180.0, -40.2,
                                                        "JPL-L4_GHRSST-SSTfnd-MUR-GLOB-v02.0-fv04.1", rows=5000)
 
-        print len(result)
+        print(len(result))
 
     def get_data_series_list_test(self):
         result = self.proxy.get_data_series_list()
 
-        print len(result)
+        print(len(result))
 
     def test_find_all_tiles_by_metadata(self):
         result = self.proxy.find_all_tiles_by_metadata(['granule_s:19811114120000-NCEI-L4_GHRSST-SSTblend-AVHRR_OI-GLOB-v02.0-fv02.0.nc'], ds="AVHRR_OI_L4_GHRSST_NCEI")
 
-        print len(result)
+        print(len(result))
 
     def test_get_tile_count(self):
         tile_count = self.proxy.get_tile_count("AVHRR_OI_L4_GHRSST_NCEI", bounding_polygon=box(-180, -90, 180, 90),
@@ -85,7 +85,7 @@ class TestQuery(unittest.TestCase):
         print(tile_count)
 
     def test_get_data_series_stats(self):
-        print(self.proxy.get_data_series_stats('AVHRR_OI_L4_GHRSST_NCEI'))
+        print((self.proxy.get_data_series_stats('AVHRR_OI_L4_GHRSST_NCEI')))
 
     def test_find_days_in_range_asc(self):
-        print(self.proxy.find_days_in_range_asc(-90, 90, -180, 180, 'AVHRR_OI_L4_GHRSST_NCEI', 1, time.time()))
+        print((self.proxy.find_days_in_range_asc(-90, 90, -180, 180, 'AVHRR_OI_L4_GHRSST_NCEI', 1, time.time())))

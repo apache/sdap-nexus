@@ -32,7 +32,7 @@ class TestMatch_Points(unittest.TestCase):
 
         matches = list(match_points_generator(primary_points, matchup_points, 0))
 
-        self.assertEquals(1, len(matches))
+        self.assertEqual(1, len(matches))
 
         p_match_point, match = matches[0]
 
@@ -48,7 +48,7 @@ class TestMatch_Points(unittest.TestCase):
 
         matches = list(match_points_generator(primary_points, matchup_points, 150000))  # tolerance 150 km
 
-        self.assertEquals(1, len(matches))
+        self.assertEqual(1, len(matches))
 
         p_match_point, match = matches[0]
 
@@ -64,7 +64,7 @@ class TestMatch_Points(unittest.TestCase):
 
         matches = list(match_points_generator(primary_points, matchup_points, 200))  # tolerance 200 m
 
-        self.assertEquals(1, len(matches))
+        self.assertEqual(1, len(matches))
 
         p_match_point, match = matches[0]
 
@@ -80,7 +80,7 @@ class TestMatch_Points(unittest.TestCase):
 
         matches = list(match_points_generator(primary_points, matchup_points, 150000))  # tolerance 150 km
 
-        self.assertEquals(0, len(matches))
+        self.assertEqual(0, len(matches))
 
     def test_one_point_not_match_tolerance_100m(self):
         primary = DomsPoint(longitude=1.0, latitude=2.0, time=1000, depth=5.0, data_id=1)
@@ -91,7 +91,7 @@ class TestMatch_Points(unittest.TestCase):
 
         matches = list(match_points_generator(primary_points, matchup_points, 100))  # tolerance 100 m
 
-        self.assertEquals(0, len(matches))
+        self.assertEqual(0, len(matches))
 
     def test_multiple_point_match(self):
         primary = DomsPoint(longitude=1.0, latitude=2.0, time=1000, depth=5.0, data_id=1)
@@ -105,13 +105,13 @@ class TestMatch_Points(unittest.TestCase):
 
         matches = list(match_points_generator(primary_points, matchup_points, 150000))  # tolerance 150 km
 
-        self.assertEquals(3, len(matches))
+        self.assertEqual(3, len(matches))
 
         self.assertSetEqual({primary}, {x[0] for x in matches})
 
         list_of_matches = [x[1] for x in matches]
 
-        self.assertEquals(3, len(list_of_matches))
+        self.assertEqual(3, len(list_of_matches))
         self.assertItemsEqual(matchup_points, list_of_matches)
 
     def test_multiple_point_match_multiple_times(self):
@@ -128,16 +128,16 @@ class TestMatch_Points(unittest.TestCase):
 
         matches = list(match_points_generator(primary_points, matchup_points, 150000))  # tolerance 150 km
 
-        self.assertEquals(5, len(matches))
+        self.assertEqual(5, len(matches))
 
         self.assertSetEqual({p for p in primary_points}, {x[0] for x in matches})
 
         # First primary point matches all 3 secondary
-        self.assertEquals(3, [x[0] for x in matches].count(primary_points[0]))
+        self.assertEqual(3, [x[0] for x in matches].count(primary_points[0]))
         self.assertItemsEqual(matchup_points, [x[1] for x in matches if x[0] == primary_points[0]])
 
         # Second primary point matches only last 2 secondary
-        self.assertEquals(2, [x[0] for x in matches].count(primary_points[1]))
+        self.assertEqual(2, [x[0] for x in matches].count(primary_points[1]))
         self.assertItemsEqual(matchup_points[1:], [x[1] for x in matches if x[0] == primary_points[1]])
 
     def test_one_of_many_primary_matches_one_of_many_matchup(self):
@@ -154,15 +154,15 @@ class TestMatch_Points(unittest.TestCase):
 
         matches = list(match_points_generator(primary_points, matchup_points, 110000))  # tolerance 110 km
 
-        self.assertEquals(1, len(matches))
+        self.assertEqual(1, len(matches))
 
         self.assertSetEqual({p for p in primary_points if p.data_id == 2}, {x[0] for x in matches})
 
         # First primary point matches none
-        self.assertEquals(0, [x[0] for x in matches].count(primary_points[0]))
+        self.assertEqual(0, [x[0] for x in matches].count(primary_points[0]))
 
         # Second primary point matches only first secondary
-        self.assertEquals(1, [x[0] for x in matches].count(primary_points[1]))
+        self.assertEqual(1, [x[0] for x in matches].count(primary_points[1]))
         self.assertItemsEqual(matchup_points[0:1], [x[1] for x in matches if x[0] == primary_points[1]])
 
     @unittest.skip("This test is just for timing, doesn't actually assert anything.")
@@ -183,7 +183,7 @@ class TestMatch_Points(unittest.TestCase):
         log.info("Generating matchup points")
         matchup_points = [
             DomsPoint(longitude=random.uniform(-2.0, 2.0), latitude=random.uniform(-2.0, 2.0), time=1000, depth=5.0,
-                      data_id=i) for i in xrange(0, 2000)]
+                      data_id=i) for i in range(0, 2000)]
 
         log.info("Starting matchup")
         log.info("Best of repeat(3, 2) matchups: %s seconds" % min(
@@ -259,11 +259,11 @@ class TestMatchup(unittest.TestCase):
                                                        fl='id')]
         result = spark_matchup_driver(tile_ids, wkt.dumps(polygon), primary_ds, matchup_ds, parameter, time_tolerance,
                                       depth_tolerance, radius_tolerance, platforms)
-        for k, v in result.iteritems():
-            print "primary: %s\n\tmatches:\n\t\t%s" % (
+        for k, v in result.items():
+            print("primary: %s\n\tmatches:\n\t\t%s" % (
                 "lon: %s, lat: %s, time: %s, sst: %s" % (k.longitude, k.latitude, k.time, k.sst),
                 '\n\t\t'.join(
-                    ["lon: %s, lat: %s, time: %s, sst: %s" % (i.longitude, i.latitude, i.time, i.sst) for i in v]))
+                    ["lon: %s, lat: %s, time: %s, sst: %s" % (i.longitude, i.latitude, i.time, i.sst) for i in v])))
 
     def test_smap_match(self):
         from shapely.wkt import loads
@@ -286,11 +286,11 @@ class TestMatchup(unittest.TestCase):
                                                        fl='id')]
         result = spark_matchup_driver(tile_ids, wkt.dumps(polygon), primary_ds, matchup_ds, parameter, time_tolerance,
                                       depth_tolerance, radius_tolerance, platforms)
-        for k, v in result.iteritems():
-            print "primary: %s\n\tmatches:\n\t\t%s" % (
+        for k, v in result.items():
+            print("primary: %s\n\tmatches:\n\t\t%s" % (
                 "lon: %s, lat: %s, time: %s, sst: %s" % (k.longitude, k.latitude, k.time, k.sst),
                 '\n\t\t'.join(
-                    ["lon: %s, lat: %s, time: %s, sst: %s" % (i.longitude, i.latitude, i.time, i.sst) for i in v]))
+                    ["lon: %s, lat: %s, time: %s, sst: %s" % (i.longitude, i.latitude, i.time, i.sst) for i in v])))
 
     def test_ascatb_match(self):
         from shapely.wkt import loads
@@ -313,9 +313,9 @@ class TestMatchup(unittest.TestCase):
                                                        fl='id')]
         result = spark_matchup_driver(tile_ids, wkt.dumps(polygon), primary_ds, matchup_ds, parameter, time_tolerance,
                                       depth_tolerance, radius_tolerance, platforms)
-        for k, v in result.iteritems():
-            print "primary: %s\n\tmatches:\n\t\t%s" % (
+        for k, v in result.items():
+            print("primary: %s\n\tmatches:\n\t\t%s" % (
                 "lon: %s, lat: %s, time: %s, wind u,v: %s,%s" % (k.longitude, k.latitude, k.time, k.wind_u, k.wind_v),
                 '\n\t\t'.join(
                     ["lon: %s, lat: %s, time: %s, wind u,v: %s,%s" % (
-                        i.longitude, i.latitude, i.time, i.wind_u, i.wind_v) for i in v]))
+                        i.longitude, i.latitude, i.time, i.wind_u, i.wind_v) for i in v])))

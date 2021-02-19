@@ -13,10 +13,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import ConfigParser
+import configparser
 import importlib
 import logging
 import sys
+import os
 from functools import partial
 
 import pkg_resources
@@ -36,7 +37,7 @@ def inject_args_in_config(args, config):
     """
     log = logging.getLogger(__name__)
 
-    for t_opt in args._options.values():
+    for t_opt in list(args._options.values()):
         n = t_opt.name
         first_ = n.find('_')
         if first_ > 0:
@@ -58,11 +59,11 @@ if __name__ == "__main__":
 
     log = logging.getLogger(__name__)
 
-    webconfig = ConfigParser.RawConfigParser()
-    webconfig.readfp(pkg_resources.resource_stream(__name__, "config/web.ini"), filename='web.ini')
+    webconfig = configparser.RawConfigParser()
+    webconfig.read_file(open(os.path.join(os.path.dirname(__file__), "config", "web.ini")))
 
-    algorithm_config = ConfigParser.RawConfigParser()
-    algorithm_config.readfp(pkg_resources.resource_stream(__name__, "config/algorithms.ini"), filename='algorithms.ini')
+    algorithm_config = configparser.RawConfigParser()
+    algorithm_config.read_file(open(os.path.join(os.path.dirname(__file__), "config", "algorithms.ini")))
 
     define("debug", default=False, help="run in debug mode")
     define("port", default=webconfig.get("global", "server.socket_port"), help="run on the given port", type=int)

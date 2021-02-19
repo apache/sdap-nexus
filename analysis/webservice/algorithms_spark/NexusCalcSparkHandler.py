@@ -43,7 +43,7 @@ class NexusCalcSparkHandler(NexusCalcHandler):
         # max_concurrent_jobs = algorithm_config.getint("spark", "maxconcurrentjobs") if algorithm_config.has_section(
         #     "spark") and algorithm_config.has_option("spark", "maxconcurrentjobs") else 10
         max_concurrent_jobs = 10
-        self.spark_job_stack = list(["Job %s" % x for x in xrange(1, max_concurrent_jobs + 1)])
+        self.spark_job_stack = list(["Job %s" % x for x in range(1, max_concurrent_jobs + 1)])
         self.log = logging.getLogger(__name__)
 
         def with_spark_job_context(calc_func):
@@ -54,8 +54,8 @@ class NexusCalcSparkHandler(NexusCalcHandler):
                 try:
                     with NexusCalcSparkHandler.SparkJobContext(self.spark_job_stack) as job_context:
                         # TODO Pool and Job are forced to a 1-to-1 relationship
-                        calc_func.im_self._sc.setLocalProperty("spark.scheduler.pool", job_context.job_name)
-                        calc_func.im_self._sc.setJobGroup(job_context.job_name, "a spark job")
+                        calc_func.__self__._sc.setLocalProperty("spark.scheduler.pool", job_context.job_name)
+                        calc_func.__self__._sc.setJobGroup(job_context.job_name, "a spark job")
                         return calc_func(*args, **kwargs1)
                 except NexusCalcSparkHandler.SparkJobContext.MaxConcurrentJobsReached:
                     raise NexusProcessingException(code=503,

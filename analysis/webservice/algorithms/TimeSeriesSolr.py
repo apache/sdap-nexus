@@ -16,7 +16,7 @@
 
 import logging
 import traceback
-from cStringIO import StringIO
+from io import StringIO
 from datetime import datetime
 from multiprocessing.dummy import Pool, Manager
 
@@ -118,15 +118,15 @@ class TimeSeriesCalcHandlerImpl(NexusCalcHandler):
             for dayinseconds in daysinrange:
                 work_queue.put(
                     ('calc_average_on_day', min_lat, max_lat, min_lon, max_lon, ds, dayinseconds))
-            [work_queue.put(SENTINEL) for _ in xrange(0, maxprocesses)]
+            [work_queue.put(SENTINEL) for _ in range(0, maxprocesses)]
 
             # Start new processes to handle the work
             pool = Pool(maxprocesses)
-            [pool.apply_async(pool_worker, (work_queue, done_queue)) for _ in xrange(0, maxprocesses)]
+            [pool.apply_async(pool_worker, (work_queue, done_queue)) for _ in range(0, maxprocesses)]
             pool.close()
 
             # Collect the results as [(day (in ms), average difference for that day)]
-            for i in xrange(0, len(daysinrange)):
+            for i in range(0, len(daysinrange)):
                 result = done_queue.get()
                 try:
                     error_str = result['error']

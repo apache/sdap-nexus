@@ -25,4 +25,4 @@ class TestInitializer:
         pass
 
     def init(self, config):
-        print "*** TEST INITIALIZATION ***"
+        print("*** TEST INITIALIZATION ***")

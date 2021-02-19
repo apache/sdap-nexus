@@ -203,14 +203,14 @@ class ClimMapNexusSparkHandlerImpl(NexusCalcSparkHandler):
                                                         x[1] + val[1]),
                                         lambda x, y: (x[0] + y[0], x[1] + y[1]))
         avg_tiles = \
-            sum_count.map(lambda (bounds, (sum_tile, cnt_tile)):
-                          (bounds, [[{'avg': (sum_tile[y, x] / cnt_tile[y, x])
-                          if (cnt_tile[y, x] > 0) else 0.,
-                                      'cnt': cnt_tile[y, x]}
+            sum_count.map(lambda bounds_sum_tile_cnt_tile:
+                          (bounds_sum_tile_cnt_tile[0], [[{'avg': (bounds_sum_tile_cnt_tile[1][0][y, x] / bounds_sum_tile_cnt_tile[1][1][y, x])
+                          if (bounds_sum_tile_cnt_tile[1][1][y, x] > 0) else 0.,
+                                      'cnt': bounds_sum_tile_cnt_tile[1][1][y, x]}
                                      for x in
-                                     range(sum_tile.shape[1])]
+                                     range(bounds_sum_tile_cnt_tile[1][0].shape[1])]
                                     for y in
-                                    range(sum_tile.shape[0])])).collect()
+                                    range(bounds_sum_tile_cnt_tile[1][0].shape[0])])).collect()
 
         # Combine subset results to produce global map.
         #

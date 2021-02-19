@@ -46,7 +46,7 @@ REWRITTEN to point to the local copies.
 # See the bottom of the file for exact switches and example of use.
 
 import sys, os, re, string, getopt, types, getpass
-import urllib, urllib2, urlparse, time, shutil, socket, stat
+import urllib.request, urllib.parse, urllib.error, urllib.request, urllib.error, urllib.parse, urllib.parse, time, shutil, socket, stat
 from fnmatch import fnmatchcase
 from ftplib import FTP
 #import dataenc
@@ -128,7 +128,7 @@ def filelist(urlPaths, regSpecs=[], wildCards=[], needCredentials=False, userCre
             if not os.path.exists(workDir):
                 die("filelist: Cannot write to fetch directory %s" % fetchDir)
 
-        if isinstance(topPaths, types.StringType): topPaths = [topPaths]
+        if isinstance(topPaths, bytes): topPaths = [topPaths]
         regSpecs = [s for s in regSpecs if s != '' and s != None]
         wildCards = [s for s in wildCards if s != '' and s != None]
 
@@ -236,7 +236,7 @@ def filelist(urlPaths, regSpecs=[], wildCards=[], needCredentials=False, userCre
                                     # kludge, makedirs throws exception if any part of path exists
                                     pass
                                 if remote:
-                                    urllib.urlretrieve(fn, tmpFile)
+                                    urllib.request.urlretrieve(fn, tmpFile)
                                 else:
                                     shutil.copyfile(fn, tmpFile)
                                 os.rename(tmpFile, destFile)   # atomic rename of file into destDir
@@ -310,7 +310,7 @@ def shouldFetch(remote, destFile, fetchIfNewer, srcFileInfo):
 def _output(line, lines, stream=None):
     """Internal function: Add line to output lines and optionally print to stream."""
     lines.append(line)
-    if stream: print >>stream, line
+    if stream: print(line, file=stream)
 
 class FileInfo:
     """Holder class for those file info. elements that are consistent among local
@@ -365,7 +365,7 @@ class UserCredentials:
 
 def promptForCredentials(urls, httpProxy=None):
     if httpProxy == None:
-        httpProxy = raw_input('Enter HTTP proxy [none]: ')
+        httpProxy = input('Enter HTTP proxy [none]: ')
         if httpProxy == '': httpProxy = None
     credentials = UserCredentials(httpProxy)
     localUserName = getpass.getuser()
@@ -383,7 +383,7 @@ def promptForCredential(url, localUserName):
         defaultUserName = 'anonymous'
     else:
         defaultUserName = localUserName
-    username = raw_input('Need credentials for URL %s\nUsername [%s]: ' \
+    username = input('Need credentials for URL %s\nUsername [%s]: ' \
                          % (url, defaultUserName))
     if username == '': username = defaultUserName
     password = ''
@@ -391,7 +391,7 @@ def promptForCredential(url, localUserName):
         password = getpass.getpass()
     validInterval = [0, 1, 0]
     if password != '':
-        response = raw_input('Enter valid time period for credential [(days, hours, minutes) = 0 1 0]: ')
+        response = input('Enter valid time period for credential [(days, hours, minutes) = 0 1 0]: ')
         if response != '':
             validInterval = response.split()
     return (username, password, validInterval)
@@ -495,7 +495,7 @@ class DirListingParser(object):
     def parse(self, dir, listingHtml):
         """Return (dirs, files, infos)."""
         dirs = []; files = []; infos = []
-        raise NotImplementedError, "Override this method in sub class."
+        raise NotImplementedError("Override this method in sub class.")
     
 class ApacheDirListingParser(DirListingParser):
     """Parser class for apache."""
@@ -581,11 +581,11 @@ class HttpDirectoryWalker(DirectoryWalker):
             if self.userCredentials.httpProxy:
                 os.environ['http_proxy'] = self.userCredentials.httpProxy
                 # global kludge, default proxyHandler looks up proxy there
-            passwordMgr = urllib2.HTTPPasswordMgrWithDefaultRealm()
-            for url, cred in self.userCredentials.credentials.iteritems():
+            passwordMgr = urllib.request.HTTPPasswordMgrWithDefaultRealm()
+            for url, cred in self.userCredentials.credentials.items():
                 passwordMgr.add_password(None, url, cred.username, cred.password)
-            authHandler = urllib2.HTTPBasicAuthHandler(passwordMgr)
-            opener = urllib2.build_opener(authHandler)
+            authHandler = urllib.request.HTTPBasicAuthHandler(passwordMgr)
+            opener = urllib.request.build_opener(authHandler)
         else:
 #            opener = urllib2.build_opener()
             opener = None
@@ -603,8 +603,8 @@ class HttpDirectoryWalker(DirectoryWalker):
                 if self.opener:
                     response = self.opener.open(url)
                 else:
-                    response = urllib.urlopen(url)
-            except IOError, e:
+                    response = urllib.request.urlopen(url)
+            except IOError as e:
                 if hasattr(e, 'reason'):
                     warn('HttpDirectoryWalker: Error, failed to reach server because: %s' % e.reason)
                 elif hasattr(e, 'code'):
@@ -666,7 +666,7 @@ class HttpDirectoryWalker(DirectoryWalker):
                 line = '%s---------  1 ? ? %15d %s %s' % (type, size, dateTime, name)
                 info = FileInfo(line, size, dateTime)
                 infos.append(info)
-                print line
+                print(line)
         
         #try plugins
         else:
@@ -712,7 +712,7 @@ def walk(top, userCredentials=None, walkDirectories=True, topDown=True):
 def remoteUrl(url):
     """Returns True if the URL is remote; also returns protocol,
     net location (host:port), and path."""
-    protocol, netloc, path, params, query, fragment = urlparse.urlparse(url)
+    protocol, netloc, path, params, query, fragment = urllib.parse.urlparse(url)
     if protocol == '':
         return (False, protocol, netloc, path)
     else:
@@ -750,7 +750,8 @@ def main():
                           'fetchDir=', 'fetchIfNewer', 'fetchWithSubDirs', 'info',
                           'list', 'quiet', 'regex=', 'size', 'topOnly',
                           'url', 'verbose', 'wildcard=', 'xml'])
-    except getopt.GetoptError, (msg, bad_opt):
+    except getopt.GetoptError as xxx_todo_changeme:
+        (msg, bad_opt) = xxx_todo_changeme.args
         die("%s error: Bad option: %s, %s" % (argv[0], bad_opt, msg))
 
     regSpecs = []; wildCards = []; matchUrl=False; walkDirectories = True
@@ -798,11 +799,11 @@ def main():
 
     if quietMode:
         if listMode == 'match':
-            print matchedFiles
+            print(matchedFiles)
         elif listMode == 'fetch':
-            print fetchedFiles
+            print(fetchedFiles)
         elif listMode == 'destination':
-            print destinationFiles
+            print(destinationFiles)
         else:
             pass
 

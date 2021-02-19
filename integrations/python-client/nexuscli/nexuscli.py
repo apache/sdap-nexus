@@ -69,7 +69,7 @@ def set_target(url, use_session=True):
     """
     global target
     target = url
-    print("Target set to {}".format(target))
+    print(("Target set to {}".format(target)))
 
     if not use_session:
         global session

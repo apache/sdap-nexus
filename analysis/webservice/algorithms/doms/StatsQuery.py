@@ -13,8 +13,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import BaseDomsHandler
-import datafetch
+from . import BaseDomsHandler
+from . import datafetch
 from webservice.algorithms.NexusCalcHandler import NexusCalcHandler as BaseHandler
 from webservice.NexusHandler import nexus_handler
 

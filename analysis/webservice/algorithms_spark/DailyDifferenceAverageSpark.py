@@ -119,8 +119,8 @@ class DailyDifferenceAverageNexusImplSpark(NexusCalcSparkHandler):
                 reason="'endTime' argument is required. Can be int value seconds from epoch or string format YYYY-MM-DDTHH:mm:ssZ",
                 code=400)
 
-        start_seconds_from_epoch = long((start_time - EPOCH).total_seconds())
-        end_seconds_from_epoch = long((end_time - EPOCH).total_seconds())
+        start_seconds_from_epoch = int((start_time - EPOCH).total_seconds())
+        end_seconds_from_epoch = int((end_time - EPOCH).total_seconds())
 
         plot = request.get_boolean_arg("plot", default=False)
 
@@ -173,57 +173,57 @@ class DailyDifferenceAverageNexusImplSpark(NexusCalcSparkHandler):
             meta = {
                 "title": "Sea Surface Temperature (SST) Anomalies",
                 "description": "SST anomalies are departures from the 5-day pixel mean",
-                "units": u'\u00B0C',
-                "label": u'Difference from 5-Day mean (\u00B0C)'
+                "units": '\u00B0C',
+                "label": 'Difference from 5-Day mean (\u00B0C)'
             }
         elif 'chl' in dataset.lower():
             meta = {
                 "title": "Chlorophyll Concentration Anomalies",
                 "description": "Chlorophyll Concentration anomalies are departures from the 5-day pixel mean",
-                "units": u'mg m^-3',
-                "label": u'Difference from 5-Day mean (mg m^-3)'
+                "units": 'mg m^-3',
+                "label": 'Difference from 5-Day mean (mg m^-3)'
             }
         elif 'sla' in dataset.lower():
             meta = {
                 "title": "Sea Level Anomaly Estimate (SLA) Anomalies",
                 "description": "SLA anomalies are departures from the 5-day pixel mean",
-                "units": u'm',
-                "label": u'Difference from 5-Day mean (m)'
+                "units": 'm',
+                "label": 'Difference from 5-Day mean (m)'
             }
         elif 'sss' in dataset.lower():
             meta = {
                 "title": "Sea Surface Salinity (SSS) Anomalies",
                 "description": "SSS anomalies are departures from the 5-day pixel mean",
-                "units": u'psu',
-                "label": u'Difference from 5-Day mean (psu)'
+                "units": 'psu',
+                "label": 'Difference from 5-Day mean (psu)'
             }
         elif 'ccmp' in dataset.lower():
             meta = {
                 "title": "Wind Speed Anomalies",
                 "description": "Wind Speed anomalies are departures from the 1-day pixel mean",
-                "units": u'm/s',
-                "label": u'Difference from 1-Day mean (m/s)'
+                "units": 'm/s',
+                "label": 'Difference from 1-Day mean (m/s)'
             }
         elif 'trmm' in dataset.lower():
             meta = {
                 "title": "Precipitation Anomalies",
                 "description": "Precipitation anomalies are departures from the 5-day pixel mean",
-                "units": u'mm',
-                "label": u'Difference from 5-Day mean (mm)'
+                "units": 'mm',
+                "label": 'Difference from 5-Day mean (mm)'
             }
         else:
             meta = {
                 "title": "Anomalies",
                 "description": "Anomalies are departures from the 5-day pixel mean",
-                "units": u'',
-                "label": u'Difference from 5-Day mean'
+                "units": '',
+                "label": 'Difference from 5-Day mean'
             }
         return meta
 
 
 class DDAResult(NexusResults):
     def toImage(self):
-        from StringIO import StringIO
+        from io import StringIO
         import matplotlib.pyplot as plt
         from matplotlib.dates import date2num
 
@@ -234,7 +234,7 @@ class DDAResult(NexusResults):
 
         plt.xlabel('Date')
         plt.xticks(rotation=70)
-        plt.ylabel(u'Difference from 5-Day mean (\u00B0C)')
+        plt.ylabel('Difference from 5-Day mean (\u00B0C)')
         plt.title('Sea Surface Temperature (SST) Anomalies')
         plt.grid(True)
         plt.tight_layout()
@@ -359,7 +359,7 @@ def get_dataset_tile(tile_service, search_bounding_shape, tile_id):
     except IndexError:
         raise NoDatasetTile()
 
-    print "%s Time to load dataset tile %s" % (str(datetime.now() - the_time), dataset_tile.tile_id)
+    print("%s Time to load dataset tile %s" % (str(datetime.now() - the_time), dataset_tile.tile_id))
     return dataset_tile
 
 
@@ -388,7 +388,7 @@ def get_climatology_tile(tile_service, search_bounding_shape, tile_bounding_shap
         except IndexError:
             raise NoClimatologyTile()
 
-    print "%s Time to load climatology tile %s" % (str(datetime.now() - the_time), climatology_tile.tile_id)
+    print("%s Time to load climatology tile %s" % (str(datetime.now() - the_time), climatology_tile.tile_id))
     return climatology_tile
 
 
@@ -403,7 +403,7 @@ def generate_diff(data_tile, climatology_tile):
     date_in_seconds = int((datetime.combine(data_tile.min_time.date(), datetime.min.time()).replace(
         tzinfo=pytz.UTC) - EPOCH).total_seconds())
 
-    print "%s Time to generate diff between %s and %s" % (
-        str(datetime.now() - the_time), data_tile.tile_id, climatology_tile.tile_id)
+    print("%s Time to generate diff between %s and %s" % (
+        str(datetime.now() - the_time), data_tile.tile_id, climatology_tile.tile_id))
 
     yield (date_in_seconds, (diff_sum, diff_ct, diff_var))

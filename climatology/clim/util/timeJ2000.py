@@ -101,11 +101,11 @@ def to_J2000(input,format=None):
     if format: format=format.upper()
     
     #assume J2000 seconds for any bare number
-    if   isinstance(input,types.IntType) or isinstance(input,types.FloatType) or isinstance(input,types.LongType) or format=='J2000': return float(input)
+    if   isinstance(input,int) or isinstance(input,float) or isinstance(input,int) or format=='J2000': return float(input)
     #if it's a list, simple... will be interpretted as y,m,d,hh,mm,ss with 0's in any unspecified slot
-    elif isinstance(input,types.ListType) or isinstance(input,types.TupleType): return list_to_J2000(input)
+    elif isinstance(input,list) or isinstance(input,tuple): return list_to_J2000(input)
     #if it's a string, could be many things
-    elif isinstance(input,types.StringType):
+    elif isinstance(input,bytes):
         #strip off any fractional second information first
         p=input.find('.')
         frac=0.0
@@ -307,18 +307,18 @@ class IonoTime:
     def __cmp__(self,other):
         return cmp(self.sec,other.sec) 
     def __coerce__(self,other):
-        if isinstance(other,types.FloatType) or isinstance(other,types.IntType) or isinstance(other,types.LongType):
+        if isinstance(other,float) or isinstance(other,int) or isinstance(other,int):
             return (self.sec,other)
-        if isinstance(other,types.StringType):
+        if isinstance(other,bytes):
             return (from_J2000(self.sec,"YYYYMMDD_HHMMSS"),other)
-        if isinstance(other,types.ListType) or isinstance(other,types.TupleType):
+        if isinstance(other,list) or isinstance(other,tuple):
             return (from_J2000(self.sec,"LIST"),other)
     def __repr__(self):
         return from_J2000(self.sec,"YYYYMMDD_HHMMSS")
         
 def test():
-   print "Testing timeJ2000 routines:"
-   print "Checking to_J2000"
+   print("Testing timeJ2000 routines:")
+   print("Checking to_J2000")
    if not to_J2000("20040606"         )==139752000      : die("FAILED YYYYMMDD test")
    if not to_J2000("040606"           )==139752000      : die("FAILED YYMMDD test")
    if not to_J2000("20040606010101"   )==139755661      : die("FAILED YYYYMMDDHHMMSS test")
@@ -337,9 +337,9 @@ def test():
    if not to_J2000("00103",'YYDOY'    )==8769600        : die("FAILED YYDOY test")
    if not to_J2000("2004/06/06,01:01:01.1")==139755661.1: die("FAILED GAIMSTRING test")
    if not to_J2000("help158b01.04.tenet",'TENETHOURLY')==139755660.0  : die("FAILED TENETHOURLY test")
-   print "Passed to_J2000"
+   print("Passed to_J2000")
 
-   print "Checking from_J2000"
+   print("Checking from_J2000")
    if not from_J2000(139752000  ,"YYYYMMDD"       )=="20040606"             : die("FAILED YYYYMMDD test")
    if not from_J2000(139752000.1,"YYYYMMDD"       )=="20040606"             : die("FAILED YYYYMMDD test")
    if not from_J2000(139752000  ,"YYMMDD"         )=="040606"               : die("FAILED YYMMDD test")
@@ -361,9 +361,9 @@ def test():
    if not from_J2000(8769600    ,"YYDOY"          )=="00103"                : die("FAILED YYDOY test")
    if not from_J2000(139755661.1,"GAIMSTRING"     )=="2004/06/06,01:01:01.1": die("FAILED GAIMSTRING test")
    if not from_J2000(139755661.1,"TENETHOURLY",'help')=="help158b01.04.tenet": die("FAILED TENETHOURLY test")
-   print "Passed from_J2000"
+   print("Passed from_J2000")
 
-   print "Testing IonoTime"
+   print("Testing IonoTime")
    if not IonoTime(0)+"a"  =="20000101_120000a"     : die("FAILED string coersion test")
    if not IonoTime(0)+1.0  ==1                      : die("FAILED integer coersion test")
    if not IonoTime(0)+[1,2]==[2000,1,1,12,0,0,1,2]  : die("FAILED list coersion test")
@@ -373,7 +373,7 @@ def test():
    if not IonoTime(12) + IonoTime(10) == 22    : die("FAILED addition test")
    if not IonoTime(12).makemidnight().to('LOCALHMS',140) == "090000" : die("FAILED Midnight or LOCALHMS test")
    if not IonoTime(6576).floor('day').to('YYYYMMDDHHMMSS') == "20000101000000": die("FAILED floor test")
-   print "Passed IonoTime"
+   print("Passed IonoTime")
 
 
 def main(args):

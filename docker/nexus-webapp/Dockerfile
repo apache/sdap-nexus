@@ -63,7 +63,8 @@ RUN apk --no-cache add wget zlib && \
 COPY docker/nexus-webapp/install_conda.sh ./install_conda.sh
 RUN /tmp/install_conda.sh 
 
-RUN conda install python=2.7
+#RUN conda install python=2.7
+RUN conda install python=3.8
 RUN cd /usr/lib && ln -s libcom_err.so.2 libcom_err.so.3 && \ 
     cd /opt/conda/lib && \
     ln -s libnetcdf.so.11 libnetcdf.so.7 && \

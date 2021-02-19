@@ -23,7 +23,7 @@ import sys, os, re, datetime
 
 import numpy as np
 
-from split import splitByNDaysKeyed, groupByKeys, extractKeys
+from .split import splitByNDaysKeyed, groupByKeys, extractKeys
 
 
 def splitModisAod(seq, n):
@@ -154,17 +154,17 @@ class CCMPWind:
         Read a variable from a netCDF or HDF file and return a numpy masked array.
         If the URL is remote or HDFS, first retrieve the file into a cache directory.
         """
-        from variables import getVariables, close
+        from .variables import getVariables, close
         v = None
         if mask:
             variables = [variable, mask]
         else:
             variables = [variable]
         try:
-            from cache import retrieveFile
+            from .cache import retrieveFile
             path = retrieveFile(url, cachePath, hdfsPath)
         except:
-            print >> sys.stderr, 'readAndMask: Error, continuing without file %s' % url
+            print('readAndMask: Error, continuing without file %s' % url, file=sys.stderr)
             return v
 
         if CCMPWind.Variable in variables:
@@ -178,7 +178,7 @@ class CCMPWind:
             close(fh)
         else:
             try:
-                print >> sys.stderr, 'Reading variable %s from %s' % (variable, path)
+                print('Reading variable %s from %s' % (variable, path), file=sys.stderr)
                 var, fh = getVariables(path, variables, arrayOnly=True,
                                        set_auto_mask=True)  # return dict of variable objects by name
                 v = var[
@@ -186,7 +186,7 @@ class CCMPWind:
                 if v.shape[0] == 1: v = v[0]  # throw away trivial time dimension for CF-style files
                 close(fh)
             except:
-                print >> sys.stderr, 'readAndMask: Error, cannot read variable %s from file %s' % (variable, path)
+                print('readAndMask: Error, cannot read variable %s from file %s' % (variable, path), file=sys.stderr)
 
         return v
 
@@ -315,7 +315,7 @@ def ymd2doy(year, mon, day):
 
 
 def ymd2datetime(y, m, d):
-    y, m, d = map(int, (y, m, d))
+    y, m, d = list(map(int, (y, m, d)))
     return datetime.datetime(y, m, d)
 
 

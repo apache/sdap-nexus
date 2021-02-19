@@ -15,8 +15,8 @@
 
 import uuid
 
-import BaseDomsHandler
-import ResultsStorage
+from . import BaseDomsHandler
+from . import ResultsStorage
 from webservice.NexusHandler import nexus_handler
 from webservice.webmodel import NexusProcessingException
 

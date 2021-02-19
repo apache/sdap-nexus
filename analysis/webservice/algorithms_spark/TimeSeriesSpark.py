@@ -16,7 +16,7 @@
 import itertools
 import logging
 import traceback
-from cStringIO import StringIO
+from io import StringIO
 from datetime import datetime
 from functools import partial
 
@@ -151,8 +151,8 @@ class TimeSeriesSparkHandlerImpl(NexusCalcSparkHandler):
         apply_seasonal_cycle_filter = request.get_apply_seasonal_cycle_filter(default=False)
         apply_low_pass_filter = request.get_apply_low_pass_filter()
 
-        start_seconds_from_epoch = long((start_time - EPOCH).total_seconds())
-        end_seconds_from_epoch = long((end_time - EPOCH).total_seconds())
+        start_seconds_from_epoch = int((start_time - EPOCH).total_seconds())
+        end_seconds_from_epoch = int((end_time - EPOCH).total_seconds())
 
         nparts_requested = request.get_nparts()
         normalize_dates = request.get_normalize_dates()

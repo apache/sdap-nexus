@@ -19,7 +19,7 @@ Utilities to retrieve files and cache them at deterministic paths.
 
 """
 
-import sys, os, urlparse, urllib
+import sys, os, urllib.parse, urllib.request, urllib.parse, urllib.error
 
 # Directory to cache retrieved files in
 CachePath = '/tmp/cache'
@@ -27,10 +27,10 @@ CachePath = '/tmp/cache'
 
 def isLocalFile(url):
     '''Check if URL is a local path.'''
-    u = urlparse.urlparse(url)
+    u = urllib.parse.urlparse(url)
     if u.scheme == '' or u.scheme == 'file':
         if not os.path.exists(u.path):
-            print >>sys.stderr, 'isLocalFile: File at local path does not exist: %s' % u.path
+            print('isLocalFile: File at local path does not exist: %s' % u.path, file=sys.stderr)
         return (True, u.path)
     else:
         return (False, u.path)
@@ -54,18 +54,18 @@ def retrieveFileWeb(url, cachePath=CachePath, retries=3):
     fn = os.path.split(path)[1]
     outPath = os.path.join(cachePath, fn)
     if os.path.exists(outPath):
-        print >>sys.stderr, 'retrieveFile: Using cached file: %s' % outPath
+        print('retrieveFile: Using cached file: %s' % outPath, file=sys.stderr)
         return outPath
     else:
-        print >>sys.stderr, 'retrieveFile: Retrieving (URL) %s to %s' % (url, outPath)
-        for i in xrange(retries):
+        print('retrieveFile: Retrieving (URL) %s to %s' % (url, outPath), file=sys.stderr)
+        for i in range(retries):
             try:
-                urllib.urlretrieve(url, outPath)
+                urllib.request.urlretrieve(url, outPath)
                 return outPath
             except:
-                print >>sys.stderr, 'retrieveFile: Error retrieving file at URL: %s' % url
-                print >>sys.stderr, 'retrieveFile: Retrying ...'
-        print >>sys.stderr, 'retrieveFile: Fatal error, Cannot retrieve file at URL: %s' % url
+                print('retrieveFile: Error retrieving file at URL: %s' % url, file=sys.stderr)
+                print('retrieveFile: Retrying ...', file=sys.stderr)
+        print('retrieveFile: Fatal error, Cannot retrieve file at URL: %s' % url, file=sys.stderr)
         return None
 
 
@@ -73,7 +73,7 @@ def hdfsCopyFromLocal(src, dest):
     '''Copy local file into HDFS directory, overwriting using force switch.'''
     outPath = os.path.join(dest, os.path.split(src)[1])
     cmd = "hadoop fs -copyFromLocal -f %s %s" % (src, dest)
-    print >>sys.stderr, "Exec overwrite: %s" % cmd
+    print("Exec overwrite: %s" % cmd, file=sys.stderr)
     os.system(cmd)
     return outPath
 
@@ -82,6 +82,6 @@ def hdfsCopyToLocal(src, dest):
     outPath = os.path.join(dest, os.path.split(src)[1])
     os.unlink(outPath)
     cmd = "hadoop fs -copyToLocal %s %s" % (src, dest)
-    print >>sys.stderr, "Exec overwrite: %s" % cmd
+    print("Exec overwrite: %s" % cmd, file=sys.stderr)
     os.system(cmd)
     return outPath

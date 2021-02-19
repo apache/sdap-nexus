@@ -27,7 +27,7 @@ params = {'q': 'dataset_s:%s' % ds, 'sort': 'id', 'cursorMark': '*', 'rows': 500
 done = False
 while not done:
     response = solrcon.select(**params)
-    print len(response.results)
+    print(len(response.results))
     if params['cursorMark'] == response.nextCursorMark:
         done = True
 

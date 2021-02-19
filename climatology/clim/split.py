@@ -86,7 +86,7 @@ def extractKeys(s, regex, transformer=None):
     regex = re.compile(regex)
     mat = regex.search(s)
     if not mat:
-        print >>sys.stderr, 'extractKeys: Fatal error, regex %s does not match %s' % (regex.pattern, s)
+        print('extractKeys: Fatal error, regex %s does not match %s' % (regex.pattern, s), file=sys.stderr)
         sys.exit(1)
     else:
         keys = mat.groups()
@@ -143,7 +143,7 @@ def test1(args):
     fn = args[1]
     with open(fn, 'r') as f:
         for chunk in fixedSplit(f, n):
-            print ' '.join(chunk)
+            print(' '.join(chunk))
 
 def test2(args):
     regex = args[0]
@@ -151,7 +151,7 @@ def test2(args):
     fn = args[1]
     with open(fn, 'r') as f:
         for chunk in splitByKey(f, regex):
-            print ' '.join(chunk)
+            print(' '.join(chunk))
 
 def test3(args):
     '''Broken!'''
@@ -161,7 +161,7 @@ def test3(args):
     fn = args[2]
     with open(fn, 'r') as f:
         for chunk in splitByNDays(f, nDays, regex):
-            print chunk
+            print(chunk)
 
 def test4(args):
     '''Correct!'''
@@ -171,9 +171,9 @@ def test4(args):
     fn = args[2]
     with open(fn, 'r') as f:
         for chunk in splitByNDays(f, nDays, regex):
-            print
-            print '\n'.join(chunk)
-            print len(chunk)
+            print()
+            print('\n'.join(chunk))
+            print(len(chunk))
 
 def test5(args):
     '''Generate multi-line JSON for pyspark.'''
@@ -182,7 +182,7 @@ def test5(args):
     fn = args[2]
     with open(fn, 'r') as f:
         for chunk in splitByNDays(f, nDays, regex):
-            print json.dumps(chunk)
+            print(json.dumps(chunk))
 
 def test6(args):
     '''Generate keyed split by month for spark.'''
@@ -190,7 +190,7 @@ def test6(args):
     fn = args[1]
     with open(fn, 'r') as f:
         for chunk in splitByMonth(f, {'get': 'doy', 'regex': re.compile(regex)}):
-            print chunk
+            print(chunk)
 
 
 def main(args):

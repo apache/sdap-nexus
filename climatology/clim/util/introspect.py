@@ -33,17 +33,17 @@ def myArgs():
 
 def test():
     def func1(a, b, c):
-        print currentframe()
-        print getmodule(callingFrame())   # getmodule doesn't work on frame objects
+        print(currentframe())
+        print(getmodule(callingFrame()))   # getmodule doesn't work on frame objects
         args = myArgs()
-        print args
+        print(args)
         return a + b + c
 
     return func1(1, 2, 3)
 
 
 def main(args):
-    print test()
+    print(test())
 
 if __name__ == '__main__':
     main(sys.argv[1:])

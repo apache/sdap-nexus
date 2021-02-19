@@ -20,8 +20,8 @@ from multiprocessing.pool import ThreadPool
 
 import requests
 
-import geo
-import values
+from . import geo
+from . import values
 from webservice.webmodel import NexusProcessingException
 
 
@@ -78,10 +78,10 @@ def __fetchJson(url, params, trycount=1, maxtries=5):
     if trycount > maxtries:
         raise Exception("Maximum retries attempted.")
     if trycount > 1:
-        print "Retry #", trycount
+        print("Retry #", trycount)
     r = requests.get(url, params=params, timeout=500.000)
 
-    print r.url
+    print(r.url)
 
     if r.status_code != 200:
         return __fetchJson(url, params, trycount + 1, maxtries)
@@ -139,7 +139,7 @@ def __doQuery(endpoint, startTime, endTime, bbox, depth_min=None, depth_max=None
             return [], int(resultsRaw["totalResults"]), int(resultsRaw["startIndex"]), int(
                 resultsRaw["itemsPerPage"]), boundsConstrainer
     except:
-        print "Invalid or missing JSON in response."
+        print("Invalid or missing JSON in response.")
         traceback.print_exc()
         raise NexusProcessingException(reason="Invalid or missing JSON in response.")
         # return [], 0, startIndex, itemsPerPage, boundsConstrainer

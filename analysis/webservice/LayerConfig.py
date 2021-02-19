@@ -61,10 +61,10 @@ def isLayerEnabled(shortName, env):
 
 
 if __name__ == "__main__":
-    print isLayerEnabled("NCDC-L4LRblend-GLOB-AVHRR_OI", None)
-    print isLayerEnabled("NCDC-L4LRblend-GLOB-AVHRR_OI", "PROD")
-    print isLayerEnabled("NCDC-L4LRblend-GLOB-AVHRR_OI", "SIT")
+    print(isLayerEnabled("NCDC-L4LRblend-GLOB-AVHRR_OI", None))
+    print(isLayerEnabled("NCDC-L4LRblend-GLOB-AVHRR_OI", "PROD"))
+    print(isLayerEnabled("NCDC-L4LRblend-GLOB-AVHRR_OI", "SIT"))
 
-    print isLayerEnabled("TFLUX_ECCO_version4_release1", None)
-    print isLayerEnabled("TFLUX_ECCO_version4_release1", "PROD")
-    print isLayerEnabled("TFLUX_ECCO_version4_release1", "SIT")
+    print(isLayerEnabled("TFLUX_ECCO_version4_release1", None))
+    print(isLayerEnabled("TFLUX_ECCO_version4_release1", "PROD"))
+    print(isLayerEnabled("TFLUX_ECCO_version4_release1", "SIT"))

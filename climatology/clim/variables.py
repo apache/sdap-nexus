@@ -20,7 +20,7 @@ smart dataset discovery and variable caching behind it.
 
 """
 
-import sys, os, urlparse, time
+import sys, os, urllib.parse, time
 #from pyhdf.SD import SD, SDC
 import netCDF4
 #from pydap.client import open_url
@@ -30,7 +30,7 @@ import numpy as N
 def getVariables(url, varNames=None, vars={}, kind=None, arrayOnly=False, order='C', retries=2, sleep=1, set_auto_scale=True, set_auto_mask=True):
     """Interface function to get variables from many file formats or via DAP.  Here kludge for special case."""
     urlStr = url
-    url = urlparse.urlparse(url)
+    url = urllib.parse.urlparse(url)
     path = url.path
 
     if varNames is None:
@@ -58,7 +58,7 @@ def getVariables(url, varNames=None, vars={}, kind=None, arrayOnly=False, order=
         elif kind == 'hdf' or kind == 'hdf4':
             d = SD(path, SDC.READ)
             if varNames == 'ALL':
-                varNames = d.datasets().keys()
+                varNames = list(d.datasets().keys())
             for varName in varNames:
                 var = d.select(varName)
                 if arrayOnly:
@@ -78,7 +78,7 @@ def getVariables(url, varNames=None, vars={}, kind=None, arrayOnly=False, order=
             d.set_auto_scale(set_auto_scale)
             d.set_auto_mask(set_auto_mask)
             if varNames == 'ALL':
-                varNames = d.variables.keys()
+                varNames = list(d.variables.keys())
             for varName in varNames:
                 var = d.variables[varName]
                 if arrayOnly:
@@ -95,7 +95,7 @@ def getVariables(url, varNames=None, vars={}, kind=None, arrayOnly=False, order=
 
     else:
         if kind == 'dap':
-            print >>sys.stderr, 'DAP get of: %s' % urlStr
+            print('DAP get of: %s' % urlStr, file=sys.stderr)
             retries += 1
             retriesSave = retries
             while retries > 0:
@@ -105,12 +105,12 @@ def getVariables(url, varNames=None, vars={}, kind=None, arrayOnly=False, order=
                 except:
                     retries -= 1
                     if retries == 0:
-                        print >>sys.stderr, 'getVariables: Error, DAP cannot open: %s' % urlStr
+                        print('getVariables: Error, DAP cannot open: %s' % urlStr, file=sys.stderr)
                         return (vars, d)
                     time.sleep(sleep)
 
             if varNames == 'ALL':
-                varNames = d.keys()
+                varNames = list(d.keys())
 
             for varName in varNames:
                 var = d[varName]
@@ -126,7 +126,7 @@ def getVariables(url, varNames=None, vars={}, kind=None, arrayOnly=False, order=
                     except:
                         retries -= 1
                         if retries == 0:
-                            print >>sys.stderr, 'getVariables: Error, DAP cannot get variable: %s' % varName
+                            print('getVariables: Error, DAP cannot get variable: %s' % varName, file=sys.stderr)
                         else:
                             time.sleep(sleep)
 

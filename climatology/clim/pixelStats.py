@@ -24,16 +24,17 @@ Simple code to be run using Spark or Dpark.
 
 """
 
-import sys, os, urllib, re, time
+import sys, os, urllib.request, urllib.parse, urllib.error, re, time
 import numpy as N
 import matplotlib
+from functools import reduce
 matplotlib.use('Agg')
 import matplotlib.pylab as M
 from netCDF4 import Dataset, default_fillvals
 
-from variables import getVariables, close
-from split import splitByMonth
-from cache import retrieveFile, CachePath
+from .variables import getVariables, close
+from .split import splitByMonth
+from .cache import retrieveFile, CachePath
 
 #from pyspark import SparkContext    # both imported below when needed
 #import dpark
@@ -55,7 +56,7 @@ def pixelStats(urls, variable, nPartitions, timeFromFilename=TimeFromFilenameDOY
     if baseKey == 'month':
         urlsByKey = splitByMonth(urls, timeFromFilename)
     else:
-        print >>sys.stderr, 'pixelStats: Unrecognized groupByKey "%s".  Must be in %s' % (baseKey, str(groupByKeys))
+        print('pixelStats: Unrecognized groupByKey "%s".  Must be in %s' % (baseKey, str(groupByKeys)), file=sys.stderr)
         sys.exit(1)
 
     if mode == 'sequential':
@@ -81,7 +82,7 @@ def pixelStats(urls, variable, nPartitions, timeFromFilename=TimeFromFilenameDOY
     else:
         stats = None
         if mode not in modes:
-            print >>sys.stderr, 'pixelStats: Unrecognized mode  "%s".  Must be in %s' % (mode, str(modes))
+            print('pixelStats: Unrecognized mode  "%s".  Must be in %s' % (mode, str(modes)), file=sys.stderr)
             sys.exit(1)
     return stats
 
@@ -95,7 +96,7 @@ def accumulate(urls, variable, accumulators, cachePath=CachePath):
             path = retrieveFile(url, cachePath)
             fn = os.path.split(path)[1]
         except:
-            print >>sys.stderr, 'accumulate: Error, continuing without file %s' % url
+            print('accumulate: Error, continuing without file %s' % url, file=sys.stderr)
             continue
 
         try:
@@ -103,7 +104,7 @@ def accumulate(urls, variable, accumulators, cachePath=CachePath):
             v = var[variable]   # masked array
             close(fh)
         except:
-            print >>sys.stderr, 'accumulate: Error, cannot read variable %s from file %s' % (variable, path)
+            print('accumulate: Error, cannot read variable %s from file %s' % (variable, path), file=sys.stderr)
             continue
 
         if i == 0:
@@ -133,7 +134,7 @@ def combine(a, b):
     '''Combine accumulators by summing.'''
     keys, a = a
     b = b[1]
-    for k in a.keys():
+    for k in list(a.keys()):
         if k != 'min' and k != 'max':
             a[k] += b[k]
     if 'min' in accumulators:
@@ -173,7 +174,7 @@ def writeStats(urls, variable, stats, outFile, copyToHdfsPath=None, format='NETC
     '''
     keys, stats = stats
     dout = Dataset(outFile, 'w', format=format)
-    print >>sys.stderr, 'Writing %s ...' % outFile
+    print('Writing %s ...' % outFile, file=sys.stderr)
     dout.setncattr('variable', variable)
     dout.setncattr('urls', str(urls))
     dout.setncattr('level', str(keys))
@@ -193,7 +194,7 @@ def writeStats(urls, variable, stats, outFile, copyToHdfsPath=None, format='NETC
         var[:] = din.variables[coord][:]
 
     # Add stats variables
-    for k,v in stats.items():
+    for k,v in list(stats.items()):
         var = dout.createVariable(k, stats[k].dtype, coordinates)
         var[:] = v[:]
 
@@ -218,7 +219,7 @@ def main(args):
     return totalStats(args)
 
 if __name__ == '__main__':
-    print main(sys.argv[1:])
+    print(main(sys.argv[1:]))
 
 
 # python pixelStats.py urls_sst_daynight_2003_3days.txt sst sequential 1 modis_sst_stats_test.nc

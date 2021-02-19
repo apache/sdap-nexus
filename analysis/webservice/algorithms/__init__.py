@@ -14,19 +14,19 @@
 # limitations under the License.
 
 
-import Capabilities
-import CorrelationMap
-import DailyDifferenceAverage
-import DataInBoundsSearch
-import DataSeriesList
-import DelayTest
-import ErrorTosserTest
-import Heartbeat
-import HofMoeller
-import LongitudeLatitudeMap
-import StandardDeviationSearch
-import TestInitializer
-import TileSearch
-import TimeAvgMap
-import TimeSeries
-import TimeSeriesSolr
+from . import Capabilities
+from . import CorrelationMap
+from . import DailyDifferenceAverage
+from . import DataInBoundsSearch
+from . import DataSeriesList
+from . import DelayTest
+from . import ErrorTosserTest
+from . import Heartbeat
+from . import HofMoeller
+from . import LongitudeLatitudeMap
+from . import StandardDeviationSearch
+from . import TestInitializer
+from . import TileSearch
+from . import TimeAvgMap
+from . import TimeSeries
+from . import TimeSeriesSolr

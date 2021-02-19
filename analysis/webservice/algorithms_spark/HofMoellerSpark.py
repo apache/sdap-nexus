@@ -14,7 +14,7 @@
 # limitations under the License.
 
 import itertools
-from cStringIO import StringIO
+from io import StringIO
 from datetime import datetime
 from functools import partial
 
@@ -191,8 +191,8 @@ class BaseHoffMoellerSparkHandlerImpl(NexusCalcSparkHandler):
                     request.get_start_datetime().strftime(ISO_8601), request.get_end_datetime().strftime(ISO_8601)),
                 code=400)
 
-        start_seconds_from_epoch = long((start_time - EPOCH).total_seconds())
-        end_seconds_from_epoch = long((end_time - EPOCH).total_seconds())
+        start_seconds_from_epoch = int((start_time - EPOCH).total_seconds())
+        end_seconds_from_epoch = int((end_time - EPOCH).total_seconds())
         normalize_dates = request.get_normalize_dates()
 
         return ds, bounding_polygon, start_seconds_from_epoch, end_seconds_from_epoch, normalize_dates
@@ -324,7 +324,7 @@ def spark_driver(sc, latlon, tile_service_factory, nexus_tiles_spark, metrics_ca
 
     # Convert the tuples to dictionary entries and combine coordinates
     # with the same time stamp.  Here we have input key = (time)
-    results = results.values().combineByKey(create_combiner, merge_value, merge_combiner).values().collect()
+    results = list(results.values()).combineByKey(create_combiner, merge_value, merge_combiner).values().collect()
 
     reduce_duration = (datetime.now() - reduce_start).total_seconds()
     metrics_callback(reduce=reduce_duration)
@@ -358,7 +358,7 @@ class LatitudeTimeHoffMoellerSparkHandlerImpl(BaseHoffMoellerSparkHandlerImpl):
                                                                                   metrics_callback=metrics_record.record_metrics,
                                                                                   fetch_data=False))]
 
-        print ("Got {} tiles".format(len(nexus_tiles_spark)))
+        print(("Got {} tiles".format(len(nexus_tiles_spark))))
         if len(nexus_tiles_spark) == 0:
             raise NoDataException(reason="No data found for selected timeframe")
 
@@ -368,7 +368,7 @@ class LatitudeTimeHoffMoellerSparkHandlerImpl(BaseHoffMoellerSparkHandlerImpl):
                                nexus_tiles_spark,
                                metrics_record.record_metrics,
                                normalize_dates)
-        results = filter(None, results)
+        results = [_f for _f in results if _f]
         results = sorted(results, key=lambda entry: entry['time'])
         for i in range(len(results)):
             results[i]['lats'] = sorted(results[i]['lats'],
@@ -414,7 +414,7 @@ class LongitudeTimeHoffMoellerSparkHandlerImpl(BaseHoffMoellerSparkHandlerImpl):
                                                                                   metrics_callback=metrics_record.record_metrics,
                                                                                   fetch_data=False))]
 
-        print ("Got {} tiles".format(len(nexus_tiles_spark)))
+        print(("Got {} tiles".format(len(nexus_tiles_spark))))
         if len(nexus_tiles_spark) == 0:
             raise NoDataException(reason="No data found for selected timeframe")
 
@@ -425,7 +425,7 @@ class LongitudeTimeHoffMoellerSparkHandlerImpl(BaseHoffMoellerSparkHandlerImpl):
                                metrics_record.record_metrics,
                                normalize_dates)
 
-        results = filter(None, results)
+        results = [_f for _f in results if _f]
         results = sorted(results, key=lambda entry: entry["time"])
         for i in range(len(results)):
             results[i]['lons'] = sorted(results[i]['lons'],

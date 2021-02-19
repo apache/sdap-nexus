@@ -17,8 +17,8 @@ from datetime import datetime
 
 from pytz import timezone
 
-import BaseDomsHandler
-import datafetch
+from . import BaseDomsHandler
+from . import datafetch
 from webservice.algorithms.NexusCalcHandler import NexusCalcHandler as BaseHandler
 from webservice.NexusHandler import nexus_handler
 

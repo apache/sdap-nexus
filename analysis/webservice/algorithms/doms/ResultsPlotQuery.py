@@ -13,10 +13,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import BaseDomsHandler
-import histogramplot
-import mapplot
-import scatterplot
+from . import BaseDomsHandler
+from . import histogramplot
+from . import mapplot
+from . import scatterplot
 from webservice.NexusHandler import nexus_handler
 
 

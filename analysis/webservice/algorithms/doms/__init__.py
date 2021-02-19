@@ -14,21 +14,21 @@
 # limitations under the License.
 
 
-import BaseDomsHandler
-import DatasetListQuery
-import DomsInitialization
-import MatchupQuery
-import MetadataQuery
-import ResultsPlotQuery
-import ResultsRetrieval
-import ResultsStorage
-import StatsQuery
-import ValuesQuery
-import config
-import datafetch
-import fetchedgeimpl
-import geo
-import insitusubset
-import subsetter
-import values
-import workerthread
+from . import BaseDomsHandler
+from . import DatasetListQuery
+from . import DomsInitialization
+from . import MatchupQuery
+from . import MetadataQuery
+from . import ResultsPlotQuery
+from . import ResultsRetrieval
+from . import ResultsStorage
+from . import StatsQuery
+from . import ValuesQuery
+from . import config
+from . import datafetch
+from . import fetchedgeimpl
+from . import geo
+from . import insitusubset
+from . import subsetter
+from . import values
+from . import workerthread

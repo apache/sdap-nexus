@@ -22,4 +22,4 @@ b = np.arange(3).reshape(1, 3)
 # np.linalg.lstsq(A,b)
 # This gives "LinAlgError: Incompatible dimensions" exception
 
-print np.linalg.lstsq(A, b.T)
+print(np.linalg.lstsq(A, b.T))

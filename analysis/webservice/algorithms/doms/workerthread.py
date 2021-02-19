@@ -48,7 +48,7 @@ def wait(threads, startFirst=False, poll=0.5):
 
 
 def foo(param1, param2):
-    print param1, param2
+    print(param1, param2)
     return "c"
 
 
@@ -58,4 +58,4 @@ if __name__ == "__main__":
     thread.start()
     while not thread.completed:
         threading._sleep(0.5)
-    print thread.results
+    print(thread.results)

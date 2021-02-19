@@ -18,14 +18,14 @@
 
 # -- Project information -----------------------------------------------------
 
-project = u'incubator-sdap-nexus'
-copyright = u'2018, Apache SDAP'
-author = u'Apache SDAP'
+project = 'incubator-sdap-nexus'
+copyright = '2018, Apache SDAP'
+author = 'Apache SDAP'
 
 # The short X.Y version
-version = u'1.0'
+version = '1.0'
 # The full version, including alpha/beta/rc tags
-release = u'1.0.0-SNAPSHOT'
+release = '1.0.0-SNAPSHOT'
 
 
 # -- General configuration ---------------------------------------------------
@@ -66,7 +66,7 @@ language = None
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
 # This pattern also affects html_static_path and html_extra_path .
-exclude_patterns = [u'_build', 'Thumbs.db', '.DS_Store']
+exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
 
 # The name of the Pygments (syntax highlighting) style to use.
 pygments_style = 'sphinx'
@@ -131,8 +131,8 @@ latex_elements = {
 # (source start file, target name, title,
 #  author, documentclass [howto, manual, or own class]).
 latex_documents = [
-    (master_doc, 'incubator-sdap-nexus.tex', u'incubator-sdap-nexus Documentation',
-     u'Apache SDAP', 'manual'),
+    (master_doc, 'incubator-sdap-nexus.tex', 'incubator-sdap-nexus Documentation',
+     'Apache SDAP', 'manual'),
 ]
 
 
@@ -141,7 +141,7 @@ latex_documents = [
 # One entry per manual page. List of tuples
 # (source start file, name, description, authors, manual section).
 man_pages = [
-    (master_doc, 'incubator-sdap-nexus', u'incubator-sdap-nexus Documentation',
+    (master_doc, 'incubator-sdap-nexus', 'incubator-sdap-nexus Documentation',
      [author], 1)
 ]
 
@@ -152,7 +152,7 @@ man_pages = [
 # (source start file, target name, title, author,
 #  dir menu entry, description, category)
 texinfo_documents = [
-    (master_doc, 'incubator-sdap-nexus', u'incubator-sdap-nexus Documentation',
+    (master_doc, 'incubator-sdap-nexus', 'incubator-sdap-nexus Documentation',
      author, 'incubator-sdap-nexus', 'One line description of project.',
      'Miscellaneous'),
 ]

@@ -14,7 +14,7 @@
 # limitations under the License.
 
 
-import ConfigParser
+import configparser
 import logging
 
 import pkg_resources
@@ -35,7 +35,7 @@ class DomsInitializer:
         log = logging.getLogger(__name__)
         log.info("*** STARTING DOMS INITIALIZATION ***")
 
-        domsconfig = ConfigParser.SafeConfigParser()
+        domsconfig = configparser.SafeConfigParser()
         domsconfig.read(DomsInitializer._get_config_files('domsconfig.ini'))
         domsconfig = self.override_config(domsconfig, config)
 

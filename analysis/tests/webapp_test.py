@@ -1,6 +1,6 @@
 import unittest
 import pkg_resources
-import ConfigParser
+import configparser
 import sys
 import logging
 import mock
@@ -24,7 +24,7 @@ class MyTestCase(unittest.TestCase):
         mock_option.value.return_value = '60'
         mock_options._options = {'solr-time-out' : mock_option}
 
-        algorithm_config = ConfigParser.RawConfigParser()
+        algorithm_config = configparser.RawConfigParser()
         algorithm_config.readfp(pkg_resources.resource_stream(__name__, "config/algorithms.ini"),
                                 filename='algorithms.ini')
 
@@ -39,7 +39,7 @@ class MyTestCase(unittest.TestCase):
         mock_option.value.return_value = '60'
         mock_options._options = {'multiprocessing-maxprocesses': mock_option}
 
-        algorithm_config = ConfigParser.RawConfigParser()
+        algorithm_config = configparser.RawConfigParser()
         algorithm_config.readfp(pkg_resources.resource_stream(__name__, "config/algorithms.ini"),
                                 filename='algorithms.ini')
 
@@ -55,7 +55,7 @@ class MyTestCase(unittest.TestCase):
         mock_option.value.return_value = '8080'
         mock_options._options = {'port': mock_option}
 
-        algorithm_config = ConfigParser.RawConfigParser()
+        algorithm_config = configparser.RawConfigParser()
         algorithm_config.readfp(pkg_resources.resource_stream(__name__, "config/algorithms.ini"),
                                 filename='algorithms.ini')
 

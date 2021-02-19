@@ -14,14 +14,14 @@
 # limitations under the License.
 
 import string
-from cStringIO import StringIO
+from io import StringIO
 from multiprocessing import Process, Manager
 
 import matplotlib
 import matplotlib.pyplot as plt
 
-import BaseDomsHandler
-import ResultsStorage
+from . import BaseDomsHandler
+from . import ResultsStorage
 
 if not matplotlib.get_backend():
     matplotlib.use('Agg')

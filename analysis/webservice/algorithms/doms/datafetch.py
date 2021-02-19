@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import fetchedgeimpl
+from . import fetchedgeimpl
 
 
 def getCount(endpoint, startTime, endTime, bbox, depth_min, depth_max, platforms=None):
