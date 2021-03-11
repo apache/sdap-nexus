@@ -310,7 +310,7 @@ class NexusTileService(object):
                                       fetch_data=False, rows=len(tile_ids))
         polys = []
         for tile in tiles:
-            polys.append(box(tile.bbox.min_lon, tile.bbox.min_lat, tile.bbox.max_lon, tile.bbox.max_lat))
+            polys.append(box(tile.bbox.min_lon[0], tile.bbox.min_lat[0], tile.bbox.max_lon[0], tile.bbox.max_lat[0]))
         return box(*MultiPolygon(polys).bounds)
 
     def get_min_time(self, tile_ids, ds=None):

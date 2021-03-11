@@ -131,8 +131,8 @@ class Matchup(NexusCalcSparkHandler):
     }
     singleton = True
 
-    def __init__(self, algorithm_config=None, sc=None):
-        NexusCalcSparkHandler.__init__(self, algorithm_config=algorithm_config, sc=sc)
+    def __init__(self, algorithm_config=None, sc=None, tile_service_factory=None):
+        NexusCalcSparkHandler.__init__(self, algorithm_config=algorithm_config, sc=sc, tile_service_factory=tile_service_factory)
         self.log = logging.getLogger(__name__)
 
     def parse_arguments(self, request):
@@ -227,6 +227,7 @@ class Matchup(NexusCalcSparkHandler):
                                                              sort=['tile_min_time_dt asc', 'tile_min_lon asc',
                                                                    'tile_min_lat asc'], rows=5000)]
 
+        self.log.debug('Found %s tile_ids', len(tile_ids))
         # Call spark_matchup
         self.log.debug("Calling Spark Driver")
         try:
@@ -601,6 +602,9 @@ def match_satellite_to_insitu(tile_ids, primary_b, matchup_b, parameter_b, tt_b,
                                                       parameter_b.value, rt_b.value, lonlat_proj, aeqd_proj) for tile_id
                         in tile_ids]
 
+    # Filter out 'None' matches
+    match_generators = [match for match in match_generators if match is not None]
+
     return chain(*match_generators)
 
 
@@ -612,6 +616,12 @@ def match_tile_to_point_generator(tile_service, tile_id, m_tree, edge_results, s
     # Load tile
     try:
         the_time = datetime.now()
+        tiles = tile_service.mask_tiles_to_polygon(wkt.loads(search_domain_bounding_wkt),
+                                                  tile_service.find_tile_by_id(tile_id))
+
+        if len(tiles) == 0:
+            print('Tile is empty after masking spatially. Skipping this tile.')
+            return
         tile = tile_service.mask_tiles_to_polygon(wkt.loads(search_domain_bounding_wkt),
                                                   tile_service.find_tile_by_id(tile_id))[0]
         print("%s Time to load tile %s" % (str(datetime.now() - the_time), tile_id))
@@ -677,10 +687,11 @@ def query_edge(dataset, variable, startTime, endTime, bbox, platform, depth_min,
               "platform": platform,
               "itemsPerPage": itemsPerPage, "startIndex": startIndex, "stats": str(stats).lower()}
 
+    dataset_url = edge_endpoints.getEndpointByName(dataset)['url']
     if session is not None:
-        edge_request = session.get(edge_endpoints.getEndpointByName(dataset)['url'], params=params)
+        edge_request = session.get(dataset_url, params=params)
     else:
-        edge_request = requests.get(edge_endpoints.getEndpointByName(dataset)['url'], params=params)
+        edge_request = requests.get(dataset_url, params=params)
 
     edge_request.raise_for_status()
     edge_response = json.loads(edge_request.text)
