@@ -56,9 +56,9 @@ class DomsInitializer:
 
         if cassPolicy == 'DCAwareRoundRobinPolicy':
             dc_policy = DCAwareRoundRobinPolicy(cassDatacenter)
+            token_policy = TokenAwarePolicy(dc_policy)
         elif cassPolicy == 'WhiteListRoundRobinPolicy':
-            dc_policy = WhiteListRoundRobinPolicy([cassHost])
-        token_policy = TokenAwarePolicy(dc_policy)
+            token_policy = WhiteListRoundRobinPolicy([cassHost])
 
         if cassUsername and cassPassword:
             auth_provider = PlainTextAuthProvider(username=cassUsername, password=cassPassword)

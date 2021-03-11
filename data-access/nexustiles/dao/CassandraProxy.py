@@ -175,14 +175,15 @@ class CassandraProxy(object):
     def __open(self):
         if self.__cass_dc_policy == 'DCAwareRoundRobinPolicy':
             dc_policy = DCAwareRoundRobinPolicy(self.__cass_local_DC)
+            token_policy = TokenAwarePolicy(dc_policy)
         elif self.__cass_dc_policy == 'WhiteListRoundRobinPolicy':
-            dc_policy = WhiteListRoundRobinPolicy([self.__cass_url])
+            token_policy = WhiteListRoundRobinPolicy([self.__cass_url])
 
         if self.__cass_username and self.__cass_password:
             auth_provider = PlainTextAuthProvider(username=self.__cass_username, password=self.__cass_password)
         else:
             auth_provider = None
-        token_policy = TokenAwarePolicy(dc_policy)
+
         connection.setup([host for host in self.__cass_url.split(',')], self.__cass_keyspace,
                          protocol_version=self.__cass_protocol_version, load_balancing_policy=token_policy,
                          port=self.__cass_port,
