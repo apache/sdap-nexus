@@ -24,6 +24,7 @@ import pkg_resources
 from cassandra.cluster import Cluster
 from cassandra.policies import TokenAwarePolicy, DCAwareRoundRobinPolicy
 from cassandra.query import BatchStatement
+from cassandra.auth import PlainTextAuthProvider
 from pytz import UTC
 
 
@@ -36,18 +37,23 @@ class AbstractResultsContainer:
 
     def __enter__(self):
         domsconfig = configparser.RawConfigParser()
-        domsconfig.readfp(pkg_resources.resource_stream(__name__, "domsconfig.ini"), filename='domsconfig.ini')
+        domsconfig.read_string(
+            pkg_resources.resource_string(__name__, "domsconfig.ini").decode('utf-8'))
 
         cassHost = domsconfig.get("cassandra", "host")
         cassKeyspace = domsconfig.get("cassandra", "keyspace")
         cassDatacenter = domsconfig.get("cassandra", "local_datacenter")
         cassVersion = int(domsconfig.get("cassandra", "protocol_version"))
+        cassUsername = domsconfig.get("cassandra", "username")
+        cassPassword = domsconfig.get("cassandra", "password")
+
+        auth_provider = PlainTextAuthProvider(username=cassUsername, password=cassPassword)
 
         dc_policy = DCAwareRoundRobinPolicy(cassDatacenter)
         token_policy = TokenAwarePolicy(dc_policy)
 
         self._cluster = Cluster([host for host in cassHost.split(',')], load_balancing_policy=token_policy,
-                                protocol_version=cassVersion)
+                                protocol_version=cassVersion, auth_provider=auth_provider)
 
         self._session = self._cluster.connect(cassKeyspace)
         return self
