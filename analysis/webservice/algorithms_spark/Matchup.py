@@ -602,9 +602,6 @@ def match_satellite_to_insitu(tile_ids, primary_b, matchup_b, parameter_b, tt_b,
                                                       parameter_b.value, rt_b.value, lonlat_proj, aeqd_proj) for tile_id
                         in tile_ids]
 
-    # Filter out 'None' matches
-    match_generators = [match for match in match_generators if match is not None]
-
     return chain(*match_generators)
 
 
