@@ -460,9 +460,21 @@ class NexusTileService(object):
                 pass
 
             try:
-                tile.bbox = BBox(
-                    solr_doc['tile_min_lat'], solr_doc['tile_max_lat'],
-                    solr_doc['tile_min_lon'], solr_doc['tile_max_lon'])
+                min_lat = solr_doc['tile_min_lat']
+                min_lon = solr_doc['tile_min_lon']
+                max_lat = solr_doc['tile_max_lat']
+                max_lon = solr_doc['tile_max_lon']
+
+                if isinstance(min_lat, list):
+                    min_lat = min_lat[0]
+                if isinstance(min_lon, list):
+                    min_lon = min_lon[0]
+                if isinstance(max_lat, list):
+                    max_lat = max_lat[0]
+                if isinstance(max_lon, list):
+                    max_lon = max_lon[0]
+
+                tile.bbox = BBox(min_lat, max_lat, min_lon, max_lon)
             except KeyError:
                 pass
 
