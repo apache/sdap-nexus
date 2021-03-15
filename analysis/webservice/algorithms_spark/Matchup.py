@@ -616,17 +616,13 @@ def match_tile_to_point_generator(tile_service, tile_id, m_tree, edge_results, s
     # Load tile
     try:
         the_time = datetime.now()
-        tiles = tile_service.mask_tiles_to_polygon(wkt.loads(search_domain_bounding_wkt),
-                                                  tile_service.find_tile_by_id(tile_id))
-
-        if len(tiles) == 0:
-            print('Tile is empty after masking spatially. Skipping this tile.')
-            return
-        tile = tiles[0]
+        tile = tile_service.mask_tiles_to_polygon(wkt.loads(search_domain_bounding_wkt),
+                                                  tile_service.find_tile_by_id(tile_id))[0]
         print("%s Time to load tile %s" % (str(datetime.now() - the_time), tile_id))
     except IndexError:
         # This should only happen if all measurements in a tile become masked after applying the bounding polygon
-        raise StopIteration
+        print('Tile is empty after masking spatially. Skipping this tile.')
+        return
 
     # Convert valid tile lat,lon tuples to UTM tuples
     the_time = datetime.now()
