@@ -114,18 +114,25 @@ if __name__ == "__main__":
                 spark = SparkSession.builder.appName("nexus-analysis").getOrCreate()
                 spark_context = spark.sparkContext
 
+            args = dict(clazz=clazzWrapper,
+                        tile_service_factory=tile_service_factory,
+                        sc=spark_context,
+                        thread_pool=request_thread_pool)
+            if clazzWrapper == webservice.algorithms_spark.Matchup.Matchup or issubclass(clazzWrapper, webservice.algorithms.doms.BaseDomsHandler.BaseDomsQueryCalcHandler):
+                args['config'] = algorithm_config
+
             handlers.append((clazzWrapper.path,
                              NexusRequestHandler,
-                             dict(clazz=clazzWrapper,
-                                  tile_service_factory=tile_service_factory,
-                                  sc=spark_context,
-                                  thread_pool=request_thread_pool)))
+                             args))
         else:
+            args = dict(clazz=clazzWrapper,
+                        tile_service_factory=tile_service_factory,
+                        thread_pool=request_thread_pool)
+            if clazzWrapper == webservice.algorithms.doms.ResultsRetrieval.DomsResultsRetrievalHandler:
+                args['config'] = algorithm_config
             handlers.append((clazzWrapper.path,
                              NexusRequestHandler,
-                             dict(clazz=clazzWrapper,
-                                  tile_service_factory=tile_service_factory,
-                                  thread_pool=request_thread_pool)))
+                             args))
 
     class VersionHandler(tornado.web.RequestHandler):
         def get(self):

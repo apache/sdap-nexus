@@ -29,8 +29,9 @@ class DomsResultsRetrievalHandler(BaseDomsHandler.BaseDomsQueryCalcHandler):
     params = {}
     singleton = True
 
-    def __init__(self):
-        BaseDomsHandler.BaseDomsQueryCalcHandler.__init__(self)
+    def __init__(self, tile_service_factory, config=None):
+        BaseDomsHandler.BaseDomsQueryCalcHandler.__init__(self, tile_service_factory)
+        self.config = config
 
     def calc(self, computeOptions, **args):
         execution_id = computeOptions.get_argument("id", None)
@@ -42,7 +43,7 @@ class DomsResultsRetrievalHandler(BaseDomsHandler.BaseDomsQueryCalcHandler):
 
         simple_results = computeOptions.get_boolean_arg("simpleResults", default=False)
 
-        with ResultsStorage.ResultsRetrieval() as storage:
+        with ResultsStorage.ResultsRetrieval(self.config) as storage:
             params, stats, data = storage.retrieveResults(execution_id, trim_data=simple_results)
 
         return BaseDomsHandler.DomsQueryResults(results=data, args=params, details=stats, bounds=None, count=None,

@@ -34,7 +34,7 @@ setup(
     packages=['nexustiles', 'nexustiles.model', 'nexustiles.dao'],
     package_data={'nexustiles': ['config/datastores.ini.default', 'config/datastores.ini']},
     platforms='any',
-    python_requires='~=2.7',
+    python_requires='~=3.8',
     install_requires=pip_requirements,
     classifiers=[
         'Development Status :: 1 - Pre-Alpha',

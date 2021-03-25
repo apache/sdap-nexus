@@ -25,7 +25,6 @@ from math import cos, radians
 import numpy as np
 import pyproj
 import requests
-from nexustiles.nexustiles import NexusTileService
 from pytz import timezone, UTC
 from scipy import spatial
 from shapely import wkt
@@ -131,9 +130,11 @@ class Matchup(NexusCalcSparkHandler):
     }
     singleton = True
 
-    def __init__(self, algorithm_config=None, sc=None, tile_service_factory=None):
+    def __init__(self, algorithm_config=None, sc=None, tile_service_factory=None, config=None):
         NexusCalcSparkHandler.__init__(self, algorithm_config=algorithm_config, sc=sc, tile_service_factory=tile_service_factory)
         self.log = logging.getLogger(__name__)
+        self.tile_service_factory = tile_service_factory
+        self.config = config
 
     def parse_arguments(self, request):
         # Parse input arguments
@@ -214,7 +215,7 @@ class Matchup(NexusCalcSparkHandler):
         depth_min, depth_max, time_tolerance, radius_tolerance, \
         platforms, match_once, result_size_limit = self.parse_arguments(request)
 
-        with ResultsStorage() as resultsStorage:
+        with ResultsStorage(self.config) as resultsStorage:
 
             execution_id = str(resultsStorage.insertExecution(None, start, None, None))
 
@@ -233,7 +234,7 @@ class Matchup(NexusCalcSparkHandler):
         try:
             spark_result = spark_matchup_driver(tile_ids, wkt.dumps(bounding_polygon), primary_ds_name,
                                                 matchup_ds_names, parameter_s, depth_min, depth_max, time_tolerance,
-                                                radius_tolerance, platforms, match_once, sc=self._sc)
+                                                radius_tolerance, platforms, match_once, self.tile_service_factory, sc=self._sc)
         except Exception as e:
             self.log.exception(e)
             raise NexusProcessingException(reason="An unknown error occurred while computing matches", code=500)
@@ -272,7 +273,7 @@ class Matchup(NexusCalcSparkHandler):
         matches = Matchup.convert_to_matches(spark_result)
 
         def do_result_insert():
-            with ResultsStorage() as storage:
+            with ResultsStorage(self.config) as storage:
                 storage.insertResults(results=matches, params=args, stats=details,
                                       startTime=start, completeTime=end, userEmail="",
                                       execution_id=execution_id)
@@ -440,7 +441,7 @@ DRIVER_LOCK = Lock()
 
 
 def spark_matchup_driver(tile_ids, bounding_wkt, primary_ds_name, matchup_ds_names, parameter, depth_min, depth_max,
-                         time_tolerance, radius_tolerance, platforms, match_once, sc=None):
+                         time_tolerance, radius_tolerance, platforms, match_once, tile_service_factory, sc=None):
     from functools import partial
 
     with DRIVER_LOCK:
@@ -462,7 +463,7 @@ def spark_matchup_driver(tile_ids, bounding_wkt, primary_ds_name, matchup_ds_nam
     rdd_filtered = rdd.mapPartitions(
         partial(match_satellite_to_insitu, primary_b=primary_b, matchup_b=matchup_b, parameter_b=parameter_b, tt_b=tt_b,
                 rt_b=rt_b, platforms_b=platforms_b, bounding_wkt_b=bounding_wkt_b, depth_min_b=depth_min_b,
-                depth_max_b=depth_max_b), preservesPartitioning=True) \
+                depth_max_b=depth_max_b, tile_service_factory=tile_service_factory), preservesPartitioning=True) \
         .filter(lambda p_m_tuple: abs(
         iso_time_to_epoch(p_m_tuple[0].time) - iso_time_to_epoch(p_m_tuple[1].time)) <= time_tolerance)
 
@@ -521,12 +522,13 @@ def add_meters_to_lon_lat(lon, lat, meters):
 
 
 def match_satellite_to_insitu(tile_ids, primary_b, matchup_b, parameter_b, tt_b, rt_b, platforms_b,
-                              bounding_wkt_b, depth_min_b, depth_max_b):
+                              bounding_wkt_b, depth_min_b, depth_max_b, tile_service_factory):
     the_time = datetime.now()
     tile_ids = list(tile_ids)
     if len(tile_ids) == 0:
         return []
-    tile_service = NexusTileService()
+
+    tile_service = tile_service_factory()
 
     # Determine the spatial temporal extents of this partition of tiles
     tiles_bbox = tile_service.get_bounding_box(tile_ids)

@@ -29,23 +29,26 @@ from pytz import UTC
 
 
 class AbstractResultsContainer:
-    def __init__(self):
+    def __init__(self, config=None):
         self._log = logging.getLogger(__name__)
         self._log.info("Creating DOMS Results Storage Instance")
 
         self._session = None
+        self._config = configparser.RawConfigParser()
+        self._config.read(AbstractResultsContainer._get_config_files('domsconfig.ini'))
+
+        if config:
+            self.override_config(config)
+        else:
+            print('Config NOT provided from params...')
 
     def __enter__(self):
-        domsconfig = configparser.RawConfigParser()
-        domsconfig.read_string(
-            pkg_resources.resource_string(__name__, "domsconfig.ini").decode('utf-8'))
-
-        cassHost = domsconfig.get("cassandra", "host")
-        cassKeyspace = domsconfig.get("cassandra", "keyspace")
-        cassDatacenter = domsconfig.get("cassandra", "local_datacenter")
-        cassVersion = int(domsconfig.get("cassandra", "protocol_version"))
-        cassUsername = domsconfig.get("cassandra", "username")
-        cassPassword = domsconfig.get("cassandra", "password")
+        cassHost = self._config.get("cassandra", "host")
+        cassKeyspace = self._config.get("cassandra", "keyspace")
+        cassDatacenter = self._config.get("cassandra", "local_datacenter")
+        cassVersion = int(self._config.get("cassandra", "protocol_version"))
+        cassUsername = self._config.get("cassandra", "username")
+        cassPassword = self._config.get("cassandra", "password")
 
         auth_provider = PlainTextAuthProvider(username=cassUsername, password=cassPassword)
 
@@ -67,10 +70,31 @@ class AbstractResultsContainer:
         time = (dt - epoch).total_seconds() * 1000.0
         return int(time)
 
+    def override_config(self, config):
+        for section in config.sections():
+            if self._config.has_section(section):
+                for option in config.options(section):
+                    if config.get(section, option) is not None:
+                        self._config.set(section, option, config.get(section, option))
+
+    @staticmethod
+    def _get_config_files(filename):
+        log = logging.getLogger(__name__)
+        candidates = []
+        extensions = ['.default', '']
+        for extension in extensions:
+            try:
+                candidate = pkg_resources.resource_filename(__name__, filename + extension)
+                log.info('use config file {}'.format(filename + extension))
+                candidates.append(candidate)
+            except KeyError as ke:
+                log.warning('configuration file {} not found'.format(filename + extension))
+        return candidates
+
 
 class ResultsStorage(AbstractResultsContainer):
-    def __init__(self):
-        AbstractResultsContainer.__init__(self)
+    def __init__(self, config=None):
+        AbstractResultsContainer.__init__(self, config)
 
     def insertResults(self, results, params, stats, startTime, completeTime, userEmail, execution_id=None):
         if isinstance(execution_id, str):
@@ -191,8 +215,8 @@ class ResultsStorage(AbstractResultsContainer):
 
 
 class ResultsRetrieval(AbstractResultsContainer):
-    def __init__(self):
-        AbstractResultsContainer.__init__(self)
+    def __init__(self, config=None):
+        AbstractResultsContainer.__init__(self, config)
 
     def retrieveResults(self, execution_id, trim_data=False):
         if isinstance(execution_id, str):

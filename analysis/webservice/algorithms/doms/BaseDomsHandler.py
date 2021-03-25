@@ -26,7 +26,7 @@ from pytz import timezone, UTC
 
 from . import config
 from . import geo
-from webservice.algorithms.NexusCalcHandler import NexusCalcHandler as BaseHandler
+from webservice.algorithms.NexusCalcHandler import NexusCalcHandler
 from webservice.webmodel import NexusResults
 
 EPOCH = timezone('UTC').localize(datetime(1970, 1, 1))
@@ -44,9 +44,9 @@ import netCDF4
 import tempfile
 
 
-class BaseDomsQueryCalcHandler(BaseHandler):
-    def __init__(self):
-        BaseHandler.__init__(self)
+class BaseDomsQueryCalcHandler(NexusCalcHandler):
+    def __init__(self, tile_service_factory):
+        NexusCalcHandler.__init__(self, tile_service_factory)
 
     def getDataSourceByName(self, source):
         for s in config.ENDPOINTS:
