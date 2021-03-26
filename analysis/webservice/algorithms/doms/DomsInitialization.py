@@ -47,6 +47,10 @@ class DomsInitializer:
         cassDatacenter = domsconfig.get("cassandra", "local_datacenter")
         cassVersion = int(domsconfig.get("cassandra", "protocol_version"))
         cassPolicy = domsconfig.get("cassandra", "dc_policy")
+        try:
+            cassCreateKeyspaceGranted = domsconfig.get("cassandra", "create_keyspace_granted")
+        except NoOptionError:
+            cassCreateKeyspaceGranted = "True"
 
         log.info("Cassandra Host(s): %s" % (cassHost))
         log.info("Cassandra Keyspace: %s" % (cassKeyspace))
@@ -72,7 +76,11 @@ class DomsInitializer:
                      auth_provider=auth_provider) as cluster:
             session = cluster.connect()
 
-            self.createKeyspace(session, cassKeyspace)
+            if cassCreateKeyspaceGranted in ["True", "true"]:
+                self.createKeyspace(session, cassKeyspace)
+            else:
+                session.set_keyspace(cassKeyspace)
+
             self.createTables(session)
 
     def override_config(self, first, second):
