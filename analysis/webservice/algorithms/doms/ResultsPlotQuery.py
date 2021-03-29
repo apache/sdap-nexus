@@ -34,8 +34,8 @@ class DomsResultsPlotHandler(BaseDomsHandler.BaseDomsQueryCalcHandler):
     params = {}
     singleton = True
 
-    def __init__(self):
-        BaseDomsHandler.BaseDomsQueryCalcHandler.__init__(self)
+    def __init__(self, tile_service_factory):
+        BaseDomsHandler.BaseDomsQueryCalcHandler.__init__(self, tile_service_factory)
 
     def calc(self, computeOptions, **args):
         id = computeOptions.get_argument("id", None)

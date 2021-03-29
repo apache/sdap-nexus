@@ -13,8 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import string
-from io import StringIO
+import io
 from multiprocessing import Process, Manager
 
 import matplotlib
@@ -40,18 +39,16 @@ PARAMETER_TO_UNITS = {
 def render(d, x, y, z, primary, secondary, parameter):
     fig, ax = plt.subplots()
 
-    ax.set_title(string.upper("%s vs. %s" % (primary, secondary)))
-
+    ax.set_title(f'{primary} vs. {secondary}'.upper())
     units = PARAMETER_TO_UNITS[parameter] if parameter in PARAMETER_TO_UNITS else PARAMETER_TO_UNITS[
         "sst"]
     ax.set_ylabel("%s %s" % (secondary, units))
     ax.set_xlabel("%s %s" % (primary, units))
 
     ax.scatter(x, y)
-
-    sio = StringIO()
-    plt.savefig(sio, format='png')
-    d['plot'] = sio.getvalue()
+    buf = io.BytesIO()
+    plt.savefig(buf, format='png')
+    d['plot'] = buf.getvalue()
 
 
 class DomsScatterPlotQueryResults(BaseDomsHandler.DomsQueryResults):

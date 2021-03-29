@@ -13,8 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import string
-from io import StringIO
+import io
 from multiprocessing import Process, Manager
 
 import matplotlib
@@ -56,7 +55,7 @@ def render(d, lats, lons, z, primary, secondary, parameter):
     fig = plt.figure()
     ax = fig.add_axes([0.1, 0.1, 0.8, 0.8])
 
-    ax.set_title(string.upper("%s vs. %s" % (primary, secondary)))
+    ax.set_title(f'{primary} vs. {secondary}')
     # ax.set_ylabel('Latitude')
     # ax.set_xlabel('Longitude')
 
@@ -103,9 +102,9 @@ def render(d, lats, lons, z, primary, secondary, parameter):
     units = PARAMETER_TO_UNITS[parameter] if parameter in PARAMETER_TO_UNITS else PARAMETER_TO_UNITS["sst"]
     cb.set_label("Difference %s" % units)
 
-    sio = StringIO()
-    plt.savefig(sio, format='png')
-    plot = sio.getvalue()
+    buf = io.BytesIO()
+    plt.savefig(buf, format='png')
+    plot = buf.getvalue()
     if d is not None:
         d['plot'] = plot
     return plot
