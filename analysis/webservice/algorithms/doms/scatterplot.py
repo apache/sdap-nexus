@@ -78,8 +78,8 @@ def renderAsync(x, y, z, primary, secondary, parameter):
     return d['plot']
 
 
-def createScatterPlot(id, parameter):
-    with ResultsStorage.ResultsRetrieval() as storage:
+def createScatterPlot(id, parameter, config=None):
+    with ResultsStorage.ResultsRetrieval(config) as storage:
         params, stats, data = storage.retrieveResults(id)
 
     primary = params["primary"]

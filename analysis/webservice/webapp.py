@@ -128,7 +128,7 @@ if __name__ == "__main__":
             args = dict(clazz=clazzWrapper,
                         tile_service_factory=tile_service_factory,
                         thread_pool=request_thread_pool)
-            if clazzWrapper == webservice.algorithms.doms.ResultsRetrieval.DomsResultsRetrievalHandler:
+            if clazzWrapper == webservice.algorithms.doms.ResultsRetrieval.DomsResultsRetrievalHandler or clazzWrapper == webservice.algorithms.doms.ResultsPlotQuery.DomsResultsPlotHandler:
                 args['config'] = algorithm_config
             handlers.append((clazzWrapper.path,
                              NexusRequestHandler,

@@ -93,8 +93,8 @@ def renderAsync(x, primary, secondary, parameter, norm_and_curve):
     return d['plot']
 
 
-def createHistogramPlot(id, parameter, norm_and_curve=False):
-    with ResultsStorage.ResultsRetrieval() as storage:
+def createHistogramPlot(id, parameter, norm_and_curve=False, config=None):
+    with ResultsStorage.ResultsRetrieval(config) as storage:
         params, stats, data = storage.retrieveResults(id)
 
     primary = params["primary"]

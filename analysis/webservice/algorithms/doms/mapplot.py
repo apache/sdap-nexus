@@ -137,8 +137,8 @@ def renderAsync(x, y, z, primary, secondary, parameter):
     return d['plot']
 
 
-def createMapPlot(id, parameter):
-    with ResultsStorage.ResultsRetrieval() as storage:
+def createMapPlot(id, parameter, config=None):
+    with ResultsStorage.ResultsRetrieval(config) as storage:
         params, stats, data = storage.retrieveResults(id)
 
     primary = params["primary"]
