@@ -13,8 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import string
-from io import StringIO
+import io
 from multiprocessing import Process, Manager
 
 import matplotlib
@@ -57,9 +56,9 @@ class DomsHistogramPlotQueryResults(BaseDomsHandler.DomsQueryResults):
 
 def render(d, x, primary, secondary, parameter, norm_and_curve=False):
     fig, ax = plt.subplots()
-    fig.suptitle(string.upper("%s vs. %s" % (primary, secondary)), fontsize=14, fontweight='bold')
+    fig.suptitle(f'{primary} vs. {secondary}', fontsize=14, fontweight='bold')
 
-    n, bins, patches = plt.hist(x, 50, normed=norm_and_curve, facecolor='green', alpha=0.75)
+    n, bins, patches = plt.hist(x, 50, facecolor='green', alpha=0.75)
 
     if norm_and_curve:
         mean = np.mean(x)
@@ -80,9 +79,9 @@ def render(d, x, primary, secondary, parameter, norm_and_curve=False):
 
     plt.grid(True)
 
-    sio = StringIO()
-    plt.savefig(sio, format='png')
-    d['plot'] = sio.getvalue()
+    buf = io.BytesIO()
+    plt.savefig(buf, format='png')
+    d['plot'] = buf.getvalue()
 
 
 def renderAsync(x, primary, secondary, parameter, norm_and_curve):
@@ -94,8 +93,8 @@ def renderAsync(x, primary, secondary, parameter, norm_and_curve):
     return d['plot']
 
 
-def createHistogramPlot(id, parameter, norm_and_curve=False):
-    with ResultsStorage.ResultsRetrieval() as storage:
+def createHistogramPlot(id, parameter, norm_and_curve=False, config=None):
+    with ResultsStorage.ResultsRetrieval(config) as storage:
         params, stats, data = storage.retrieveResults(id)
 
     primary = params["primary"]

@@ -13,9 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-FROM nexusjpl/alpine-pyspark:2.4.4
-#FROM python:2.7
-#FROM alpine:3.12
+FROM nexusjpl/alpine-pyspark:3.1.1
 
 
 MAINTAINER Apache SDAP "dev@sdap.apache.org"
@@ -25,14 +23,16 @@ ARG CONDA_VERSION="4.7.12.1"
 ARG CONDA_MD5="81c773ff87af5cfac79ab862942ab6b3"
 ARG CONDA_DIR="/opt/conda"
 
-ENV PYTHONPATH=${PYTHONPATH}:/opt/spark/python:/opt/spark/python/lib/py4j-0.10.7-src.zip:/opt/spark/python/lib/pyspark.zip/python:/usr/lib \
+ENV  \
+    PYTHONPATH=/opt/conda/share/py4j/py4j0.10.9.2.jar \
     NEXUS_SRC=/tmp/incubator-sdap-nexus \
-    PROJ_LIB=/opt/conda/lib/python2.7/site-packages/pyproj/data	\
+    PROJ_LIB=/opt/conda/lib/python3.8/site-packages/pyproj/data	\
     PATH="$CONDA_DIR/bin:$PATH" \
     PYTHONDONTWRITEBYTECODE=1 \
-    PYSPARK_DRIVER_PYTHON=/opt/conda/bin/python \
-    PYSPARK_PYTHON=/opt/conda/bin/python \
-    LD_LIBRARY_PATH=/usr/lib 
+    SPARK_HOME=/opt/spark \
+    PYSPARK_DRIVER_PYTHON=/opt/conda/lib/python3.8 \
+    PYSPARK_PYTHON=/opt/conda/lib/python3.8 \
+    LD_LIBRARY_PATH=/usr/lib
 
 RUN apk add --update --no-cache \
     bzip2 \
@@ -63,7 +63,6 @@ RUN apk --no-cache add wget zlib && \
 COPY docker/nexus-webapp/install_conda.sh ./install_conda.sh
 RUN /tmp/install_conda.sh 
 
-#RUN conda install python=2.7
 RUN conda install python=3.8
 RUN cd /usr/lib && ln -s libcom_err.so.2 libcom_err.so.3 && \ 
     cd /opt/conda/lib && \
@@ -86,17 +85,20 @@ COPY analysis /incubator-sdap-nexus/analysis
 COPY tools /incubator-sdap-nexus/tools
 
 WORKDIR /incubator-sdap-nexus/data-access
-RUN python setup.py install
+RUN python3 setup.py install
 
 WORKDIR /incubator-sdap-nexus/analysis
-RUN python setup.py install
+RUN python3 setup.py install
 
 WORKDIR /incubator-sdap-nexus/tools/deletebyquery
-RUN pip install -r requirements.txt
+RUN pip3 install cassandra-driver==3.20.1 --install-option="--no-cython"
+RUN pip3 install pyspark py4j
+RUN pip3 install -r requirements.txt
+RUN pip3 install cython
 RUN rm requirements.txt
 
 WORKDIR /incubator-sdap-nexus
 
 # Upgrade kubernetes client jar from the default version
-RUN rm /opt/spark/jars/kubernetes-client-4.1.2.jar
-ADD https://repo1.maven.org/maven2/io/fabric8/kubernetes-client/4.4.2/kubernetes-client-4.4.2.jar /opt/spark/jars
+RUN rm /opt/spark/jars/kubernetes-client-4.12.0.jar
+ADD https://repo1.maven.org/maven2/io/fabric8/kubernetes-client/4.12.0/kubernetes-client-4.12.0.jar /opt/spark/jars

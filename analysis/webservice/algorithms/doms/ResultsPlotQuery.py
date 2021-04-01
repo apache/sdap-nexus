@@ -34,8 +34,9 @@ class DomsResultsPlotHandler(BaseDomsHandler.BaseDomsQueryCalcHandler):
     params = {}
     singleton = True
 
-    def __init__(self):
-        BaseDomsHandler.BaseDomsQueryCalcHandler.__init__(self)
+    def __init__(self, tile_service_factory, config=None):
+        BaseDomsHandler.BaseDomsQueryCalcHandler.__init__(self, tile_service_factory)
+        self.config = config
 
     def calc(self, computeOptions, **args):
         id = computeOptions.get_argument("id", None)
@@ -46,10 +47,10 @@ class DomsResultsPlotHandler(BaseDomsHandler.BaseDomsQueryCalcHandler):
         normAndCurve = computeOptions.get_boolean_arg("normandcurve", False)
 
         if plotType == PlotTypes.SCATTER:
-            return scatterplot.createScatterPlot(id, parameter)
+            return scatterplot.createScatterPlot(id, parameter, config=self.config)
         elif plotType == PlotTypes.MAP:
-            return mapplot.createMapPlot(id, parameter)
+            return mapplot.createMapPlot(id, parameter, config=self.config)
         elif plotType == PlotTypes.HISTOGRAM:
-            return histogramplot.createHistogramPlot(id, parameter, normAndCurve)
+            return histogramplot.createHistogramPlot(id, parameter, normAndCurve, config=self.config)
         else:
             raise Exception("Unsupported plot type '%s' specified." % plotType)

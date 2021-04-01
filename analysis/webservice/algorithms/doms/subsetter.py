@@ -93,8 +93,8 @@ class DomsResultsRetrievalHandler(BaseDomsHandler.BaseDomsQueryCalcHandler):
     }
     singleton = True
 
-    def __init__(self):
-        BaseDomsHandler.BaseDomsQueryCalcHandler.__init__(self)
+    def __init__(self, tile_service_factory):
+        BaseDomsHandler.BaseDomsQueryCalcHandler.__init__(self, tile_service_factory)
         self.log = logging.getLogger(__name__)
 
     def parse_arguments(self, request):
@@ -204,7 +204,7 @@ class DomsResultsRetrievalHandler(BaseDomsHandler.BaseDomsQueryCalcHandler):
                 primary_temp_file, primary_temp_file_path = tempfile.mkstemp(suffix='.csv')
                 download_file(primary_url, primary_temp_file_path, session, params=primary_params)
 
-            if len(matchup_ds_names) > 0:
+            if matchup_ds_names is not None and len(matchup_ds_names) > 0:
                 # Download matchup
                 matchup_downloads = {}
                 for matchup_ds in matchup_ds_names:

@@ -11,7 +11,8 @@ class NexusZIPRenderer(object):
         tornado_handler.set_header("Content-Type", "application/zip")
         tornado_handler.set_header("Content-Disposition", "filename=\"%s\"" % self._request.get_argument('filename', "download.zip"))
         try:
-            self.write(result.toZip())
+            tornado_handler.write(result.toZip())
+            tornado_handler.finish()
         except:
             traceback.print_exc(file=sys.stdout)
             raise NexusProcessingException(reason="Unable to convert results to Zip.")

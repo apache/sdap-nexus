@@ -11,7 +11,8 @@ class NexusCSVRenderer(object):
         tornado_handler.set_header("Content-Type", "text/csv")
         tornado_handler.set_header("Content-Disposition", "filename=\"%s\"" % self._request.get_argument('filename', "download.csv"))
         try:
-            self.write(result.toCSV())
+            tornado_handler.write(result.toCSV())
+            tornado_handler.finish()
         except:
             traceback.print_exc(file=sys.stdout)
             raise NexusProcessingException(reason="Unable to convert results to CSV.")

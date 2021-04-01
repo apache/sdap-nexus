@@ -108,8 +108,8 @@ class DomsResultsRetrievalHandler(BaseDomsHandler.BaseDomsQueryCalcHandler):
     ]
     singleton = True
 
-    def __init__(self):
-        BaseDomsHandler.BaseDomsQueryCalcHandler.__init__(self)
+    def __init__(self, tile_service_factory):
+        BaseDomsHandler.BaseDomsQueryCalcHandler.__init__(self, tile_service_factory)
         self.log = logging.getLogger(__name__)
 
     def parse_arguments(self, request):
