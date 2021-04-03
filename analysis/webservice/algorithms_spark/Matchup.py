@@ -69,7 +69,7 @@ class Matchup(NexusCalcSparkHandler):
         "parameter": {
             "name": "Match-Up Parameter",
             "type": "string",
-            "description": "The parameter of interest used for the match up. One of 'sst', 'sss', 'wind'. Required"
+            "description": "The parameter of interest used for the match up. One of 'sst', 'sss', 'wind'. Optional"
         },
         "startTime": {
             "name": "Start Time",
@@ -152,8 +152,8 @@ class Matchup(NexusCalcSparkHandler):
         if matchup_ds_names is None:
             raise NexusProcessingException(reason="'matchup' argument is required", code=400)
 
-        parameter_s = request.get_argument('parameter', 'sst')
-        if parameter_s not in ['sst', 'sss', 'wind']:
+        parameter_s = request.get_argument('parameter')
+        if parameter_s and parameter_s not in ['sst', 'sss', 'wind']:
             raise NexusProcessingException(
                 reason="Parameter %s not supported. Must be one of 'sst', 'sss', 'wind'." % parameter_s, code=400)
 
@@ -356,11 +356,11 @@ class DomsPoint(object):
         point.data_id = "%s[%s]" % (tile.tile_id, nexus_point.index)
 
         # TODO Not an ideal solution; but it works for now.
-        if parameter == 'sst':
+        if parameter == 'sst' or parameter == None:
             point.sst = nexus_point.data_val.item()
-        elif parameter == 'sss':
+        if parameter == 'sss' or parameter == None:
             point.sss = nexus_point.data_val.item()
-        elif parameter == 'wind':
+        if parameter == 'wind' or parameter == None:
             point.wind_u = nexus_point.data_val.item()
             try:
                 point.wind_v = tile.meta_data['wind_v'][tuple(nexus_point.index)].item()
@@ -374,7 +374,7 @@ class DomsPoint(object):
                 point.wind_speed = tile.meta_data['wind_speed'][tuple(nexus_point.index)].item()
             except (KeyError, IndexError):
                 pass
-        else:
+        if parameter not in ('sst', 'sss', 'wind', None):
             raise NotImplementedError('%s not supported. Only sst, sss, and wind parameters are supported.' % parameter)
 
         point.longitude = nexus_point.longitude.item()
