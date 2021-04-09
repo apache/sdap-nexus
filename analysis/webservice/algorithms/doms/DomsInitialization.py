@@ -49,7 +49,7 @@ class DomsInitializer:
         cassPolicy = domsconfig.get("cassandra", "dc_policy")
         try:
             cassCreateKeyspaceGranted = domsconfig.get("cassandra", "create_keyspace_granted")
-        except NoOptionError:
+        except configparser.NoOptionError:
             cassCreateKeyspaceGranted = "True"
 
         log.info("Cassandra Host(s): %s" % (cassHost))
