@@ -518,6 +518,11 @@ class NexusTileService(object):
             except KeyError:
                 pass
 
+            try:
+                tile.var_name = solr_doc['tile_var_name_s']
+            except KeyError:
+                pass
+
             tiles.append(tile)
 
         return tiles

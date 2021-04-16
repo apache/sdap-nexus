@@ -6,8 +6,7 @@ rootWebpage:
 webapp:
   enabled: true
   distributed:
-    image: nexusjpl/nexus-webapp:distributed.0.4.0
-
+    image: nexusjpl/nexus-webapp:distributed.0.4.1
     ## Use any of the driver configuration options available at
     ## https://github.com/GoogleCloudPlatform/spark-on-k8s-operator/blob/master/docs/user-guide.md
     driver:
@@ -68,11 +67,11 @@ ingestion:
 
     ## path is the path on either local filesystem or NFS mount at which
     ## the granule files are stored. This will be ignored if S3 ingestion is enabled.
-    path: 
+    path:
 
     s3:
       ## If bucket has a value, S3 ingestion will be enabled (and nfsServer will be ignored even if it has a value).
-      bucket: 
+      bucket:
 
       ## awsCredsEnvs can include any environment variables that contain AWS credentials
       awsCredsEnvs: {}
@@ -85,7 +84,7 @@ ingestion:
 
     ## Name of a ConfigMap containing the Collections Config YAML.
     ## Leave this blank if Git is enabled below.
-    configMap: 
+    configMap:
 
     ## Load the Collections Config file from a git repository.
     git:
@@ -107,7 +106,7 @@ ingestion:
 
 ## The values in this section are relevant if using Solr, Zookeeper, or Cassandra that were not deployed from this Helm chart
 external:
-  solrHostAndPort:   
+  solrHostAndPort:
   zookeeperHostAndPort:
   cassandraHost:
   cassandraUsername:

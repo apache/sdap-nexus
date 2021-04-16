@@ -302,7 +302,7 @@ class Matchup(NexusCalcSparkHandler):
 
     @staticmethod
     def domspoint_to_dict(domspoint):
-        return {
+        doms_dict = {
             "sea_water_temperature": domspoint.sst,
             "sea_water_temperature_depth": domspoint.sst_depth,
             "sea_water_salinity": domspoint.sss,
@@ -321,6 +321,9 @@ class Matchup(NexusCalcSparkHandler):
             "id": domspoint.data_id,
             "source": domspoint.source,
         }
+        if domspoint.satellite_var_name:
+            doms_dict[domspoint.satellite_var_name] = domspoint.satellite_var_value
+        return doms_dict
 
 
 class DomsPoint(object):
@@ -331,6 +334,9 @@ class DomsPoint(object):
         self.latitude = latitude
         self.depth = depth
         self.data_id = data_id
+
+        self.satellite_var_name = None
+        self.satellite_var_value = None
 
         self.wind_u = None
         self.wind_v = None
@@ -350,32 +356,28 @@ class DomsPoint(object):
         return str(self.__dict__)
 
     @staticmethod
-    def from_nexus_point(nexus_point, tile=None, parameter='sst'):
+    def from_nexus_point(nexus_point, tile=None):
         point = DomsPoint()
 
         point.data_id = "%s[%s]" % (tile.tile_id, nexus_point.index)
 
-        # TODO Not an ideal solution; but it works for now.
-        if parameter == 'sst' or parameter == None:
-            point.sst = nexus_point.data_val.item()
-        if parameter == 'sss' or parameter == None:
-            point.sss = nexus_point.data_val.item()
-        if parameter == 'wind' or parameter == None:
-            point.wind_u = nexus_point.data_val.item()
-            try:
-                point.wind_v = tile.meta_data['wind_v'][tuple(nexus_point.index)].item()
-            except (KeyError, IndexError):
-                pass
-            try:
-                point.wind_direction = tile.meta_data['wind_dir'][tuple(nexus_point.index)].item()
-            except (KeyError, IndexError):
-                pass
-            try:
-                point.wind_speed = tile.meta_data['wind_speed'][tuple(nexus_point.index)].item()
-            except (KeyError, IndexError):
-                pass
-        if parameter not in ('sst', 'sss', 'wind', None):
-            raise NotImplementedError('%s not supported. Only sst, sss, and wind parameters are supported.' % parameter)
+        # Get the name of the satellite variable from the source NetCDF
+        satellite_var_name = tile.var_name
+        point.satellite_var_name = satellite_var_name
+        point.satellite_var_value = nexus_point.data_val.item()
+
+        try:
+            point.wind_v = tile.meta_data['wind_v'][tuple(nexus_point.index)].item()
+        except (KeyError, IndexError):
+            pass
+        try:
+            point.wind_direction = tile.meta_data['wind_dir'][tuple(nexus_point.index)].item()
+        except (KeyError, IndexError):
+            pass
+        try:
+            point.wind_speed = tile.meta_data['wind_speed'][tuple(nexus_point.index)].item()
+        except (KeyError, IndexError):
+            pass
 
         point.longitude = nexus_point.longitude.item()
         point.latitude = nexus_point.latitude.item()
@@ -594,6 +596,8 @@ def match_satellite_to_insitu(tile_ids, primary_b, matchup_b, parameter_b, tt_b,
     print("%s Time to convert match points for partition %s to %s" % (
         str(datetime.now() - the_time), tile_ids[0], tile_ids[-1]))
 
+    print(f'matchup_points={matchup_points}')
+
     # Build kdtree from matchup points
     the_time = datetime.now()
     m_tree = spatial.cKDTree(matchup_points, leafsize=30)
@@ -642,11 +646,16 @@ def match_tile_to_point_generator(tile_service, tile_id, m_tree, edge_results, s
     print("%s Time to query primary tree for tile %s" % (str(datetime.now() - a_time), tile_id))
     for i, point_matches in enumerate(matched_indexes):
         if len(point_matches) > 0:
-            p_nexus_point = NexusPoint(tile.latitudes[valid_indices[i][1]],
-                                       tile.longitudes[valid_indices[i][2]], None,
-                                       tile.times[valid_indices[i][0]], valid_indices[i],
-                                       tile.data[tuple(valid_indices[i])])
-            p_doms_point = DomsPoint.from_nexus_point(p_nexus_point, tile=tile, parameter=search_parameter)
+            p_nexus_point = NexusPoint(
+                latitude=tile.latitudes[valid_indices[i][1]],
+                longitude=tile.longitudes[valid_indices[i][2]],
+                depth=None,
+                time=tile.times[valid_indices[i][0]],
+                index=valid_indices[i],
+                data_val=tile.data[tuple(valid_indices[i])]
+            )
+
+            p_doms_point = DomsPoint.from_nexus_point(p_nexus_point, tile=tile)
             for m_point_index in point_matches:
                 m_doms_point = DomsPoint.from_edge_point(edge_results[m_point_index])
                 yield p_doms_point, m_doms_point
@@ -672,14 +681,16 @@ def query_edge(dataset, variable, startTime, endTime, bbox, platform, depth_min,
         # Assume we were passed a list
         pass
 
-    params = {"variable": variable,
-              "startTime": startTime,
+    params = {"startTime": startTime,
               "endTime": endTime,
               "bbox": bbox,
               "minDepth": depth_min,
               "maxDepth": depth_max,
               "platform": platform,
               "itemsPerPage": itemsPerPage, "startIndex": startIndex, "stats": str(stats).lower()}
+
+    if variable is not None:
+        params["variable"] = variable
 
     dataset_url = edge_endpoints.getEndpointByName(dataset)['url']
     if session is not None:
