@@ -596,8 +596,6 @@ def match_satellite_to_insitu(tile_ids, primary_b, matchup_b, parameter_b, tt_b,
     print("%s Time to convert match points for partition %s to %s" % (
         str(datetime.now() - the_time), tile_ids[0], tile_ids[-1]))
 
-    print(f'matchup_points={matchup_points}')
-
     # Build kdtree from matchup points
     the_time = datetime.now()
     m_tree = spatial.cKDTree(matchup_points, leafsize=30)
