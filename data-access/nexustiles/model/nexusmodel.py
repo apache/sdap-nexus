@@ -36,6 +36,7 @@ class Tile(object):
         self.max_time = None
 
         self.tile_stats = None
+        self.var_name = None
 
         self.latitudes = None  # This should be a 1-d ndarray
         self.longitudes = None  # This should be a 1-d ndarray
