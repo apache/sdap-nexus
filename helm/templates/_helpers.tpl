@@ -32,9 +32,11 @@ The data volume which is used in both the Collection Manager and the Granule Ing
     server: {{ .Values.ingestion.granules.nfsServer }}
     path: {{ .Values.ingestion.granules.path }}
   {{- else }}
+  {{- if .Values.ingestion.granules.path -}}
   hostPath:
     path: {{ .Values.ingestion.granules.path }}
-{{- end }}
+  {{- end -}}
+  {{- end -}}
 {{- end -}}
 
 {{/*
