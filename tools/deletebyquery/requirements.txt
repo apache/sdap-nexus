@@ -1,1 +1,1 @@
-solrcloudpy==2.4.1
+solrcloudpy==4.0.1
