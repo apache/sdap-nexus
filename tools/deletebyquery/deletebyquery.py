@@ -105,12 +105,12 @@ def delete_by_query(args):
 
 
 def confirm_delete(num_found):
-    do_continue = eval(input(
-        "This action will delete %s record(s) from SOLR and Cassandra. Are you sure you want to Continue? y/n: " % num_found))
+    do_continue = input(
+        "This action will delete %s record(s) from SOLR and Cassandra. Are you sure you want to Continue? y/n: " % num_found)
 
     while do_continue not in ['y', 'n']:
-        do_continue = eval(input(
-            "This action will delete %s record(s) from SOLR and Cassandra. Are you sure you want to Continue? y/n: " % num_found))
+        do_continue = input(
+            "This action will delete %s record(s) from SOLR and Cassandra. Are you sure you want to Continue? y/n: " % num_found)
 
     return do_continue == 'y'
 
@@ -124,10 +124,10 @@ def check_query(query):
         logging.info("Query returned 0 results")
         return False
 
-    do_continue = eval(input("Query found %s matching documents. Continue? [y]/n/(s)ample: " % num_found))
+    do_continue = input("Query found %s matching documents. Continue? [y]/n/(s)ample: " % num_found)
 
     while do_continue not in ['y', 'n', 's', '']:
-        do_continue = eval(input("Query found %s matching documents. Continue? [y]/n/(s)ample: " % num_found))
+        do_continue = input("Query found %s matching documents. Continue? [y]/n/(s)ample: " % num_found)
 
     if do_continue == 'y' or do_continue == '':
         return True
