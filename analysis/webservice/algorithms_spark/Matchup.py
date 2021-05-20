@@ -552,7 +552,6 @@ def match_satellite_to_insitu(tile_ids, primary_b, matchup_b, parameter_b, tt_b,
     # Find the centroid of the matchup bounding box and initialize the projections
     matchup_center = box(matchup_min_lon, matchup_min_lat, matchup_max_lon, matchup_max_lat).centroid.coords[0]
     aeqd_proj = pyproj.Proj(proj='aeqd', lon_0=matchup_center[0], lat_0=matchup_center[1])
-    lonlat_proj = pyproj.Proj(proj='lonlat')
 
     # Increase temporal extents by the time tolerance
     matchup_min_time = tiles_min_time - tt_b.value
@@ -592,7 +591,7 @@ def match_satellite_to_insitu(tile_ids, primary_b, matchup_b, parameter_b, tt_b,
             except ValueError:
                 y, x = Point(*[float(c) for c in edge_point['point'].split(',')]).coords[0]
 
-        matchup_points[n][0], matchup_points[n][1] = pyproj.transform(p1=lonlat_proj, p2=aeqd_proj, x=x, y=y)
+        matchup_points[n][0], matchup_points[n][1] = aeqd_proj(x, y)
     print("%s Time to convert match points for partition %s to %s" % (
         str(datetime.now() - the_time), tile_ids[0], tile_ids[-1]))
 
@@ -603,14 +602,14 @@ def match_satellite_to_insitu(tile_ids, primary_b, matchup_b, parameter_b, tt_b,
 
     # The actual matching happens in the generator. This is so that we only load 1 tile into memory at a time
     match_generators = [match_tile_to_point_generator(tile_service, tile_id, m_tree, edge_results, bounding_wkt_b.value,
-                                                      parameter_b.value, rt_b.value, lonlat_proj, aeqd_proj) for tile_id
+                                                      parameter_b.value, rt_b.value, aeqd_proj) for tile_id
                         in tile_ids]
 
     return chain(*match_generators)
 
 
 def match_tile_to_point_generator(tile_service, tile_id, m_tree, edge_results, search_domain_bounding_wkt,
-                                  search_parameter, radius_tolerance, lonlat_proj, aeqd_proj):
+                                  search_parameter, radius_tolerance, aeqd_proj):
     from nexustiles.model.nexusmodel import NexusPoint
     from webservice.algorithms_spark.Matchup import DomsPoint  # Must import DomsPoint or Spark complains
 
@@ -630,7 +629,7 @@ def match_tile_to_point_generator(tile_service, tile_id, m_tree, edge_results, s
     # Get list of indices of valid values
     valid_indices = tile.get_indices()
     primary_points = np.array(
-        [pyproj.transform(p1=lonlat_proj, p2=aeqd_proj, x=tile.longitudes[aslice[2]], y=tile.latitudes[aslice[1]]) for
+        [aeqd_proj(tile.longitudes[aslice[2]], tile.latitudes[aslice[1]]) for
          aslice in valid_indices])
 
     print("%s Time to convert primary points for tile %s" % (str(datetime.now() - the_time), tile_id))
