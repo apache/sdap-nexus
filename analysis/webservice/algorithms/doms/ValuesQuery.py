@@ -33,8 +33,8 @@ class DomsValuesQueryHandler(BaseDomsHandler.BaseDomsQueryCalcHandler):
     params = {}
     singleton = True
 
-    def __init__(self):
-        BaseHandler.__init__(self)
+    def __init__(self, tile_service_factory):
+        BaseHandler.__init__(self, tile_service_factory)
 
     def calc(self, computeOptions, **args):
         source = computeOptions.get_argument("source", None)

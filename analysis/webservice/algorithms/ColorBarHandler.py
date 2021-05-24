@@ -58,8 +58,8 @@ class ColorBarCalcHandler(BaseHandler):
     }
     singleton = True
 
-    def __init__(self):
-        BaseHandler.__init__(self)
+    def __init__(self, tile_service_factory):
+        BaseHandler.__init__(self, tile_service_factory)
 
     def __get_dataset_minmax(self, ds, dataTime):
         dataTimeStart = dataTime - 86400.0  # computeOptions.get_datetime_arg("t", None)
