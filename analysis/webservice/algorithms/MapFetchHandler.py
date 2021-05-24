@@ -91,8 +91,8 @@ class MapFetchCalcHandler(BaseHandler):
 
     NO_DATA_IMAGE = None
 
-    def __init__(self):
-        BaseHandler.__init__(self)
+    def __init__(self, tile_service_factory):
+        BaseHandler.__init__(self, tile_service_factory)
 
     @staticmethod
     def __tile_to_image(img_data, tile, min, max, table, x_res, y_res):
