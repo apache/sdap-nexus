@@ -29,7 +29,7 @@ ingestion:
 
   granuleIngester:
     replicas: 2
-    image: nexusjpl/granule-ingester:0.1.5
+    image: nexusjpl/granule-ingester:0.1.6
 
     ## cpu refers to both request and limit
     cpu: 1
@@ -38,7 +38,7 @@ ingestion:
     memory: 1Gi
 
   collectionManager:
-    image: nexusjpl/collection-manager:0.1.5
+    image: nexusjpl/collection-manager:0.1.6
 
     ## cpu refers to both request and limit
     cpu: 0.5
