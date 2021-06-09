@@ -27,7 +27,7 @@ spec:
 {{ .Values.webapp.distributed.driver | toYaml | indent 4 }}
     labels:
       version: 2.4.4
-    serviceAccount: spark-serviceaccount
+    serviceAccount: sdap-spark
   executor:
 {{ .Values.webapp.distributed.executor| toYaml | indent 4 }}
     labels:
