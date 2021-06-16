@@ -7,15 +7,10 @@ metadata:
     app.kubernetes.io/version: v1beta2-1.2.3-3.1.1
   name: sdap-spark-role
 rules:
-  - verbs:
-      - '*'
-    apiGroups:
-      - ''
-    resources:
-      - pods
-  - verbs:
-      - '*'
-    apiGroups:
-      - ''
-    resources:
-      - services
+  - apiGroups: [""]
+    resources: ["pods"]
+    verbs: ["create", "get", "list", "delete"]
+  - apiGroups: [""]
+    resources: ["services"]
+    verbs: ["create"]
+
