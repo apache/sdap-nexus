@@ -35,6 +35,9 @@ The data volume which is used in both the Collection Manager and the Granule Ing
   {{- if .Values.ingestion.granules.path -}}
   hostPath:
     path: {{ .Values.ingestion.granules.path }}
+  {{- else }}
+  persistentVolumeClaim:
+    claimName: {{ .Values.ingestion.granules.pvc }}
   {{- end -}}
   {{- end -}}
 {{- end -}}
