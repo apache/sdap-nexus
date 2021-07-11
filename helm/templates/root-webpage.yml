@@ -43,8 +43,8 @@ spec:
         name: root-webpage
         resources:
           limits:
-            cpu: 0.5
+            cpu: 0.1
           requests:
-            cpu: 0.3
+            cpu: 0.1
       restartPolicy: Always
 {{ end }}

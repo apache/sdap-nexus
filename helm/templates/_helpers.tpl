@@ -63,9 +63,9 @@ The data volume mount which is used in both the Collection Manager and the Granu
 {{- end -}}
 
 {{- define "nexus.credentials.cassandra.username" -}}
-{{ .Values.external.cassandraUsername | default "cassandra" }}
+{{ .Values.external.cassandraUsername | default (.Values.cassandra.dbUser.user) }}
 {{- end -}}
 
 {{- define "nexus.credentials.cassandra.password" -}}
-{{ .Values.external.cassandraPassword | default "cassandra" }}
+{{ .Values.external.cassandraPassword | default (.Values.cassandra.dbUser.password)  }}
 {{- end -}}
