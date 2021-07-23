@@ -74,6 +74,8 @@ class DomsEncoder(json.JSONEncoder):
             return int((obj - EPOCH).total_seconds())
         elif isinstance(obj, Decimal):
             return str(obj)
+        elif isinstance(obj, np.float32):
+            return float(obj)
         else:
             return json.JSONEncoder.default(self, obj)
 
