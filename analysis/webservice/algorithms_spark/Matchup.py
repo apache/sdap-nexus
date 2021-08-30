@@ -229,7 +229,7 @@ class Matchup(NexusCalcSparkHandler):
                                                              sort=['tile_min_time_dt asc', 'tile_min_lon asc',
                                                                    'tile_min_lat asc'], rows=5000)]
 
-        self.log.debug('Found %s tile_ids', len(tile_ids))
+        self.log.info('Found %s tile_ids', len(tile_ids))
         # Call spark_matchup
         self.log.debug("Calling Spark Driver")
         try:
@@ -321,9 +321,8 @@ class Matchup(NexusCalcSparkHandler):
             "fileurl": domspoint.file_url,
             "id": domspoint.data_id,
             "source": domspoint.source,
+            "data": domspoint.data
         }
-        if domspoint.satellite_var_name:
-            doms_dict[domspoint.satellite_var_name] = domspoint.satellite_var_value
         return doms_dict
 
 
@@ -336,8 +335,7 @@ class DomsPoint(object):
         self.depth = depth
         self.data_id = data_id
 
-        self.satellite_var_name = None
-        self.satellite_var_value = None
+        self.data = None
 
         self.wind_u = None
         self.wind_v = None
@@ -362,10 +360,14 @@ class DomsPoint(object):
 
         point.data_id = "%s[%s]" % (tile.tile_id, nexus_point.index)
 
-        # Get the name of the satellite variable from the source NetCDF
-        satellite_var_name = tile.var_name
-        point.satellite_var_name = satellite_var_name
-        point.satellite_var_value = nexus_point.data_val.item()
+        data = []
+        for val, name in zip(nexus_point.data_vals, tile.var_names):
+            data_point = {
+                'name': name,
+                'value': val
+            }
+            data.append(data_point)
+        point.data = data
 
         try:
             point.wind_v = tile.meta_data['wind_v'][tuple(nexus_point.index)].item()
@@ -429,6 +431,27 @@ class DomsPoint(object):
         point.platform = edge_point.get('platform')
         point.device = edge_point.get('device')
         point.file_url = edge_point.get('fileurl')
+
+        data_fields = [
+            'eastward_wind',
+            'northward_wind',
+            'wind_direction',
+            'wind_speed',
+            'sea_water_temperature',
+            'sea_water_temperature_depth',
+            'sea_water_salinity',
+            'sea_water_salinity_depth',
+        ]
+        data = []
+        for name in data_fields:
+            val = edge_point.get(name)
+            if val:
+                data_point = {
+                    'name': name,
+                    'value': val
+                }
+                data.append(data_point)
+        point.data = data
 
         try:
             point.data_id = str(edge_point['id'])
@@ -720,13 +743,14 @@ def match_tile_to_point_generator(tile_service, tile_id, m_tree, edge_results, s
     print("%s Time to query primary tree for tile %s" % (str(datetime.now() - a_time), tile_id))
     for i, point_matches in enumerate(matched_indexes):
         if len(point_matches) > 0:
+            data_vals = [tile_data[tuple(valid_indices[i])] for tile_data in tile.data]
             p_nexus_point = NexusPoint(
                 latitude=tile.latitudes[valid_indices[i][1]],
                 longitude=tile.longitudes[valid_indices[i][2]],
                 depth=None,
                 time=tile.times[valid_indices[i][0]],
                 index=valid_indices[i],
-                data_val=tile.data[tuple(valid_indices[i])]
+                data_vals=data_vals
             )
 
             p_doms_point = DomsPoint.from_nexus_point(p_nexus_point, tile=tile)

@@ -53,6 +53,31 @@ class NexusTileData(Model):
         return from_shaped_array(the_tile_data.variable_data)
 
     def get_lat_lon_time_data_meta(self):
+        """
+        Retrieve data from data store and metadata from metadata store
+        for this tile. For gridded tiles, the tile shape of the data
+        will match the input shape. For example, if the input was a
+        30x30 tile, all variables will also be 30x30. However, if the
+        tile is a swath tile, the data will be transformed along the
+        diagonal of the data matrix. For example, a 30x30 tile would
+        become 900x900 where the 900 points are along the diagonal.
+
+        Multi-variable tile will also include an extra dimension in the
+        data array. For example, a 30 x 30 x 30 array would be
+        transformed to N x 30 x 30 x 30 where N is the number of
+         variables in this tile.
+
+        latitude_data, longitude_data, np.array([grid_tile.time]), grid_tile_data, meta_data, is_multi_var
+
+        :return: latitude data
+        :return: longitude data
+        :return: time data
+        :return: data
+        :return: meta data dictionary
+        :return: boolean flag, True if this tile has more than one variable
+        """
+        is_multi_var = False
+
         if self._get_nexus_tile().HasField('grid_tile'):
             grid_tile = self._get_nexus_tile().grid_tile
 
@@ -72,7 +97,7 @@ class NexusTileData(Model):
                     meta_array = meta_array[np.newaxis, :]
                 meta_data[name] = meta_array
 
-            return latitude_data, longitude_data, np.array([grid_tile.time]), grid_tile_data, meta_data
+            return latitude_data, longitude_data, np.array([grid_tile.time]), grid_tile_data, meta_data, is_multi_var
         elif self._get_nexus_tile().HasField('swath_tile'):
             swath_tile = self._get_nexus_tile().swath_tile
 
@@ -97,7 +122,7 @@ class NexusTileData(Model):
                 reshaped_meta_array = self._to_standard_index(actual_meta_array, tile_data.shape)
                 meta_data[name] = reshaped_meta_array
 
-            return latitude_data, longitude_data, time_data, tile_data, meta_data
+            return latitude_data, longitude_data, time_data, tile_data, meta_data, is_multi_var
         elif self._get_nexus_tile().HasField('time_series_tile'):
             time_series_tile = self._get_nexus_tile().time_series_tile
 
@@ -122,12 +147,42 @@ class NexusTileData(Model):
 
                 meta_data[name] = reshaped_meta_array
 
-            return latitude_data, longitude_data, time_data, tile_data, meta_data
+            return latitude_data, longitude_data, time_data, tile_data, meta_data, is_multi_var
+        elif self._get_nexus_tile().HasField('swath_multi_variable_tile'):
+            swath_tile = self._get_nexus_tile().swath_multi_variable_tile
+            is_multi_var = True
+
+            latitude_data = np.ma.masked_invalid(from_shaped_array(swath_tile.latitude)).reshape(-1)
+            longitude_data = np.ma.masked_invalid(from_shaped_array(swath_tile.longitude)).reshape(-1)
+            time_data = np.ma.masked_invalid(from_shaped_array(swath_tile.time)).reshape(-1)
+
+            # Simplify the tile if the time dimension is the same value repeated
+            if np.all(time_data == np.min(time_data)):
+                time_data = np.array([np.min(time_data)])
+
+            swath_tile_data = np.ma.masked_invalid(from_shaped_array(swath_tile.variable_data))
+
+            desired_shape = (
+                len(time_data),
+                len(latitude_data),
+                len(longitude_data),
+            )
+            tile_data = self._to_standard_index(swath_tile_data, desired_shape, is_multi_var=True)
+
+            # Extract the meta data
+            meta_data = {}
+            for meta_data_obj in swath_tile.meta_data:
+                name = meta_data_obj.name
+                actual_meta_array = np.ma.masked_invalid(from_shaped_array(meta_data_obj.meta_data))
+                reshaped_meta_array = self._to_standard_index(actual_meta_array, tile_data.shape)
+                meta_data[name] = reshaped_meta_array
+
+            return latitude_data, longitude_data, time_data, tile_data, meta_data, is_multi_var
         else:
-            raise NotImplementedError("Only supports grid_tile, swath_tile, and time_series_tile")
+            raise NotImplementedError("Only supports grid_tile, swath_tile, swath_multi_variable_tile, and time_series_tile")
 
     @staticmethod
-    def _to_standard_index(data_array, desired_shape):
+    def _to_standard_index(data_array, desired_shape, is_multi_var=False):
 
         if desired_shape[0] == 1:
             reshaped_array = np.ma.masked_all((desired_shape[1], desired_shape[2]))
@@ -138,6 +193,23 @@ class NexusTileData(Model):
             reshaped_array.mask[np.diag_indices(desired_shape[1], len(reshaped_array.shape))] = data_array.mask[
                 row.flat, col.flat]
             reshaped_array = reshaped_array[np.newaxis, :]
+        elif is_multi_var == True:
+            # Break the array up by variable. Translate shape from
+            # len(times) x len(latitudes) x len(longitudes) x num_vars,
+            # to
+            # num_vars x len(times) x len(latitudes) x len(longitudes)
+            reshaped_data_array = np.moveaxis(data_array, -1, 0)
+            reshaped_array = []
+
+            for variable_data_array in reshaped_data_array:
+                variable_reshaped_array = np.ma.masked_all(desired_shape)
+                row, col = np.indices(variable_data_array.shape)
+
+                variable_reshaped_array[np.diag_indices(desired_shape[1], len(variable_reshaped_array.shape))] = variable_data_array[
+                    row.flat, col.flat]
+                variable_reshaped_array.mask[np.diag_indices(desired_shape[1], len(variable_reshaped_array.shape))] = variable_data_array.mask[
+                    row.flat, col.flat]
+                reshaped_array.append(variable_reshaped_array)
         else:
             reshaped_array = np.ma.masked_all(desired_shape)
             row, col = np.indices(data_array.shape)

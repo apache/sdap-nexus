@@ -16,13 +16,63 @@
 from collections import namedtuple
 
 import numpy as np
+from dataclasses import dataclass
 
-NexusPoint = namedtuple('NexusPoint', 'latitude longitude depth time index data_val')
+
+NexusPoint = namedtuple('NexusPoint', 'latitude longitude depth time index data_vals')
 BBox = namedtuple('BBox', 'min_lat max_lat min_lon max_lon')
 TileStats = namedtuple('TileStats', 'min max mean count')
 
 
+@dataclass
 class Tile(object):
+    """
+    :param tile_id: Unique UUID tile ID, also used in data store and
+        metadata store to distinguish this tile
+    :type tile_id: Union[string, None]
+    :param dataset_id: Unique dataset ID this tile belongs to
+    :type dataset_id: string
+    :param section_spec: A summary of the indices used from the source
+        granule to create this tile. Format is
+        dimension:min_index:max_index,dimension:min_index:max_index,...
+    :type section_spec: string
+    :param dataset: The name of the dataset this tile belongs to
+    :type dataset: string
+    :param granule: The name of the granule this tile is sourced from
+    :type granule: string
+    :param bbox: Comma-separated string representing the spatial bounds
+        of this tile. The format is min_lon, min_lat, max_lon, max_lat
+    :type bbox: string
+    :param min_time: ISO 8601 formatted timestamp representing the
+        temporal minimum of this tile
+    :type min_time: string
+    :param max_time: ISO 8601 formatted timestamp representing the
+        temporal minimum of this tile
+    :type max_time: string
+    :param tile_stats: Dictionary representing the min, max, mean, and
+        count of this tile
+    :type tile_stats: dict
+    :param var_names: A list of size N where N == the number of vars
+        this tile represents
+    :type var_names: list
+    :param latitudes: 1-d ndarray representing the latitude values of
+        this tile
+    :type latitudes: ndarray
+    :param longitudes: 1-d ndarray representing the longitude values of
+        this tile
+    :type longitudes: ndarray
+    :param times: 1-d ndarray representing the longitude values of
+        this tile
+    :type times: ndarray
+    :param data: This should be an ndarray with shape len(times) x
+        len(latitudes) x len(longitudes) x num_vars
+    :type data: ndarray
+    :param is_multi: 'True' if this is a multi-var tile
+    :type is_multi: boolean
+    :param meta_data: dict of the form { 'meta_data_name' :
+        [[[ndarray]]] }. Each ndarray should be the same shape as data.
+    :type meta_data: dict
+    """
     def __init__(self):
         self.tile_id = None
         self.dataset_id = None
@@ -36,14 +86,16 @@ class Tile(object):
         self.max_time = None
 
         self.tile_stats = None
-        self.var_name = None
+        self.var_names = None
 
-        self.latitudes = None  # This should be a 1-d ndarray
-        self.longitudes = None  # This should be a 1-d ndarray
-        self.times = None  # This should be a 1-d ndarray
-        self.data = None  # This should be an ndarray with shape len(times) x len(latitudes) x len(longitudes)
+        self.latitudes = None
+        self.longitudes = None
+        self.times = None
 
-        self.meta_data = None  # This should be a dict of the form { 'meta_data_name' : [[[ndarray]]] }. Each ndarray should be the same shape as data.
+        self.data = None
+        self.is_multi = None
+
+        self.meta_data = None
 
     def __str__(self):
         return str(self.get_summary())
@@ -100,6 +152,8 @@ class Tile(object):
     def get_indices(self, include_nan=False):
         if include_nan:
             return list(np.ndindex(self.data.shape))
+        if self.is_multi:
+            return np.argwhere(self.data[0])
         else:
             return np.transpose(np.where(np.ma.getmaskarray(self.data) == False)).tolist()
 

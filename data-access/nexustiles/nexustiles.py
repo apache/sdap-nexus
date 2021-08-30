@@ -16,8 +16,9 @@
 import configparser
 import logging
 import sys
+import json
 from datetime import datetime
-from functools import wraps
+from functools import wraps, reduce
 
 import numpy as np
 import numpy.ma as ma
@@ -356,7 +357,16 @@ class NexusTileService(object):
                         | ma.getmaskarray(tile.latitudes)[np.newaxis, :, np.newaxis] \
                         | ma.getmaskarray(tile.longitudes)[np.newaxis, np.newaxis, :]
 
-            tile.data = ma.masked_where(data_mask, tile.data)
+            # If this is multi-var, need to mask each variable separately.
+            if tile.is_multi:
+                # Combine space/time mask with existing mask on data
+                data_mask = reduce(np.logical_or, [tile.data[0].mask, data_mask])
+
+                num_vars = len(tile.data)
+                multi_data_mask = np.repeat(data_mask[np.newaxis, ...], num_vars, axis=0)
+                tile.data = ma.masked_where(multi_data_mask, tile.data)
+            else:
+                tile.data = ma.masked_where(data_mask, tile.data)
 
         tiles[:] = [tile for tile in tiles if not tile.data.mask.all()]
 
@@ -437,13 +447,14 @@ class NexusTileService(object):
             raise Exception("Missing data for tile_id(s) %s." % missing_data)
 
         for a_tile in tiles:
-            lats, lons, times, data, meta = tile_data_by_id[a_tile.tile_id].get_lat_lon_time_data_meta()
+            lats, lons, times, data, meta, is_multi_var = tile_data_by_id[a_tile.tile_id].get_lat_lon_time_data_meta()
 
             a_tile.latitudes = lats
             a_tile.longitudes = lons
             a_tile.times = times
             a_tile.data = data
             a_tile.meta_data = meta
+            a_tile.is_multi = is_multi_var
 
             del (tile_data_by_id[a_tile.tile_id])
 
@@ -519,7 +530,13 @@ class NexusTileService(object):
                 pass
 
             try:
-                tile.var_name = solr_doc['tile_var_name_s']
+                # tile_var_name_s is a json encoded list of strings
+                # (or just a single string). This may change in the
+                # future if tile_var_name_s format changes.
+                if '[' in solr_doc['tile_var_name_s']:
+                    tile.var_names = json.loads(solr_doc['tile_var_name_s'])
+                else:
+                    tile.var_names = [solr_doc['tile_var_name_s']]
             except KeyError:
                 pass
 
