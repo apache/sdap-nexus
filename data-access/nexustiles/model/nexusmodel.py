@@ -27,75 +27,55 @@ TileStats = namedtuple('TileStats', 'min max mean count')
 @dataclass
 class Tile(object):
     """
-    :param tile_id: Unique UUID tile ID, also used in data store and
+    Tile class representing the contents of a tile. The tile contents
+    are populated using the metadata store and the data store.
+
+    :attribute tile_id: Unique UUID tile ID, also used in data store and
         metadata store to distinguish this tile
-    :type tile_id: Union[string, None]
-    :param dataset_id: Unique dataset ID this tile belongs to
-    :type dataset_id: string
-    :param section_spec: A summary of the indices used from the source
+    :attribute dataset_id: Unique dataset ID this tile belongs to
+    :attribute section_spec: A summary of the indices used from the source
         granule to create this tile. Format is
         dimension:min_index:max_index,dimension:min_index:max_index,...
-    :type section_spec: string
-    :param dataset: The name of the dataset this tile belongs to
-    :type dataset: string
-    :param granule: The name of the granule this tile is sourced from
-    :type granule: string
-    :param bbox: Comma-separated string representing the spatial bounds
+    :attribute dataset: The name of the dataset this tile belongs to
+    :attribute granule: The name of the granule this tile is sourced from
+    :attribute bbox: Comma-separated string representing the spatial bounds
         of this tile. The format is min_lon, min_lat, max_lon, max_lat
-    :type bbox: string
-    :param min_time: ISO 8601 formatted timestamp representing the
+    :attribute min_time: ISO 8601 formatted timestamp representing the
         temporal minimum of this tile
-    :type min_time: string
-    :param max_time: ISO 8601 formatted timestamp representing the
+    :attribute max_time: ISO 8601 formatted timestamp representing the
         temporal minimum of this tile
-    :type max_time: string
-    :param tile_stats: Dictionary representing the min, max, mean, and
+    :attribute tile_stats: Dictionary representing the min, max, mean, and
         count of this tile
-    :type tile_stats: dict
-    :param var_names: A list of size N where N == the number of vars
+    :attribute var_names: A list of size N where N == the number of vars
         this tile represents
-    :type var_names: list
-    :param latitudes: 1-d ndarray representing the latitude values of
+    :attribute latitudes: 1-d ndarray representing the latitude values of
         this tile
-    :type latitudes: ndarray
-    :param longitudes: 1-d ndarray representing the longitude values of
+    :attribute longitudes: 1-d ndarray representing the longitude values of
         this tile
-    :type longitudes: ndarray
-    :param times: 1-d ndarray representing the longitude values of
+    :attribute times: 1-d ndarray representing the longitude values of
         this tile
-    :type times: ndarray
-    :param data: This should be an ndarray with shape len(times) x
+    :attribute data: This should be an ndarray with shape len(times) x
         len(latitudes) x len(longitudes) x num_vars
-    :type data: ndarray
-    :param is_multi: 'True' if this is a multi-var tile
-    :type is_multi: boolean
-    :param meta_data: dict of the form { 'meta_data_name' :
-        [[[ndarray]]] }. Each ndarray should be the same shape as data.
-    :type meta_data: dict
+    :attribute is_multi: 'True' if this is a multi-var tile
+    :attribute meta_data: dict of the form {'meta_data_name':
+        [[[ndarray]]]}. Each ndarray should be the same shape as data.
     """
-    def __init__(self):
-        self.tile_id = None
-        self.dataset_id = None
-        self.section_spec = None
-        self.dataset = None
-        self.granule = None
-
-        self.bbox = None
-
-        self.min_time = None
-        self.max_time = None
-
-        self.tile_stats = None
-        self.var_names = None
-
-        self.latitudes = None
-        self.longitudes = None
-        self.times = None
-
-        self.data = None
-        self.is_multi = None
-
-        self.meta_data = None
+    tile_id: str = None
+    dataset_id: str = None
+    section_spec: str = None
+    dataset: str = None
+    granule: str = None
+    bbox: str = None
+    min_time: str = None
+    max_time: str = None
+    tile_stats: dict = None
+    var_names: list = None
+    latitudes: np.array = None
+    longitudes: np.array = None
+    times: np.array = None
+    data: np.array = None
+    is_multi: bool = None
+    meta_data: dict = None
 
     def __str__(self):
         return str(self.get_summary())
