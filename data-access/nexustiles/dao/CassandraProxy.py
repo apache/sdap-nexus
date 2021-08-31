@@ -178,11 +178,52 @@ class NexusTileData(Model):
                 meta_data[name] = reshaped_meta_array
 
             return latitude_data, longitude_data, time_data, tile_data, meta_data, is_multi_var
+        elif self._get_nexus_tile().HasField('grid_multi_variable_tile'):
+            grid_multi_variable_tile = self._get_nexus_tile().grid_multi_variable_tile
+            is_multi_var = True
+
+            grid_tile_data = np.ma.masked_invalid(from_shaped_array(grid_multi_variable_tile.variable_data))
+            latitude_data = np.ma.masked_invalid(from_shaped_array(grid_multi_variable_tile.latitude))
+            longitude_data = np.ma.masked_invalid(from_shaped_array(grid_multi_variable_tile.longitude))
+
+            # If there are 3 dimensions, that means the time dimension
+            # was squeezed. Add back in
+            if len(grid_tile_data.shape) == 3:
+                grid_tile_data = np.expand_dims(grid_tile_data, axis=1)
+            # If there are 4 dimensions, that means the time dimension
+            # is present. Move the multivar dimension.
+            if len(grid_tile_data.shape) == 4:
+                grid_tile_data = np.moveaxis(grid_tile_data, -1, 0)
+
+            # Extract the meta data
+            meta_data = {}
+            for meta_data_obj in grid_multi_variable_tile.meta_data:
+                name = meta_data_obj.name
+                meta_array = np.ma.masked_invalid(from_shaped_array(meta_data_obj.meta_data))
+                if len(meta_array.shape) == 2:
+                    meta_array = meta_array[np.newaxis, :]
+                meta_data[name] = meta_array
+
+            return latitude_data, longitude_data, np.array([grid_multi_variable_tile.time]), grid_tile_data, meta_data, is_multi_var
         else:
             raise NotImplementedError("Only supports grid_tile, swath_tile, swath_multi_variable_tile, and time_series_tile")
 
     @staticmethod
     def _to_standard_index(data_array, desired_shape, is_multi_var=False):
+        """
+        Transform swath data to a standard format where data runs along
+        diagonal of ND matrix and the non-diagonal data points are
+        masked
+
+        :param data_array: The data array to be transformed
+        :param desired_shape: The desired shape of the resulting array
+        :param is_multi_var: True if this is a multi-variable tile
+        :type data_array: np.array
+        :type desired_shape: tuple
+        :type is_multi_var: bool
+        :return: Reshaped array
+        :rtype: np.array
+        """
 
         if desired_shape[0] == 1:
             reshaped_array = np.ma.masked_all((desired_shape[1], desired_shape[2]))
