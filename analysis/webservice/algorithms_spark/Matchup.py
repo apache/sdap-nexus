@@ -360,8 +360,13 @@ class DomsPoint(object):
 
         point.data_id = "%s[%s]" % (tile.tile_id, nexus_point.index)
 
+        if tile.is_multi:
+            data_vals = nexus_point.data_vals
+        else:
+            data_vals = [nexus_point.data_vals]
+
         data = []
-        for val, name in zip(nexus_point.data_vals, tile.var_names):
+        for val, name in zip(data_vals, tile.var_names):
             data_point = {
                 'name': name,
                 'value': val
@@ -443,6 +448,7 @@ class DomsPoint(object):
             'sea_water_salinity_depth',
         ]
         data = []
+        # This is for in-situ secondary points
         for name in data_fields:
             val = edge_point.get(name)
             if val:
@@ -451,16 +457,20 @@ class DomsPoint(object):
                     'value': val
                 }
                 data.append(data_point)
+
+
+        # This is for satellite secondary points
+        if 'var_names' in edge_point and 'var_values' in edge_point:
+            data.extend([{
+                'name': var_name,
+                'value': var_value,
+            } for var_name, var_value in zip(edge_point['var_names'], edge_point['var_values'])])
         point.data = data
 
         try:
             point.data_id = str(edge_point['id'])
         except KeyError:
             point.data_id = "%s:%s:%s" % (point.time, point.longitude, point.latitude)
-
-        if 'var_name' in edge_point and 'var_value' in edge_point:
-            point.satellite_var_name = edge_point['var_name']
-            point.satellite_var_value = edge_point['var_value']
 
         return point
 
@@ -570,6 +580,11 @@ def tile_to_edge_points(tile):
     edge_points = []
 
     for idx in indices:
+        if tile.is_multi:
+            data = [var_data[tuple(idx)] for var_data in tile.data]
+        else:
+            data = [tile.data[tuple(idx)]]
+
         edge_point = {
             'point': f'Point({tile.longitudes[idx[2]]} {tile.latitudes[idx[1]]})',
             'time': datetime.utcfromtimestamp(tile.times[idx[0]]).strftime('%Y-%m-%dT%H:%M:%SZ'),
@@ -577,8 +592,8 @@ def tile_to_edge_points(tile):
             'platform': None,
             'device': None,
             'fileurl': tile.granule,
-            'var_name': tile.var_name,
-            'var_value': tile.data[tuple(idx)]
+            'var_names': tile.var_names,
+            'var_values': data
         }
         edge_points.append(edge_point)
     return edge_points
@@ -743,7 +758,10 @@ def match_tile_to_point_generator(tile_service, tile_id, m_tree, edge_results, s
     print("%s Time to query primary tree for tile %s" % (str(datetime.now() - a_time), tile_id))
     for i, point_matches in enumerate(matched_indexes):
         if len(point_matches) > 0:
-            data_vals = [tile_data[tuple(valid_indices[i])] for tile_data in tile.data]
+            if tile.is_multi:
+                data_vals = [tile_data[tuple(valid_indices[i])] for tile_data in tile.data]
+            else:
+                data_vals = tile.data[tuple(valid_indices[i])]
             p_nexus_point = NexusPoint(
                 latitude=tile.latitudes[valid_indices[i][1]],
                 longitude=tile.longitudes[valid_indices[i][2]],
