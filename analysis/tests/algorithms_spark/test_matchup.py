@@ -85,6 +85,17 @@ def test_matchup_args():
     )
 
 
+def setup_mock_tile_service(tile):
+    tile_service_factory = mock.MagicMock()
+    tile_service = mock.MagicMock()
+    tile_service_factory.return_value = tile_service
+    tile_service.get_bounding_box.return_value = box(-90, -45, 90, 45)
+    tile_service.get_min_time.return_value = 1627490285
+    tile_service.get_max_time.return_value = 1627490285
+    tile_service.mask_tiles_to_polygon.return_value = [tile]
+    return tile_service_factory
+
+
 def test_doms_point_is_pickleable():
     edge_point = {
         'id': 'argo-profiles-5903995(46, 0)',
@@ -103,7 +114,7 @@ def test_doms_point_is_pickleable():
     assert pickle.dumps(point) is not None
 
 
-def test_calc():
+def test_calc(test_matchup_args):
     """
     Assert that the expected functions are called during the matchup
     calculation and that the results are formatted as expected.
@@ -271,34 +282,13 @@ def test_match_satellite_to_insitu(test_dir, test_tile, test_matchup_args):
     with secondary point (5, 15) and primary point (20, 0) should match
     with (18, 3)
     """
-    tile = Tile()
-    tile.tile_id = 1
-    tile.tile_min_lat = 0
-    tile.tile_max_lat = 20
-    tile.tile_min_lon = 0
-    tile.tile_max_lon = 20
-    tile.dataset = 'test-dataset'
-    tile.dataset_id = 123
-    tile.granule = 'test-granule-name'
-    tile.min_time = '2020-07-28T00:00:00'
-    tile.max_time = '2020-07-28T00:00:00'
-    tile.section_spec = 'test-section-spec'
-    tile.var_names = ['sea_surface_temperature']
-    tile.latitudes = np.array([0, 20], dtype=np.float32)
-    tile.longitudes = np.array([0, 20], dtype=np.float32)
-    tile.times = [1627490285]
-    tile.data = np.array([[[11.0, 21.0], [31.0, 41.0]]])
-    tile.get_indices = lambda: [[0, 0, 0], [0, 0, 1], [0, 1, 0], [0, 1, 1]]
-    tile.meta_data = {'wind_type': []}
-    tile.is_multi = False
-
-    tile_service_factory = mock.MagicMock()
-    tile_service = mock.MagicMock()
-    tile_service_factory.return_value = tile_service
-    tile_service.get_bounding_box.return_value = box(-90, -45, 90, 45)
-    tile_service.get_min_time.return_value = 1627490285
-    tile_service.get_max_time.return_value = 1627490285
-    tile_service.mask_tiles_to_polygon.return_value = [tile]
+    test_tile.var_names = ['sea_surface_temperature']
+    test_tile.latitudes = np.array([0, 20], dtype=np.float32)
+    test_tile.longitudes = np.array([0, 20], dtype=np.float32)
+    test_tile.times = [1627490285]
+    test_tile.data = np.array([[[11.0, 21.0], [31.0, 41.0]]])
+    test_tile.get_indices = lambda: [[0, 0, 0], [0, 0, 1], [0, 1, 0], [0, 1, 1]]
+    test_tile.is_multi = False
 
     tile_ids = [1]
     polygon_wkt = 'POLYGON((-34.98 29.54, -30.1 29.54, -30.1 31.00, -34.98 31.00, -34.98 29.54))'
@@ -311,11 +301,9 @@ def test_match_satellite_to_insitu(test_dir, test_tile, test_matchup_args):
     radius_tolerance = 1000000.0
     platforms = '1,2,3,4,5,6,7,8,9'
 
-    class MockSparkParam:
-        def __init__(self, value):
-            self.value = value
-
-    with mock.patch('webservice.algorithms_spark.Matchup.edge_endpoints.getEndpointByName') as mock_edge_endpoints:
+    with mock.patch(
+            'webservice.algorithms_spark.Matchup.edge_endpoints.getEndpointByName'
+    ) as mock_edge_endpoints:
         # Test the satellite->insitu branch
         # By mocking the getEndpointsByName function we are forcing
         # Matchup to think this dummy matchup dataset is an insitu
@@ -335,7 +323,7 @@ def test_match_satellite_to_insitu(test_dir, test_tile, test_matchup_args):
             bounding_wkt_b=MockSparkParam(polygon_wkt),
             depth_min_b=MockSparkParam(depth_min),
             depth_max_b=MockSparkParam(depth_max),
-            tile_service_factory=tile_service_factory
+            tile_service_factory=setup_mock_tile_service(test_tile)
         )
 
         generator = matchup.match_satellite_to_insitu(**match_args)
@@ -392,32 +380,21 @@ def test_match_satellite_to_insitu(test_dir, test_tile, test_matchup_args):
         points = [wkt.loads(result['point']) for result in edge_json['results']]
 
         matchup_tile = Tile()
-        matchup_tile.tile_id = 1
-        matchup_tile.tile_min_lat = 3
-        matchup_tile.tile_max_lat = 15
-        matchup_tile.tile_min_lon = 5
-        matchup_tile.tile_max_lon = 18
-        matchup_tile.dataset = 'test-dataset'
-        matchup_tile.dataset_id = 123
-        matchup_tile.granule = 'test-granule-name'
-        matchup_tile.min_time = '2020-07-28T00:00:00'
-        matchup_tile.max_time = '2020-07-28T00:00:00'
-        matchup_tile.section_spec = 'test-section-spec'
         matchup_tile.var_names = ['sea_surface_temperature']
         matchup_tile.latitudes = np.array([point.y for point in points], dtype=np.float32)
         matchup_tile.longitudes = np.array([point.x for point in points], dtype=np.float32)
         matchup_tile.times = [edge_json['results'][0]['time']]
         matchup_tile.data = np.array([[[10.0, 0, 0], [0, 20.0, 0], [0, 0, 30.0]]])
         matchup_tile.get_indices = lambda: [[0, 0, 0], [0, 1, 1], [0, 2, 2]]
-        matchup_tile.meta_data = {'wind_type': []}
         matchup_tile.is_multi = False
 
-        tile_service.find_tiles_in_polygon.return_value = [matchup_tile]
+        match_args['tile_service_factory']().find_tiles_in_polygon.return_value = [matchup_tile]
 
         generator = matchup.match_satellite_to_insitu(**match_args)
 
         sat_matchup_result = list(generator)
         validate_matchup_result(sat_matchup_result, insitu_matchup=False)
+
 
 def test_multi_variable_matchup(test_dir, test_tile, test_matchup_args):
     """
@@ -438,18 +415,11 @@ def test_multi_variable_matchup(test_dir, test_tile, test_matchup_args):
     ])
     test_tile.is_multi = True
     test_tile.var_names = ['wind_speed', 'wind_dir']
-
-    tile_service_factory = mock.MagicMock()
-    tile_service = mock.MagicMock()
-    tile_service_factory.return_value = tile_service
-    tile_service.get_bounding_box.return_value = box(-90, -45, 90, 45)
-    tile_service.get_min_time.return_value = 1627490285
-    tile_service.get_max_time.return_value = 1627490285
-    tile_service.mask_tiles_to_polygon.return_value = [test_tile]
-    test_matchup_args['tile_service_factory'] = tile_service_factory
+    test_matchup_args['tile_service_factory'] = setup_mock_tile_service(test_tile)
 
     with mock.patch(
-            'webservice.algorithms_spark.Matchup.edge_endpoints.getEndpointByName') as mock_edge_endpoints:
+            'webservice.algorithms_spark.Matchup.edge_endpoints.getEndpointByName'
+    ) as mock_edge_endpoints:
         # Test the satellite->insitu branch
         # By mocking the getEndpointsByName function we are forcing
         # Matchup to think this dummy matchup dataset is an insitu
