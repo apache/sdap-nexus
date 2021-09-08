@@ -143,7 +143,7 @@ if __name__ == "__main__":
     handlers.append(
         (r'/apidocs', tornado.web.RedirectHandler, {"url": "/apidocs/"}))
     handlers.append(
-        (r'/apidocs/(.*)', tornado.web.StaticFileHandler, {'path': '/Users/jgarde/Development/incubator-sdap-nexus/analysis/webservice/apidocs', "default_filename": "index.html"}))
+        (r'/apidocs/(.*)', tornado.web.StaticFileHandler, {'path': 'webservice/apidocs', "default_filename": "index.html"}))
 
     if staticEnabled:
         handlers.append(
