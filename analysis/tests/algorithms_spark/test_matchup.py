@@ -398,7 +398,7 @@ def test_match_satellite_to_insitu(test_dir, test_tile, test_matchup_args):
 
 def test_multi_variable_matchup(test_dir, test_tile, test_matchup_args):
     """
-    Test multi-variable matchup functionality.
+    Test multi-variable satellite to in-situ matchup functionality.
     """
     test_tile.latitudes = np.array([0, 20], dtype=np.float32)
     test_tile.longitudes = np.array([0, 20], dtype=np.float32)
@@ -447,5 +447,66 @@ def test_multi_variable_matchup(test_dir, test_tile, test_matchup_args):
                 assert data_dict.variable_value == 31.0
 
 
-def test_multi_variable_satellite_to_satellite_matchup():
-    pass
+def test_multi_variable_satellite_to_satellite_matchup(test_dir, test_tile, test_matchup_args):
+    """
+    Test multi-variable satellite to satellite matchup functionality.
+    """
+    test_tile.latitudes = np.array([0, 20], dtype=np.float32)
+    test_tile.longitudes = np.array([0, 20], dtype=np.float32)
+    test_tile.times = [1627490285]
+    test_tile.data = np.array([
+        [[
+            [1.10, 2.10],
+            [3.10, 4.10]
+        ]],
+        [[
+            [11.0, 21.0],
+            [31.0, 41.0]
+        ]]
+    ])
+    test_tile.is_multi = True
+    test_tile.var_names = ['wind_speed', 'wind_dir']
+    test_matchup_args['tile_service_factory'] = setup_mock_tile_service(test_tile)
+
+    with mock.patch(
+            'webservice.algorithms_spark.Matchup.edge_endpoints.getEndpointByName'
+    ) as mock_edge_endpoints:
+        mock_edge_endpoints.return_value = None
+        # Open the edge response json. We want to convert these points
+        # to tile points so we can test sat to sat matchup
+        edge_json = json.load(open(os.path.join(test_dir, 'edge_response.json')))
+        points = [wkt.loads(result['point']) for result in edge_json['results']]
+
+        matchup_tile = Tile()
+        matchup_tile.var_names = ['sea_surface_temperature', 'wind_dir']
+        matchup_tile.latitudes = np.array([point.y for point in points], dtype=np.float32)
+        matchup_tile.longitudes = np.array([point.x for point in points], dtype=np.float32)
+        matchup_tile.times = [edge_json['results'][0]['time']]
+        matchup_tile.data = np.array([
+            [[
+                [10.0, 0, 0],
+                [0, 20.0, 0],
+                [0, 0, 30.0]
+            ]],
+            [[
+                [100.0, 0, 0],
+                [0, 200.0, 0],
+                [0, 0, 300.0]
+            ]]
+        ])
+        # matchup_tile.get_indices = lambda: [[0, 0, 0], [0, 1, 1], [0, 2, 2]]
+        matchup_tile.is_multi = True
+
+        test_matchup_args['tile_service_factory']().find_tiles_in_polygon.return_value = [
+            matchup_tile
+        ]
+
+        generator = matchup.match_satellite_to_insitu(**test_matchup_args)
+        matchup_result = list(generator)
+        assert len(matchup_result) == 2
+        assert len(matchup_result[0]) == 2
+        assert len(matchup_result[1]) == 2
+        assert len(matchup_result[0][0].data) == 2
+        assert len(matchup_result[0][1].data) == 2
+        assert len(matchup_result[1][0].data) == 2
+        assert len(matchup_result[1][1].data) == 2
