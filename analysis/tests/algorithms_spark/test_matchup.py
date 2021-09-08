@@ -27,7 +27,7 @@ from nexustiles.model.nexusmodel import Tile
 from pyspark.sql import SparkSession
 from shapely import wkt
 from shapely.geometry import box
-from webservice.algorithms_spark.Matchup import DomsPoint, Matchup
+from webservice.algorithms_spark.Matchup import DomsPoint, Matchup, DataPoint
 
 
 class MockSparkParam:
@@ -163,22 +163,22 @@ def test_calc():
     d1_ins = DomsPoint(**doms_point_args)
     d2_ins = DomsPoint(**doms_point_args)
 
-    d1_sat.data = [{
-        'name': 'sea_surface_temperature',
-        'value': 10.0
-    }]
-    d2_sat.data = [{
-        'name': 'sea_surface_temperature',
-        'value': 20.0
-    }]
-    d1_ins.data = [{
-        'name': 'sea_surface_temperature',
-        'value': 30.0
-    }]
-    d2_ins.data = [{
-        'name': 'sea_surface_temperature',
-        'value': 40.0
-    }]
+    d1_sat.data = [DataPoint(
+        variable_name='sea_surface_temperature',
+        variable_value=10.0
+    )]
+    d2_sat.data = [DataPoint(
+        variable_name='sea_surface_temperature',
+        variable_value=20.0
+    )]
+    d1_ins.data = [DataPoint(
+        variable_name='sea_surface_temperature',
+        variable_value=30.0
+    )]
+    d2_ins.data = [DataPoint(
+        variable_name='sea_surface_temperature',
+        variable_value=40.0
+    )]
 
     fake_spark_result = {
         d1_sat: [d1_ins, d2_ins],
@@ -227,12 +227,12 @@ def test_calc():
                 assert matches['x'] == '-180'
                 assert matches['y'] == '-90'
 
-        assert json_matchup_result['data'][0]['data'][0]['value'] == 10.0
-        assert json_matchup_result['data'][1]['data'][0]['value'] == 20.0
-        assert json_matchup_result['data'][0]['matches'][0]['data'][0]['value'] == 30.0
-        assert json_matchup_result['data'][0]['matches'][1]['data'][0]['value'] == 40.0
-        assert json_matchup_result['data'][1]['matches'][0]['data'][0]['value'] == 30.0
-        assert json_matchup_result['data'][1]['matches'][1]['data'][0]['value'] == 40.0
+        assert json_matchup_result['data'][0]['data'][0]['variable_value'] == 10.0
+        assert json_matchup_result['data'][1]['data'][0]['variable_value'] == 20.0
+        assert json_matchup_result['data'][0]['matches'][0]['data'][0]['variable_value'] == 30.0
+        assert json_matchup_result['data'][0]['matches'][1]['data'][0]['variable_value'] == 40.0
+        assert json_matchup_result['data'][1]['matches'][0]['data'][0]['variable_value'] == 30.0
+        assert json_matchup_result['data'][1]['matches'][1]['data'][0]['variable_value'] == 40.0
 
         assert json_matchup_result['details']['numInSituMatched'] == 4
         assert json_matchup_result['details']['numGriddedMatched'] == 2
@@ -362,20 +362,20 @@ def test_match_satellite_to_insitu(test_dir, test_tile, test_matchup_args):
             assert matchup_result[1][1].longitude == 5.0
             # Check that the secondary points have the expected values
             if insitu_matchup:
-                assert matchup_result[0][1].data[0]['value'] == 30.0
-                assert matchup_result[1][1].data[0]['value'] == 10.0
-                assert matchup_result[0][1].data[0]['name'] == 'sea_water_temperature'
-                assert matchup_result[1][1].data[0]['name'] == 'sea_water_temperature'
+                assert matchup_result[0][1].data[0].variable_value == 30.0
+                assert matchup_result[1][1].data[0].variable_value == 10.0
+                assert matchup_result[0][1].data[0].variable_name == 'sea_water_temperature'
+                assert matchup_result[1][1].data[0].variable_name == 'sea_water_temperature'
             else:
-                assert matchup_result[0][1].data[0]['value'] == 30.0
-                assert matchup_result[1][1].data[0]['value'] == 10.0
-                assert matchup_result[0][1].data[0]['name'] == 'sea_surface_temperature'
-                assert matchup_result[1][1].data[0]['name'] == 'sea_surface_temperature'
+                assert matchup_result[0][1].data[0].variable_value == 30.0
+                assert matchup_result[1][1].data[0].variable_value == 10.0
+                assert matchup_result[0][1].data[0].variable_name == 'sea_surface_temperature'
+                assert matchup_result[1][1].data[0].variable_name == 'sea_surface_temperature'
             # Check that the satellite points have the expected values
-            assert matchup_result[0][0].data[0]['value'] == 21.0
-            assert matchup_result[1][0].data[0]['value'] == 31.0
-            assert matchup_result[0][0].data[0]['name'] == 'sea_surface_temperature'
-            assert matchup_result[1][0].data[0]['name'] == 'sea_surface_temperature'
+            assert matchup_result[0][0].data[0].variable_value == 21.0
+            assert matchup_result[1][0].data[0].variable_value == 31.0
+            assert matchup_result[0][0].data[0].variable_name == 'sea_surface_temperature'
+            assert matchup_result[1][0].data[0].variable_name == 'sea_surface_temperature'
 
         insitu_matchup_result = list(generator)
         validate_matchup_result(insitu_matchup_result, insitu_matchup=True)
@@ -464,17 +464,17 @@ def test_multi_variable_matchup(test_dir, test_tile, test_matchup_args):
 
         # wind_speed is first, wind_dir is second
         for data_dict in insitu_matchup_result[0][0].data:
-            assert data_dict['name'] in test_tile.var_names
-            if data_dict['name'] == 'wind_speed':
-                assert data_dict['value'] == 2.10
-            elif data_dict['name'] == 'wind_dir':
-                assert data_dict['value'] == 21.0
+            assert data_dict.variable_name in test_tile.var_names
+            if data_dict.variable_name == 'wind_speed':
+                assert data_dict.variable_value == 2.10
+            elif data_dict.variable_name == 'wind_dir':
+                assert data_dict.variable_value == 21.0
         for data_dict in insitu_matchup_result[1][0].data:
-            assert data_dict['name'] in test_tile.var_names
-            if data_dict['name'] == 'wind_speed':
-                assert data_dict['value'] == 3.10
-            elif data_dict['name'] == 'wind_dir':
-                assert data_dict['value'] == 31.0
+            assert data_dict.variable_name in test_tile.var_names
+            if data_dict.variable_name == 'wind_speed':
+                assert data_dict.variable_value == 3.10
+            elif data_dict.variable_name == 'wind_dir':
+                assert data_dict.variable_value == 31.0
 
 
 def test_multi_variable_satellite_to_satellite_matchup():

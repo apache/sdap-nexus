@@ -22,6 +22,7 @@ from shapely.geometry import Polygon
 from datetime import datetime
 from itertools import chain
 from math import cos, radians
+from dataclasses import dataclass
 
 import numpy as np
 import pyproj
@@ -321,9 +322,25 @@ class Matchup(NexusCalcSparkHandler):
             "fileurl": domspoint.file_url,
             "id": domspoint.data_id,
             "source": domspoint.source,
-            "data": domspoint.data
+            "data": [data_point.__dict__ for data_point in domspoint.data]
         }
         return doms_dict
+
+
+@dataclass
+class DataPoint:
+    """
+    Represents a single point of data. This is used to construct the
+    output of the matchup algorithm.
+
+    :attribute variable_name: The name of the NetCDF variable. If
+        standard_name was available, that is used here. Otherwise, the
+        actual variable name is used.
+    :attribute variable_value: value at some point for the given
+        variable.
+    """
+    variable_name: str = None
+    variable_value: float = None
 
 
 class DomsPoint(object):
@@ -367,11 +384,7 @@ class DomsPoint(object):
 
         data = []
         for val, name in zip(data_vals, tile.var_names):
-            data_point = {
-                'name': name,
-                'value': val
-            }
-            data.append(data_point)
+            data.append(DataPoint(name, val))
         point.data = data
 
         try:
@@ -452,19 +465,15 @@ class DomsPoint(object):
         for name in data_fields:
             val = edge_point.get(name)
             if val:
-                data_point = {
-                    'name': name,
-                    'value': val
-                }
-                data.append(data_point)
+                data.append(DataPoint(name, val))
 
 
         # This is for satellite secondary points
         if 'var_names' in edge_point and 'var_values' in edge_point:
-            data.extend([{
-                'name': var_name,
-                'value': var_value,
-            } for var_name, var_value in zip(edge_point['var_names'], edge_point['var_values'])])
+            data.extend([DataPoint(
+                variable_name=var_name,
+                variable_value=var_value
+            ) for var_name, var_value in zip(edge_point['var_names'], edge_point['var_values'])])
         point.data = data
 
         try:
