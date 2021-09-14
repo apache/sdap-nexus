@@ -333,13 +333,15 @@ class DataPoint:
     Represents a single point of data. This is used to construct the
     output of the matchup algorithm.
 
-    :attribute variable_name: The name of the NetCDF variable. If
-        standard_name was available, that is used here. Otherwise, the
-        actual variable name is used.
+    :attribute variable_name: The name of the NetCDF variable.
+    :attribute cf_variable_name: The CF standard_name of the
+    NetCDF variable. This will be None if the standard_name does not
+    exist in the source data file.
     :attribute variable_value: value at some point for the given
         variable.
     """
     variable_name: str = None
+    cf_variable_name: str = None
     variable_value: float = None
 
 
@@ -383,8 +385,12 @@ class DomsPoint(object):
             data_vals = [nexus_point.data_vals]
 
         data = []
-        for val, name in zip(data_vals, tile.var_names):
-            data.append(DataPoint(name, val))
+        for val, name, standard_name in zip(data_vals, tile.var_names, tile.standard_names):
+            data.append(DataPoint(
+                variable_name=name,
+                variable_value=val,
+                cf_variable_name=standard_name
+            ))
         point.data = data
 
         try:
@@ -465,15 +471,23 @@ class DomsPoint(object):
         for name in data_fields:
             val = edge_point.get(name)
             if val:
-                data.append(DataPoint(name, val))
+                data.append(DataPoint(
+                    variable_name=name,
+                    variable_value=val
+                ))
 
 
         # This is for satellite secondary points
         if 'var_names' in edge_point and 'var_values' in edge_point:
             data.extend([DataPoint(
                 variable_name=var_name,
-                variable_value=var_value
-            ) for var_name, var_value in zip(edge_point['var_names'], edge_point['var_values'])])
+                variable_value=var_value,
+                cf_variable_name=standard_name
+            ) for var_name, var_value, standard_name in zip(
+                edge_point['var_names'],
+                edge_point['var_values'],
+                edge_point['var_standard_names']
+            )])
         point.data = data
 
         try:
@@ -602,7 +616,8 @@ def tile_to_edge_points(tile):
             'device': None,
             'fileurl': tile.granule,
             'var_names': tile.var_names,
-            'var_values': data
+            'var_values': data,
+            'var_standard_names': tile.standard_names
         }
         edge_points.append(edge_point)
     return edge_points

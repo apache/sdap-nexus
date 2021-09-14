@@ -282,7 +282,8 @@ def test_match_satellite_to_insitu(test_dir, test_tile, test_matchup_args):
     with secondary point (5, 15) and primary point (20, 0) should match
     with (18, 3)
     """
-    test_tile.var_names = ['sea_surface_temperature']
+    test_tile.var_names = ['sst']
+    test_tile.standard_names = ['sea_surface_temperature']
     test_tile.latitudes = np.array([0, 20], dtype=np.float32)
     test_tile.longitudes = np.array([0, 20], dtype=np.float32)
     test_tile.times = [1627490285]
@@ -357,13 +358,17 @@ def test_match_satellite_to_insitu(test_dir, test_tile, test_matchup_args):
             else:
                 assert matchup_result[0][1].data[0].variable_value == 30.0
                 assert matchup_result[1][1].data[0].variable_value == 10.0
-                assert matchup_result[0][1].data[0].variable_name == 'sea_surface_temperature'
-                assert matchup_result[1][1].data[0].variable_name == 'sea_surface_temperature'
+                assert matchup_result[0][1].data[0].variable_name == 'sst'
+                assert matchup_result[0][1].data[0].cf_variable_name == 'sea_surface_temperature'
+                assert matchup_result[1][1].data[0].variable_name == 'sst'
+                assert matchup_result[1][1].data[0].cf_variable_name == 'sea_surface_temperature'
             # Check that the satellite points have the expected values
             assert matchup_result[0][0].data[0].variable_value == 21.0
             assert matchup_result[1][0].data[0].variable_value == 31.0
-            assert matchup_result[0][0].data[0].variable_name == 'sea_surface_temperature'
-            assert matchup_result[1][0].data[0].variable_name == 'sea_surface_temperature'
+            assert matchup_result[0][0].data[0].variable_name == 'sst'
+            assert matchup_result[0][0].data[0].cf_variable_name == 'sea_surface_temperature'
+            assert matchup_result[1][0].data[0].variable_name == 'sst'
+            assert matchup_result[1][0].data[0].cf_variable_name == 'sea_surface_temperature'
 
         insitu_matchup_result = list(generator)
         validate_matchup_result(insitu_matchup_result, insitu_matchup=True)
@@ -380,7 +385,8 @@ def test_match_satellite_to_insitu(test_dir, test_tile, test_matchup_args):
         points = [wkt.loads(result['point']) for result in edge_json['results']]
 
         matchup_tile = Tile()
-        matchup_tile.var_names = ['sea_surface_temperature']
+        matchup_tile.var_names = ['sst']
+        matchup_tile.standard_names = ['sea_surface_temperature']
         matchup_tile.latitudes = np.array([point.y for point in points], dtype=np.float32)
         matchup_tile.longitudes = np.array([point.x for point in points], dtype=np.float32)
         matchup_tile.times = [edge_json['results'][0]['time']]
@@ -415,6 +421,7 @@ def test_multi_variable_matchup(test_dir, test_tile, test_matchup_args):
     ])
     test_tile.is_multi = True
     test_tile.var_names = ['wind_speed', 'wind_dir']
+    test_tile.standard_names = ['wind_speed', 'wind_direction']
     test_matchup_args['tile_service_factory'] = setup_mock_tile_service(test_tile)
 
     with mock.patch(
@@ -466,6 +473,7 @@ def test_multi_variable_satellite_to_satellite_matchup(test_dir, test_tile, test
     ])
     test_tile.is_multi = True
     test_tile.var_names = ['wind_speed', 'wind_dir']
+    test_tile.standard_names = ['wind_speed', 'wind_direction']
     test_matchup_args['tile_service_factory'] = setup_mock_tile_service(test_tile)
 
     with mock.patch(
@@ -478,7 +486,8 @@ def test_multi_variable_satellite_to_satellite_matchup(test_dir, test_tile, test
         points = [wkt.loads(result['point']) for result in edge_json['results']]
 
         matchup_tile = Tile()
-        matchup_tile.var_names = ['sea_surface_temperature', 'wind_dir']
+        matchup_tile.var_names = ['sst', 'wind_dir']
+        matchup_tile.standard_names = ['sea_surface_temperature', 'wind_direction']
         matchup_tile.latitudes = np.array([point.y for point in points], dtype=np.float32)
         matchup_tile.longitudes = np.array([point.x for point in points], dtype=np.float32)
         matchup_tile.times = [edge_json['results'][0]['time']]

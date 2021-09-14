@@ -47,7 +47,10 @@ class Tile(object):
     :attribute tile_stats: Dictionary representing the min, max, mean, and
         count of this tile
     :attribute var_names: A list of size N where N == the number of vars
-        this tile represents
+        this tile represents. This represents the variable name from the
+        source data file.
+    :attribute standard_names: A list of size N where N == the number of vars
+        this tile represents. This represents the CF 'standard_name' from the
     :attribute latitudes: 1-d ndarray representing the latitude values of
         this tile
     :attribute longitudes: 1-d ndarray representing the longitude values of
@@ -70,6 +73,7 @@ class Tile(object):
     max_time: str = None
     tile_stats: dict = None
     var_names: list = None
+    standard_names: list = None
     latitudes: np.array = None
     longitudes: np.array = None
     times: np.array = None

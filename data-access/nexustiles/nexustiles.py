@@ -540,6 +540,16 @@ class NexusTileService(object):
             except KeyError:
                 pass
 
+            try:
+                # tile_standard_name_s is a json encoded list of strings
+                # (or just a single string).
+                if '[' in solr_doc['tile_standard_name_s']:
+                    tile.standard_names = json.loads(solr_doc['tile_standard_name_s'])
+                else:
+                    tile.standard_names = [solr_doc['tile_standard_name_s']]
+            except KeyError:
+                pass
+
             tiles.append(tile)
 
         return tiles
