@@ -386,11 +386,12 @@ class DomsPoint(object):
 
         data = []
         for val, name, standard_name in zip(data_vals, tile.var_names, tile.standard_names):
-            data.append(DataPoint(
-                variable_name=name,
-                variable_value=val,
-                cf_variable_name=standard_name
-            ))
+            if val:
+                data.append(DataPoint(
+                    variable_name=name,
+                    variable_value=val,
+                    cf_variable_name=standard_name
+                ))
         point.data = data
 
         try:
@@ -479,6 +480,7 @@ class DomsPoint(object):
 
         # This is for satellite secondary points
         if 'var_names' in edge_point and 'var_values' in edge_point:
+
             data.extend([DataPoint(
                 variable_name=var_name,
                 variable_value=var_value,
@@ -487,7 +489,7 @@ class DomsPoint(object):
                 edge_point['var_names'],
                 edge_point['var_values'],
                 edge_point['var_standard_names']
-            )])
+            ) if var_value])
         point.data = data
 
         try:
