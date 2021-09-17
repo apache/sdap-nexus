@@ -137,7 +137,12 @@ class Tile(object):
         if include_nan:
             return list(np.ndindex(self.data.shape))
         if self.is_multi:
-            return np.argwhere(self.data[0])
+            # For each variable, combine masks. This is a logical or
+            # operation, because we want to ensure we don't lose any
+            # data.
+            combined_data_mask = np.logical_or(*self.data)
+            # Return the indices where the data is valid
+            return np.argwhere(combined_data_mask)
         else:
             return np.transpose(np.where(np.ma.getmaskarray(self.data) == False)).tolist()
 
