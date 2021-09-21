@@ -18,6 +18,7 @@ import importlib
 import logging
 import sys
 import os
+from pathlib import Path
 from functools import partial
 
 import pkg_resources
@@ -139,6 +140,13 @@ if __name__ == "__main__":
             self.write(pkg_resources.get_distribution("nexusanalysis").version)
 
     handlers.append((r"/version", VersionHandler))
+
+    handlers.append(
+        (r'/apidocs', tornado.web.RedirectHandler, {"url": "/apidocs/"}))
+
+    apidocs_path = Path(__file__).parent.joinpath('apidocs').resolve()
+    handlers.append(
+        (r'/apidocs/(.*)', tornado.web.StaticFileHandler, {'path': str(apidocs_path), "default_filename": "index.html"}))
 
     if staticEnabled:
         handlers.append(

@@ -1,0 +1,854 @@
+openapi: 3.0.3
+info:
+  description: The next generation cloud-based science data service platform.
+  version: 0.4.2
+  title: Distributed Oceanographic Matchup Service (DOMS)
+  license:
+    name: Apache 2.0
+    url: http://www.apache.org/licenses/LICENSE-2.0.html
+tags:
+  - name: Matchup
+    description: Data Matchup API
+  - name: Analytics
+    description: Data Analytics API
+  - name: Subsetting
+    description: Data Subsetting API
+paths:
+  /match_spark:
+    get:
+      summary: Execute matchup request
+      operationId: matchup
+      tags:
+        - Matchup
+      parameters:
+        - in: query
+          name: primary
+          description: |
+            The primary dataset used to find matches for. One of the
+            satellite "shortName" as supplied by /domslist endpoint.
+          required: true
+          schema:
+            type: string
+          example: avhrr-l4-glob-v2-daily-ncei-ghrsst-sstblend-avhrr-oi-glob-v020-fv020
+        - in: query
+          name: matchup
+          description: |
+            The dataset(s) being searched for measurements that match
+            the measurements in primary. One or more (comma-separated)
+            of the insitu or satellite "name" as supplied by
+            https://doms.jpl.nasa.gov/domslist
+          required: true
+          schema:
+            type: string
+          example: icoads
+        - in: query
+          name: startTime
+          description: |
+            Starting time in format YYYY-MM-DDTHH:mm:ssZ or seconds
+            since epoch
+          required: true
+          schema:
+            type: string
+            format: date-time
+          example: '2012-09-25T00:00:00Z'
+        - in: query
+          name: endTime
+          description: |
+            Ending time in format YYYY-MM-DDTHH:mm:ssZ or seconds
+            since epoch
+          required: true
+          schema:
+            type: string
+            format: date-time
+          example: '2012-09-30T23:59:59Z'
+        - in: query
+          name: b
+          description: |
+            Minimum (Western) Longitude, Minimum (Southern) Latitude,
+            Maximum (Eastern) Longitude, Maximum (Northern) Latitude
+          required: true
+          schema:
+            type: string
+          example: -45,15,-30,30
+        - in: query
+          name: platforms
+          description: Platforms to include for matchup consideration
+          required: true
+          schema:
+            type: string
+          example: 1,2,3,4,5,6,7,8,9
+        - in: query
+          name: depthMin
+          description: |
+            Minimum depth of measurements allowed to be considered for
+            matchup
+          required: false
+          schema:
+            type: integer
+          example: 0
+        - in: query
+          name: depthMax
+          description: |
+            Maximum depth of measurements allowed to be considered for
+            matchup
+          required: false
+          schema:
+            type: integer
+          example: 5
+        - in: query
+          name: tt
+          description: |
+            Tolerance in time (seconds) when comparing two measurements.
+          required: false
+          schema:
+            type: integer
+            default: 86400
+          example: 86400
+        - in: query
+          name: rt
+          description: |
+            Tolerance in radius (meters) when comparing two
+            measurements.
+          required: false
+          schema:
+            type: number
+            default: 1000.0
+          example: 1000.0
+        - in: query
+          name: parameter
+          description: |
+            The parameter of interest used for the match up.
+          required: false
+          schema:
+            type: string
+            enum: ['sst', 'sss', 'wind']
+            default: sst
+          example: sst
+        - in: query
+          name: matchOnce
+          description: |
+            True/False flag used to determine if more than one match
+            per primary point is returned. If true, only the nearest
+            point will be returned for each primary point. If false,
+            all points within the tolerances will be returned for each
+            primary point.
+          required: false
+          schema:
+            type: boolean
+            default: false
+          example: false
+        - in: query
+          name: resultSizeLimit
+          description: |
+            Optional integer value that limits the number of results
+            returned from the matchup. If the number of primary matches
+            is greater than this limit, the service will respond with
+            (HTTP 202 Accepted) and an empty response body. A value of
+            0 means return all results.
+          required: false
+          schema:
+            type: integer
+            default: 500
+          example: 500
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MatchupResponse'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /domssubset:
+    get:
+      summary: Subset DOMS sources given the search domain
+      operationId: domssubset
+      tags:
+        - Subsetting
+      parameters:
+        - in: query
+          name: dataset
+          description: |
+            The NEXUS dataset. *Optional but at least one of 'dataset'
+            or 'insitu' are required
+          required: false
+          schema:
+            type: string
+          example: MAVHRR_OI_L4_GHRSST_NCEI
+        - in: query
+          name: insitu
+          description: |
+            The in situ source(s). *Optional but at least one of
+            'dataset' or 'insitu' are required
+          required: false
+          schema:
+            type: string
+          example: icoads,samos,spurs,spurs2
+        - in: query
+          name: startTime
+          description: |
+            Starting time in format YYYY-MM-DDTHH:mm:ssZ or seconds
+            since epoch
+          required: true
+          schema:
+            type: string
+            format: date-time
+          example: '2013-10-21T00:00:00Z'
+        - in: query
+          name: endTime
+          description: |
+            Ending time in format YYYY-MM-DDTHH:mm:ssZ or seconds
+            since epoch
+          required: true
+          schema:
+            type: string
+            format: date-time
+          example: '2013-10-21T01:00:00Z'
+        - in: query
+          name: b
+          description: |
+            Minimum (Western) Longitude, Minimum (Southern) Latitude,
+            Maximum (Eastern) Longitude, Maximum (Northern) Latitude
+          required: true
+          schema:
+            type: string
+          example: -30,15,-45,30
+        - in: query
+          name: parameter
+          description: |
+            The parameter of interest. One of 'sst', 'sss', 'wind'
+          required: true
+          schema:
+            type: string
+            enum: ['sst', 'sss', 'wind']
+          example: sss
+        - in: query
+          name: depthMin
+          description: |
+            Minimum depth of measurements. Must be less than depthMax.
+          required: false
+          schema:
+            type: integer
+          example: 0
+        - in: query
+          name: depthMax
+          description: |
+            Maximum depth of measurements. Must be greater than
+            depthMin.
+          required: false
+          schema:
+            type: integer
+          example: 5
+        - in: query
+          name: platforms
+          description: |
+            Platforms to include for subset consideration.
+          required: false
+          schema:
+            type: string
+            default: 1,2,3,4,5,6,7,8,9
+          example: 1,2,3,4,5,6,7,8,9
+        - in: query
+          name: output
+          description: |
+            Output type. Only 'ZIP' is currently supported
+          required: true
+          schema:
+            type: string
+            enum: ['ZIP']
+            default: ZIP
+          example: ZIP
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/zip:
+              schema:
+                type: string
+                format: binary
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /datainbounds:
+    get:
+      summary: Fetches point values for a given dataset and geographical area
+      operationId: datainbounds
+      tags:
+        - Subsetting
+      parameters:
+        - in: query
+          name: ds
+          description: |
+            The Dataset shortname to use in calculation
+          required: true
+          schema:
+            type: string
+          example: avhrr-l4-glob-v2-daily-ncei-ghrsst-sstblend-avhrr-oi-glob-v020-fv020
+        - in: query
+          name: startTime
+          description: |
+            Starting time in format YYYY-MM-DDTHH:mm:ssZ or seconds
+            since epoch
+          required: true
+          schema:
+            type: string
+            format: date-time
+          example: '2012-09-28T00:00:00Z'
+        - in: query
+          name: endTime
+          description: |
+            Ending time in format YYYY-MM-DDTHH:mm:ssZ or seconds
+            since epoch
+          required: true
+          schema:
+            type: string
+            format: date-time
+          example: '2012-09-28T00:01:00Z'
+        - in: query
+          name: b
+          description: |
+            Minimum (Western) Longitude, Minimum (Southern) Latitude,
+            Maximum (Eastern) Longitude, Maximum (Northern) Latitude
+          required: true
+          schema:
+            type: string
+          example: -45,15,-30,30
+        - in: query
+          name: parameter
+          description: |
+            The parameter of interest. One of 'sst', 'sss', 'wind'
+          required: true
+          schema:
+            type: string
+            enum: ['sst', 'sss', 'wind']
+          example: sst
+        - in: query
+          name: output
+          description: |
+            Output type. Only 'CSV' or 'JSON' is currently supported
+          required: false
+          schema:
+            type: string
+            default: 'JSON'
+            enum: ['CSV', 'JSON']
+          example: JSON
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MatchupResponse'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /version:
+    get:
+      summary: List the version of the API
+      operationId: apiversion
+      tags:
+        - Matchup
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            text/plain:
+              schema:
+                type: string
+                example: 1.6
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /domslist:
+    get:
+      summary: Provides a list of available data sets
+      operationId: domslist
+      tags:
+        - Matchup
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DomsList'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /domsvalues:
+    get:
+      summary: |
+        Fetches stats and data values for the selected in situ source
+        and bounding box
+      operationId: domsvalues
+      tags:
+        - Matchup
+      parameters:
+        - in: query
+          name: source
+          description: |
+            The insitu shortname to find stats and data for
+          required: true
+          schema:
+            type: string
+          example: samos
+        - in: query
+          name: startTime
+          description: |
+            Starting time in format YYYY-MM-DDTHH:mm:ssZ or seconds
+            since epoch
+          required: true
+          schema:
+            type: string
+            format: date-time
+          example: '2013-10-21T00:00:00Z'
+        - in: query
+          name: endTime
+          description: |
+            Ending time in format YYYY-MM-DDTHH:mm:ssZ or seconds
+            since epoch
+          required: true
+          schema:
+            type: string
+            format: date-time
+          example: '2013-10-21T01:00:00Z'
+        - in: query
+          name: b
+          description: |
+            Minimum (Western) Longitude, Minimum (Southern) Latitude,
+            Maximum (Eastern) Longitude, Maximum (Northern) Latitude
+          required: true
+          schema:
+            type: string
+          example: -30,15,-45,30
+        - in: query
+          name: tt
+          description: |
+            Tolerance in time (seconds) when comparing two measurements.
+          required: true
+          schema:
+            type: integer
+          example: 86400
+        - in: query
+          name: rt
+          description: |
+            Tolerance in radius (meters) when comparing two
+            measurements.
+          required: true
+          schema:
+            type: number
+          example: 1000.0
+        - in: query
+          name: depthMin
+          description: |
+            Minimum depth of measurements. Must be less than depthMax.
+          required: false
+          schema:
+            type: integer
+          example: 0
+        - in: query
+          name: depthMax
+          description: |
+            Maximum depth of measurements. Must be greater than
+            depthMin.
+          required: false
+          schema:
+            type: integer
+          example: 5
+        - in: query
+          name: platforms
+          description: |
+            Platforms to include for subset consideration.
+          required: false
+          schema:
+            type: string
+          example: 1,2,3,4,5,6,7,8,9
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DomsValues'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /stats:
+    get:
+      summary: |
+        Computes time series statistics
+      operationId: stats
+      tags:
+        - Analytics
+      parameters:
+        - in: query
+          name: ds
+          description: |
+            The dataset on which to generate the statistics
+          required: true
+          schema:
+            type: string
+          example: MUR25-JPL-L4-GLOB-v04.2
+        - in: query
+          name: minLat
+          description: |
+            Minimum latitude on which to generate statistics
+          required: true
+          schema:
+            type: string
+          example: -90
+        - in: query
+          name: maxLat
+          description: |
+            Maximum latitude on which to generate statistics
+          required: true
+          schema:
+            type: string
+          example: 90
+        - in: query
+          name: minLon
+          description: |
+            Minimum longitude on which to generate statistics
+          required: true
+          schema:
+            type: string
+          example: -180
+        - in: query
+          name: maxLon
+          description: |
+            Maximum longitude on which to generate statistics
+          required: true
+          schema:
+            type: string
+          example: 180
+        - in: query
+          name: startTime
+          description: |
+            Starting time in format YYYY-MM-DDTHH:mm:ssZ or seconds
+            since epoch
+          required: true
+          schema:
+            type: string
+            format: date-time
+          example: '2013-10-21T00:00:00Z'
+        - in: query
+          name: endTime
+          description: |
+            Ending time in format YYYY-MM-DDTHH:mm:ssZ or seconds
+            since epoch
+          required: true
+          schema:
+            type: string
+            format: date-time
+          example: '2013-10-31T23:59:59Z'
+        - in: query
+          name: output
+          description: |
+            Data formatting for results. Default is ‘JSON’. Alternative
+            is ‘CSV’ for comma-seperated values.
+          required: false
+          schema:
+            type: string
+            enum: ['JSON', 'CSV']
+          example: JSON
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Stats'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+externalDocs:
+  description: Documentation
+  url: https://incubator-sdap-nexus.readthedocs.io/en/latest/index.html
+components:
+  schemas:
+    DomsQueryResult:
+      type: object
+      properties:
+        executionId:
+          type: string
+          format: uuid
+    MatchupResponse:
+      allOf:
+        - $ref: '#/components/schemas/DomsQueryResult'
+        - type: object
+          properties:
+            data:
+              type: array
+              items:
+                $ref: '#/components/schemas/DomsPoint'
+    DomsPoint:
+      type: object
+      properties:
+        sea_water_temperature:
+          type: number
+        sea_water_temperature_depth:
+          type: number
+        sea_water_salinity:
+          type: number
+        sea_water_salinity_depth:
+          type: number
+        wind_speed:
+          type: number
+        wind_direction:
+          type: number
+        wind_u:
+          type: number
+        wind_v:
+          type: number
+        platform:
+          type: string
+        device:
+          type: string
+        x:
+          type: string
+        y:
+          type: string
+        point:
+          type: string
+          format: wkt
+        time:
+          type: integer
+        fileurl:
+          type: string
+        id:
+          type: string
+        source:
+          type: string
+        analysed_sst:
+          type: number # TODO Fix this
+        matches:
+          type: array
+          items:
+            $ref: '#/components/schemas/DomsPoint'
+    DomsList:
+      allOf:
+        - $ref: '#/components/schemas/DomsQueryResult'
+        - type: object
+          properties:
+            data:
+              type: object
+              properties:
+                satellite:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      shortName:
+                        type: string
+                      title:
+                        type: string
+                      tileCount:
+                        type: integer
+                      metadata:
+                        type: string # TODO
+                insitu:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      name:
+                        type: string
+                      endpoint:
+                        type: string
+                        format: url
+                      metadata:
+                        type: string # TODO
+                      depths:
+                        type: string # TODO
+                      facets:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            field:
+                              type: string
+                            values:
+                              type: array
+                              items:
+                                type: object
+                                properties:
+                                  count:
+                                    type: integer
+                                  value:
+                                    type: string
+                params:
+                  type: string # TODO
+                bounds:
+                  type: object # TODO
+                count:
+                  type: integer
+                details:
+                  type: string # TODO
+    DomsValues:
+      type: object
+      allOf:
+        - $ref: '#/components/schemas/DomsQueryResult'
+        - type: object
+          properties:
+            data:
+              type: array
+              items:
+                type: object
+                properties:
+                  x:
+                    type: number
+                  y:
+                    type: number
+                  source:
+                    type: string
+                  time:
+                    type: number
+                  device:
+                    type: string
+                    nullable: true
+                  platform:
+                    type: string
+                  depth:
+                    type: number
+                    nullable: true
+    Stats:
+      type: object
+      properties:
+        meta:
+          type: array
+          items:
+            type: object
+            properties:
+              shortname:
+                type: string
+              bounds:
+                type: object
+                properties:
+                  east:
+                    type: number
+                  west:
+                    type: number
+                  north:
+                    type: number
+                  south:
+                    type: number
+              time:
+                type: object
+                properties:
+                  start:
+                    type: integer
+                  stop:
+                    type: integer
+                  iso_start:
+                    type: string
+                    format: date
+                  iso_stop:
+                    type: string
+                    format: date
+        data:
+          type: array
+          items:
+            type: object
+            properties:
+              min:
+                type: number
+              max:
+                type: number
+              mean:
+                type: number
+              cnt:
+                type: integer
+              std:
+                type: number
+              time:
+                type: integer
+              meanSeasonal:
+                type: number
+              minSeasonal:
+                type: number
+              maxSeasonal:
+                type: number
+              meanLowPass:
+                type: number
+              maxLowPass:
+                type: number
+              meanSeasonalLowPass:
+                type: number
+              minSeasonalLowPass:
+                type: number
+              maxSeasonalLowPass:
+                type: number
+              ds:
+                type: integer
+        stats:
+          type: object
+          properties:
+            slope:
+              type: number
+            intercept:
+              type: number
+            r:
+              type: number
+            p:
+              type: number
+            err:
+              type: string
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+        code:
+          type: integer
