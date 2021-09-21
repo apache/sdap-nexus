@@ -17,6 +17,7 @@ import json
 import logging
 import threading
 import time
+import re
 from datetime import datetime
 from pytz import timezone, UTC
 
@@ -24,9 +25,6 @@ import requests
 import pysolr
 from shapely import wkt
 from elasticsearch import Elasticsearch
-
-import inspect
-
 
 ELASTICSEARCH_CON_LOCK = threading.Lock()
 thread_local = threading.local()
@@ -54,63 +52,52 @@ class ElasticsearchProxy(object):
 
     def find_tile_by_id(self, tile_id):
 
-        #search = f'id:{tile_id}'
-
-        #params = {
-        #    'rows': 1
-        #}
-
-        search = {
+        params = {
+            "size": 1,
             "query": {
-                "terms": {
-                    "id": tile_id
+                "term": {
+                    "id": {
+                        "value": tile_id
+                    }
                 }
             }
         }
 
-        params = {
-            "size": 1
-        }
-
-        results = self.do_query_raw(*(search, None, None, True, None), **params)["hits"]["hits"]
-
-        assert len(results) == 1, f"Found {len(results)} results, expected exactly 1"
+        results, _, hits = self.do_query(*(None, None, None, True, None), **params)
+        assert hits == 1, f"Found {hits} results, expected exactly 1"
         return [results[0]["_source"]]
 
     def find_tiles_by_id(self, tile_ids, ds=None, **kwargs):
 
-        if ds is not None:
-            search = f'dataset_s:{ds}'
-        else:
-            search = '*:*'
-
-        additionalparams = {
+        params = {
             "query": {
-                "terms": {
-                    "id": tile_ids
+                "bool": {
+                    "filter": [],
+                    "should": [],
+                    "minimum_should_match": 1
                 }
             }
         }
 
-        self._merge_kwargs(additionalparams, **kwargs)
+        for tile_id in tile_ids:
+            params['query']['bool']['should'].append({"term": {"id": {"value": tile_id}}})
+            
+        if ds is not None:
+            params['query']['bool']['filter'].append({"term": {"dataset_s": {"value": ds}}})
 
-        results = self.do_query_all(*(search, None, None, False, None), **additionalparams)
+        self._merge_kwargs(params, **kwargs)
 
+        results = self.do_query_all(*(None, None, None, False, None), **params)
         assert len(results) == len(tile_ids), "Found %s results, expected exactly %s" % (len(results), len(tile_ids))
         return results
 
     def find_min_date_from_tiles(self, tile_ids, ds=None, **kwargs):
-
-        #if ds is not None:
-        #    search = ds
-        #else:
-        #    search = ""
-        search = "nexustiles"
-        additionalparams = {
+        params = {
             "size": 0,
-            "query": { 
-                "term": {
-                    "dataset_s": ds
+            "query": {
+                "bool": {
+                    "filter": [],
+                    "should": []
                 }
             },
             "aggs": {
@@ -121,19 +108,23 @@ class ElasticsearchProxy(object):
                 }
             }            
         }
-        response = self.do_query_raw(*(search, None, None, True, None), **additionalparams)
-        return self.convert_iso_to_datetime(response["aggregations"]['min_date_agg']["value_as_string"])
+        
+        for tile_id in tile_ids:
+            params['query']['bool']['should'].append({"term": {"id": {"value": tile_id}}})
+        if ds is not None:
+            params['query']['bool']['filter'].append({"term": {"dataset_s": {"value": ds}}})
 
+        aggregations = self.do_aggregation(*(None, None, None, True, None), **params)
+        return self.convert_iso_to_datetime(aggregations['min_date_agg']["value_as_string"])
 
     def find_max_date_from_tiles(self, tile_ids, ds=None, **kwargs):
 
-        #TODO : change hardcoded index name :
-        search = "nexustiles"
-        additionalparams = {
+        params = {
             "size": 0,
-            "query": { 
-                "term": {
-                    "dataset_s": ds
+            "query": {
+                "bool": {
+                    "filter": [],
+                    "should": []
                 }
             },
             "aggs": {
@@ -144,18 +135,37 @@ class ElasticsearchProxy(object):
                 }
             }            
         }
-        results = self.do_query_raw(*(search, None, None, True, None), **additionalparams)
-        return self.convert_iso_to_datetime(results["aggregations"]['max_date_agg']["value_as_string"])
+        
+        for tile_id in tile_ids:
+            params['query']['bool']['should'].append({"term": {"id": {"value": tile_id}}})
+        if ds is not None:
+            params['query']['bool']['filter'].append({"term": {"dataset_s": {"value": ds}}})        
+
+        aggregations = self.do_aggregation(*(None, None, None, True, None), **params)
+        return self.convert_iso_to_datetime(aggregations['max_date_agg']["value_as_string"])
 
 
     def find_min_max_date_from_granule(self, ds, granule_name, **kwargs):
-        #search = 'dataset_s:%s' % ds
-
-        search = "nexustiles"
-        additionalparams = {
+        
+        params = {
             "query": {
-                "terms": {
-                    "granule_s": granule_name
+                "bool": {
+                    "filter": [
+                        {
+                            "term": {
+                                "dataset_s": {
+                                    "value": ds
+                                }
+                            }
+                        },
+                        {
+                            "term": {
+                                "granule_s": {
+                                    "value": granule_name
+                                }
+                            }
+                        }
+                    ]
                 }
             },
             "aggs": {
@@ -172,10 +182,11 @@ class ElasticsearchProxy(object):
             }
         }
 
-        self._merge_kwargs(additionalparams, **kwargs)
-        results = self.do_query_raw(*(search, None, None, False, None), **additionalparams)
-        start_time = self.convert_iso_to_datetime(results["aggregations"]['min_date_agg']["value_as_string"])
-        end_time = self.convert_iso_to_datetime(results["aggregations"]['max_date_agg']["value_as_string"])
+        self._merge_kwargs(params, **kwargs)
+        
+        aggregations = self.do_aggregation(*(None, None, None, False, None), **params)
+        start_time = self.convert_iso_to_datetime(aggregations['min_date_agg']["value_as_string"])
+        end_time = self.convert_iso_to_datetime(aggregations['max_date_agg']["value_as_string"])
 
         return start_time, end_time
 
@@ -194,28 +205,34 @@ class ElasticsearchProxy(object):
         return datasets
 
     def get_data_series_list_simple(self):
-        #search = "*:*"
-        search = "nexustiles_test"
+        
         params = {
             'size': 0,
             "aggs": {
                 "dataset_list_agg": {
-                    "terms": {
+                    "composite": {
                         "size":100,
-                        "field": "dataset_s"
+                        "sources": [
+                            {
+                                "dataset_s": {
+                                    "terms": {
+                                        "field": "dataset_s"
+                                    }
+                                }
+                            }
+                        ]
                     }
                 }
             }
         }
 
-        response = self.do_query_raw(*(search, None, None, False, None), **params)
-        #self.logger.info(response)
+        aggregations = self.do_aggregation_all(params, 'dataset_list_agg')
         l = []
 
-        for dataset in response["aggregations"]["dataset_list_agg"]["buckets"]:
+        for dataset in aggregations:
             l.append({
-                "shortName": dataset["key"],
-                "title": dataset["key"],
+                "shortName": dataset['key']['dataset_s'],
+                "title": dataset['key']['dataset_s'],
                 "tileCount": dataset["doc_count"]
             })
 
@@ -223,8 +240,6 @@ class ElasticsearchProxy(object):
         return l
 
     def get_data_series_stats(self, ds):
-        #TODO : change hardcoded index name :
-        search = "nexustiles_test"
 
         params = {
             "size": 0,
@@ -236,12 +251,36 @@ class ElasticsearchProxy(object):
                 }     
             },
             "aggs": {
-                "terms_tile_max_time_dt": {
-                    "terms": {
-                        "size":10000,
-                        "field": "tile_max_time_dt"
+                "available_dates": {
+                    "composite": {
+                        "size": 100,
+                        "sources": [
+                            {"terms_tile_max_time_dt": {"terms": {"field": "tile_max_time_dt"}}}
+                        ]
                     }
-                },
+                }
+            }
+        }
+
+        aggregations = self.do_aggregation_all(params, 'available_dates')
+        stats = {}
+        stats['available_dates'] = []
+
+        for dt in aggregations:
+            stats['available_dates'].append(dt['key']['terms_tile_max_time_dt'] / 1000)
+
+        stats['available_dates'] = sorted(stats['available_dates'])
+
+        params = {
+            "size": 0,
+            "query": {
+                "term":{
+                    "dataset_s": {
+                        "value": ds
+                    }
+                }
+            }, 
+            "aggs": {
                 "min_tile_min_val_d": {
                     "min": {
                         "field": "tile_min_val_d"
@@ -265,71 +304,23 @@ class ElasticsearchProxy(object):
             }
         }
 
-#        params = {
-#            "facet": "true",
-#            "facet.field": ["dataset_s", "tile_max_time_dt"],
-#            "facet.limit": "-1",
-#            "facet.pivot": "{!stats=piv1}dataset_s",
-#            "stats": "on",
-#            "stats.field": ["{!tag=piv1 min=true max=true sum=false}tile_max_time_dt","{!tag=piv1 min=true max=false sum=false}tile_min_val_d","{!tag=piv1 min=false max=true sum=false}tile_max_val_d"]
-#        }
-
-        response = self.do_query_raw(*(search, None, None, False, None), **params)
-
-        stats = {}
-        stats["start"] = int(response["aggregations"]["min_tile_max_time_dt"]["value"]) / 1000
-        stats["end"] = int(response["aggregations"]["max_tile_max_time_dt"]["value"]) / 1000
-        stats["minValue"] = response["aggregations"]["min_tile_min_val_d"]["value"]
-        stats["maxValue"] = response["aggregations"]["max_tile_max_val_d"]["value"]
-
-#        for g in response.facets["facet_pivot"]["dataset_s"]:
-#            if g["value"] == ds:
-#                stats["start"] = self.convert_iso_to_timestamp(g["stats"]["stats_fields"]["tile_max_time_dt"]["min"])
-#                stats["end"] = self.convert_iso_to_timestamp(g["stats"]["stats_fields"]["tile_max_time_dt"]["max"])
-#                stats["minValue"] = g["stats"]["stats_fields"]["tile_min_val_d"]["min"]
-#                stats["maxValue"] = g["stats"]["stats_fields"]["tile_max_val_d"]["max"]
-
-
-        stats["availableDates"] = []
-        for dt in response["aggregations"]["terms_tile_max_time_dt"]["buckets"]:
-            stats["availableDates"].append(dt["key"] / 1000)
-        #for dt in response["facet_fields"]["tile_max_time_dt"][::2]:
-        #    stats["availableDates"].append(self.convert_iso_to_timestamp(dt))
-
-        stats["availableDates"] = sorted(stats["availableDates"])
-
-        #self.logger.info("get_data_series_stats :: stats = {}".format(stats))
+        aggregations = self.do_aggregation(*(None, None, None, False, None), **params)
+        stats["start"] = int(aggregations["min_tile_max_time_dt"]["value"]) / 1000
+        stats["end"] = int(aggregations["max_tile_max_time_dt"]["value"]) / 1000
+        stats["minValue"] = aggregations["min_tile_min_val_d"]["value"]
+        stats["maxValue"] = aggregations["max_tile_max_val_d"]["value"]
 
         return stats
 
     # TODO : day_of_year is not ingested, so this method can not work yet.
-    def find_tile_by_polygon_and_most_recent_day_of_year(self, bounding_polygon, ds, day_of_year):
+    def find_tile_by_polygon_vailable_dates_and_most_recent_day_of_year(self, bounding_polygon, ds, day_of_year):
 
-        #search = 'dataset_s:%s' % ds
-        search = "nexustiles"
-        
-        # self.logger.info("INSIDE find_tile_by_polygon_and_most_recent_day_of_year")
-        
         max_lat = bounding_polygon.bounds[3]
         min_lon = bounding_polygon.bounds[0]
         min_lat = bounding_polygon.bounds[1]
         max_lon = bounding_polygon.bounds[2]
         
-        # params = {
-        #     'fq': [
-        #         "{!field f=geo}Intersects(%s)" % bounding_polygon.wkt,
-        #         "tile_count_i:[1 TO *]",
-        #         "day_of_year_i:[* TO %s]" % day_of_year
-        #     ],
-        #     'rows': 1
-        # }
-
-        # results, start, found = self.do_query(
-        #     *(search, None, None, True, 'day_of_year_i desc'), **params)
-
-        # return [results[0]]
-        
-        es_params = {
+        params = {
             "size": "1",
             "query": {
                 "bool": {
@@ -339,7 +330,9 @@ class ElasticsearchProxy(object):
                                 "dataset_s": {
                                     "value": ds
                                 }
-                            },
+                            }
+                        },
+                        {
                             "geo_shape": {
                                 "geo": {
                                     "shape": {
@@ -350,51 +343,34 @@ class ElasticsearchProxy(object):
                                 }
                             }
                         },
-                        {
+                        { 
                             "range": {
                                 "tile_count_i": {
                                     "gte": 1
-                                },
+                                }
+                            }   
+                        },
+                        { 
+                            "range": {
                                 "day_of_year_i": {
                                     "lte": day_of_year
                                 }
-                            }
+                            } 
                         }
                     ]
                 }
             }
         }
+        result, _, _ = self.do_query(*(None, None, None, True, 'day_of_year_i desc'), **params)
         
-        # self.logger.info('ES Parameters : ' + str(es_params))
-
-        result, start, found = self.do_query(*(search, None, None, True, 'day_of_year_i desc'), **es_params)
-        
-        # self.logger.info('Returning ' + str(results[0]))
         return [results[0]]
 
-
     def find_days_in_range_asc(self, min_lat, max_lat, min_lon, max_lon, ds, start_time, end_time, **kwargs):
-
-        #TODO : change hardcoded index name :
-        search = "nexustiles"
-
-        # self.logger.info("min_lat : {}".format(min_lat))
-        # self.logger.info("max_lat : {}".format(max_lat))
-        # self.logger.info("min_lon : {}".format(min_lon))
-        # self.logger.info("max_lon : {}".format(max_lon))
-        # self.logger.info("start_time : {}".format(start_time))
-        # self.logger.info("end_time : {}".format(end_time))
-
-        #self.logger.info("KWARGS :")
-        #self.logger.info(kwargs)
 
         search_start_s = datetime.utcfromtimestamp(start_time).strftime(ELASTICSEARCH_FORMAT)
         search_end_s = datetime.utcfromtimestamp(end_time).strftime(ELASTICSEARCH_FORMAT)
 
-        # self.logger.info("start_time : {}".format(search_start_s))
-        # self.logger.info("end_time : {}".format(search_end_s))
-
-        additionalparams = {
+        params = {
             "size": "0",
             "_source": "tile_min_time_dt",
             "query": {
@@ -431,27 +407,31 @@ class ElasticsearchProxy(object):
             },
             "aggs": {
                 "days_range_agg": {
-                    "terms": {
-                        "size":10000,
-                        "field": "tile_min_time_dt"
-                        }
+                    "composite": {
+                        "size":100,
+                        "sources": [
+                            {
+                                "tile_min_time_dt": {
+                                    "terms": {
+                                        "field": "tile_min_time_dt"
+                                    }
+                                }
+                            }
+                        ]
+                    }
                 }
             }
         }
 
-        response = self.do_query_raw(*(search, None, None, False, None), **additionalparams)
-
-        results = [res["key"] for res in response["aggregations"]["days_range_agg"]["buckets"]]
-        
+        aggregations = self.do_aggregation_all(params, 'days_range_agg')
+        results = [res['key']['tile_min_time_dt'] for res in aggregations]
         daysinrangeasc = sorted([(res / 1000) for res in results])
-
         return daysinrangeasc
 
     def find_all_tiles_in_box_sorttimeasc(self, min_lat, max_lat, min_lon, max_lon, ds, start_time=0,
                                           end_time=-1, **kwargs):
 
-        search = "nexustiles_test"
-        additionalparams = {
+        params = {
             "size": 1000,
             "query": {
                 "bool": {
@@ -488,68 +468,15 @@ class ElasticsearchProxy(object):
                             
 
         if 0 < start_time <= end_time:
-            search_start_s = datetime.utcfromtimestamp(start_time).strftime(ELASTICSEARCH_FORMAT)
-            search_end_s = datetime.utcfromtimestamp(end_time).strftime(ELASTICSEARCH_FORMAT)
+            params["query"]["bool"]["should"] = self.get_formatted_time_clause(start_time, end_time)
+            params["query"]["bool"]["minimum_should_match"] = 1
 
+        self._merge_kwargs(params, **kwargs)
 
-            time_clause = [
-                    {
-                        "range": {
-                            "tile_min_time_dt": {
-                                "gte": search_start_s,
-                                "lte": search_end_s
-                            }
-                        }
-                    },
-                    {
-                        "range": {
-                            "tile_max_time_dt": {
-                                "gte": search_start_s,
-                                "lte": search_end_s
-                            }
-                        }
-                    },
-                    {
-                        "bool": {
-                            "must": [
-                                {
-                                    "range": {
-                                        "tile_min_time_dt": {
-                                            "gte": search_start_s
-                                        }
-                                    }
-                                },
-                                {
-                                    "range": {
-                                        "tile_max_time_dt": {
-                                            "lte": search_end_s
-                                        }
-                                    }
-                                }
-                            ]
-                        }
-                    }
-                ]
-
-            additionalparams["query"]["bool"]["should"] = time_clause
-            additionalparams["query"]["bool"]["minimum_should_match"] = 1
-
-        self._merge_kwargs(additionalparams, **kwargs)
-
-        return self.do_query_all(
-            *(search, None, None, False, 'tile_min_time_dt asc, tile_max_time_dt asc'),
-            **additionalparams)
+        return self.do_query_all(*(None, None, None, False, 'tile_min_time_dt asc,tile_max_time_dt asc'), **params)
 
     def find_all_tiles_in_polygon_sorttimeasc(self, bounding_polygon, ds, start_time=0, end_time=-1, **kwargs):
 
-        #TODO : change hardcoded index name :
-        search = "nexustiles_test"
-
-        #curframe = inspect.currentframe()
-        #calframe = inspect.getouterframes(curframe, 2)
-        #self.logger.info(f"{curframe.f_code.co_name} was called by {calframe[1][3]}")
-
-        import re
         nums = re.findall(r'\d+(?:\.\d*)?', bounding_polygon.wkt.rpartition(',')[0])
         polygon_coordinates = list(zip(*[iter(nums)] * 2))
 
@@ -558,14 +485,7 @@ class ElasticsearchProxy(object):
         min_lat = bounding_polygon.bounds[1]
         max_lon = bounding_polygon.bounds[2]
 
-        # self.logger.info("min_lat : {}".format(min_lat))
-        # self.logger.info("max_lat : {}".format(max_lat))
-        # self.logger.info("min_lon : {}".format(min_lon))
-        # self.logger.info("max_lon : {}".format(max_lon))
-        # self.logger.info("WKT : {}".format(bounding_polygon.wkt))
-
-        additionalparams = {
-            "size": 1000,
+        params = {
             "query": {
                 "bool": {
                     "filter": [
@@ -593,59 +513,19 @@ class ElasticsearchProxy(object):
         }
 
         try:
-            # self.logger.info("find_all_tiles_in_polygon_sorttimeasc :: fields list : {}".format(kwargs["fl"]))
             if 'fl' in list(kwargs.keys()):
-                additionalparams["_source"] = kwargs["fl"].split(',')
+                params["_source"] = kwargs["fl"].split(',')
         except KeyError:
             pass
 
         if 0 < start_time <= end_time:
-            search_start_s = datetime.utcfromtimestamp(start_time).strftime(ELASTICSEARCH_FORMAT)
-            search_end_s = datetime.utcfromtimestamp(end_time).strftime(ELASTICSEARCH_FORMAT)
+            params["query"]["bool"]["should"] = self.get_formatted_time_clause(start_time, end_time)
+            params["query"]["bool"]["minimum_should_match"] = 1
 
-            additionalparams["query"]["bool"]["should"] = [ 
-                                                               { "range": {
-                                                                   "tile_min_time_dt": {
-                                                                       "lte": search_end_s,
-                                                                       "gte": search_start_s
-                                                                   }
-                                                               } },
-                                                               { "range": {
-                                                                   "tile_max_time_dt": {
-                                                                       "lte": search_end_s,
-                                                                       "gte": search_start_s
-                                                                   }
-                                                               } },
-                                                               { "bool": 
-                                                                    { "must": [
-                                                                       { "range": {
-                                                                           "tile_min_time_dt": {
-                                                                               "lte": search_start_s
-                                                                           }
-                                                                       } },
-                                                                       { "range": {
-                                                                           "tile_max_time_dt": {
-                                                                               "gte": search_end_s
-                                                                           }
-                                                                       } }
-                                                                   ] } 
-                                                               }
-                                                           ]
+        return self.do_query_all(*(None, None, None, False, 'tile_min_time_dt asc,tile_max_time_dt asc'), **params)
 
-            additionalparams["query"]["bool"]["minimum_should_match"] = 1
-        # self.logger.info("find_all_tiles_in_polygon_sorttimeasc :: additional params = {}".format(additionalparams))
-
-
-        return self.do_query_all(*(search, None, None, False, 'tile_min_time_dt asc,tile_max_time_dt asc'), **additionalparams)
-
-
-    # TODO
     def find_all_tiles_in_polygon(self, bounding_polygon, ds, start_time=0, end_time=-1, **kwargs):
 
-        #TODO : change hardcoded index name :
-        search = "nexustiles_test"
-
-        import re
         nums = re.findall(r'\d+(?:\.\d*)?', bounding_polygon.wkt.rpartition(',')[0])
         polygon_coordinates = list(zip(*[iter(nums)] * 2))
 
@@ -654,13 +534,7 @@ class ElasticsearchProxy(object):
         min_lat = bounding_polygon.bounds[1]
         max_lon = bounding_polygon.bounds[2]
 
-        # self.logger.info("min_lat : {}".format(min_lat))
-        # self.logger.info("max_lat : {}".format(max_lat))
-        # self.logger.info("min_lon : {}".format(min_lon))
-        # self.logger.info("max_lon : {}".format(max_lon))
-        # self.logger.info("WKT : {}".format(bounding_polygon.wkt))
-
-        additionalparams = {
+        params = {
             "size": 1000,
             "query": {
                 "bool": {
@@ -696,64 +570,27 @@ class ElasticsearchProxy(object):
         }
 
         try:
-            # self.logger.info("inspect.currentframe().f_code.co_name :: fields list : {}".format(kwargs["fl"]))
             if 'fl' in list(kwargs.keys()):
-                additionalparams["_source"] = kwargs["fl"].split(',')
+                params["_source"] = kwargs["fl"].split(',')
         except KeyError:
             pass
 
         if 0 < start_time <= end_time:
-            search_start_s = datetime.utcfromtimestamp(start_time).strftime(ELASTICSEARCH_FORMAT)
-            search_end_s = datetime.utcfromtimestamp(end_time).strftime(ELASTICSEARCH_FORMAT)
+            params["query"]["bool"]["should"] = self.get_formatted_time_clause(start_time, end_time)
+            params["query"]["bool"]["minimum_should_match"] = 1
 
-            additionalparams["query"]["bool"]["should"] = [ 
-                                                               { "range": {
-                                                                   "tile_min_time_dt": {
-                                                                       "lte": search_end_s,
-                                                                       "gte": search_start_s
-                                                                   }
-                                                               } },
-                                                               { "range": {
-                                                                   "tile_max_time_dt": {
-                                                                       "lte": search_end_s,
-                                                                       "gte": search_start_s
-                                                                   }
-                                                               } },
-                                                               { "bool": 
-                                                                    { "must": [
-                                                                       { "range": {
-                                                                           "tile_min_time_dt": {
-                                                                               "gte": search_start_s
-                                                                           }
-                                                                       } },
-                                                                       { "range": {
-                                                                           "tile_max_time_dt": {
-                                                                               "lte": search_end_s                                                                                                          }
-                                                                       } }
-                                                                   ] } 
-                                                               }
-                                                           ]
+        self._merge_kwargs(params, **kwargs)
 
-            additionalparams["query"]["bool"]["minimum_should_match"] = 1
-
-
-        self._merge_kwargs(additionalparams, **kwargs)
-
-        return self.do_query_all(
-            *(search, None, None, False, None),
-            **additionalparams)
-
+        return self.do_query_all(*(None, None, None, False, None), **params)
 
     def find_distinct_bounding_boxes_in_polygon(self, bounding_polygon, ds, start_time=0, end_time=-1, **kwargs):
         
-        search = 'nexustiles_test'
-        
-        max_lat = bounding_polygon.bounds[3]
-        min_lon = bounding_polygon.bounds[0]
-        min_lat = bounding_polygon.bounds[1]
-        max_lon = bounding_polygon.bounds[2]
+        tile_max_lat = bounding_polygon.bounds[3]
+        tile_min_lon = bounding_polygon.bounds[0]
+        tile_min_lat = bounding_polygon.bounds[1]
+        tile_max_lon = bounding_polygon.bounds[2]
 
-        additionalparams = {
+        params = {
             "size": 0,
             "query": {
                 "bool": {
@@ -770,7 +607,7 @@ class ElasticsearchProxy(object):
                                 "geo": {
                                     "shape": {
                                         "type": "envelope",
-                                        "coordinates": [[min_lon, max_lat], [max_lon, min_lat]]
+                                        "coordinates": [[tile_min_lon, tile_max_lat], [tile_max_lon, tile_min_lat]]
                                     },
                                     "relation": "intersects"
                                 }
@@ -778,68 +615,49 @@ class ElasticsearchProxy(object):
                         }
                     ]
                 }
-            }           
-        }
-        
-        if 0 < start_time <= end_time:
-            search_start_s = datetime.utcfromtimestamp(start_time).strftime(ELASTICSEARCH_FORMAT)
-            search_end_s = datetime.utcfromtimestamp(end_time).strftime(ELASTICSEARCH_FORMAT)
-
-            additionalparams["query"]["bool"]["should"] = [ 
-                { 
-                    "range": {
-                        "tile_min_time_dt": {
-                            "lte": search_end_s,
-                            "gte": search_start_s    
-                        }
-                    }
-                },
-                { 
-                    "range": {
-                        "tile_max_time_dt": {
-                            "lte": search_end_s,
-                            "gte": search_start_s
-                        }
-                    }
-                },
-                { 
-                    "bool": { 
-                        "must": [
-                            { 
-                                "range": {
-                                    "tile_min_time_dt": {
-                                        "gte": search_start_s
-                                    }
-                                } 
-                            },
+            },
+            "aggs": {
+                "distinct_bounding_boxes": {
+                    "composite": {
+                        "size": 100,
+                        "sources": [
                             {
-                                "range": {
-                                    "tile_max_time_dt": {
-                                        "lte": search_end_s
+                                "bounding_box": {
+                                    "terms": {
+                                        "script": {
+                                            "source": "String.valueOf(doc['tile_min_lon'].value) + ', ' + String.valueOf(doc['tile_max_lon'].value) + ', ' + String.valueOf(doc['tile_min_lat'].value) + ', ' + String.valueOf(doc['tile_max_lat'].value)",
+                                            "lang": "painless"
+                                        }
                                     }
-                                } 
+                                }
                             }
-                        ] 
-                    } 
+                        ]
+                    }
                 }
-            ]
+            }
+        }
+                            
+        if 0 < start_time <= end_time:
+            params["query"]["bool"]["should"] = self.get_formatted_time_clause(start_time, end_time)
+            params["query"]["bool"]["minimum_should_match"] = 1
 
-            additionalparams["query"]["bool"]["minimum_should_match"] = 1
+        self._merge_kwargs(params, **kwargs)
+        aggregations = self.do_aggregation_all(params, 'distinct_bounding_boxes')
+        distinct_bounds = []
+        for agg in aggregations:   
+            coords = agg['key']['bounding_box'].split(',')
+            min_lon = round(float(coords[0]), 2)
+            max_lon = round(float(coords[1]), 2)
+            min_lat = round(float(coords[2]), 2)
+            max_lat = round(float(coords[3]), 2)
+            polygon = 'POLYGON((%s %s, %s %s, %s %s, %s %s, %s %s))' % (min_lon, max_lat, min_lon, min_lat, max_lon, min_lat, max_lon, max_lat, min_lon, max_lat)
+            distinct_bounds.append(wkt.loads(polygon).bounds)
         
-
-        self._merge_kwargs(additionalparams, **kwargs)
-
-        response = self.do_query_raw(*(search, None, None, False, None), **additionalparams)
-
-        distinct_bounds = [wkt.loads(key).bounds for key in response.facets["facet_fields"]["geo_s"][::2]]
-
         return distinct_bounds
-
     
     def find_tiles_by_exact_bounds(self, minx, miny, maxx, maxy, ds, start_time=0, end_time=-1, **kwargs):
-        search = 'nexustiles_test'
             
-        additionalparams = {
+        params = {
             "query": {
                 "bool": {
                     "filter": [
@@ -883,63 +701,18 @@ class ElasticsearchProxy(object):
         }}    
         
         if 0 < start_time <= end_time:
-            search_start_s = datetime.utcfromtimestamp(start_time).strftime(ELASTICSEARCH_FORMAT)
-            search_end_s = datetime.utcfromtimestamp(end_time).strftime(ELASTICSEARCH_FORMAT)
+            params["query"]["bool"]["should"] = self.get_formatted_time_clause(start_time, end_time)
+            params["query"]["bool"]["minimum_should_match"] = 1
 
-            additionalparams["query"]["bool"]["should"] = [ 
-                { 
-                    "range": {
-                        "tile_min_time_dt": {
-                            "lte": search_end_s,
-                            "gte": search_start_s    
-                        }
-                    }
-                },
-                { 
-                    "range": {
-                        "tile_max_time_dt": {
-                            "lte": search_end_s,
-                            "gte": search_start_s
-                        }
-                    }
-                },
-                { 
-                    "bool": { 
-                        "must": [
-                            { 
-                                "range": {
-                                    "tile_min_time_dt": {
-                                        "gte": search_start_s
-                                    }
-                                } 
-                            },
-                            {
-                                "range": {
-                                    "tile_max_time_dt": {
-                                        "lte": search_end_s
-                                    }
-                                } 
-                            }
-                        ] 
-                    } 
-                }
-            ]
+        self._merge_kwargs(params, **kwargs)
 
-            additionalparams["query"]["bool"]["minimum_should_match"] = 1
-
-        self._merge_kwargs(additionalparams, **kwargs)
-
-        return self.do_query_all(
-            *(search, None, None, False, None),
-            **additionalparams)
+        return self.do_query_all(*(None, None, None, False, None), **params)
 
     def find_all_tiles_in_box_at_time(self, min_lat, max_lat, min_lon, max_lon, ds, search_time, **kwargs):
         
-        search = "nexustiles_test"
-
         the_time = datetime.utcfromtimestamp(search_time).strftime(ELASTICSEARCH_FORMAT)
 
-        additionalparams = {
+        params = {
             "size": 1000,
             "query": {
                 "bool": {
@@ -951,63 +724,6 @@ class ElasticsearchProxy(object):
                                 }
                             }
                         },
-                        {
-                            "geo_shape": {
-                                "geo": {
-                                    "shape": {
-                                        "type": "envelope",
-                                        "coordinates": [[min_lon, max_lat],[max_lon, min_lat]]
-                                    },
-                                    "relation": "intersects"
-                                }
-                            }
-                        },
-                        { "range": {
-                            "tile_min_time_dt": {
-                                "lte": the_time
-                            }
-                        } },
-                        { "range": {
-                            "tile_max_time_dt": {
-                                "gte": the_time
-                            }
-                        } }
-                    ]
-                }
-            }
-        }
-
-        self._merge_kwargs(additionalparams, **kwargs)
-
-        return self.do_query_all(*(search, None, None, False, None), **additionalparams)
-
-
-    def find_all_tiles_in_box_at_time_and_depth(self, min_lat, max_lat, min_lon, max_lon, depth, ds, search_time, **kwargs):
-        search = "nexustiles"
-
-
-        the_time = datetime.utcfromtimestamp(search_time).strftime(ELASTICSEARCH_FORMAT)
-
-
-        additionalparams = {
-            "size": 1000,
-            "query": {
-                "bool": {
-                    "filter": [
-                        {
-                            "term": {
-                                "dataset_s": {
-                                    "value": ds
-                                }
-                            }
-                        },
-			{
-			    "term": {
-                                "depth": {
-                                    "value": depth
-			        }
-                            }
-			},
                         {
                             "geo_shape": {
                                 "geo": {
@@ -1024,25 +740,25 @@ class ElasticsearchProxy(object):
                                 "tile_min_time_dt": {
                                     "lte": the_time
                                 }
-                            } 
+                            }   
                         },
                         { 
                             "range": {
                                 "tile_max_time_dt": {
                                     "gte": the_time
                                 }
-                            }
+                            } 
                         }
                     ]
                 }
             }
         }
-        
-        return self.do_query_all(*(search, None, None, False, None), **additionalparams)
 
+        self._merge_kwargs(params, **kwargs)
+
+        return self.do_query_all(*(None, None, None, False, None), **params)
 
     def find_all_tiles_in_polygon_at_time(self, bounding_polygon, ds, search_time, **kwargs):
-        search = 'nexustiles_test'
 
         the_time = datetime.utcfromtimestamp(search_time).strftime(ELASTICSEARCH_FORMAT)
 
@@ -1051,7 +767,7 @@ class ElasticsearchProxy(object):
         min_lat = bounding_polygon.bounds[1]
         max_lon = bounding_polygon.bounds[2]
 
-        additionalparams = {
+        params = {
             "size": 1000,
             "query": {
                 "bool": {
@@ -1089,17 +805,16 @@ class ElasticsearchProxy(object):
             }
         }
         
-        self._merge_kwargs(additionalparams, **kwargs)
+        self._merge_kwargs(params, **kwargs)
 
-        return self.do_query_all(*(search, None, None, False, None), **additionalparams)
+        return self.do_query_all(*(None, None, None, False, None), **params)
 
 
     def find_all_tiles_within_box_at_time(self, min_lat, max_lat, min_lon, max_lon, ds, time, **kwargs):
-        search = 'nexustiles_test'
 
         the_time = datetime.utcfromtimestamp(time).strftime(ELASTICSEARCH_FORMAT)
         
-        additionalparams = {
+        params = {
             "size": 1000,
             "query": {
                 "bool": {
@@ -1149,19 +864,15 @@ class ElasticsearchProxy(object):
         }
 
 
-        self._merge_kwargs(additionalparams, **kwargs)
+        self._merge_kwargs(params, **kwargs)
 
-        return self.do_query_all(*(search, "product(tile_avg_val_d, tile_count_i),*", None, False, None),
-                                 **additionalparams)
-
+        return self.do_query_all(*(None, "product(tile_avg_val_d, tile_count_i),*", None, False, None), **params)
 
     def find_all_boundary_tiles_at_time(self, min_lat, max_lat, min_lon, max_lon, ds, time, **kwargs):
         
-        search = "nexustiles_test"
-
         the_time = datetime.utcfromtimestamp(time).strftime(ELASTICSEARCH_FORMAT)
         
-        additionalparams = {
+        params = {
             "size": 1000,
             "query": {
                 "bool": {
@@ -1221,11 +932,10 @@ class ElasticsearchProxy(object):
             }
         }
 
-        self._merge_kwargs(additionalparams, **kwargs)
+        self._merge_kwargs(params, **kwargs)
 
-        return self.do_query_all(*(search, None, None, False, None), **additionalparams)
+        return self.do_query_all(*(None, None, None, False, None), **params)
 
-    # TODO
     def find_all_tiles_by_metadata(self, metadata, ds, start_time=0, end_time=-1, **kwargs):
         """
         Get a list of tile metadata that matches the specified metadata, start_time, end_time.
@@ -1235,38 +945,79 @@ class ElasticsearchProxy(object):
         :param end_time: The end time to search for tiles
         :return: A list of tile metadata
         """
-        search = 'dataset_s:%s' % ds
 
-        additionalparams = {
-            'fq': metadata
+        params = {
+            "query": {
+                "bool": {
+                    "must": [
+                        {
+                            "term": {
+                                "dataset_s": {"value": ds}
+                            }
+                        }
+                    ]
+                }
+            }
         }
 
+        if len(metadata) > 0:
+            for key_value in metadata:
+                key = key_value.split(':')[0]
+                value = key_value.split(':')[1]
+                params['query']['bool']['must'].append({"match": {key: value}})
+
         if 0 < start_time <= end_time:
-            additionalparams['fq'].append(self.get_formatted_time_clause(start_time, end_time))
+            params['query']['bool']['should'] = self.get_formatted_time_clause(start_time, end_time)
+            params["query"]["bool"]["minimum_should_match"] = 1
 
-        self._merge_kwargs(additionalparams, **kwargs)
+        self._merge_kwargs(params, **kwargs)
+        return self.do_query_all(*(None, None, None, False, None), **params)
 
-        return self.do_query_all(
-            *(search, None, None, False, None),
-            **additionalparams)
-
-    # TODO
     def get_formatted_time_clause(self, start_time, end_time):
         search_start_s = datetime.utcfromtimestamp(start_time).strftime(ELASTICSEARCH_FORMAT)
         search_end_s = datetime.utcfromtimestamp(end_time).strftime(ELASTICSEARCH_FORMAT)
+ 
+        time_clause = [ 
+            { 
+                "range": {
+                    "tile_min_time_dt": {
+                        "lte": search_end_s,
+                        "gte": search_start_s    
+                    }
+                }
+            },
+            { 
+                "range": {
+                    "tile_max_time_dt": {
+                        "lte": search_end_s,
+                        "gte": search_start_s
+                    }
+                }
+            },
+            { 
+                "bool": { 
+                    "must": [
+                        { 
+                            "range": {
+                                "tile_min_time_dt": {
+                                    "gte": search_start_s
+                                }
+                            } 
+                        },
+                        {
+                            "range": {
+                                "tile_max_time_dt": {
+                                    "lte": search_end_s
+                                }
+                            } 
+                        }
+                    ] 
+                } 
+            }
+        ]
 
-        time_clause = "(" \
-                      "tile_min_time_dt:[%s TO %s] " \
-                      "OR tile_max_time_dt:[%s TO %s] " \
-                      "OR (tile_min_time_dt:[* TO %s] AND tile_max_time_dt:[%s TO *])" \
-                      ")" % (
-                          search_start_s, search_end_s,
-                          search_start_s, search_end_s,
-                          search_start_s, search_end_s
-                          )
         return time_clause
 
-    # TODO
     def get_tile_count(self, ds, bounding_polygon=None, start_time=0, end_time=-1, metadata=None, **kwargs):
         """
         Return number of tiles that match search criteria.
@@ -1277,9 +1028,8 @@ class ElasticsearchProxy(object):
         :param metadata: List of metadata values to search for tiles e.g ["river_id_i:1", "granule_s:granule_name"]
         :return: number of tiles that match search criteria
         """
-        search = "nexustiles_test"
         
-        additionalparams = {
+        params = {
             "size": 0,
             "query": {
                 "bool": {
@@ -1316,112 +1066,92 @@ class ElasticsearchProxy(object):
                 }
             }
                 
-            additionalparams['query']['bool']['filter'].append(geo_clause)
+            params['query']['bool']['filter'].append(geo_clause)
 
         if 0 < start_time <= end_time:
-        
-            time_clause = {
-                {
-                    "range": {
-                        "tile_min_time_dt": {
-                            "lte": end_time,
-                            "gte": start_time    
-                        }
-                    }
-                },
-                { 
-                    "range": {
-                        "tile_max_time_dt": {
-                            "lte": end_time,
-                            "gte": start_time
-                        }
-                    }
-                },
-                { 
-                    "bool": { 
-                        "must": [
-                            { 
-                                "range": {
-                                    "tile_min_time_dt": {
-                                        "gte": start_time
-                                    }
-                                } 
-                            },
-                            {
-                                "range": {
-                                    "tile_max_time_dt": {
-                                        "lte": end_time
-                                    }
-                                } 
-                            }
-                        ] 
-                    } 
-                }
-	    }
+            params['query']['bool']['should'] = self.get_formatted_time_clause(start_time, end_time)
+            params["query"]["bool"]["minimum_should_match"] = 1
 
-            additionalparams['query']['bool']['filter'].append(time_clause)
+        if len(metadata) > 0:
+            for key_value in metadata:
+                key = key_value.split(':')[0]
+                value = key_value.split(':')[1]
+                params['query']['bool']['filter'].append({"term": {key: {"value": value}}})
 
-        # TODO - HANDLE METADATA
-        # if metadata:
-            # additionalparams['fq'].extend(metadata)
-
-        self._merge_kwargs(additionalparams, **kwargs)
-        
-        results, start, found = self.do_query(*(search, None, None, True, None), **additionalparams)
+        self._merge_kwargs(params, **kwargs)
+        _, _, found = self.do_query(*(None, None, None, True, None), **params)
 
         return found
-
-    def do_query(self, *args, **params):
-        # TODO : decide what to do with this method. Keep it ? What's the difference with do_query_raw ?
+    
+    def do_aggregation(self, *args, **params):
+        # Gets raw aggregations
 
         response = self.do_query_raw(*args, **params)
-        # self.logger.info(f"DO QUERY RESPONSE {response}")
-        return response.docs, response.raw_response['response']['start'], response.hits
+        aggregations = response.get('aggregations', None)
+        return aggregations
 
-    def do_query_raw(self, *args, **params):
-
-        if 'sort' not in list(params.keys()) and args[4]:
-            # params['sort'] = args[4]
-
-            sort_fields = args[4].split(",")
-            params["sort"] = []
-
-            for field in sort_fields:
-                field_order = field.split(' ')
-                sort_instruction = {
-                    field_order[0]: { "order": field_order[1] }
-                }
-                params["sort"].append(sort_instruction)
-
-
-
-        # self.logger.info(f"do_query_raw :: args = {args}")
-        # self.logger.info(f"do_query_raw :: params = {params}")
+    def do_aggregation_all(self, params, agg_name):
+        # Used for pagination when results can exceed ES max size (use of after_key)
 
         with ELASTICSEARCH_CON_LOCK:
             response = self.elasticsearchcon.search(index=self.elasticsearchIndex, body=params)
-        #with ELASTICSEARCH_CON_LOCK:
-        #    if args[1] is not None and args[1] == "scroll":
-        #        response = self.elasticsearchcon.search(index=args[0], body=params, scroll="5s")
-        #    else:
-        #        response = self.elasticsearchcon.search(index=args[0], body=params)
+        all_buckets = []
+        
+        try:
+            aggregations = response.get('aggregations', None)
+            current_buckets = aggregations.get(agg_name, None)
+            buckets = current_buckets.get('buckets', None)
+            all_buckets += buckets
+            after_bucket = current_buckets.get('after_key', None)    
+            
+            while after_bucket is not None:
+                for agg in params['aggs']:
+                    params['aggs'][agg]['composite']['after'] = {}
+                    for source in params['aggs'][agg]['composite']['sources']:
+                        key_name = next(iter(source))
+                        params['aggs'][agg]['composite']['after'][key_name] = after_bucket[key_name]
+                with ELASTICSEARCH_CON_LOCK:
+                    response = self.elasticsearchcon.search(index=self.elasticsearchIndex, body=params)
+                
+                aggregations = response.get('aggregations', None)
+                current_buckets = aggregations.get(agg_name, None)
+                buckets = current_buckets.get('buckets', None)
+                all_buckets += buckets
+                after_bucket = current_buckets.get('after_key', None)
+                
+        except AttributeError as e:
+            self.logger.error('Error when accessing aggregation buckets - ' + str(e))
 
+        return all_buckets
+
+    def do_query(self, *args, **params):
+        response = self.do_query_raw(*args, **params)
+        return response['hits']['hits'], None, response['hits']['total']['value']
+
+    def do_query_raw(self, *args, **params):
+
+        if args[4]:
+
+            sort_fields = args[4].split(",")
+
+            if 'sort' not in list(params.keys()):
+                params["sort"] = []
+
+            for field in sort_fields:
+                field_order = field.split(' ')
+                sort_instruction = {field_order[0]: field_order[1]}
+                if sort_instruction not in params['sort']:
+                    params["sort"].append(sort_instruction)
+        with ELASTICSEARCH_CON_LOCK:
+            response = self.elasticsearchcon.search(index=self.elasticsearchIndex, body=params)
+        
         return response
 
-
-    #def do_query_scroll(self, scroll_id):
-    #    with ELASTICSEARCH_CON_LOCK:
-    #        response = self.elasticsearchcon.scroll(scroll_id=scroll_id)
-    #    return response
-
-
     def do_query_all(self, *args, **params):
-
-        curframe = inspect.currentframe()
-        calframe = inspect.getouterframes(curframe, 2)
-        # self.logger.info(f"{curframe.f_code.co_name} was called by {calframe[1][3]}")
-
-
+        # Used to paginate with search_after. 
+        # The method calling this might already have a sort clause, 
+        # so we merge both sort clauses inside do_query_raw
+        
         results = []
 
         search = None
@@ -1432,41 +1162,33 @@ class ElasticsearchProxy(object):
 
         # Add sort instruction order to paginate the results :
         params["sort"] = [
-            { "_id": "asc" },
-            { "tile_min_time_dt": "asc"}
+            { "tile_min_time_dt": "asc"},
+            { "_id": "asc" }
         ]
 
         response = self.do_query_raw(*args, **params)
-
         results.extend([r["_source"] for r in response["hits"]["hits"]])
-        # if len(results) > 0:
-            # self.logger.info(f"RESULT SAMPLE : {results[-1]}")
 
         total_hits = response["hits"]["total"]["value"]
 
-        # self.logger.info(f"total hits : {total_hits}")
-        
         try:
-            search_after = [response["hits"]["hits"][-1]["sort"][0], str(response["hits"]["hits"][-1]["sort"][1])]
+            search_after = []
+            for sort_param in response["hits"]["hits"][-1]["sort"]:
+                search_after.append(str(sort_param))
         except (KeyError, IndexError):
             search_after = []
 
         try:
             while len(results) < total_hits:
-            #while True:
-                #self.logger.info("DAO : search after because {} < {}".format(len(results), total_hits))
-                #additionalparams = {"search_after": search_after}
-
-                #self._merge_kwargs(additionalparams, **params)
-                #self.logger.info(f"SEARCH AFTER ? {search_after}")
-                #self.logger.info(f"DAO : search after because {len(results)} < {total_hits}")
                 params["search_after"] = search_after
                 response = self.do_query_raw(*args, **params)
-
                 results.extend([r["_source"] for r in response["hits"]["hits"]])
-                search_after = [response["hits"]["hits"][-1]["sort"][0], str(response["hits"]["hits"][-1]["sort"][1])]
+                
+                search_after = []
+                for sort_param in response["hits"]["hits"][-1]["sort"]:
+                    search_after.append(str(sort_param))
+        
         except (KeyError, IndexError):
-            # self.logger.info("DAO : End of paginated results.")
             pass
 
         return results
@@ -1477,58 +1199,29 @@ class ElasticsearchProxy(object):
     def convert_iso_to_timestamp(self, date):
         return (self.convert_iso_to_datetime(date) - EPOCH).total_seconds()
 
-    # def ping(self):
-    #     solrAdminPing = 'http://%s/solr/%s/admin/ping' % (self.solrUrl, self.solrCore)
-    #     try:
-    #         r = requests.get(solrAdminPing, params={'wt': 'json'})
-    #         results = json.loads(r.text)
-    #         return results
-    #     except:
-    #         return None
-
     @staticmethod
-    def _merge_kwargs(additionalparams, **kwargs):
+    def _merge_kwargs(params, **kwargs):
         # Only Solr-specific kwargs are parsed
         # And the special 'limit'
         try:
-            additionalparams['limit'] = kwargs['limit']
+            params['limit'] = kwargs['limit']
         except KeyError:
             pass
 
         try:
-            additionalparams['_route_'] = kwargs['_route_']
+            params['_route_'] = kwargs['_route_']
         except KeyError:
             pass
 
         try:
-            additionalparams['size'] = kwargs['size']
+            params['size'] = kwargs['size']
         except KeyError:
             pass
 
         try:
-            additionalparams['start'] = kwargs['start']
+            params['start'] = kwargs['start']
         except KeyError:
             pass
-
-        #try:
-        #    kwfq = kwargs['fq'] if isinstance(kwargs['fq'], list) else list(kwargs['fq'])
-        #except KeyError:
-        #    kwfq = []
-
-        #try:
-        #    additionalparams['fq'].extend(kwfq)
-        #except KeyError:
-        #    additionalparams['fq'] = kwfq
-
-        #try:
-        #    kwfl = kwargs['fl'] if isinstance(kwargs['fl'], list) else [kwargs['fl']]
-        #except KeyError:
-        #    kwfl = []
-
-        #try:
-        #    additionalparams['fl'].extend(kwfl)
-        #except KeyError:
-        #    additionalparams['fl'] = kwfl
 
         try:
             s = kwargs['sort'] if isinstance(kwargs['sort'], list) else [kwargs['sort']]
@@ -1536,7 +1229,7 @@ class ElasticsearchProxy(object):
             s = None
 
         try:
-            additionalparams['sort'].extend(s)
+            params['sort'].extend(s)
         except KeyError:
             if s is not None:
-                additionalparams['sort'] = s
+                params['sort'] = s
