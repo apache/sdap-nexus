@@ -363,7 +363,7 @@ class ElasticsearchProxy(object):
         }
         result, _, _ = self.do_query(*(None, None, None, True, 'day_of_year_i desc'), **params)
         
-        return [results[0]]
+        return [result[0]]
 
     def find_days_in_range_asc(self, min_lat, max_lat, min_lon, max_lon, ds, start_time, end_time, **kwargs):
 

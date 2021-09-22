@@ -313,7 +313,7 @@ class TestQuery(unittest.TestCase):
             self.query_data.get('find_tile_by_polygon_and_most_recent_day_of_year', 'dataset_name'),
             self.query_data.getint('find_tile_by_polygon_and_most_recent_day_of_year', 'day_of_year'))
         
-        self.assertIsNotNone(result)
+        self.assertIs(len(result), 1)
+        self.assertIsInstance(result, list)
         # print('RESULT FROM find_tile_by_polygon_and_most_recent_day_of_year (LENGTH = ' + str(len(result)) + ') -> ' + str(result[:10]))
-
 
