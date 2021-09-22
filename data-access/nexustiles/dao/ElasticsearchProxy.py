@@ -312,8 +312,8 @@ class ElasticsearchProxy(object):
 
         return stats
 
-    # TODO : day_of_year is not ingested, so this method can not work yet.
-    def find_tile_by_polygon_vailable_dates_and_most_recent_day_of_year(self, bounding_polygon, ds, day_of_year):
+    # day_of_year_i added (SDAP-347)
+    def find_tile_by_polygon_and_most_recent_day_of_year(self, bounding_polygon, ds, day_of_year):
 
         max_lat = bounding_polygon.bounds[3]
         min_lon = bounding_polygon.bounds[0]
