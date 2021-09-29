@@ -16,8 +16,9 @@
 import configparser
 import logging
 import sys
+import json
 from datetime import datetime
-from functools import wraps
+from functools import wraps, reduce
 
 import numpy as np
 import numpy.ma as ma
@@ -29,7 +30,7 @@ from .dao import CassandraProxy
 from .dao import DynamoProxy
 from .dao import S3Proxy
 from .dao import SolrProxy
-from .model.nexusmodel import Tile, BBox, TileStats
+from .model.nexusmodel import Tile, BBox, TileStats, TileVariable
 
 EPOCH = timezone('UTC').localize(datetime(1970, 1, 1))
 
@@ -356,7 +357,16 @@ class NexusTileService(object):
                         | ma.getmaskarray(tile.latitudes)[np.newaxis, :, np.newaxis] \
                         | ma.getmaskarray(tile.longitudes)[np.newaxis, np.newaxis, :]
 
-            tile.data = ma.masked_where(data_mask, tile.data)
+            # If this is multi-var, need to mask each variable separately.
+            if tile.is_multi:
+                # Combine space/time mask with existing mask on data
+                data_mask = reduce(np.logical_or, [tile.data[0].mask, data_mask])
+
+                num_vars = len(tile.data)
+                multi_data_mask = np.repeat(data_mask[np.newaxis, ...], num_vars, axis=0)
+                tile.data = ma.masked_where(multi_data_mask, tile.data)
+            else:
+                tile.data = ma.masked_where(data_mask, tile.data)
 
         tiles[:] = [tile for tile in tiles if not tile.data.mask.all()]
 
@@ -437,13 +447,14 @@ class NexusTileService(object):
             raise Exception("Missing data for tile_id(s) %s." % missing_data)
 
         for a_tile in tiles:
-            lats, lons, times, data, meta = tile_data_by_id[a_tile.tile_id].get_lat_lon_time_data_meta()
+            lats, lons, times, data, meta, is_multi_var = tile_data_by_id[a_tile.tile_id].get_lat_lon_time_data_meta()
 
             a_tile.latitudes = lats
             a_tile.longitudes = lons
             a_tile.times = times
             a_tile.data = data
             a_tile.meta_data = meta
+            a_tile.is_multi = is_multi_var
 
             del (tile_data_by_id[a_tile.tile_id])
 
@@ -519,9 +530,44 @@ class NexusTileService(object):
                 pass
 
             try:
-                tile.var_name = solr_doc['tile_var_name_s']
+                # Ensure backwards compatibility by working with old
+                # tile_var_name_s and tile_standard_name_s fields to
+
+                # will be overwritten if tile_var_name_ss is present
+                # as well.
+                if '[' in solr_doc['tile_var_name_s']:
+                    var_names = json.loads(solr_doc['tile_var_name_s'])
+                else:
+                    var_names = [solr_doc['tile_var_name_s']]
+
+                standard_name = solr_doc.get(
+                        'tile_standard_name_s',
+                        json.dumps([None] * len(var_names))
+                )
+                if '[' in standard_name:
+                    standard_names = json.loads(standard_name)
+                else:
+                    standard_names = [standard_name]
+
+                tile.variables = []
+                for var_name, standard_name in zip(var_names, standard_names):
+                    tile.variables.append(TileVariable(
+                        variable_name=var_name,
+                        standard_name=standard_name
+                    ))
             except KeyError:
                 pass
+
+
+            if 'tile_var_name_ss' in solr_doc:
+                tile.variables = []
+                for var_name in solr_doc['tile_var_name_ss']:
+                    standard_name_key = f'{var_name}.tile_standard_name_s'
+                    standard_name = solr_doc.get(standard_name_key)
+                    tile.variables.append(TileVariable(
+                        variable_name=var_name,
+                        standard_name=standard_name
+                    ))
 
             tiles.append(tile)
 

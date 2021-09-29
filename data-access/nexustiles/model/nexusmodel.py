@@ -16,34 +16,81 @@
 from collections import namedtuple
 
 import numpy as np
+from dataclasses import dataclass
 
-NexusPoint = namedtuple('NexusPoint', 'latitude longitude depth time index data_val')
+
+NexusPoint = namedtuple('NexusPoint', 'latitude longitude depth time index data_vals')
 BBox = namedtuple('BBox', 'min_lat max_lat min_lon max_lon')
 TileStats = namedtuple('TileStats', 'min max mean count')
 
 
+@dataclass
+class TileVariable:
+    """
+    TileVariable class representing a single variable. This contains
+    both the name of the variable and the CF standard name.
+
+    :attribute variable_name: Name of the variable in the tile. This is
+    the name from the satellite data file.
+    :attribute standard_name: CF Standard name of the variable in the
+    tile. This is the 'standard_name' attribute from the satellite data file. This might be null in the case where the source variable does not contain a standard_name attribute.
+    """
+    variable_name: str = None
+    standard_name: str = None
+
+
+@dataclass
 class Tile(object):
-    def __init__(self):
-        self.tile_id = None
-        self.dataset_id = None
-        self.section_spec = None
-        self.dataset = None
-        self.granule = None
+    """
+    Tile class representing the contents of a tile. The tile contents
+    are populated using the metadata store and the data store.
 
-        self.bbox = None
-
-        self.min_time = None
-        self.max_time = None
-
-        self.tile_stats = None
-        self.var_name = None
-
-        self.latitudes = None  # This should be a 1-d ndarray
-        self.longitudes = None  # This should be a 1-d ndarray
-        self.times = None  # This should be a 1-d ndarray
-        self.data = None  # This should be an ndarray with shape len(times) x len(latitudes) x len(longitudes)
-
-        self.meta_data = None  # This should be a dict of the form { 'meta_data_name' : [[[ndarray]]] }. Each ndarray should be the same shape as data.
+    :attribute tile_id: Unique UUID tile ID, also used in data store and
+        metadata store to distinguish this tile
+    :attribute dataset_id: Unique dataset ID this tile belongs to
+    :attribute section_spec: A summary of the indices used from the source
+        granule to create this tile. Format is
+        dimension:min_index:max_index,dimension:min_index:max_index,...
+    :attribute dataset: The name of the dataset this tile belongs to
+    :attribute granule: The name of the granule this tile is sourced from
+    :attribute bbox: Comma-separated string representing the spatial bounds
+        of this tile. The format is min_lon, min_lat, max_lon, max_lat
+    :attribute min_time: ISO 8601 formatted timestamp representing the
+        temporal minimum of this tile
+    :attribute max_time: ISO 8601 formatted timestamp representing the
+        temporal minimum of this tile
+    :attribute tile_stats: Dictionary representing the min, max, mean, and
+        count of this tile
+    :attribute variables: A list of size N where N == the number of vars
+        this tile represents. The list type is TileVariable.
+    :attribute latitudes: 1-d ndarray representing the latitude values of
+        this tile
+    :attribute longitudes: 1-d ndarray representing the longitude values of
+        this tile
+    :attribute times: 1-d ndarray representing the longitude values of
+        this tile
+    :attribute data: This should be an ndarray with shape len(times) x
+        len(latitudes) x len(longitudes) x num_vars
+    :attribute is_multi: 'True' if this is a multi-var tile
+    :attribute meta_data: dict of the form {'meta_data_name':
+        [[[ndarray]]]}. Each ndarray should be the same shape as data.
+    """
+    tile_id: str = None
+    dataset_id: str = None
+    section_spec: str = None
+    dataset: str = None
+    granule: str = None
+    bbox: str = None
+    min_time: str = None
+    max_time: str = None
+    tile_stats: dict = None
+    variables: list = None
+    latitudes: np.array = None
+    longitudes: np.array = None
+    times: np.array = None
+    data: np.array = None
+    is_multi: bool = None
+    meta_data: dict = None
 
     def __str__(self):
         return str(self.get_summary())
@@ -100,6 +147,13 @@ class Tile(object):
     def get_indices(self, include_nan=False):
         if include_nan:
             return list(np.ndindex(self.data.shape))
+        if self.is_multi:
+            # For each variable, combine masks. This is a logical or
+            # operation, because we want to ensure we don't lose any
+            # data.
+            combined_data_mask = np.logical_or(*self.data)
+            # Return the indices where the data is valid
+            return np.argwhere(combined_data_mask)
         else:
             return np.transpose(np.where(np.ma.getmaskarray(self.data) == False)).tolist()
 

@@ -22,6 +22,7 @@ from shapely.geometry import Polygon
 from datetime import datetime
 from itertools import chain
 from math import cos, radians
+from dataclasses import dataclass
 
 import numpy as np
 import pyproj
@@ -229,7 +230,7 @@ class Matchup(NexusCalcSparkHandler):
                                                              sort=['tile_min_time_dt asc', 'tile_min_lon asc',
                                                                    'tile_min_lat asc'], rows=5000)]
 
-        self.log.debug('Found %s tile_ids', len(tile_ids))
+        self.log.info('Found %s tile_ids', len(tile_ids))
         # Call spark_matchup
         self.log.debug("Calling Spark Driver")
         try:
@@ -321,10 +322,27 @@ class Matchup(NexusCalcSparkHandler):
             "fileurl": domspoint.file_url,
             "id": domspoint.data_id,
             "source": domspoint.source,
+            "data": [data_point.__dict__ for data_point in domspoint.data]
         }
-        if domspoint.satellite_var_name:
-            doms_dict[domspoint.satellite_var_name] = domspoint.satellite_var_value
         return doms_dict
+
+
+@dataclass
+class DataPoint:
+    """
+    Represents a single point of data. This is used to construct the
+    output of the matchup algorithm.
+
+    :attribute variable_name: The name of the NetCDF variable.
+    :attribute cf_variable_name: The CF standard_name of the
+    NetCDF variable. This will be None if the standard_name does not
+    exist in the source data file.
+    :attribute variable_value: value at some point for the given
+        variable.
+    """
+    variable_name: str = None
+    cf_variable_name: str = None
+    variable_value: float = None
 
 
 class DomsPoint(object):
@@ -336,8 +354,7 @@ class DomsPoint(object):
         self.depth = depth
         self.data_id = data_id
 
-        self.satellite_var_name = None
-        self.satellite_var_value = None
+        self.data = None
 
         self.wind_u = None
         self.wind_v = None
@@ -362,10 +379,20 @@ class DomsPoint(object):
 
         point.data_id = "%s[%s]" % (tile.tile_id, nexus_point.index)
 
-        # Get the name of the satellite variable from the source NetCDF
-        satellite_var_name = tile.var_name
-        point.satellite_var_name = satellite_var_name
-        point.satellite_var_value = nexus_point.data_val.item()
+        if tile.is_multi:
+            data_vals = nexus_point.data_vals
+        else:
+            data_vals = [nexus_point.data_vals]
+
+        data = []
+        for data_val, variable in zip(data_vals, tile.variables):
+            if data_val:
+                data.append(DataPoint(
+                    variable_name=variable.variable_name,
+                    variable_value=data_val,
+                    cf_variable_name=variable.standard_name
+                ))
+        point.data = data
 
         try:
             point.wind_v = tile.meta_data['wind_v'][tuple(nexus_point.index)].item()
@@ -430,14 +457,44 @@ class DomsPoint(object):
         point.device = edge_point.get('device')
         point.file_url = edge_point.get('fileurl')
 
+        data_fields = [
+            'eastward_wind',
+            'northward_wind',
+            'wind_direction',
+            'wind_speed',
+            'sea_water_temperature',
+            'sea_water_temperature_depth',
+            'sea_water_salinity',
+            'sea_water_salinity_depth',
+        ]
+        data = []
+        # This is for in-situ secondary points
+        for name in data_fields:
+            val = edge_point.get(name)
+            if val:
+                data.append(DataPoint(
+                    variable_name=name,
+                    variable_value=val
+                ))
+
+
+        # This is for satellite secondary points
+        if 'variables' in edge_point:
+
+            data.extend([DataPoint(
+                variable_name=variable.variable_name,
+                variable_value=var_value,
+                cf_variable_name=variable.standard_name
+            ) for var_value, variable in zip(
+                edge_point['var_values'],
+                edge_point['variables']
+            ) if var_value])
+        point.data = data
+
         try:
             point.data_id = str(edge_point['id'])
         except KeyError:
             point.data_id = "%s:%s:%s" % (point.time, point.longitude, point.latitude)
-
-        if 'var_name' in edge_point and 'var_value' in edge_point:
-            point.satellite_var_name = edge_point['var_name']
-            point.satellite_var_value = edge_point['var_value']
 
         return point
 
@@ -547,6 +604,11 @@ def tile_to_edge_points(tile):
     edge_points = []
 
     for idx in indices:
+        if tile.is_multi:
+            data = [var_data[tuple(idx)] for var_data in tile.data]
+        else:
+            data = [tile.data[tuple(idx)]]
+
         edge_point = {
             'point': f'Point({tile.longitudes[idx[2]]} {tile.latitudes[idx[1]]})',
             'time': datetime.utcfromtimestamp(tile.times[idx[0]]).strftime('%Y-%m-%dT%H:%M:%SZ'),
@@ -554,8 +616,8 @@ def tile_to_edge_points(tile):
             'platform': None,
             'device': None,
             'fileurl': tile.granule,
-            'var_name': tile.var_name,
-            'var_value': tile.data[tuple(idx)]
+            'variables': tile.variables,
+            'var_values': data
         }
         edge_points.append(edge_point)
     return edge_points
@@ -720,13 +782,17 @@ def match_tile_to_point_generator(tile_service, tile_id, m_tree, edge_results, s
     print("%s Time to query primary tree for tile %s" % (str(datetime.now() - a_time), tile_id))
     for i, point_matches in enumerate(matched_indexes):
         if len(point_matches) > 0:
+            if tile.is_multi:
+                data_vals = [tile_data[tuple(valid_indices[i])] for tile_data in tile.data]
+            else:
+                data_vals = tile.data[tuple(valid_indices[i])]
             p_nexus_point = NexusPoint(
                 latitude=tile.latitudes[valid_indices[i][1]],
                 longitude=tile.longitudes[valid_indices[i][2]],
                 depth=None,
                 time=tile.times[valid_indices[i][0]],
                 index=valid_indices[i],
-                data_val=tile.data[tuple(valid_indices[i])]
+                data_vals=data_vals
             )
 
             p_doms_point = DomsPoint.from_nexus_point(p_nexus_point, tile=tile)
