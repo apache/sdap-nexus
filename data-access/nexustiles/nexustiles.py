@@ -529,10 +529,34 @@ class NexusTileService(object):
             except KeyError:
                 pass
 
-            tile.variables = []
+            try:
+                # Ensure backwards compatibility by working with old
+                # tile_var_name_s and tile_standard_name_s fields to
+
+                # will be overwritten if tile_var_name_ss is present
+                # as well.
+                if '[' in solr_doc['tile_var_name_s']:
+                    var_names = json.loads(solr_doc['tile_var_name_s'])
+                else:
+                    var_names = [solr_doc['tile_var_name_s']]
+
+                if '[' in solr_doc['tile_standard_name_s']:
+                    standard_names = json.loads(solr_doc['tile_standard_name_s'])
+                else:
+                    standard_names = [solr_doc['tile_standard_name_s']]
+
+                tile.variables = []
+                for var_name, standard_name in zip(var_names, standard_names):
+                    tile.variables.append(TileVariable(
+                        variable_name=var_name,
+                        standard_name=standard_name
+                    ))
+            except KeyError:
+                pass
 
 
             if 'tile_var_name_ss' in solr_doc:
+                tile.variables = []
                 for var_name in solr_doc['tile_var_name_ss']:
                     standard_name_key = f'{var_name}.tile_standard_name_s'
                     standard_name = solr_doc.get(standard_name_key)
