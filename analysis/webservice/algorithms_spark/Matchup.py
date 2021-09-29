@@ -385,12 +385,12 @@ class DomsPoint(object):
             data_vals = [nexus_point.data_vals]
 
         data = []
-        for val, name, standard_name in zip(data_vals, tile.var_names, tile.standard_names):
-            if val:
+        for data_val, variable in zip(data_vals, tile.variables):
+            if data_val:
                 data.append(DataPoint(
-                    variable_name=name,
-                    variable_value=val,
-                    cf_variable_name=standard_name
+                    variable_name=variable.variable_name,
+                    variable_value=data_val,
+                    cf_variable_name=variable.standard_name
                 ))
         point.data = data
 
@@ -479,16 +479,15 @@ class DomsPoint(object):
 
 
         # This is for satellite secondary points
-        if 'var_names' in edge_point and 'var_values' in edge_point:
+        if 'variables' in edge_point:
 
             data.extend([DataPoint(
-                variable_name=var_name,
+                variable_name=variable.variable_name,
                 variable_value=var_value,
-                cf_variable_name=standard_name
-            ) for var_name, var_value, standard_name in zip(
-                edge_point['var_names'],
+                cf_variable_name=variable.standard_name
+            ) for var_value, variable in zip(
                 edge_point['var_values'],
-                edge_point['var_standard_names']
+                edge_point['variables']
             ) if var_value])
         point.data = data
 
@@ -617,9 +616,8 @@ def tile_to_edge_points(tile):
             'platform': None,
             'device': None,
             'fileurl': tile.granule,
-            'var_names': tile.var_names,
-            'var_values': data,
-            'var_standard_names': tile.standard_names
+            'variables': tile.variables,
+            'var_values': data
         }
         edge_points.append(edge_point)
     return edge_points

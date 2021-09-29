@@ -30,7 +30,7 @@ from .dao import CassandraProxy
 from .dao import DynamoProxy
 from .dao import S3Proxy
 from .dao import SolrProxy
-from .model.nexusmodel import Tile, BBox, TileStats
+from .model.nexusmodel import Tile, BBox, TileStats, TileVariable
 
 EPOCH = timezone('UTC').localize(datetime(1970, 1, 1))
 
@@ -529,26 +529,17 @@ class NexusTileService(object):
             except KeyError:
                 pass
 
-            try:
-                # tile_var_name_s is a json encoded list of strings
-                # (or just a single string). This may change in the
-                # future if tile_var_name_s format changes.
-                if '[' in solr_doc['tile_var_name_s']:
-                    tile.var_names = json.loads(solr_doc['tile_var_name_s'])
-                else:
-                    tile.var_names = [solr_doc['tile_var_name_s']]
-            except KeyError:
-                pass
+            tile.variables = []
 
-            try:
-                # tile_standard_name_s is a json encoded list of strings
-                # (or just a single string).
-                if '[' in solr_doc['tile_standard_name_s']:
-                    tile.standard_names = json.loads(solr_doc['tile_standard_name_s'])
-                else:
-                    tile.standard_names = [solr_doc['tile_standard_name_s']]
-            except KeyError:
-                pass
+
+            if 'tile_var_name_ss' in solr_doc:
+                for var_name in solr_doc['tile_var_name_ss']:
+                    standard_name_key = f'{var_name}.tile_standard_name_s'
+                    standard_name = solr_doc.get(standard_name_key)
+                    tile.variables.append(TileVariable(
+                        variable_name=var_name,
+                        standard_name=standard_name
+                    ))
 
             tiles.append(tile)
 

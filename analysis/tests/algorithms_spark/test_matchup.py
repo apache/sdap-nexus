@@ -23,7 +23,7 @@ import mock
 import numpy as np
 import pytest
 import webservice.algorithms_spark.Matchup as matchup
-from nexustiles.model.nexusmodel import Tile
+from nexustiles.model.nexusmodel import Tile, TileVariable
 from pyspark.sql import SparkSession
 from shapely import wkt
 from shapely.geometry import box
@@ -282,8 +282,7 @@ def test_match_satellite_to_insitu(test_dir, test_tile, test_matchup_args):
     with secondary point (5, 15) and primary point (20, 0) should match
     with (18, 3)
     """
-    test_tile.var_names = ['sst']
-    test_tile.standard_names = ['sea_surface_temperature']
+    test_tile.variables = [TileVariable('sst', 'sea_surface_temperature')]
     test_tile.latitudes = np.array([0, 20], dtype=np.float32)
     test_tile.longitudes = np.array([0, 20], dtype=np.float32)
     test_tile.times = [1627490285]
@@ -385,8 +384,7 @@ def test_match_satellite_to_insitu(test_dir, test_tile, test_matchup_args):
         points = [wkt.loads(result['point']) for result in edge_json['results']]
 
         matchup_tile = Tile()
-        matchup_tile.var_names = ['sst']
-        matchup_tile.standard_names = ['sea_surface_temperature']
+        matchup_tile.variables = [TileVariable('sst', 'sea_surface_temperature')]
         matchup_tile.latitudes = np.array([point.y for point in points], dtype=np.float32)
         matchup_tile.longitudes = np.array([point.x for point in points], dtype=np.float32)
         matchup_tile.times = [edge_json['results'][0]['time']]
@@ -420,8 +418,11 @@ def test_multi_variable_matchup(test_dir, test_tile, test_matchup_args):
         ]]
     ])
     test_tile.is_multi = True
-    test_tile.var_names = ['wind_speed', 'wind_dir']
-    test_tile.standard_names = ['wind_speed', 'wind_direction']
+    test_tile.variables = [
+        TileVariable('wind_speed', 'wind_speed'),
+        TileVariable('wind_dir', 'wind_direction'),
+    ]
+    test_tile.standard_names = ['', '']
     test_matchup_args['tile_service_factory'] = setup_mock_tile_service(test_tile)
 
     with mock.patch(
@@ -439,15 +440,17 @@ def test_multi_variable_matchup(test_dir, test_tile, test_matchup_args):
 
         insitu_matchup_result = list(generator)
 
+        tile_var_names = [var.variable_name for var in test_tile.variables]
+
         # wind_speed is first, wind_dir is second
         for data_dict in insitu_matchup_result[0][0].data:
-            assert data_dict.variable_name in test_tile.var_names
+            assert data_dict.variable_name in tile_var_names
             if data_dict.variable_name == 'wind_speed':
                 assert data_dict.variable_value == 2.10
             elif data_dict.variable_name == 'wind_dir':
                 assert data_dict.variable_value == 21.0
         for data_dict in insitu_matchup_result[1][0].data:
-            assert data_dict.variable_name in test_tile.var_names
+            assert data_dict.variable_name in tile_var_names
             if data_dict.variable_name == 'wind_speed':
                 assert data_dict.variable_value == 3.10
             elif data_dict.variable_name == 'wind_dir':
@@ -472,8 +475,10 @@ def test_multi_variable_satellite_to_satellite_matchup(test_dir, test_tile, test
         ]]
     ])
     test_tile.is_multi = True
-    test_tile.var_names = ['wind_speed', 'wind_dir']
-    test_tile.standard_names = ['wind_speed', 'wind_direction']
+    test_tile.variables = [
+        TileVariable('wind_speed', 'wind_speed'),
+        TileVariable('wind_dir', 'wind_direction')
+    ]
     test_matchup_args['tile_service_factory'] = setup_mock_tile_service(test_tile)
 
     with mock.patch(
@@ -486,8 +491,10 @@ def test_multi_variable_satellite_to_satellite_matchup(test_dir, test_tile, test
         points = [wkt.loads(result['point']) for result in edge_json['results']]
 
         matchup_tile = Tile()
-        matchup_tile.var_names = ['sst', 'wind_dir']
-        matchup_tile.standard_names = ['sea_surface_temperature', 'wind_direction']
+        matchup_tile.variables = [
+            TileVariable('sst', 'sea_surface_temperature'),
+            TileVariable('wind_dir', 'wind_direction')
+        ]
         matchup_tile.latitudes = np.array([point.y for point in points], dtype=np.float32)
         matchup_tile.longitudes = np.array([point.x for point in points], dtype=np.float32)
         matchup_tile.times = [edge_json['results'][0]['time']]

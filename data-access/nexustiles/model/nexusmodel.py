@@ -25,6 +25,21 @@ TileStats = namedtuple('TileStats', 'min max mean count')
 
 
 @dataclass
+class TileVariable:
+    """
+    TileVariable class representing a single variable. This contains
+    both the name of the variable and the CF standard name.
+
+    :attribute variable_name: Name of the variable in the tile. This is
+    the name from the satellite data file.
+    :attribute standard_name: CF Standard name of the variable in the
+    tile. This is the 'standard_name' attribute from the satellite data file. This might be null in the case where the source variable does not contain a standard_name attribute.
+    """
+    variable_name: str = None
+    standard_name: str = None
+
+
+@dataclass
 class Tile(object):
     """
     Tile class representing the contents of a tile. The tile contents
@@ -46,11 +61,8 @@ class Tile(object):
         temporal minimum of this tile
     :attribute tile_stats: Dictionary representing the min, max, mean, and
         count of this tile
-    :attribute var_names: A list of size N where N == the number of vars
-        this tile represents. This represents the variable name from the
-        source data file.
-    :attribute standard_names: A list of size N where N == the number of vars
-        this tile represents. This represents the CF 'standard_name' from the
+    :attribute variables: A list of size N where N == the number of vars
+        this tile represents. The list type is TileVariable.
     :attribute latitudes: 1-d ndarray representing the latitude values of
         this tile
     :attribute longitudes: 1-d ndarray representing the longitude values of
@@ -72,8 +84,7 @@ class Tile(object):
     min_time: str = None
     max_time: str = None
     tile_stats: dict = None
-    var_names: list = None
-    standard_names: list = None
+    variables: list = None
     latitudes: np.array = None
     longitudes: np.array = None
     times: np.array = None
