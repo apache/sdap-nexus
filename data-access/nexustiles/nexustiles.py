@@ -540,10 +540,14 @@ class NexusTileService(object):
                 else:
                     var_names = [solr_doc['tile_var_name_s']]
 
-                if '[' in solr_doc['tile_standard_name_s']:
-                    standard_names = json.loads(solr_doc['tile_standard_name_s'])
+                standard_name = solr_doc.get(
+                        'tile_standard_name_s',
+                        json.dumps([None] * len(var_names))
+                )
+                if '[' in standard_name:
+                    standard_names = json.loads(standard_name)
                 else:
-                    standard_names = [solr_doc['tile_standard_name_s']]
+                    standard_names = [standard_name]
 
                 tile.variables = []
                 for var_name, standard_name in zip(var_names, standard_names):
