@@ -277,12 +277,12 @@ class NexusTileService(object):
         return tiles
 
     def get_min_max_time_by_granule(self, ds, granule_name):
-        start_time, end_time = self._solr.find_min_max_date_from_granule(ds, granule_name)
+        start_time, end_time = self._metadatastore.find_min_max_date_from_granule(ds, granule_name)
 
         return start_time, end_time
 
     def get_dataset_overall_stats(self, ds):
-        return self._solr.get_data_series_stats(ds)
+        return self._metadatastore.get_data_series_stats(ds)
 
     def get_tiles_bounded_by_box_at_time(self, min_lat, max_lat, min_lon, max_lon, dataset, time, **kwargs):
         tiles = self.find_all_tiles_in_box_at_time(min_lat, max_lat, min_lon, max_lon, dataset, time, **kwargs)
@@ -542,12 +542,12 @@ class NexusTileService(object):
 
                 # will be overwritten if tile_var_name_ss is present
                 # as well.
-                if '[' in solr_doc['tile_var_name_s']:
-                    var_names = json.loads(solr_doc['tile_var_name_s'])
+                if '[' in store_doc['tile_var_name_s']:
+                    var_names = json.loads(store_doc['tile_var_name_s'])
                 else:
-                    var_names = [solr_doc['tile_var_name_s']]
+                    var_names = [store_doc['tile_var_name_s']]
 
-                standard_name = solr_doc.get(
+                standard_name = store_doc.get(
                         'tile_standard_name_s',
                         json.dumps([None] * len(var_names))
                 )
@@ -566,11 +566,11 @@ class NexusTileService(object):
                 pass
 
 
-            if 'tile_var_name_ss' in solr_doc:
+            if 'tile_var_name_ss' in store_doc:
                 tile.variables = []
-                for var_name in solr_doc['tile_var_name_ss']:
+                for var_name in store_doc['tile_var_name_ss']:
                     standard_name_key = f'{var_name}.tile_standard_name_s'
-                    standard_name = solr_doc.get(standard_name_key)
+                    standard_name = store_doc.get(standard_name_key)
                     tile.variables.append(TileVariable(
                         variable_name=var_name,
                         standard_name=standard_name
