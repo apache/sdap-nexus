@@ -34,7 +34,6 @@ from .dao import ElasticsearchProxy
 
 from .model.nexusmodel import Tile, BBox, TileStats, TileVariable
 
-
 EPOCH = timezone('UTC').localize(datetime(1970, 1, 1))
 
 logging.basicConfig(
