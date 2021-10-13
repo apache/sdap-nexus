@@ -15,7 +15,7 @@
 
 from setuptools import setup
 
-__version__ = '0.33'
+__version__ = '0.33.0'
 
 
 with open('requirements.txt') as f:
