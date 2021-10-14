@@ -305,14 +305,6 @@ class Matchup(NexusCalcSparkHandler):
     @staticmethod
     def domspoint_to_dict(domspoint):
         doms_dict = {
-            "sea_water_temperature": domspoint.sst,
-            "sea_water_temperature_depth": domspoint.sst_depth,
-            "sea_water_salinity": domspoint.sss,
-            "sea_water_salinity_depth": domspoint.sss_depth,
-            "wind_speed": domspoint.wind_speed,
-            "wind_direction": domspoint.wind_direction,
-            "wind_u": domspoint.wind_u,
-            "wind_v": domspoint.wind_v,
             "platform": doms_values.getPlatformById(domspoint.platform),
             "device": doms_values.getDeviceById(domspoint.device),
             "x": str(domspoint.longitude),
@@ -356,14 +348,6 @@ class DomsPoint(object):
 
         self.data = None
 
-        self.wind_u = None
-        self.wind_v = None
-        self.wind_direction = None
-        self.wind_speed = None
-        self.sst = None
-        self.sst_depth = None
-        self.sss = None
-        self.sss_depth = None
         self.source = None
         self.depth = None
         self.platform = None
@@ -444,14 +428,6 @@ class DomsPoint(object):
 
         point.time = edge_point['time']
 
-        point.wind_u = edge_point.get('eastward_wind')
-        point.wind_v = edge_point.get('northward_wind')
-        point.wind_direction = edge_point.get('wind_direction')
-        point.wind_speed = edge_point.get('wind_speed')
-        point.sst = edge_point.get('sea_water_temperature')
-        point.sst_depth = edge_point.get('sea_water_temperature_depth')
-        point.sss = edge_point.get('sea_water_salinity')
-        point.sss_depth = edge_point.get('sea_water_salinity_depth')
         point.source = edge_point.get('source')
         point.platform = edge_point.get('platform')
         point.device = edge_point.get('device')
