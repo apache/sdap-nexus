@@ -1,5 +1,6 @@
 cassandra-driver==3.24.0
 pysolr==3.9.0
+elasticsearch
 requests
 nexusproto
 Shapely
