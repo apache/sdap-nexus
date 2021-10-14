@@ -30,6 +30,8 @@ from .dao import CassandraProxy
 from .dao import DynamoProxy
 from .dao import S3Proxy
 from .dao import SolrProxy
+from .dao import ElasticsearchProxy
+
 from .model.nexusmodel import Tile, BBox, TileStats, TileVariable
 
 EPOCH = timezone('UTC').localize(datetime(1970, 1, 1))
@@ -45,10 +47,10 @@ def tile_data(default_fetch=True):
     def tile_data_decorator(func):
         @wraps(func)
         def fetch_data_for_func(*args, **kwargs):
-            solr_start = datetime.now()
-            solr_docs = func(*args, **kwargs)
-            solr_duration = (datetime.now() - solr_start).total_seconds()
-            tiles = args[0]._solr_docs_to_tiles(*solr_docs)
+            metadatastore_start = datetime.now()
+            metadatastore_docs = func(*args, **kwargs)
+            metadatastore_duration = (datetime.now() - metadatastore_start).total_seconds()
+            tiles = args[0]._metadata_store_docs_to_tiles(*metadatastore_docs)
 
             cassandra_duration = 0
             if ('fetch_data' in kwargs and kwargs['fetch_data']) or ('fetch_data' not in kwargs and default_fetch):
@@ -60,7 +62,7 @@ def tile_data(default_fetch=True):
             if 'metrics_callback' in kwargs and kwargs['metrics_callback'] is not None:
                 try:
                     kwargs['metrics_callback'](cassandra=cassandra_duration,
-                                               solr=solr_duration,
+                                               metadatastore=metadatastore_duration,
                                                num_tiles=len(tiles))
                 except Exception as e:
                     logger.error("Metrics callback '{}'raised an exception. Will continue anyway. " +
@@ -99,7 +101,11 @@ class NexusTileService(object):
                 raise ValueError("Error reading datastore from config file")
 
         if not skipMetadatastore:
-            self._metadatastore = SolrProxy.SolrProxy(self._config)
+            metadatastore = self._config.get("metadatastore", "store", fallback='solr')
+            if metadatastore == "solr":
+                self._metadatastore = SolrProxy.SolrProxy(self._config)
+            elif metadatastore == "elasticsearch":
+                self._metadatastore = ElasticsearchProxy.ElasticsearchProxy(self._config)
 
     def override_config(self, config):
         for section in config.sections():
@@ -270,12 +276,12 @@ class NexusTileService(object):
         return tiles
 
     def get_min_max_time_by_granule(self, ds, granule_name):
-        start_time, end_time = self._solr.find_min_max_date_from_granule(ds, granule_name)
+        start_time, end_time = self._metadatastore.find_min_max_date_from_granule(ds, granule_name)
 
         return start_time, end_time
 
     def get_dataset_overall_stats(self, ds):
-        return self._solr.get_data_series_stats(ds)
+        return self._metadatastore.get_data_series_stats(ds)
 
     def get_tiles_bounded_by_box_at_time(self, min_lat, max_lat, min_lon, max_lon, dataset, time, **kwargs):
         tiles = self.find_all_tiles_in_box_at_time(min_lat, max_lat, min_lon, max_lon, dataset, time, **kwargs)
@@ -460,21 +466,21 @@ class NexusTileService(object):
 
         return tiles
 
-    def _solr_docs_to_tiles(self, *solr_docs):
+    def _metadata_store_docs_to_tiles(self, *store_docs):
 
         tiles = []
-        for solr_doc in solr_docs:
+        for store_doc in store_docs:
             tile = Tile()
             try:
-                tile.tile_id = solr_doc['id']
+                tile.tile_id = store_doc['id']
             except KeyError:
                 pass
 
             try:
-                min_lat = solr_doc['tile_min_lat']
-                min_lon = solr_doc['tile_min_lon']
-                max_lat = solr_doc['tile_max_lat']
-                max_lon = solr_doc['tile_max_lon']
+                min_lat = store_doc['tile_min_lat']
+                min_lon = store_doc['tile_min_lon']
+                max_lat = store_doc['tile_max_lat']
+                max_lon = store_doc['tile_max_lon']
 
                 if isinstance(min_lat, list):
                     min_lat = min_lat[0]
@@ -490,41 +496,41 @@ class NexusTileService(object):
                 pass
 
             try:
-                tile.dataset = solr_doc['dataset_s']
+                tile.dataset = store_doc['dataset_s']
             except KeyError:
                 pass
 
             try:
-                tile.dataset_id = solr_doc['dataset_id_s']
+                tile.dataset_id = store_doc['dataset_id_s']
             except KeyError:
                 pass
 
             try:
-                tile.granule = solr_doc['granule_s']
+                tile.granule = store_doc['granule_s']
             except KeyError:
                 pass
 
             try:
-                tile.min_time = datetime.strptime(solr_doc['tile_min_time_dt'], "%Y-%m-%dT%H:%M:%SZ").replace(
+                tile.min_time = datetime.strptime(store_doc['tile_min_time_dt'], "%Y-%m-%dT%H:%M:%SZ").replace(
                     tzinfo=UTC)
             except KeyError:
                 pass
 
             try:
-                tile.max_time = datetime.strptime(solr_doc['tile_max_time_dt'], "%Y-%m-%dT%H:%M:%SZ").replace(
+                tile.max_time = datetime.strptime(store_doc['tile_max_time_dt'], "%Y-%m-%dT%H:%M:%SZ").replace(
                     tzinfo=UTC)
             except KeyError:
                 pass
 
             try:
-                tile.section_spec = solr_doc['sectionSpec_s']
+                tile.section_spec = store_doc['sectionSpec_s']
             except KeyError:
                 pass
 
             try:
                 tile.tile_stats = TileStats(
-                    solr_doc['tile_min_val_d'], solr_doc['tile_max_val_d'],
-                    solr_doc['tile_avg_val_d'], solr_doc['tile_count_i']
+                    store_doc['tile_min_val_d'], store_doc['tile_max_val_d'],
+                    store_doc['tile_avg_val_d'], store_doc['tile_count_i']
                 )
             except KeyError:
                 pass
@@ -535,12 +541,12 @@ class NexusTileService(object):
 
                 # will be overwritten if tile_var_name_ss is present
                 # as well.
-                if '[' in solr_doc['tile_var_name_s']:
-                    var_names = json.loads(solr_doc['tile_var_name_s'])
+                if '[' in store_doc['tile_var_name_s']:
+                    var_names = json.loads(store_doc['tile_var_name_s'])
                 else:
-                    var_names = [solr_doc['tile_var_name_s']]
+                    var_names = [store_doc['tile_var_name_s']]
 
-                standard_name = solr_doc.get(
+                standard_name = store_doc.get(
                         'tile_standard_name_s',
                         json.dumps([None] * len(var_names))
                 )
@@ -559,11 +565,11 @@ class NexusTileService(object):
                 pass
 
 
-            if 'tile_var_name_ss' in solr_doc:
+            if 'tile_var_name_ss' in store_doc:
                 tile.variables = []
-                for var_name in solr_doc['tile_var_name_ss']:
+                for var_name in store_doc['tile_var_name_ss']:
                     standard_name_key = f'{var_name}.tile_standard_name_s'
-                    standard_name = solr_doc.get(standard_name_key)
+                    standard_name = store_doc.get(standard_name_key)
                     tile.variables.append(TileVariable(
                         variable_name=var_name,
                         standard_name=standard_name
