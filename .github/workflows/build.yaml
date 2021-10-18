@@ -1,0 +1,133 @@
+name: build
+on: push
+jobs:
+  build:
+    name: Build, Test, Verify, Publish
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout sdap-nexus
+      uses: actions/checkout@v2
+      with:
+        fetch-depth: 0
+    - name: Install miniconda
+      run: |
+        curl -o /tmp/miniconda.sh "https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh"
+        bash /tmp/miniconda.sh -b -p /opt/miniconda
+        echo "/opt/miniconda/condabin" >> $GITHUB_PATH  # Preserve conda's PATH across jobs
+        /opt/miniconda/condabin/conda init bash
+    - name: Setup dependencies
+      run: |
+        conda config --add channels conda-forge
+        conda config --set channel_priority strict
+        conda env create -qf environment.yml
+    - name: Install analysis & data-access
+      shell: bash -ieo pipefail {0} # Interative shells required for conda
+      run: |
+        conda activate sdap-nexus
+        pip install -q analysis
+        pip install -q data-access
+    - name: Install pipeline tools
+      shell: bash -ieo pipefail {0}
+      run: |
+        conda activate sdap-nexus
+        conda install -qy pylint flake8 pytest
+    - name: Lint
+      shell: bash -ieo pipefail {0}
+      continue-on-error: true
+      run: |
+        conda activate sdap-nexus
+        pylint analysis
+        flake8 analysis
+        pylint data-access
+        flake8 data-access
+    - name: Test and coverage
+      continue-on-error: true
+      shell: bash -ieo pipefail {0}
+      run: |
+        conda activate sdap-nexus
+        pytest analysis/tests/
+        pytest data-access/tests/
+    - name: Get module commits relative to develop
+      if: ${{ github.ref != 'refs/heads/develop' && github.ref != 'refs/heads/master' }}
+      run: |
+        echo "BRANCH=origin/develop" >> $GITHUB_ENV
+    - name: Get module commits relative to master
+      if: ${{ github.ref == 'refs/heads/develop' }}
+      run: |
+        echo "BRANCH=origin/master" >> $GITHUB_ENV
+    - name: Get module commits relative to latest tag
+      if: ${{ github.ref == 'refs/heads/master' }}
+      run: |
+        echo "BRANCH=$(git describe --tags --abbrev=0)" >> $GITHUB_ENV
+    - name: Get module commits
+      id: get_module_commits
+      run: |
+        DATA_ACCESS_COMMITS=$(git rev-list $BRANCH -- data-access| wc -l | awk '{print $1}')
+        ANALYSIS_COMMITS=$(git rev-list $BRANCH -- analysis| wc -l | awk '{print $1}')
+
+        echo "data-access commits: $DATA_ACCESS_COMMITS"
+        echo "analysis commits: $ANALYSIS_COMMITS"
+
+        echo "::set-output name=data_access_commits::$DATA_ACCESS_COMMITS"
+        echo "::set-output name=analysis_commits::$ANALYSIS_COMMITS"
+    - name: Bump pre-alpha version
+      if: ${{ github.ref != 'refs/heads/develop' && github.ref != 'refs/heads/master' }}
+      run: |
+        echo "PHASE=pre-alpha" >> $GITHUB_ENV
+        echo "VALUE=$(git rev-parse --short ${GITHUB_SHA})" >> $GITHUB_ENV
+    - name: Bump alpha version
+      if: ${{ github.ref == 'refs/heads/develop' }}
+      run: |
+        echo "PHASE=alpha" >> $GITHUB_ENV
+        echo "VALUE=auto" >> $GITHUB_ENV
+    - name: Bump release version
+      if: ${{ github.ref == 'refs/heads/master' }}
+      run: |
+        echo "PHASE=patch" >> $GITHUB_ENV
+        echo "VALUE=auto" >> $GITHUB_ENV
+    - name: Bump versions
+      id: bump_versions
+      run: |
+        if [ ${{steps.get_module_commits.outputs.data_access_commits}} -gt 0 ]; then
+          DATA_ACCESS_VERSION=$(python3 .github/workflows/version.py data-access/VERSION.txt --phase $PHASE --value $VALUE)
+        else
+          DATA_ACCESS_VERSION=$(python3 .github/workflows/version.py data-access/VERSION.txt)
+        fi
+        if [ ${{steps.get_module_commits.outputs.analysis_commits}} -gt 0 ]; then
+          ANALYSIS_VERSION=$(python3 .github/workflows/version.py analysis/VERSION.txt --phase $PHASE --value $VALUE)
+        else
+          ANALYSIS_VERSION=$(python3 .github/workflows/version.py analysis/VERSION.txt)
+        fi
+        DOCKER_VERSION=$(python3 .github/workflows/version.py docker/nexus-webapp/VERSION.txt --phase $PHASE --value $VALUE)
+
+        echo "data-access: $DATA_ACCESS_VERSION"
+        echo "analysis: $ANALYSIS_VERSION"
+        echo "docker: $DOCKER_VERSION"
+
+        echo "::set-output name=data_access_version::$DATA_ACCESS_VERSION"
+        echo "::set-output name=analysis_version::$ANALYSIS_VERSION"
+        echo "::set-output name=docker_version::$DOCKER_VERSION"
+    - name: Commit version bump + tag
+      if: |
+        github.ref == 'refs/heads/develop' ||
+        github.ref == 'refs/heads/master'    ||
+        startsWith(github.ref, 'refs/heads/release')
+      run: |
+        git config --global user.name 'sdap-nexus bot'
+        git config --global user.email 'sdap-nexus@noreply.github.com'
+        git commit -am "/version ${{steps.bump_versions.outputs.docker_version}}"
+        git tag -a "distributed.${{steps.bump_versions.outputs.docker_version}}" -m "Version ${{steps.bump_versions.outputs.docker_version}}"
+        git push origin
+        git push origin "distributed.${{steps.bump_versions.outputs.docker_version}}"
+    - name: Log in to the Container registry
+      uses: docker/login-action@v1
+      with:
+        username: ${{ secrets.DOCKERHUB_USERNAME }}
+        password: ${{ secrets.DOCKERHUB_TOKEN }}
+    - name: Build and push Docker image
+      id: docker_build
+      uses: docker/build-push-action@v2
+      with:
+        push: true
+        file: 'docker/nexus-webapp/Dockerfile'
+        tags: nexusjpl/nexus-webapp:distributed.${{ steps.bump_versions.outputs.docker_version }}
