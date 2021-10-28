@@ -31,7 +31,7 @@ paths:
             type: string
           example: avhrr-l4-glob-v2-daily-ncei-ghrsst-sstblend-avhrr-oi-glob-v020-fv020
         - in: query
-          name: matchup
+          name: secondary
           description: |
             The dataset(s) being searched for measurements that match
             the measurements in primary. One or more (comma-separated)
@@ -632,26 +632,28 @@ components:
             data:
               type: array
               items:
-                $ref: '#/components/schemas/DomsPoint'
-    DomsPoint:
+                $ref: '#/components/schemas/DomsPointPrimary'
+    DomsPointPrimary:
+      allOf:
+        - $ref: '#/components/schemas/DomsPointBase'
+        - type: object
+          properties:
+            primary:
+              type: array
+              items:
+                $ref: '#/components/schemas/DomsDataPoint'
+    DomsPointSecondary:
+      allOf:
+        - $ref: '#/components/schemas/DomsPointBase'
+        - type: object
+          properties:
+            secondary:
+              type: array
+              items:
+                $ref: '#/components/schemas/DomsDataPoint'
+    DomsPointBase:
       type: object
       properties:
-        sea_water_temperature:
-          type: number
-        sea_water_temperature_depth:
-          type: number
-        sea_water_salinity:
-          type: number
-        sea_water_salinity_depth:
-          type: number
-        wind_speed:
-          type: number
-        wind_direction:
-          type: number
-        wind_u:
-          type: number
-        wind_v:
-          type: number
         platform:
           type: string
         device:
@@ -671,12 +673,19 @@ components:
           type: string
         source:
           type: string
-        analysed_sst:
-          type: number # TODO Fix this
         matches:
           type: array
           items:
-            $ref: '#/components/schemas/DomsPoint'
+            $ref: '#/components/schemas/DomsPointSecondary'
+    DomsDataPoint:
+      type: object
+      properties:
+        variable_name:
+          type: string
+        cf_variable_name:
+          type: string
+        variable_value:
+          type: number
     DomsList:
       allOf:
         - $ref: '#/components/schemas/DomsQueryResult'
