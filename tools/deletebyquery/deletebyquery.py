@@ -31,6 +31,7 @@ from six.moves import input
 solr_connection = None
 solr_collection = None
 SOLR_UNIQUE_KEY = None
+solr_delete_from_all_collections = None
 
 cassandra_cluster = None
 cassandra_session = None
@@ -45,10 +46,15 @@ logging.getLogger().handlers[0].setFormatter(
 def init(args):
     global solr_connection
     solr_connection = SolrConnection(args.solr)
+
     global solr_collection
     solr_collection = solr_connection[args.collection]
+
     global SOLR_UNIQUE_KEY
     SOLR_UNIQUE_KEY = args.solrIdField
+
+    global solr_delete_from_all_collections
+    solr_delete_from_all_collections = args.deleteFromAllCollections
 
     dc_policy = RoundRobinPolicy()
     token_policy = TokenAwarePolicy(dc_policy)
@@ -186,8 +192,14 @@ def delete_from_cassandra(doc_ids):
 
 
 def delete_from_solr(query):
-    solr_collection.delete(query, commit=False)
-    solr_collection.commit()
+    if not solr_delete_from_all_collections:
+        solr_collection.delete(query, commit=False)
+        solr_collection.commit()
+    else:
+        for collection in dir(solr_connection):
+            solr_collection = solr_connection[collection]
+            solr_collection.delete(query, commit=False)
+            solr_collection.commit()
 
 
 def parse_args():
@@ -210,6 +222,13 @@ def parse_args():
                         required=False,
                         default='id',
                         metavar='id')
+    
+    parser.add_argument('--deleteFromAllCollections',
+                        help='Delete from all collections in SOLR, not limiting ' \
+                             'to the collection specified in collection option',
+                        required=False,
+                        default=False,
+                        action='store_true')
 
     parser.add_argument('--cassandra',
                         help='The hostname(s) or IP(s) of the Cassandra server(s).',
@@ -243,8 +262,9 @@ def parse_args():
 
     parser.add_argument('-p', '--cassandraPort',
                         help='The port used to connect to Cassandra.',
+                        type=int,
                         required=False,
-                        default='9042')
+                        default=9042)
 
     parser.add_argument('--cassandraUsername',
                         help='The username used to connect to Cassandra.',
