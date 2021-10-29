@@ -638,6 +638,12 @@ components:
         - $ref: '#/components/schemas/DomsPointBase'
         - type: object
           properties:
+            matches:
+              type: array
+              items:
+                $ref: '#/components/schemas/DomsPointSecondary'
+        - type: object
+          properties:
             primary:
               type: array
               items:
@@ -673,10 +679,6 @@ components:
           type: string
         source:
           type: string
-        matches:
-          type: array
-          items:
-            $ref: '#/components/schemas/DomsPointSecondary'
     DomsDataPoint:
       type: object
       properties:
