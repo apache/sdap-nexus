@@ -63,7 +63,7 @@ def test_matchup_args():
     tile_ids = [1]
     polygon_wkt = 'POLYGON((-34.98 29.54, -30.1 29.54, -30.1 31.00, -34.98 31.00, -34.98 29.54))'
     primary_ds_name = 'primary-ds-name'
-    matchup_ds_names = 'test'
+    secondary_ds_names = 'test'
     parameter = 'sst'
     depth_min = 0.0
     depth_max = 1.0
@@ -74,7 +74,7 @@ def test_matchup_args():
     yield dict(
         tile_ids=tile_ids,
         primary_b=MockSparkParam(primary_ds_name),
-        matchup_b=MockSparkParam(matchup_ds_names),
+        secondary_b=MockSparkParam(secondary_ds_names),
         parameter_b=MockSparkParam(parameter),
         tt_b=MockSparkParam(time_tolerance),
         rt_b=MockSparkParam(radius_tolerance),
@@ -238,12 +238,12 @@ def test_calc(test_matchup_args):
                 assert matches['x'] == '-180'
                 assert matches['y'] == '-90'
 
-        assert json_matchup_result['data'][0]['data'][0]['variable_value'] == 10.0
-        assert json_matchup_result['data'][1]['data'][0]['variable_value'] == 20.0
-        assert json_matchup_result['data'][0]['matches'][0]['data'][0]['variable_value'] == 30.0
-        assert json_matchup_result['data'][0]['matches'][1]['data'][0]['variable_value'] == 40.0
-        assert json_matchup_result['data'][1]['matches'][0]['data'][0]['variable_value'] == 30.0
-        assert json_matchup_result['data'][1]['matches'][1]['data'][0]['variable_value'] == 40.0
+        assert json_matchup_result['data'][0]['primary'][0]['variable_value'] == 10.0
+        assert json_matchup_result['data'][1]['primary'][0]['variable_value'] == 20.0
+        assert json_matchup_result['data'][0]['matches'][0]['secondary'][0]['variable_value'] == 30.0
+        assert json_matchup_result['data'][0]['matches'][1]['secondary'][0]['variable_value'] == 40.0
+        assert json_matchup_result['data'][1]['matches'][0]['secondary'][0]['variable_value'] == 30.0
+        assert json_matchup_result['data'][1]['matches'][1]['secondary'][0]['variable_value'] == 40.0
 
         assert json_matchup_result['details']['numInSituMatched'] == 4
         assert json_matchup_result['details']['numGriddedMatched'] == 2
@@ -315,7 +315,7 @@ def test_match_satellite_to_insitu(test_dir, test_tile, test_matchup_args):
         match_args = dict(
             tile_ids=tile_ids,
             primary_b=MockSparkParam(primary_ds_name),
-            matchup_b=MockSparkParam(matchup_ds_names),
+            secondary_b=MockSparkParam(matchup_ds_names),
             parameter_b=MockSparkParam(parameter),
             tt_b=MockSparkParam(time_tolerance),
             rt_b=MockSparkParam(radius_tolerance),

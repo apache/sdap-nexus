@@ -63,7 +63,7 @@ class Matchup(NexusCalcSparkHandler):
             "type": "string",
             "description": "The Primary dataset used to find matches for. Required"
         },
-        "matchup": {
+        "secondary": {
             "name": "Match-Up Datasets",
             "type": "comma-delimited string",
             "description": "The Dataset(s) being searched for measurements that match the Primary. Required"
@@ -150,9 +150,9 @@ class Matchup(NexusCalcSparkHandler):
         primary_ds_name = request.get_argument('primary', None)
         if primary_ds_name is None:
             raise NexusProcessingException(reason="'primary' argument is required", code=400)
-        matchup_ds_names = request.get_argument('matchup', None)
-        if matchup_ds_names is None:
-            raise NexusProcessingException(reason="'matchup' argument is required", code=400)
+        secondary_ds_names = request.get_argument('secondary', None)
+        if secondary_ds_names is None:
+            raise NexusProcessingException(reason="'secondary' argument is required", code=400)
 
         parameter_s = request.get_argument('parameter')
         if parameter_s and parameter_s not in ['sst', 'sss', 'wind']:
@@ -204,7 +204,7 @@ class Matchup(NexusCalcSparkHandler):
         start_seconds_from_epoch = int((start_time - EPOCH).total_seconds())
         end_seconds_from_epoch = int((end_time - EPOCH).total_seconds())
 
-        return bounding_polygon, primary_ds_name, matchup_ds_names, parameter_s, \
+        return bounding_polygon, primary_ds_name, secondary_ds_names, parameter_s, \
                start_time, start_seconds_from_epoch, end_time, end_seconds_from_epoch, \
                depth_min, depth_max, time_tolerance, radius_tolerance, \
                platforms, match_once, result_size_limit
@@ -212,7 +212,7 @@ class Matchup(NexusCalcSparkHandler):
     def calc(self, request, **args):
         start = datetime.utcnow()
         # TODO Assuming Satellite primary
-        bounding_polygon, primary_ds_name, matchup_ds_names, parameter_s, \
+        bounding_polygon, primary_ds_name, secondary_ds_names, parameter_s, \
         start_time, start_seconds_from_epoch, end_time, end_seconds_from_epoch, \
         depth_min, depth_max, time_tolerance, radius_tolerance, \
         platforms, match_once, result_size_limit = self.parse_arguments(request)
@@ -235,7 +235,7 @@ class Matchup(NexusCalcSparkHandler):
         self.log.debug("Calling Spark Driver")
         try:
             spark_result = spark_matchup_driver(tile_ids, wkt.dumps(bounding_polygon), primary_ds_name,
-                                                matchup_ds_names, parameter_s, depth_min, depth_max, time_tolerance,
+                                                secondary_ds_names, parameter_s, depth_min, depth_max, time_tolerance,
                                                 radius_tolerance, platforms, match_once, self.tile_service_factory, sc=self._sc)
         except Exception as e:
             self.log.exception(e)
@@ -246,7 +246,7 @@ class Matchup(NexusCalcSparkHandler):
         self.log.debug("Building and saving results")
         args = {
             "primary": primary_ds_name,
-            "matchup": matchup_ds_names,
+            "matchup": secondary_ds_names,
             "startTime": start_time,
             "endTime": end_time,
             "bbox": request.get_argument('b'),
@@ -295,15 +295,15 @@ class Matchup(NexusCalcSparkHandler):
     def convert_to_matches(cls, spark_result):
         matches = []
         for primary_domspoint, matched_domspoints in spark_result.items():
-            p_matched = [cls.domspoint_to_dict(p_match) for p_match in matched_domspoints]
+            p_matched = [cls.domspoint_to_dict(p_match, 'secondary') for p_match in matched_domspoints]
 
-            primary = cls.domspoint_to_dict(primary_domspoint)
+            primary = cls.domspoint_to_dict(primary_domspoint, 'primary')
             primary['matches'] = list(p_matched)
             matches.append(primary)
         return matches
 
     @staticmethod
-    def domspoint_to_dict(domspoint):
+    def domspoint_to_dict(domspoint, data_key_name='data'):
         doms_dict = {
             "platform": doms_values.getPlatformById(domspoint.platform),
             "device": doms_values.getDeviceById(domspoint.device),
@@ -314,7 +314,7 @@ class Matchup(NexusCalcSparkHandler):
             "fileurl": domspoint.file_url,
             "id": domspoint.data_id,
             "source": domspoint.source,
-            "data": [data_point.__dict__ for data_point in domspoint.data]
+            data_key_name: [data_point.__dict__ for data_point in domspoint.data]
         }
         return doms_dict
 
@@ -480,14 +480,14 @@ from threading import Lock
 DRIVER_LOCK = Lock()
 
 
-def spark_matchup_driver(tile_ids, bounding_wkt, primary_ds_name, matchup_ds_names, parameter, depth_min, depth_max,
+def spark_matchup_driver(tile_ids, bounding_wkt, primary_ds_name, secondary_ds_names, parameter, depth_min, depth_max,
                          time_tolerance, radius_tolerance, platforms, match_once, tile_service_factory, sc=None):
     from functools import partial
 
     with DRIVER_LOCK:
         # Broadcast parameters
         primary_b = sc.broadcast(primary_ds_name)
-        matchup_b = sc.broadcast(matchup_ds_names)
+        secondary_b = sc.broadcast(secondary_ds_names)
         depth_min_b = sc.broadcast(float(depth_min) if depth_min is not None else None)
         depth_max_b = sc.broadcast(float(depth_max) if depth_max is not None else None)
         tt_b = sc.broadcast(time_tolerance)
@@ -504,7 +504,7 @@ def spark_matchup_driver(tile_ids, bounding_wkt, primary_ds_name, matchup_ds_nam
         partial(
             match_satellite_to_insitu,
             primary_b=primary_b,
-            matchup_b=matchup_b,
+            secondary_b=secondary_b,
             parameter_b=parameter_b,
             tt_b=tt_b,
             rt_b=rt_b,
@@ -599,7 +599,7 @@ def tile_to_edge_points(tile):
     return edge_points
 
 
-def match_satellite_to_insitu(tile_ids, primary_b, matchup_b, parameter_b, tt_b, rt_b, platforms_b,
+def match_satellite_to_insitu(tile_ids, primary_b, secondary_b, parameter_b, tt_b, rt_b, platforms_b,
                               bounding_wkt_b, depth_min_b, depth_max_b, tile_service_factory):
     the_time = datetime.now()
     tile_ids = list(tile_ids)
@@ -636,14 +636,14 @@ def match_satellite_to_insitu(tile_ids, primary_b, matchup_b, parameter_b, tt_b,
         str(datetime.now() - the_time), tile_ids[0], tile_ids[-1]))
 
     # Query edge for all points within the spatial-temporal extents of this partition
-    is_insitu_dataset = edge_endpoints.getEndpointByName(matchup_b.value)
+    is_insitu_dataset = edge_endpoints.getEndpointByName(secondary_b.value)
 
     if is_insitu_dataset:
         the_time = datetime.now()
         edge_session = requests.Session()
         edge_results = []
         with edge_session:
-            for insitudata_name in matchup_b.value.split(','):
+            for insitudata_name in secondary_b.value.split(','):
                 bbox = ','.join(
                     [str(matchup_min_lon), str(matchup_min_lat), str(matchup_max_lon), str(matchup_max_lat)])
                 edge_response = query_edge(insitudata_name, parameter_b.value, matchup_min_time, matchup_max_time, bbox,
@@ -682,7 +682,7 @@ def match_satellite_to_insitu(tile_ids, primary_b, matchup_b, parameter_b, tt_b,
 
         matchup_tiles = tile_service.find_tiles_in_polygon(
             bounding_polygon=polygon,
-            ds=matchup_b.value,
+            ds=secondary_b.value,
             start_time=matchup_min_time,
             end_time=matchup_max_time,
             fetch_data=True,
