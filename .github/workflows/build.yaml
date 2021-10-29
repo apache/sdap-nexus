@@ -94,13 +94,11 @@ jobs:
           DATA_ACCESS_VERSION=$(python3 .github/workflows/version.py data-access/VERSION.txt)
         fi
         if [ ${{steps.get_module_commits.outputs.analysis_commits}} -gt 0 ]; then
-          ANALYSIS_VERSION=$(python3 .github/workflows/version.py analysis/VERSION.txt --phase $PHASE --value $VALUE)
+          ANALYSIS_VERSION=$(python3 .github/workflows/version.py analysis/VERSION.txt --track analysis/webservice/apidocs/openapi.yml --phase $PHASE --value $VALUE)
         else
           ANALYSIS_VERSION=$(python3 .github/workflows/version.py analysis/VERSION.txt)
         fi
         DOCKER_VERSION=$(python3 .github/workflows/version.py docker/nexus-webapp/VERSION.txt --phase $PHASE --value $VALUE)
-        python3 .github/workflows/version analysis/webservice/apidocs/openapi.yml --phase manual --value "$ANALYSIS_VERSION" >> /dev/null
-
         echo "data-access: $DATA_ACCESS_VERSION"
         echo "analysis: $ANALYSIS_VERSION"
         echo "docker: $DOCKER_VERSION"

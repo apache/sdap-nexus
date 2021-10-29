@@ -1,7 +1,10 @@
 #!/usr/bin/env python3
 from argparse import ArgumentParser
+import re
 
-version_regex = r'(?P<major>\d+)\.(?P<minor>\d+)\.(?P<patch>\d+)((a(?P<alpha_num>\d+))|(-(?P<commit>.*)))?'  # noqa: E501
+version_regex = re.compile(
+    r'(?P<major>\d+)\.(?P<minor>\d+)\.(?P<patch>\d+)((a(?P<alpha_num>\d+))|(-(?P<commit>.*)))?'  # noqa: E501
+)
 
 
 def main():
@@ -9,6 +12,7 @@ def main():
     parser.add_argument('file')
     parser.add_argument('--phase', default='current')
     parser.add_argument('--value', default='auto')
+    parser.add_argument('--track', nargs='+', default=[])
 
     args = parser.parse_args()
 
@@ -35,6 +39,16 @@ def main():
     version_file.write(version_contents)
     version_file.truncate()
     version_file.close()
+
+    for tracked_path in args.track:
+        with open(tracked_path, 'r+') as tracked_file:
+            contents = tracked_file.read()
+            new_contents = contents.replace(
+                current_version.group(0), new_version, 1)
+
+            tracked_file.seek(0)
+            tracked_file.write(new_contents)
+            tracked_file.truncate()
 
 
 def bump_version(version, phase, value):
