@@ -30,8 +30,8 @@ ENV  \
     PATH="$CONDA_DIR/bin:$PATH" \
     PYTHONDONTWRITEBYTECODE=1 \
     SPARK_HOME=/opt/spark \
-    PYSPARK_DRIVER_PYTHON=/opt/conda/lib/python3.8 \
-    PYSPARK_PYTHON=/opt/conda/lib/python3.8 \
+    PYSPARK_DRIVER_PYTHON=/opt/conda/bin/python3.8 \
+    PYSPARK_PYTHON=/opt/conda/bin/python3.8 \
     LD_LIBRARY_PATH=/usr/lib
 
 RUN apk add --update --no-cache \
