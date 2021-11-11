@@ -165,12 +165,9 @@ def test_calc(test_timeseries_args):
     fake_spark_result = list(itertools.chain.from_iterable(stats_arr))
     fake_spark_result = sorted(fake_spark_result, key=lambda entry: entry["time"]), {}
 
-    
-    
     timeseries_obj = TimeSeriesSparkHandlerImpl(tile_service_factory=tile_service_factory, sc=spark_context)
     timeseries_obj.parse_arguments = lambda _: [item for item in args.values()]
 
-    # Mock _create_nc_file_time1d to avoid saving of netCDF file
     with mock.patch('webservice.algorithms_spark.TimeSeriesSpark.spark_driver') as mock_driver, \
         mock.patch('webservice.algorithms_spark.NexusCalcSparkHandler.NexusCalcSparkHandler._create_nc_file_time1d') as mock_create_nc:
         mock_driver.return_value = fake_spark_result
