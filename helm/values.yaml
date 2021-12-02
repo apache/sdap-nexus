@@ -122,6 +122,8 @@ solr:
     repository: nexusjpl/solr
     tag: 8.4.0
   replicaCount: 3
+  authentication:
+    enabled: false
   volumeClaimTemplates:
     storageClassName: hostpath
     storageSize: 10Gi
