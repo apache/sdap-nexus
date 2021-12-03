@@ -2,7 +2,7 @@ openapi: 3.0.3
 info:
   description: The next generation cloud-based science data service platform.
   version: 0.4.2
-  title: Distributed Oceanographic Matchup Service (DOMS)
+  title: Science Data Analytics Platform (SDAP)
   license:
     name: Apache 2.0
     url: http://www.apache.org/licenses/LICENSE-2.0.html
