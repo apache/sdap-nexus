@@ -419,9 +419,10 @@ class NexusTileService(object):
                 tile.times = ma.masked_outside(tile.times, start_time, end_time)
 
                 # Or together the masks of the individual arrays to create the new mask
-                data_mask = ma.getmaskarray(tile.times)[:, np.newaxis, np.newaxis] \
-                            | ma.getmaskarray(tile.latitudes)[np.newaxis, :, np.newaxis] \
-                            | ma.getmaskarray(tile.longitudes)[np.newaxis, np.newaxis, :]
+                data_mask = ma.getmaskarray(tile.variables)[:, np.newaxis, np.newaxis, np.newaxis] \
+                            | ma.getmaskarray(tile.times)[np.newaxis, :, np.newaxis, np.newaxis] \
+                            | ma.getmaskarray(tile.latitudes)[np.newaxis, np.newaxis, :, np.newaxis] \
+                            | ma.getmaskarray(tile.longitudes)[np.newaxis, np.newaxis, np.newaxis, :]
 
                 tile.data = ma.masked_where(data_mask, tile.data)
 

@@ -36,7 +36,7 @@ spec:
             - name: ZK_HOST_AND_PORT
               value: {{ include "nexus.urls.zookeeper" . }}
             {{ if .Values.ingestion.granuleIngester.maxConcurrency }}
-            - name: MAX_CONCURRENCY
+            - name: MAX_THREADS
               value: "{{ .Values.ingestion.granuleIngester.maxConcurrency }}"
             {{ end }}
             {{- range $name, $value := .Values.ingestion.granules.s3.awsCredsEnvs }}

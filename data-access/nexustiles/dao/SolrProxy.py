@@ -654,7 +654,8 @@ class SolrProxy(object):
             response = self.do_query_raw(*args, **params)
             results.extend(response.docs)
 
-        assert len(results) == limit
+        # often does not work if tiles are being ingested during the request
+        #assert len(results) == limit
 
         return results
 

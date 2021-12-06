@@ -18,6 +18,7 @@ from . import Capabilities
 from . import CorrelationMap
 from . import DailyDifferenceAverage
 from . import DataInBoundsSearch
+from . import DataInBoundsSearchMB
 from . import DataSeriesList
 from . import DelayTest
 from . import ErrorTosserTest

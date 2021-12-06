@@ -10,7 +10,7 @@ Python module that exposes NEXUS analytical capabilities via a HTTP webservice. 
 1. Setup a separate conda env or activate an existing one
 
     ````
-    conda create --name nexus-analysis python=2.7.17
+    conda create --name nexus-analysis python=3.7
     conda activate nexus-analysis
     ````
 
@@ -21,6 +21,7 @@ Python module that exposes NEXUS analytical capabilities via a HTTP webservice. 
     conda install pyspark
     conda install -c conda-forge --file conda-requirements.txt
     #conda install numpy matplotlib mpld3 scipy netCDF4 basemap gdal pyproj=1.9.5.1 libnetcdf=4.3.3.1
+    pip install -e '.[dev]'
     ````
 
 3. Update the configuration for solr and cassandra

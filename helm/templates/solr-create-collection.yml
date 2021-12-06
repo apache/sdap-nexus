@@ -19,8 +19,8 @@ spec:
         image: nexusjpl/solr-cloud-init:1.0.2
         resources:
           requests:
-            memory: "0.5Gi"
-            cpu: "0.25"
+            memory: "0.1Gi"
+            cpu: "0.1"
         env:
         - name: MINIMUM_NODES
           value: "{{ .Values.solr.replicaCount }}"
