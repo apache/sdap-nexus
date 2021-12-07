@@ -192,6 +192,7 @@ def delete_from_cassandra(doc_ids):
 
 
 def delete_from_solr(query):
+    global solr_collection
     if not solr_delete_from_all_collections:
         solr_collection.delete(query, commit=False)
         solr_collection.commit()
