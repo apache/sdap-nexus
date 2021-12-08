@@ -120,8 +120,10 @@ solr:
   initPodEnabled: true
   image:
     repository: nexusjpl/solr
-    tag: 8.4.0
+    tag: 8.11.0
   replicaCount: 3
+  authentication:
+    enabled: false
   volumeClaimTemplates:
     storageClassName: hostpath
     storageSize: 10Gi

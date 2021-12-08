@@ -34,7 +34,7 @@ This image can be built by:
 
 .. code-block:: bash
 
-    docker build -t sdap/solr:${BUILD_VERSION} .
+    docker build -t nexusjpl/solr:${BUILD_VERSION} .
 
 How to Run
 ^^^^^^^^^^

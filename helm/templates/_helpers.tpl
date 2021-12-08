@@ -32,7 +32,7 @@ The data volume which is used in both the Collection Manager and the Granule Ing
     server: {{ .Values.ingestion.granules.nfsServer }}
     path: {{ .Values.ingestion.granules.path }}
   {{- else }}
-  {{- if .Values.ingestion.granules.path -}}
+  {{- if .Values.ingestion.granules.path }}
   hostPath:
     path: {{ .Values.ingestion.granules.path }}
   {{- end -}}
@@ -48,7 +48,7 @@ The data volume mount which is used in both the Collection Manager and the Granu
 {{- end -}}
 
 {{- define "nexus.urls.solr" -}}
-{{ .Values.external.solrHostAndPort | default (print "http://" .Release.Name "-solr-svc:8983") }}
+{{ .Values.external.solrHostAndPort | default (print "http://" .Release.Name "-solr:8983") }}
 {{- end -}}
 
 {{- define "nexus.urls.zookeeper" -}}

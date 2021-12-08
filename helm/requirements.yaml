@@ -8,8 +8,8 @@ dependencies:
     repository: https://charts.bitnami.com/bitnami
     condition: rabbitmq.enabled
   - name: solr
-    version: 1.5.2
-    repository: https://charts.helm.sh/incubator
+    version: 2.1.3
+    repository: https://charts.bitnami.com/bitnami
     condition: solr.enabled
   - name: cassandra
     version: 5.5.3

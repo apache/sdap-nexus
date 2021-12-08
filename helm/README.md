@@ -48,7 +48,7 @@ NEXUS needs the [Spark Operator](https://github.com/helm/charts/tree/master/incu
 Follow their instructions to install the Helm chart, or simply run:
 
     $ kubectl create namespace spark-operator
-    $ helm repo add incubator http://storage.googleapis.com/kubernetes-charts-incubator
+    $ helm repo add incubator https://charts.helm.sh/incubator
     $ helm install incubator/sparkoperator --generate-name --namespace=spark-operator
 
 #### Persistent Volume Provisioner

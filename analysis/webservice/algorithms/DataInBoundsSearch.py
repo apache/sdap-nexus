@@ -139,11 +139,11 @@ class DataInBoundsSearchCalcHandlerImpl(NexusCalcHandler):
                 point['id'] = tile.tile_id
 
                 if parameter == 'sst':
-                    point['sst'] = nexus_point.data_val
+                    point['sst'] = nexus_point.data_vals
                 elif parameter == 'sss':
-                    point['sss'] = nexus_point.data_val
+                    point['sss'] = nexus_point.data_vals
                 elif parameter == 'wind':
-                    point['wind_u'] = nexus_point.data_val
+                    point['wind_u'] = nexus_point.data_vals
                     try:
                         point['wind_v'] = tile.meta_data['wind_v'][tuple(nexus_point.index)]
                     except (KeyError, IndexError):
@@ -157,7 +157,7 @@ class DataInBoundsSearchCalcHandlerImpl(NexusCalcHandler):
                     except (KeyError, IndexError):
                         pass
                 else:
-                    point['variable'] = nexus_point.data_val
+                    point['variable'] = nexus_point.data_vals
 
                 data.append({
                     'latitude': nexus_point.latitude,
