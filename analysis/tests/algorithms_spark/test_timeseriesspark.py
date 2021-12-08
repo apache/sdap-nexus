@@ -129,15 +129,16 @@ def test_calc_average_on_day():
     test_tile.latitudes = [45]
     test_tile.longitudes = [60, 60, 60]
 
-    tile_service_factory = mock.MagicMock()
-    tile_service = mock.MagicMock()
-    tile_service_factory.return_value = tile_service
-    tile_service.get_bounding_box.return_value = box(-90, -45, 90, 45)
-    tile_service.get_min_time.return_value = 1627490285
-    tile_service.get_max_time.return_value = 1627490285
-    tile_service.get_tiles_bounded_by_polygon.return_value = [test_tile]
-    tile_service.mask_tiles_to_polygon.return_value = [test_tile]
-
+    def setup_mock_tile_service(tile):
+        tile_service_factory = mock.MagicMock()
+        tile_service = mock.MagicMock()
+        tile_service_factory.return_value = tile_service
+        tile_service.get_bounding_box.return_value = box(-90, -45, 90, 45)
+        tile_service.get_min_time.return_value = 1627490285
+        tile_service.get_max_time.return_value = 1627490285
+        tile_service.get_tiles_bounded_by_polygon.return_value = [test_tile]
+        tile_service.mask_tiles_to_polygon.return_value = [test_tile]
+        return tile_service_factory
 
     def callback(calculation):
         """
@@ -150,7 +151,7 @@ def test_calc_average_on_day():
                     'dataset', timestamps, -9999.)
 
     avg_args = dict(
-        tile_service_factory = tile_service,
+        tile_service_factory = setup_mock_tile_service(test_tile),
         metrics_callback = callback,
         normalize_dates = False,
         tile_in_spark = spark_tile
