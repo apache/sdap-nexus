@@ -57,7 +57,9 @@ def timeseries_args():
 
 
 def generate_monthly_stats():
-    # Generate dummy monthly data for one year
+    """
+    Generates dummy monthly stats for one year
+    """
     times = [1577836800, 1580515200, 1583020800, 1585699200, 1588291200, 1590969600,
     1593561600, 1596240000, 1598918400, 1601510400, 1604188800, 1606780800]
 
@@ -79,7 +81,9 @@ def generate_monthly_stats():
     return stats_arr, clim_stats
 
 def generate_daily_stats():
-    # Generate dummy daily data for one year
+    """
+    Generates dummy daily stats for one year
+    """
     times = [1577836800 + (i * 86400) for i in range(0,366)]
     
     stats_arr = [[]]
@@ -101,6 +105,9 @@ def generate_daily_stats():
 
 
 def test_calc_average_on_day():
+    """
+    Tests the calc_average_on_day function in TimeSeriesSpark.py
+    """
     timestamps = [1578096000, 1578096001, 1578096002]
     data = [1,2,3]
 
@@ -122,25 +129,25 @@ def test_calc_average_on_day():
     test_tile.latitudes = [45]
     test_tile.longitudes = [60, 60, 60]
 
-    def setup_mock_tile_service(tile):
-        tile_service_factory = mock.MagicMock()
-        tile_service = mock.MagicMock()
-        tile_service_factory.return_value = tile_service
-        tile_service.get_bounding_box.return_value = box(-90, -45, 90, 45)
-        tile_service.get_min_time.return_value = 1627490285
-        tile_service.get_max_time.return_value = 1627490285
-        tile_service.get_tiles_bounded_by_polygon.return_value = [tile]
-        tile_service.mask_tiles_to_polygon.return_value = [tile]
-        return tile_service_factory
-
-    tile_service = setup_mock_tile_service(test_tile)
+    tile_service_factory = mock.MagicMock()
+    tile_service = mock.MagicMock()
+    tile_service_factory.return_value = tile_service
+    tile_service.get_bounding_box.return_value = box(-90, -45, 90, 45)
+    tile_service.get_min_time.return_value = 1627490285
+    tile_service.get_max_time.return_value = 1627490285
+    tile_service.get_tiles_bounded_by_polygon.return_value = [test_tile]
+    tile_service.mask_tiles_to_polygon.return_value = [test_tile]
 
 
     def callback(calculation):
+        """
+        Dummy function used for metrics callback
+        """
         pass
 
-
-    spark_tile = ('POLYGON((-34.98 29.54, -30.1 29.54, -30.1 31.00, -34.98 31.00, -34.98 29.54))', 'dataset', timestamps, False)
+    # Spark tile format: (polygon string, ds name, list of time stamps, fill value)
+    spark_tile = ('POLYGON((-34.98 29.54, -30.1 29.54, -30.1 31.00, -34.98 31.00, -34.98 29.54))', 
+                    'dataset', timestamps, -9999.)
 
     avg_args = dict(
         tile_service_factory = tile_service,
@@ -203,7 +210,7 @@ def test_calc(timeseries_args):
 
     # Mock result
     # 'spark_driver' returns results, meta. 
-    # Format of results: [[{stats}, {stats}]]
+    # Format of results: [[{stats}, {stats},...]]
     # Format of meta: {}
     fake_spark_result = list(itertools.chain.from_iterable(stats_arr))
     fake_spark_result = sorted(fake_spark_result, key=lambda entry: entry["time"]), {}
@@ -500,8 +507,7 @@ def test_calc_seasonal_filter_daily(timeseries_args):
 
 def test_calc_seasonal_lowpass_filter(timeseries_args):
     """
-    Assert that the expected functions are called during the timeseries
-    calculation and that the results are formatted as expected.
+    Lowpass assertions are commented out for now - will resume work as needed.
     """
     # Mock anything that connects external dependence (Solr, Cassandra, ...)
     tile_service_factory = mock.MagicMock()
@@ -610,15 +616,14 @@ def test_calc_seasonal_lowpass_filter(timeseries_args):
             assert result_data['maxSeasonal'] == result_data['max'] - clim_stats[month]['max']
             assert result_data['meanSeasonal'] == result_data['mean'] - clim_stats[month]['mean']
 
-            # Low pass versions
-            # TODO: need to determine how to check low pass results
-            # assert result_data['minLowPass'] >= result_data['min']
-            # assert result_data['maxLowPass'] <= result_data['max']
-            # assert result_data['meanLowPass'] >= result_data['mean']
-            # assert result_data['minSeasonalLowPass'] >= result_data['minSeasonal']
-            # assert result_data['maxSeasonalLowPass'] <= result_data['maxSeasonal']
-            # assert result_data['meanSeasonalLowPass'] <= result_data['meanSeasonal']
-
+            # Low pass data
+            # TODO: need to determine expected low pass results
+            # assert result_data['minLowPass']  result_data['min']
+            # assert result_data['maxLowPass']  result_data['max']
+            # assert result_data['meanLowPass']  result_data['mean']
+            # assert result_data['minSeasonalLowPass']  result_data['minSeasonal']
+            # assert result_data['maxSeasonalLowPass']  result_data['maxSeasonal']
+            # assert result_data['meanSeasonalLowPass']  result_data['meanSeasonal']
 
         # Stats
         assert json_timeseries_result['stats'] == {}
