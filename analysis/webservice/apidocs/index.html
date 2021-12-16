@@ -31,8 +31,9 @@
   <body>
     <div id="swagger-ui"></div>
 
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/swagger-ui/3.52.0/swagger-ui-bundle.min.js" integrity="sha512-5Om3SqdVpHoZ1gYajhWvokmdj4Qr3YnMtCkgxOxraWo5tU4L40tyMHG+ZDmOS8AB+oEtF/0mA3FymbkYCOdZ7Q==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/swagger-ui/4.1.3/swagger-ui-bundle.min.js" integrity="sha512-yNSFkZpMlHmyfyHN1cNSq7+jguocLrAndVKs0bWHvBiH6gJNmJ89E1x270xH6Or3aXtgBgs+IJ8HvBMIPpPIzw==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/swagger-ui/3.52.0/swagger-ui-standalone-preset.min.js" integrity="sha512-Pa5TWsES4T1o6gHBRqi9I5+quIPpDBjThcQLO7rvvaNYquPvAntd0Gtm7nOWGMQKY5ds6PeqccVBC6KAHqN+fQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <script src="dataset-populate.js"></script>
     <script>
     window.onload = function() {
       // Begin Swagger UI call region
@@ -45,7 +46,8 @@
           SwaggerUIStandalonePreset
         ],
         plugins: [
-          SwaggerUIBundle.plugins.DownloadUrl
+          SwaggerUIBundle.plugins.DownloadUrl,
+          DatasetPopulatePlugin
         ],
         syntaxHighlight: {
           activated: false
