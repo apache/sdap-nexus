@@ -120,7 +120,7 @@ solr:
   initPodEnabled: true
   image:
     repository: nexusjpl/solr
-    tag: 8.11.0
+    tag: 8.11.1
   replicaCount: 3
   authentication:
     enabled: false
