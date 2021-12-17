@@ -57,7 +57,6 @@ function DatasetPopulatePlugin(system) {
     },
     wrapComponents: {
       JsonSchemaForm: (Original, system) => (props) => {
-        const JsonSchema_string = system.getComponent('JsonSchema_string')
         let dsPopulate = props.schema.get('x-dspopulate') ? props.schema.get('x-dspopulate') : false
 
         if (!dsPopulate || system.dsPopulateSelectors.hasError())
@@ -65,7 +64,7 @@ function DatasetPopulatePlugin(system) {
 
         let datasets = system.dsPopulateSelectors.datasets()
         props.schema = props.schema.set('enum', datasets)
-        return system.React.createElement(JsonSchema_string, props)
+        return system.React.createElement(Original, props)
       }
     },
     afterLoad: (system) => {
