@@ -762,11 +762,15 @@ def match_tile_to_point_generator(tile_service, tile_id, m_tree, edge_results, s
                 data_vals = [tile_data[tuple(valid_indices[i])] for tile_data in tile.data]
             else:
                 data_vals = tile.data[tuple(valid_indices[i])]
+
+            time_val = tile.times[tuple(
+                valid_indices[i]
+            )] if tile.times.shape == tile.data.shape else tile.times[0]
             p_nexus_point = NexusPoint(
-                latitude=tile.latitudes[valid_indices[i][1]],
-                longitude=tile.longitudes[valid_indices[i][2]],
+                latitude=tile.latitudes[tuple(valid_indices[i])],
+                longitude=tile.longitudes[tuple(valid_indices[i])],
                 depth=None,
-                time=tile.times[valid_indices[i][0]],
+                time=time_val,
                 index=valid_indices[i],
                 data_vals=data_vals
             )
