@@ -79,7 +79,6 @@ class NexusTileData(Model):
         is_multi_var = False
 
         if self._get_nexus_tile().HasField('grid_tile'):
-            # TODO refactor to l2 format
             grid_tile = self._get_nexus_tile().grid_tile
 
             grid_tile_data = np.ma.masked_invalid(from_shaped_array(grid_tile.variable_data))
@@ -94,6 +93,9 @@ class NexusTileData(Model):
             latitude_data = np.tile(latitude_data, (grid_tile_data.shape[1], 1)).transpose()
             longitude_data = np.tile(longitude_data, (grid_tile_data.shape[2], 1))
 
+            latitude_data = latitude_data[np.newaxis, :]  # np.tile(latitude_data, (1, 1))
+            longitude_data = longitude_data[np.newaxis, :]  # np.tile(longitude_data, (1, 1))
+
             # Extract the meta data
             meta_data = {}
             for meta_data_obj in grid_tile.meta_data:
@@ -105,8 +107,6 @@ class NexusTileData(Model):
 
             return latitude_data, longitude_data, np.array([grid_tile.time]), grid_tile_data, meta_data, is_multi_var
         elif self._get_nexus_tile().HasField('swath_tile'):
-            print('Tile is swath tile')
-            # TODO refactor to L2 format
             swath_tile = self._get_nexus_tile().swath_tile
 
             latitude_data = np.ma.masked_invalid(from_shaped_array(swath_tile.latitude))
@@ -132,7 +132,6 @@ class NexusTileData(Model):
 
             return latitude_data, longitude_data, time_data, swath_tile_data, meta_data, is_multi_var
         elif self._get_nexus_tile().HasField('time_series_tile'):
-            # TODO evaluate what to do here
             time_series_tile = self._get_nexus_tile().time_series_tile
 
             time_series_tile_data = np.ma.masked_invalid(from_shaped_array(time_series_tile.variable_data))
@@ -158,8 +157,6 @@ class NexusTileData(Model):
 
             return latitude_data, longitude_data, time_data, tile_data, meta_data, is_multi_var
         elif self._get_nexus_tile().HasField('swath_multi_variable_tile'):
-            print('Tile is multi-var swath tile')
-            # TODO refactor to l2 format
             swath_tile = self._get_nexus_tile().swath_multi_variable_tile
             is_multi_var = True
 
@@ -186,7 +183,6 @@ class NexusTileData(Model):
 
             return latitude_data, longitude_data, time_data, swath_tile_data, meta_data, is_multi_var
         elif self._get_nexus_tile().HasField('grid_multi_variable_tile'):
-            # TODO refactor to L2 format
             grid_multi_variable_tile = self._get_nexus_tile().grid_multi_variable_tile
             is_multi_var = True
 
@@ -207,6 +203,12 @@ class NexusTileData(Model):
             latitude_data = np.tile(latitude_data, (grid_tile_data.shape[2], 1)).transpose()
             longitude_data = np.tile(longitude_data, (grid_tile_data.shape[3], 1))
 
+            # Add new dimension to lats and lons, and times
+            # Assume there is only one time value.
+            latitude_data = latitude_data[np.newaxis, :]#np.tile(latitude_data, (1, 1))
+            longitude_data = longitude_data[np.newaxis, :]#np.tile(longitude_data, (1, 1))
+            time_data = np.full(longitude_data.shape, grid_multi_variable_tile.time)
+
             # Extract the meta data
             meta_data = {}
             for meta_data_obj in grid_multi_variable_tile.meta_data:
@@ -216,7 +218,7 @@ class NexusTileData(Model):
                     meta_array = meta_array[np.newaxis, :]
                 meta_data[name] = meta_array
 
-            return latitude_data, longitude_data, np.array([grid_multi_variable_tile.time]), grid_tile_data, meta_data, is_multi_var
+            return latitude_data, longitude_data, time_data, grid_tile_data, meta_data, is_multi_var
         else:
             raise NotImplementedError("Only supports grid_tile, swath_tile, swath_multi_variable_tile, and time_series_tile")
 

@@ -586,8 +586,8 @@ def tile_to_edge_points(tile):
             data = [tile.data[tuple(idx)]]
 
         edge_point = {
-            'point': f'Point({tile.longitudes[idx[2]]} {tile.latitudes[idx[1]]})',
-            'time': datetime.utcfromtimestamp(tile.times[idx[0]]).strftime('%Y-%m-%dT%H:%M:%SZ'),
+            'point': f'Point({tile.longitudes[tuple(idx)]} {tile.latitudes[tuple(idx)]})',
+            'time': datetime.utcfromtimestamp(tile.times[tuple(idx)]).strftime('%Y-%m-%dT%H:%M:%SZ'),
             'source': tile.dataset,
             'platform': None,
             'device': None,
@@ -695,8 +695,8 @@ def match_satellite_to_insitu(tile_ids, primary_b, secondary_b, parameter_b, tt_
         for tile in matchup_tiles:
             valid_indices = tile.get_indices()
             primary_points = np.array([aeqd_proj(
-                tile.longitudes[aslice[2]],
-                tile.latitudes[aslice[1]]
+                tile.longitudes[tuple(aslice)],
+                tile.latitudes[tuple(aslice)]  # TODO this needs to be updated
             ) for aslice in valid_indices])
             matchup_points.extend(primary_points)
 
@@ -744,7 +744,7 @@ def match_tile_to_point_generator(tile_service, tile_id, m_tree, edge_results, s
     # Get list of indices of valid values
     valid_indices = tile.get_indices()
     primary_points = np.array(
-        [aeqd_proj(tile.longitudes[aslice[2]], tile.latitudes[aslice[1]]) for
+        [aeqd_proj(tile.longitudes[tuple(aslice)], tile.latitudes[tuple(aslice)]) for
          aslice in valid_indices])
 
     print("%s Time to convert primary points for tile %s" % (str(datetime.now() - the_time), tile_id))
@@ -763,9 +763,11 @@ def match_tile_to_point_generator(tile_service, tile_id, m_tree, edge_results, s
             else:
                 data_vals = tile.data[tuple(valid_indices[i])]
 
-            time_val = tile.times[tuple(
-                valid_indices[i]
-            )] if tile.times.shape == tile.data.shape else tile.times[0]
+            if len(tile.times.shape) == len(valid_indices[i]):
+                time_val = tile.times[tuple(valid_indices[i])]
+            else:
+                time_val = tile.times[valid_indices[i][0]]
+
             p_nexus_point = NexusPoint(
                 latitude=tile.latitudes[tuple(valid_indices[i])],
                 longitude=tile.longitudes[tuple(valid_indices[i])],

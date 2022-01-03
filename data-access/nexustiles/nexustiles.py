@@ -358,10 +358,11 @@ class NexusTileService(object):
             tile.latitudes = ma.masked_outside(tile.latitudes, min_lat, max_lat)
             tile.longitudes = ma.masked_outside(tile.longitudes, min_lon, max_lon)
 
-            # Or together the masks of the individual arrays to create the new mask
-            data_mask = ma.getmaskarray(tile.times)[:, np.newaxis, np.newaxis] \
-                        | ma.getmaskarray(tile.latitudes)[np.newaxis, :, np.newaxis] \
-                        | ma.getmaskarray(tile.longitudes)[np.newaxis, np.newaxis, :]
+            data_mask = ma.getmaskarray(tile.latitudes) | ma.getmaskarray(tile.longitudes)
+
+            if tile.times.shape == tile.latitudes.shape:
+                # If there is more than one tile value, combine tile
+                data_mask = data_mask | ma.getmaskarray(tile.times)
 
             # If this is multi-var, need to mask each variable separately.
             if tile.is_multi:
@@ -375,7 +376,6 @@ class NexusTileService(object):
                 tile.data = ma.masked_where(data_mask, tile.data)
 
         tiles[:] = [tile for tile in tiles if not tile.data.mask.all()]
-
         return tiles
 
     def mask_tiles_to_bbox_and_time(self, min_lat, max_lat, min_lon, max_lon, start_time, end_time, tiles):
