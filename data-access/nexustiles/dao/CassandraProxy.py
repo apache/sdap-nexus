@@ -93,8 +93,8 @@ class NexusTileData(Model):
             latitude_data = np.tile(latitude_data, (grid_tile_data.shape[1], 1)).transpose()
             longitude_data = np.tile(longitude_data, (grid_tile_data.shape[2], 1))
 
-            latitude_data = latitude_data[np.newaxis, :]  # np.tile(latitude_data, (1, 1))
-            longitude_data = longitude_data[np.newaxis, :]  # np.tile(longitude_data, (1, 1))
+            latitude_data = latitude_data[np.newaxis, :]
+            longitude_data = longitude_data[np.newaxis, :]
 
             # Extract the meta data
             meta_data = {}
@@ -205,8 +205,8 @@ class NexusTileData(Model):
 
             # Add new dimension to lats and lons, and times
             # Assume there is only one time value.
-            latitude_data = latitude_data[np.newaxis, :]#np.tile(latitude_data, (1, 1))
-            longitude_data = longitude_data[np.newaxis, :]#np.tile(longitude_data, (1, 1))
+            latitude_data = latitude_data[np.newaxis, :]
+            longitude_data = longitude_data[np.newaxis, :]
             time_data = np.full(longitude_data.shape, grid_multi_variable_tile.time)
 
             # Extract the meta data

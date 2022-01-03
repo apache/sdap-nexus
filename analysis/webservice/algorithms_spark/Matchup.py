@@ -696,7 +696,7 @@ def match_satellite_to_insitu(tile_ids, primary_b, secondary_b, parameter_b, tt_
             valid_indices = tile.get_indices()
             primary_points = np.array([aeqd_proj(
                 tile.longitudes[tuple(aslice)],
-                tile.latitudes[tuple(aslice)]  # TODO this needs to be updated
+                tile.latitudes[tuple(aslice)]
             ) for aslice in valid_indices])
             matchup_points.extend(primary_points)
 
