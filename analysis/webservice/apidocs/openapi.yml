@@ -29,7 +29,8 @@ paths:
           required: true
           schema:
             type: string
-            x-dspopulate: true
+            x-dspopulate:
+             - satellite
           example: avhrr-l4-glob-v2-daily-ncei-ghrsst-sstblend-avhrr-oi-glob-v020-fv020
         - in: query
           name: secondary
@@ -41,6 +42,9 @@ paths:
           required: true
           schema:
             type: string
+            x-dspopulate:
+             - satellite
+             - insitu
           example: icoads
         - in: query
           name: startTime
@@ -185,7 +189,8 @@ paths:
           required: false
           schema:
             type: string
-            x-dspopulate: true
+            x-dspopulate:
+             - satellite
           example: MAVHRR_OI_L4_GHRSST_NCEI
         - in: query
           name: insitu
@@ -195,6 +200,8 @@ paths:
           required: false
           schema:
             type: string
+            x-dspopulate:
+             - insitu
           example: icoads,samos,spurs,spurs2
         - in: query
           name: startTime
@@ -304,7 +311,8 @@ paths:
           required: true
           schema:
             type: string
-            x-dspopulate: true
+            x-dspopulate:
+             - satellite
           example: avhrr-l4-glob-v2-daily-ncei-ghrsst-sstblend-avhrr-oi-glob-v020-fv020
         - in: query
           name: startTime
@@ -534,7 +542,9 @@ paths:
           required: true
           schema:
             type: string
-            x-dspopulate: true
+            x-dspopulate:
+             - satellite
+             - insitu
           example: MUR25-JPL-L4-GLOB-v04.2
         - in: query
           name: minLat

@@ -11,17 +11,29 @@ function DatasetPopulatePlugin(system) {
         console.error(`[DatasetPopulate] Unable to load dataset list from: ${DS_PATH}; Status: ${response.status}`)
       }
 
-      let responseJson = await response.json()
-      let satellite = responseJson.data.satellite
-      let datasets = []
+      let results = await response.json()
+      let satellite = results.data.satellite
+      let insitu = results.data.insitu
+
+      let total = 0
+      let datasets = {
+        satellite: [],
+        insitu: []
+      }
 
       for (const ds of satellite)
-        datasets.push(ds.shortName)
+        datasets['satellite'].push(ds.shortName)
+        total++
 
-      datasets.sort()
+      for (const ds of insitu)
+        datasets['insitu'].push(ds.name)
+        total++
+
+      datasets['satellite'].sort()
+      datasets['insitu'].sort()
 
       system.dsPopulateActions.updateDatasets(datasets)
-      console.debug(`[DatasetPopulate] List populated; count: ${datasets.length}`)
+      console.debug(`[DatasetPopulate] Lists populated; count: ${total}`)
     } catch (err) {
       system.dsPopulateActions.updateError(true)
       console.error(`[DatasetPopulate] Error retreiving dataset list: ${err.message}`);
@@ -62,7 +74,14 @@ function DatasetPopulatePlugin(system) {
         if (!dsPopulate || system.dsPopulateSelectors.hasError())
           return system.React.createElement(Original, props)
 
-        let datasets = system.dsPopulateSelectors.datasets()
+        let datasetMap = system.dsPopulateSelectors.datasets()
+        let datasets = []
+        for (const datasetName of dsPopulate.toArray()) {
+          datasets.push(...datasetMap[datasetName])
+        }
+
+        datasets.sort()
+
         props.schema = props.schema.set('enum', datasets)
         return system.React.createElement(Original, props)
       }
