@@ -75,6 +75,9 @@ function DatasetPopulatePlugin(system) {
           return system.React.createElement(Original, props)
 
         let datasetMap = system.dsPopulateSelectors.datasets()
+        if (!datasetMap)
+          return system.React.createElement(Original, props) 
+
         let datasets = []
         for (const datasetName of dsPopulate.toArray()) {
           datasets.push(...datasetMap[datasetName])
