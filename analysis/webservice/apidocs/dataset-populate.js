@@ -21,13 +21,15 @@ function DatasetPopulatePlugin(system) {
         insitu: []
       }
 
-      for (const ds of satellite)
+      for (const ds of satellite) {
         datasets['satellite'].push(ds.shortName)
         total++
+      }
 
-      for (const ds of insitu)
+      for (const ds of insitu) {
         datasets['insitu'].push(ds.name)
         total++
+      }
 
       datasets['satellite'].sort()
       datasets['insitu'].sort()
