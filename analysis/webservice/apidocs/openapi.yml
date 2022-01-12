@@ -436,6 +436,8 @@ paths:
           required: true
           schema:
             type: string
+            x-dspopulate:
+              - insitu
           example: samos
         - in: query
           name: startTime
