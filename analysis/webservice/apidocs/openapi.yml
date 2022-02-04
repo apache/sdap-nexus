@@ -191,7 +191,6 @@ paths:
             type: string
             x-dspopulate:
              - satellite
-          example: MAVHRR_OI_L4_GHRSST_NCEI
         - in: query
           name: insitu
           description: |
@@ -202,7 +201,6 @@ paths:
             type: string
             x-dspopulate:
              - insitu
-          example: icoads,samos,spurs,spurs2
         - in: query
           name: startTime
           description: |
