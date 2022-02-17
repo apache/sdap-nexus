@@ -25,7 +25,7 @@ spec:
           serviceName: nexus-webapp
           servicePort: webapp
       {{ if ne .Values.onEarthProxyIP "" }}
-      - path: /onearth/?(.*)
+      - path: /?(.*)
         backend:
           serviceName: onearth
           servicePort: 80
