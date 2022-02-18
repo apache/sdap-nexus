@@ -18,6 +18,7 @@
 import configparser
 import logging
 import uuid
+import numpy as np
 from datetime import datetime
 
 import pkg_resources
@@ -168,8 +169,13 @@ class ResultsStorage(AbstractResultsContainer):
         self._session.execute(batch)
 
     def __insertResult(self, execution_id, primaryId, result, batch, insertStatement):
+        data_dict = {}
+        if 'primary' in result:
+            data_dict = result['primary']
+        elif 'secondary' in result:
+            data_dict = result['secondary']
 
-        dataMap = self.__buildDataMap(result)
+        dataMap = self.__buildDataMap(data_dict)
         result_id = uuid.uuid4()
         batch.add(insertStatement, (
             result_id,
@@ -206,11 +212,12 @@ class ResultsStorage(AbstractResultsContainer):
 
     def __buildDataMap(self, result):
         dataMap = {}
-        for name in result:
-            value = result[name]
-            if name not in ["id", "x", "y", "source", "time", "platform", "device", "point", "matches"] and type(
-                    value) in [float, int]:
-                dataMap[name] = value
+        for data_dict in result:
+            name = data_dict['variable_name']
+            value = data_dict['variable_value']
+            if isinstance(value, np.generic):
+                value = value.item()
+            dataMap[name] = value
         return dataMap
 
 
