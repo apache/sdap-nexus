@@ -213,7 +213,11 @@ class ResultsStorage(AbstractResultsContainer):
     def __buildDataMap(self, result):
         dataMap = {}
         for data_dict in result:
-            name = data_dict['variable_name']
+            name = data_dict.get('cf_variable_name')
+
+            if name is None:
+                name = data_dict['variable_name']
+
             value = data_dict['variable_value']
             if isinstance(value, np.generic):
                 value = value.item()
