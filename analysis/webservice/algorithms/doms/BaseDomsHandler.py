@@ -19,6 +19,7 @@ import csv
 import json
 from datetime import datetime
 import time
+import itertools
 from decimal import Decimal
 
 import numpy as np
@@ -114,7 +115,7 @@ class DomsCSVFormatter:
             DomsCSVFormatter.__addDynamicAttrs(csv_mem_file, executionId, results, params, details)
             csv.writer(csv_mem_file).writerow([])
 
-            DomsCSVFormatter.__packValues(csv_mem_file, results, params)
+            DomsCSVFormatter.__packValues(csv_mem_file, results)
 
             csv_out = csv_mem_file.getvalue()
         finally:
@@ -123,54 +124,33 @@ class DomsCSVFormatter:
         return csv_out
 
     @staticmethod
-    def __packValues(csv_mem_file, results, params):
-
-        writer = csv.writer(csv_mem_file)
-
-        headers = [
-            # Primary
-            "id", "source", "lon (degrees_east)", "lat (degrees_north)", "time", "platform",
-            "sea_surface_salinity (1e-3)", "sea_surface_temperature (degree_C)", "wind_speed (m s-1)", "wind_direction",
-            "wind_u (m s-1)", "wind_v (m s-1)",
-            # Match
-            "id", "source", "lon (degrees_east)", "lat (degrees_north)", "time", "platform",
-            "depth (m)", "sea_water_salinity (1e-3)",
-            "sea_water_temperature (degree_C)", "wind_speed (m s-1)",
-            "wind_direction", "wind_u (m s-1)", "wind_v (m s-1)"
+    def __packValues(csv_mem_file, results):
+        primary_headers = [
+            key for key in results[0].keys() if key != 'matches'
         ]
 
-        writer.writerow(headers)
+        secondary_headers = [
+            key for key in results[0]['matches'][0].keys()
+        ]
 
-        #
-        # Only include the depth variable related to the match-up parameter. If the match-up parameter
-        # is not sss or sst then do not include any depth data, just fill values.
-        #
-        if params["parameter"] == "sss":
-            depth = "sea_water_salinity_depth"
-        elif params["parameter"] == "sst":
-            depth = "sea_water_temperature_depth"
-        else:
-            depth = "NO_DEPTH"
+        writer = csv.writer(csv_mem_file)
+        writer.writerow(list(itertools.chain(primary_headers, secondary_headers)))
 
         for primaryValue in results:
             for matchup in primaryValue["matches"]:
-                row = [
-                    # Primary
-                    primaryValue["id"], primaryValue["source"], str(primaryValue["x"]), str(primaryValue["y"]),
-                    primaryValue["time"].strftime(ISO_8601), primaryValue["platform"],
-                    primaryValue.get("sea_water_salinity", ""), primaryValue.get("sea_water_temperature", ""),
-                    primaryValue.get("wind_speed", ""), primaryValue.get("wind_direction", ""),
-                    primaryValue.get("wind_u", ""), primaryValue.get("wind_v", ""),
-
-                    # Matchup
-                    matchup["id"], matchup["source"], matchup["x"], matchup["y"],
-                    matchup["time"].strftime(ISO_8601), matchup["platform"],
-                    matchup.get(depth, ""), matchup.get("sea_water_salinity", ""),
-                    matchup.get("sea_water_temperature", ""),
-                    matchup.get("wind_speed", ""), matchup.get("wind_direction", ""),
-                    matchup.get("wind_u", ""), matchup.get("wind_v", ""),
-                ]
-                writer.writerow(row)
+                # Primary
+                primary_row = [None for _ in range(len(primary_headers))]
+                for key, value in primaryValue.items():
+                    if key == 'matches':
+                        continue
+                    index = primary_headers.index(key)
+                    primary_row[index] = value
+                # Secondary
+                secondary_row = [None for _ in range(len(secondary_headers))]
+                for key, value in matchup.items():
+                    index = secondary_headers.index(key)
+                    secondary_row[index] = value
+                writer.writerow(list(itertools.chain(primary_row, secondary_row)))
 
     @staticmethod
     def __addConstants(csvfile):
