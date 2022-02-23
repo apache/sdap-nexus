@@ -125,13 +125,13 @@ class DomsCSVFormatter:
 
     @staticmethod
     def __packValues(csv_mem_file, results):
-        primary_headers = [
-            key for key in results[0].keys() if key != 'matches'
-        ]
+        primary_headers = list(dict.fromkeys(
+            key for result in results for key in result if key != 'matches'
+        ))
 
-        secondary_headers = [
-            key for key in results[0]['matches'][0].keys()
-        ]
+        secondary_headers = list(dict.fromkeys(
+            key for result in results for match in result['matches'] for key in match
+        ))
 
         writer = csv.writer(csv_mem_file)
         writer.writerow(list(itertools.chain(primary_headers, secondary_headers)))
