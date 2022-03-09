@@ -23,3 +23,5 @@ To delete a dataset called `my_dataset`, with SDAP deployed using the Helm chart
 cd /incubator-sdap-nexus/tools/deletebyquery
 python deletebyquery.py --solr sdap-solr-svc:8983 --cassandra sdap-cassandra --cassandraUsername cassandra --cassandraPassword cassandra --query 'dataset_s:"my_dataset"'
 ```
+
+You can provide a flag `-f` or `--force` which will cause the script to skip all prompts before deleting. 
