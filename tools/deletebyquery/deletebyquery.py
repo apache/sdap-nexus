@@ -23,7 +23,7 @@ from random import sample
 from cassandra.auth import PlainTextAuthProvider
 import cassandra.concurrent
 from cassandra.cluster import Cluster
-from cassandra.policies import RoundRobinPolicy, TokenAwarePolicy, WhiteListRoundRobinPolicy
+from cassandra.policies import RoundRobinPolicy, TokenAwarePolicy
 from solrcloudpy import SolrConnection, SearchOptions
 
 from six.moves import input
