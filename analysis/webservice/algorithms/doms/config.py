@@ -50,8 +50,9 @@ ENDPOINTS = [
 
 METADATA_LINKS = {
     "samos": "http://samos.coaps.fsu.edu/html/nav.php?s=2",
-    "icoads": "https://rda.ucar.edu/datasets/ds548.1/",
-    "spurs": "https://podaac.jpl.nasa.gov/spurs"
+    "icoads": "https://rda.ucar.edu/datasets/ds548.0/",
+    "spurs": "https://podaac.jpl.nasa.gov/spurs",
+    "spurs2": "https://podaac.jpl.nasa.gov/spurs?tab=spurs2-campaign",
 }
 
 import os

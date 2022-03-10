@@ -182,8 +182,8 @@ class ResultsStorage(AbstractResultsContainer):
             execution_id,
             result["id"],
             primaryId,
-            result["x"],
-            result["y"],
+            result["lon"],
+            result["lat"],
             result["source"],
             result["time"],
             result["platform"] if "platform" in result else None,
@@ -270,16 +270,16 @@ class ResultsRetrieval(AbstractResultsContainer):
     def __rowToDataEntry(self, row, trim_data=False):
         if trim_data:
             entry = {
-                "x": float(row.x),
-                "y": float(row.y),
+                "lon": float(row.x),
+                "lat": float(row.y),
                 "source": row.source_dataset,
                 "time": row.measurement_time.replace(tzinfo=UTC)
             }
         else:
             entry = {
                 "id": row.value_id,
-                "x": float(row.x),
-                "y": float(row.y),
+                "lon": float(row.x),
+                "lat": float(row.y),
                 "source": row.source_dataset,
                 "device": row.device,
                 "platform": row.platform,

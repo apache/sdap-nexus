@@ -307,8 +307,8 @@ class Matchup(NexusCalcSparkHandler):
         doms_dict = {
             "platform": doms_values.getPlatformById(domspoint.platform),
             "device": doms_values.getDeviceById(domspoint.device),
-            "x": str(domspoint.longitude),
-            "y": str(domspoint.latitude),
+            "lon": str(domspoint.longitude),
+            "lat": str(domspoint.latitude),
             "point": "Point(%s %s)" % (domspoint.longitude, domspoint.latitude),
             "time": datetime.strptime(domspoint.time, "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=UTC),
             "fileurl": domspoint.file_url,
@@ -356,6 +356,24 @@ class DomsPoint(object):
 
     def __repr__(self):
         return str(self.__dict__)
+
+    @staticmethod
+    def _variables_to_device(variables):
+        """
+        Given a list of science variables, attempt to determine what
+        the correct device is. This method will only be used for
+        satellite measurements, so the only options are 'scatterometers'
+        or 'radiometers'
+
+        :param variables: List of variable names
+        :return: device id integer
+        """
+        for variable in variables:
+            if 'wind' in variable.variable_name.lower():
+                # scatterometers
+                return 6
+        # Assume radiometers
+        return 5
 
     @staticmethod
     def from_nexus_point(nexus_point, tile=None):
@@ -406,9 +424,8 @@ class DomsPoint(object):
         point.source = tile.dataset
         point.file_url = tile.granule
 
-        # TODO device should change based on the satellite making the observations.
         point.platform = 9
-        point.device = 5
+        point.device = DomsPoint._variables_to_device(tile.variables)
         return point
 
     @staticmethod
