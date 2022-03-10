@@ -14,8 +14,10 @@
 # limitations under the License.
 
 
-from datetime import datetime
+import json
+import numpy
 
+from datetime import datetime
 from pytz import timezone
 
 from webservice.NexusHandler import nexus_handler
@@ -225,3 +227,14 @@ class DataInBoundsResult(NexusResults):
             rows.append(",".join(cols))
 
         return "\r\n".join(rows)
+
+    def toJson(self):
+        return json.dumps(self.results(), indent=4, cls=NpEncoder)
+
+class NpEncoder(json.JSONEncoder):
+    def default(self, obj):
+        if isinstance(obj, numpy.integer):
+            return int(obj)
+        if isinstance(obj, numpy.floating):
+            return float(obj)
+        return super(NpEncoder, self).default(obj)
