@@ -183,7 +183,7 @@ class DomsCSVFormatter:
             {"Global Attribute": "publisher_name",  "Value": "CDMS"},
             {"Global Attribute": "publisher_email", "Value": "cdms@jpl.nasa.gov"},
             {"Global Attribute": "publisher_url", "Value": "https://doms.jpl.nasa.gov"},
-            {"Global Attribute": "acknowledgment", "Value": "CDMS is a NASA/AIST-funded ACCESS project."},
+            {"Global Attribute": "acknowledgment", "Value": "CDMS is a NASA/ACCESS funded project with prior support from NASA/AIST"},
         ]
 
         writer = csv.DictWriter(csvfile, sorted(next(iter(global_attrs)).keys()))
@@ -223,7 +223,6 @@ class DomsCSVFormatter:
             {"Global Attribute": "geospatial_vertical_min", "Value": params["depthMin"]},
             {"Global Attribute": "geospatial_vertical_max", "Value": params["depthMax"]},
             {"Global Attribute": "geospatial_vertical_units", "Value": "m"},
-            {"Global Attribute": "geospatial_vertical_resolution", "Value": "point"},
             {"Global Attribute": "geospatial_vertical_positive", "Value": "down"},
 
             {"Global Attribute": "CDMS_matchID", "Value": executionId},
@@ -236,7 +235,7 @@ class DomsCSVFormatter:
 
             {"Global Attribute": "CDMS_DatasetMetadata", "Value": ', '.join(insituLinks)},
             {"Global Attribute": "CDMS_primary", "Value": params["primary"]},
-            {"Global Attribute": "CDMS_secondary", "Value": params["matchup"]},
+            {"Global Attribute": "CDMS_secondary", "Value": ','.join(params['matchup'])},
             {"Global Attribute": "CDMS_ParameterPrimary", "Value": params.get("parameter", "")},
 
             {"Global Attribute": "CDMS_time_to_complete", "Value": details["timeToComplete"]},
@@ -280,14 +279,11 @@ class DomsNetCDFFormatter:
         dataset.geospatial_lat_min = bbox.south
         dataset.geospatial_lon_max = bbox.east
         dataset.geospatial_lon_min = bbox.west
-        dataset.geospatial_lat_resolution = "point"
-        dataset.geospatial_lon_resolution = "point"
         dataset.geospatial_lat_units = "degrees_north"
         dataset.geospatial_lon_units = "degrees_east"
         dataset.geospatial_vertical_min = float(params["depthMin"])
         dataset.geospatial_vertical_max = float(params["depthMax"])
         dataset.geospatial_vertical_units = "m"
-        dataset.geospatial_vertical_resolution = "point"
         dataset.geospatial_vertical_positive = "down"
 
         dataset.DOMS_TimeWindow = params["timeTolerance"] / 60 / 60
@@ -360,7 +356,7 @@ class DomsNetCDFFormatter:
         dataset.publisher_name = "Cloud-Based Data Matchup Service (CDMS)"
         dataset.publisher_email = "cdms@jpl.nasa.gov"
         dataset.publisher_url = "https://doms.jpl.nasa.gov"
-        dataset.acknowledgment = "CDMS is a NASA/AIST-funded ACCESS project"
+        dataset.acknowledgment = "CDMS is a NASA/ACCESS funded project with prior support from NASA/AIST"
 
     @staticmethod
     def __writeResults(results, satelliteWriter, insituWriter):
