@@ -18,6 +18,7 @@
 import configparser
 import logging
 import uuid
+import numpy as np
 from datetime import datetime
 
 import pkg_resources
@@ -168,16 +169,21 @@ class ResultsStorage(AbstractResultsContainer):
         self._session.execute(batch)
 
     def __insertResult(self, execution_id, primaryId, result, batch, insertStatement):
+        data_dict = {}
+        if 'primary' in result:
+            data_dict = result['primary']
+        elif 'secondary' in result:
+            data_dict = result['secondary']
 
-        dataMap = self.__buildDataMap(result)
+        dataMap = self.__buildDataMap(data_dict)
         result_id = uuid.uuid4()
         batch.add(insertStatement, (
             result_id,
             execution_id,
             result["id"],
             primaryId,
-            result["x"],
-            result["y"],
+            result["lon"],
+            result["lat"],
             result["source"],
             result["time"],
             result["platform"] if "platform" in result else None,
@@ -206,11 +212,16 @@ class ResultsStorage(AbstractResultsContainer):
 
     def __buildDataMap(self, result):
         dataMap = {}
-        for name in result:
-            value = result[name]
-            if name not in ["id", "x", "y", "source", "time", "platform", "device", "point", "matches"] and type(
-                    value) in [float, int]:
-                dataMap[name] = value
+        for data_dict in result:
+            name = data_dict.get('cf_variable_name')
+
+            if name is None:
+                name = data_dict['variable_name']
+
+            value = data_dict['variable_value']
+            if isinstance(value, np.generic):
+                value = value.item()
+            dataMap[name] = value
         return dataMap
 
 
@@ -259,16 +270,16 @@ class ResultsRetrieval(AbstractResultsContainer):
     def __rowToDataEntry(self, row, trim_data=False):
         if trim_data:
             entry = {
-                "x": float(row.x),
-                "y": float(row.y),
+                "lon": float(row.x),
+                "lat": float(row.y),
                 "source": row.source_dataset,
                 "time": row.measurement_time.replace(tzinfo=UTC)
             }
         else:
             entry = {
                 "id": row.value_id,
-                "x": float(row.x),
-                "y": float(row.y),
+                "lon": float(row.x),
+                "lat": float(row.y),
                 "source": row.source_dataset,
                 "device": row.device,
                 "platform": row.platform,

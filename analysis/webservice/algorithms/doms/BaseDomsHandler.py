@@ -19,6 +19,8 @@ import csv
 import json
 from datetime import datetime
 import time
+import itertools
+import importlib_metadata
 from decimal import Decimal
 
 import numpy as np
@@ -114,7 +116,7 @@ class DomsCSVFormatter:
             DomsCSVFormatter.__addDynamicAttrs(csv_mem_file, executionId, results, params, details)
             csv.writer(csv_mem_file).writerow([])
 
-            DomsCSVFormatter.__packValues(csv_mem_file, results, params)
+            DomsCSVFormatter.__packValues(csv_mem_file, results)
 
             csv_out = csv_mem_file.getvalue()
         finally:
@@ -123,84 +125,65 @@ class DomsCSVFormatter:
         return csv_out
 
     @staticmethod
-    def __packValues(csv_mem_file, results, params):
+    def __packValues(csv_mem_file, results):
+        primary_headers = list(dict.fromkeys(
+            key for result in results for key in result if key != 'matches'
+        ))
+
+        secondary_headers = list(dict.fromkeys(
+            key for result in results for match in result['matches'] for key in match
+        ))
 
         writer = csv.writer(csv_mem_file)
-
-        headers = [
-            # Primary
-            "id", "source", "lon (degrees_east)", "lat (degrees_north)", "time", "platform",
-            "sea_surface_salinity (1e-3)", "sea_surface_temperature (degree_C)", "wind_speed (m s-1)", "wind_direction",
-            "wind_u (m s-1)", "wind_v (m s-1)",
-            # Match
-            "id", "source", "lon (degrees_east)", "lat (degrees_north)", "time", "platform",
-            "depth (m)", "sea_water_salinity (1e-3)",
-            "sea_water_temperature (degree_C)", "wind_speed (m s-1)",
-            "wind_direction", "wind_u (m s-1)", "wind_v (m s-1)"
-        ]
-
-        writer.writerow(headers)
-
-        #
-        # Only include the depth variable related to the match-up parameter. If the match-up parameter
-        # is not sss or sst then do not include any depth data, just fill values.
-        #
-        if params["parameter"] == "sss":
-            depth = "sea_water_salinity_depth"
-        elif params["parameter"] == "sst":
-            depth = "sea_water_temperature_depth"
-        else:
-            depth = "NO_DEPTH"
+        writer.writerow(list(itertools.chain(primary_headers, secondary_headers)))
 
         for primaryValue in results:
             for matchup in primaryValue["matches"]:
-                row = [
-                    # Primary
-                    primaryValue["id"], primaryValue["source"], str(primaryValue["x"]), str(primaryValue["y"]),
-                    primaryValue["time"].strftime(ISO_8601), primaryValue["platform"],
-                    primaryValue.get("sea_water_salinity", ""), primaryValue.get("sea_water_temperature", ""),
-                    primaryValue.get("wind_speed", ""), primaryValue.get("wind_direction", ""),
-                    primaryValue.get("wind_u", ""), primaryValue.get("wind_v", ""),
-
-                    # Matchup
-                    matchup["id"], matchup["source"], matchup["x"], matchup["y"],
-                    matchup["time"].strftime(ISO_8601), matchup["platform"],
-                    matchup.get(depth, ""), matchup.get("sea_water_salinity", ""),
-                    matchup.get("sea_water_temperature", ""),
-                    matchup.get("wind_speed", ""), matchup.get("wind_direction", ""),
-                    matchup.get("wind_u", ""), matchup.get("wind_v", ""),
-                ]
-                writer.writerow(row)
+                # Primary
+                primary_row = [None for _ in range(len(primary_headers))]
+                for key, value in primaryValue.items():
+                    if key == 'matches':
+                        continue
+                    index = primary_headers.index(key)
+                    primary_row[index] = value
+                # Secondary
+                secondary_row = [None for _ in range(len(secondary_headers))]
+                for key, value in matchup.items():
+                    index = secondary_headers.index(key)
+                    secondary_row[index] = value
+                writer.writerow(list(itertools.chain(primary_row, secondary_row)))
 
     @staticmethod
     def __addConstants(csvfile):
 
+        version = importlib_metadata.distribution('nexusanalysis').version
+
         global_attrs = [
             {"Global Attribute": "product_version", "Value": "1.0"},
             {"Global Attribute": "Conventions", "Value": "CF-1.6, ACDD-1.3"},
-            {"Global Attribute": "title", "Value": "DOMS satellite-insitu machup output file"},
+            {"Global Attribute": "title", "Value": "CDMS satellite-insitu machup output file"},
             {"Global Attribute": "history",
-             "Value": "Processing_Version = V1.0, Software_Name = DOMS, Software_Version = 1.03"},
-            {"Global Attribute": "institution", "Value": "JPL, FSU, NCAR"},
+             "Value": f"Processing_Version = V1.0, Software_Name = CDMS, Software_Version = {version}"},
+            {"Global Attribute": "institution", "Value": "JPL, FSU, NCAR, Saildrone"},
             {"Global Attribute": "source", "Value": "doms.jpl.nasa.gov"},
             {"Global Attribute": "standard_name_vocabulary",
              "Value": "CF Standard Name Table v27, BODC controlled vocabulary"},
-            {"Global Attribute": "cdm_data_type", "Value": "Point/Profile, Swath/Grid"},
+            {"Global Attribute": "cdm_data_type", "Value": "trajectory, station, point, swath, grid"},
             {"Global Attribute": "processing_level", "Value": "4"},
-            {"Global Attribute": "project", "Value": "Distributed Oceanographic Matchup System (DOMS)"},
+            {"Global Attribute": "project", "Value": "Cloud-based Data Matchup Service (CDMS)"},
             {"Global Attribute": "keywords_vocabulary",
              "Value": "NASA Global Change Master Directory (GCMD) Science Keywords"},
             # TODO What should the keywords be?
             {"Global Attribute": "keywords", "Value": "SATELLITES, OCEAN PLATFORMS, SHIPS, BUOYS, MOORINGS, AUVS, ROV, "
                                                       "NASA/JPL/PODAAC, FSU/COAPS, UCAR/NCAR, SALINITY, "
                                                       "SEA SURFACE TEMPERATURE, SURFACE WINDS"},
-            {"Global Attribute": "creator_name", "Value": "NASA PO.DAAC"},
-            {"Global Attribute": "creator_email", "Value": "podaac@podaac.jpl.nasa.gov"},
-            {"Global Attribute": "creator_url", "Value": "https://podaac.jpl.nasa.gov/"},
-            {"Global Attribute": "publisher_name", "Value": "NASA PO.DAAC"},
-            {"Global Attribute": "publisher_email", "Value": "podaac@podaac.jpl.nasa.gov"},
-            {"Global Attribute": "publisher_url", "Value": "https://podaac.jpl.nasa.gov"},
-            {"Global Attribute": "acknowledgment", "Value": "DOMS is a NASA/AIST-funded project. NRA NNH14ZDA001N."},
+            {"Global Attribute": "creator_name", "Value": "Cloud-Based Data Matchup Service (CDMS)"},
+            {"Global Attribute": "creator_email", "Value": "cdms@jpl.nasa.gov"},
+            {"Global Attribute": "creator_url", "Value": "https://doms.jpl.nasa.gov/"},
+            {"Global Attribute": "publisher_name",  "Value": "CDMS"},
+            {"Global Attribute": "publisher_email", "Value": "cdms@jpl.nasa.gov"},
+            {"Global Attribute": "publisher_url", "Value": "https://doms.jpl.nasa.gov"},
+            {"Global Attribute": "acknowledgment", "Value": "CDMS is a NASA/ACCESS funded project with prior support from NASA/AIST"},
         ]
 
         writer = csv.DictWriter(csvfile, sorted(next(iter(global_attrs)).keys()))
@@ -229,45 +212,41 @@ class DomsCSVFormatter:
              "Value": params["startTime"].strftime(ISO_8601)},
             {"Global Attribute": "time_coverage_end",
              "Value": params["endTime"].strftime(ISO_8601)},
-            {"Global Attribute": "time_coverage_resolution", "Value": "point"},
 
             {"Global Attribute": "geospatial_lon_min", "Value": params["bbox"].split(',')[0]},
             {"Global Attribute": "geospatial_lat_min", "Value": params["bbox"].split(',')[1]},
             {"Global Attribute": "geospatial_lon_max", "Value": params["bbox"].split(',')[2]},
             {"Global Attribute": "geospatial_lat_max", "Value": params["bbox"].split(',')[3]},
-            {"Global Attribute": "geospatial_lat_resolution", "Value": "point"},
-            {"Global Attribute": "geospatial_lon_resolution", "Value": "point"},
             {"Global Attribute": "geospatial_lat_units", "Value": "degrees_north"},
             {"Global Attribute": "geospatial_lon_units", "Value": "degrees_east"},
 
             {"Global Attribute": "geospatial_vertical_min", "Value": params["depthMin"]},
             {"Global Attribute": "geospatial_vertical_max", "Value": params["depthMax"]},
             {"Global Attribute": "geospatial_vertical_units", "Value": "m"},
-            {"Global Attribute": "geospatial_vertical_resolution", "Value": "point"},
             {"Global Attribute": "geospatial_vertical_positive", "Value": "down"},
 
-            {"Global Attribute": "DOMS_matchID", "Value": executionId},
-            {"Global Attribute": "DOMS_TimeWindow", "Value": params["timeTolerance"] / 60 / 60},
-            {"Global Attribute": "DOMS_TimeWindow_Units", "Value": "hours"},
+            {"Global Attribute": "CDMS_matchID", "Value": executionId},
+            {"Global Attribute": "CDMS_TimeWindow", "Value": params["timeTolerance"] / 60 / 60},
+            {"Global Attribute": "CDMS_TimeWindow_Units", "Value": "hours"},
 
-            {"Global Attribute": "DOMS_platforms", "Value": params["platforms"]},
-            {"Global Attribute": "DOMS_SearchRadius", "Value": params["radiusTolerance"]},
-            {"Global Attribute": "DOMS_SearchRadius_Units", "Value": "m"},
+            {"Global Attribute": "CDMS_platforms", "Value": params["platforms"]},
+            {"Global Attribute": "CDMS_SearchRadius", "Value": params["radiusTolerance"]},
+            {"Global Attribute": "CDMS_SearchRadius_Units", "Value": "m"},
 
-            {"Global Attribute": "DOMS_DatasetMetadata", "Value": ', '.join(insituLinks)},
-            {"Global Attribute": "DOMS_primary", "Value": params["primary"]},
-            {"Global Attribute": "DOMS_match_up", "Value": params["matchup"]},
-            {"Global Attribute": "DOMS_ParameterPrimary", "Value": params.get("parameter", "")},
+            {"Global Attribute": "CDMS_DatasetMetadata", "Value": ', '.join(insituLinks)},
+            {"Global Attribute": "CDMS_primary", "Value": params["primary"]},
+            {"Global Attribute": "CDMS_secondary", "Value": ','.join(params['matchup'])},
+            {"Global Attribute": "CDMS_ParameterPrimary", "Value": params.get("parameter", "")},
 
-            {"Global Attribute": "DOMS_time_to_complete", "Value": details["timeToComplete"]},
-            {"Global Attribute": "DOMS_time_to_complete_units", "Value": "seconds"},
-            {"Global Attribute": "DOMS_num_matchup_matched", "Value": details["numInSituMatched"]},
-            {"Global Attribute": "DOMS_num_primary_matched", "Value": details["numGriddedMatched"]},
+            {"Global Attribute": "CDMS_time_to_complete", "Value": details["timeToComplete"]},
+            {"Global Attribute": "CDMS_time_to_complete_units", "Value": "seconds"},
+            {"Global Attribute": "CDMS_num_secondary_matched", "Value": details["numInSituMatched"]},
+            {"Global Attribute": "CDMS_num_primary_matched", "Value": details["numGriddedMatched"]},
 
             {"Global Attribute": "date_modified", "Value": datetime.utcnow().replace(tzinfo=UTC).strftime(ISO_8601)},
             {"Global Attribute": "date_created", "Value": datetime.utcnow().replace(tzinfo=UTC).strftime(ISO_8601)},
 
-            {"Global Attribute": "URI_Matchup", "Value": "http://{webservice}/domsresults?id=" + executionId + "&output=CSV"},
+            {"Global Attribute": "URI_Matchup", "Value": "https://doms.jpl.nasa.gov/domsresults?id=" + executionId + "&output=CSV"}, # TODO how to replace with actual req URL
         ]
 
         writer = csv.DictWriter(csvfile, sorted(next(iter(global_attrs)).keys()))
@@ -300,22 +279,18 @@ class DomsNetCDFFormatter:
         dataset.geospatial_lat_min = bbox.south
         dataset.geospatial_lon_max = bbox.east
         dataset.geospatial_lon_min = bbox.west
-        dataset.geospatial_lat_resolution = "point"
-        dataset.geospatial_lon_resolution = "point"
         dataset.geospatial_lat_units = "degrees_north"
         dataset.geospatial_lon_units = "degrees_east"
         dataset.geospatial_vertical_min = float(params["depthMin"])
         dataset.geospatial_vertical_max = float(params["depthMax"])
         dataset.geospatial_vertical_units = "m"
-        dataset.geospatial_vertical_resolution = "point"
         dataset.geospatial_vertical_positive = "down"
 
         dataset.DOMS_TimeWindow = params["timeTolerance"] / 60 / 60
         dataset.DOMS_TimeWindow_Units = "hours"
         dataset.DOMS_SearchRadius = float(params["radiusTolerance"])
         dataset.DOMS_SearchRadius_Units = "m"
-        # dataset.URI_Subset = "http://webservice subsetting query request"
-        dataset.URI_Matchup = "http://{webservice}/domsresults?id=" + executionId + "&output=NETCDF"
+        dataset.URI_Matchup = "https://doms.jpl.nasa.gov/domsresults?id=" + executionId + "&output=NETCDF"
         dataset.DOMS_ParameterPrimary = params["parameter"] if "parameter" in params else ""
         dataset.DOMS_platforms = params["platforms"]
         dataset.DOMS_primary = params["primary"]
@@ -366,7 +341,7 @@ class DomsNetCDFFormatter:
         dataset.Conventions = "CF-1.6, ACDD-1.3"
         dataset.title = "DOMS satellite-insitu machup output file"
         dataset.history = "Processing_Version = V1.0, Software_Name = DOMS, Software_Version = 1.03"
-        dataset.institution = "JPL, FSU, NCAR"
+        dataset.institution = "JPL, FSU, NCAR, Saildrone"
         dataset.source = "doms.jpl.nasa.gov"
         dataset.standard_name_vocabulary = "CF Standard Name Table v27", "BODC controlled vocabulary"
         dataset.cdm_data_type = "Point/Profile, Swath/Grid"
@@ -375,13 +350,13 @@ class DomsNetCDFFormatter:
         dataset.keywords_vocabulary = "NASA Global Change Master Directory (GCMD) Science Keywords"
         dataset.keywords = "SATELLITES, OCEAN PLATFORMS, SHIPS, BUOYS, MOORINGS, AUVS, ROV, NASA/JPL/PODAAC, " \
                            "FSU/COAPS, UCAR/NCAR, SALINITY, SEA SURFACE TEMPERATURE, SURFACE WINDS"
-        dataset.creator_name = "NASA PO.DAAC"
-        dataset.creator_email = "podaac@podaac.jpl.nasa.gov"
-        dataset.creator_url = "https://podaac.jpl.nasa.gov/"
-        dataset.publisher_name = "NASA PO.DAAC"
-        dataset.publisher_email = "podaac@podaac.jpl.nasa.gov"
-        dataset.publisher_url = "https://podaac.jpl.nasa.gov"
-        dataset.acknowledgment = "DOMS is a NASA/AIST-funded project. NRA NNH14ZDA001N."
+        dataset.creator_name = "Cloud-Based Data Matchup Service (CDMS)"
+        dataset.creator_email = "cdms@jpl.nasa.gov"
+        dataset.creator_url = "https://doms.jpl.nasa.gov/"
+        dataset.publisher_name = "Cloud-Based Data Matchup Service (CDMS)"
+        dataset.publisher_email = "cdms@jpl.nasa.gov"
+        dataset.publisher_url = "https://doms.jpl.nasa.gov"
+        dataset.acknowledgment = "CDMS is a NASA/ACCESS funded project with prior support from NASA/AIST"
 
     @staticmethod
     def __writeResults(results, satelliteWriter, insituWriter):
