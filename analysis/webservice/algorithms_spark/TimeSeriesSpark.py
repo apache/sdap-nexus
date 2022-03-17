@@ -449,7 +449,7 @@ class TimeSeriesResults(NexusResults):
 
 def spark_driver(daysinrange, bounding_polygon, ds, tile_service_factory, metrics_callback, normalize_dates, fill=-9999.,
                  spark_nparts=1, sc=None):
-    nexus_tiles_spark = [(bounding_polygon.wkt, ds,
+    nexus_tiles_spark = [(bounding_polygon, ds,
                           list(daysinrange_part), fill)
                          for daysinrange_part
                          in np.array_split(daysinrange, spark_nparts)]
@@ -470,18 +470,22 @@ def calc_average_on_day(tile_service_factory, metrics_callback, normalize_dates,
     from pytz import timezone
     ISO_8601 = '%Y-%m-%dT%H:%M:%S%z'
 
-    (bounding_wkt, dataset, timestamps, fill) = tile_in_spark
+    (bounding_polygon, dataset, timestamps, fill) = tile_in_spark
     if len(timestamps) == 0:
         return []
     tile_service = tile_service_factory()
-    ds1_nexus_tiles = \
-        tile_service.get_tiles_bounded_by_polygon(shapely.wkt.loads(bounding_wkt),
-                                                  dataset,
-                                                  timestamps[0],
-                                                  timestamps[-1],
-                                                  rows=5000,
-                                                  metrics_callback=metrics_callback)
 
+    ds1_nexus_tiles = \
+        tile_service.get_tiles_bounded_by_box(bounding_polygon.bounds[1], 
+                                            bounding_polygon.bounds[3],
+                                            bounding_polygon.bounds[0],
+                                            bounding_polygon.bounds[2],
+                                            dataset,
+                                            timestamps[0],
+                                            timestamps[-1],
+                                            rows=5000,
+                                            metrics_callback=metrics_callback)
+    
     calculation_start = datetime.now()
 
     tile_dict = {}
