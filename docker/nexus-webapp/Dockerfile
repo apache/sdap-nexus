@@ -89,6 +89,7 @@ RUN python3 setup.py install
 
 WORKDIR /incubator-sdap-nexus/analysis
 RUN python3 setup.py install
+RUN pip3 install importlib-metadata
 
 WORKDIR /incubator-sdap-nexus/tools/deletebyquery
 RUN pip3 install cassandra-driver==3.20.1 --install-option="--no-cython"

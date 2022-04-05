@@ -16,7 +16,7 @@
 ENDPOINTS = [
     {
         "name": "samos",
-        "url": "http://doms.coaps.fsu.edu:8890/ws/search/samos",
+        "url": "https://doms.coaps.fsu.edu/ws/search/samos",
         "fetchParallel": True,
         "fetchThreads": 8,
         "itemsPerPage": 1000,
@@ -32,7 +32,7 @@ ENDPOINTS = [
     },
     {
         "name": "icoads",
-        "url": "http://rda-data.ucar.edu:8890/ws/search/icoads",
+        "url": "http://rda-work.ucar.edu:8890/ws/search/icoads",
         "fetchParallel": True,
         "fetchThreads": 8,
         "itemsPerPage": 1000,
@@ -63,7 +63,7 @@ try:
         ENDPOINTS = [
             {
                 "name": "samos",
-                "url": "http://doms.coaps.fsu.edu:8890/ws/search/samos",
+                "url": "https://doms.coaps.fsu.edu/ws/search/samos",
                 "fetchParallel": True,
                 "fetchThreads": 8,
                 "itemsPerPage": 1000,
@@ -79,7 +79,7 @@ try:
             },
             {
                 "name": "icoads",
-                "url": "http://rda-data.ucar.edu:8890/ws/search/icoads",
+                "url": "http://rda-work.ucar.edu:8890/ws/search/icoads",
                 "fetchParallel": True,
                 "fetchThreads": 8,
                 "itemsPerPage": 1000,
