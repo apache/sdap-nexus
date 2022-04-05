@@ -63,7 +63,7 @@ try:
         ENDPOINTS = [
             {
                 "name": "samos",
-                "url": "http://doms.coaps.fsu.edu:8890/ws/search/samos",
+                "url": "https://doms.coaps.fsu.edu/ws/search/samos",
                 "fetchParallel": True,
                 "fetchThreads": 8,
                 "itemsPerPage": 1000,
