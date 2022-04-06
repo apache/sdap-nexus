@@ -136,7 +136,7 @@ def test_calc_average_on_day():
         tile_service.get_bounding_box.return_value = box(-90, -45, 90, 45)
         tile_service.get_min_time.return_value = 1627490285
         tile_service.get_max_time.return_value = 1627490285
-        tile_service.get_tiles_bounded_by_polygon.return_value = [test_tile]
+        tile_service.get_tiles_bounded_by_box.return_value = [test_tile]
         tile_service.mask_tiles_to_polygon.return_value = [test_tile]
         return tile_service_factory
 
@@ -147,7 +147,7 @@ def test_calc_average_on_day():
         pass
 
     # Spark tile format: (polygon string, ds name, list of time stamps, fill value)
-    spark_tile = ('POLYGON((-34.98 29.54, -30.1 29.54, -30.1 31.00, -34.98 31.00, -34.98 29.54))', 
+    spark_tile = (wkt.loads('POLYGON((-34.98 29.54, -30.1 29.54, -30.1 31.00, -34.98 31.00, -34.98 29.54))'), 
                     'dataset', timestamps, -9999.)
 
     avg_args = dict(
