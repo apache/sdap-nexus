@@ -13,6 +13,50 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+INSITU_API_ENDPOINT = 'https://doms.jpl.nasa.gov/insitu/1.0/query_data_doms'
+
+INSITU_PROVIDER_MAP = [
+    {
+        'name': 'NCAR',
+        'projects': [
+            {
+                'name': 'ICOADS Release 3.0',
+                'platforms': ['0', '16', '17', '30', '41', '42']
+            }
+        ]
+    },
+    {
+        'name': 'Florida State University, COAPS',
+        'projects': [
+            {
+                'name': 'SAMOS',
+                'platforms': ['30']
+            }
+        ]
+    },
+    {
+        'name': 'Saildrone',
+        'projects': [
+            {
+                'name': '1021_atlantic',
+                'platforms': ['3B']
+            },
+            {
+                'name': 'antarctic_circumnavigation_2019',
+                'platforms': ['3B']
+            },
+            {
+                'name': 'atlantic_to_med_2019_to_2020',
+                'platforms': ['3B']
+            },
+            {
+                'name': 'shark-2018',
+                'platforms': ['3B']
+            }
+        ]
+    }
+]
+
 ENDPOINTS = [
     {
         "name": "samos",
@@ -103,8 +147,35 @@ except KeyError:
     pass
 
 
-def getEndpointByName(name):
-    for endpoint in ENDPOINTS:
-        if endpoint["name"].upper() == name.upper():
-            return endpoint
-    return None
+def getEndpoint():
+    return INSITU_API_ENDPOINT
+
+
+def validate_insitu_params(provider_name, project_name, platform_name):
+    """
+    Validate the provided params. The project should be within the
+    given provider and the platform should be appropriate for the
+    given project.
+    """
+    provider = next((provider for provider in INSITU_PROVIDER_MAP
+                     if provider['name'] == provider_name), None)
+
+    if provider is None:
+        return False
+
+    project = next((project for project in provider['projects']
+                    if project_name == project['name']), None)
+
+    if project is None:
+        return False
+
+    return platform_name in project['platforms']
+
+
+def get_provider_name(project_name):
+    provider = next((provider for provider in INSITU_PROVIDER_MAP
+                     if project_name in map(lambda project: project['name'], provider['projects'])), None)
+
+    if provider is not None:
+        return provider['name']
+
