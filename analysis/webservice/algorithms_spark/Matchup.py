@@ -51,6 +51,14 @@ def iso_time_to_epoch(str_time):
         tzinfo=UTC) - EPOCH).total_seconds()
 
 
+class MatchupException(Exception):
+    """
+    Exception raised by the matchup algorithm. If raised, the message
+    should be passed to the user.
+    """
+    pass
+
+
 @nexus_handler
 class Matchup(NexusCalcSparkHandler):
     name = "Matchup"
@@ -237,6 +245,9 @@ class Matchup(NexusCalcSparkHandler):
             spark_result = spark_matchup_driver(tile_ids, wkt.dumps(bounding_polygon), primary_ds_name,
                                                 secondary_ds_names, parameter_s, depth_min, depth_max, time_tolerance,
                                                 radius_tolerance, platforms, match_once, self.tile_service_factory, sc=self._sc)
+        except MatchupException as matchup_exception:
+            self.log.exception(matchup_exception)
+            raise NexusProcessingException(reason=matchup_exception, code=500)
         except Exception as e:
             self.log.exception(e)
             raise NexusProcessingException(reason="An unknown error occurred while computing matches", code=500)
@@ -431,14 +442,7 @@ class DomsPoint(object):
     @staticmethod
     def from_edge_point(edge_point):
         point = DomsPoint()
-
-        try:
-            x, y = wkt.loads(edge_point['point']).coords[0]
-        except WKTReadingError:
-            try:
-                x, y = Point(*[float(c) for c in edge_point['point'].split(' ')]).coords[0]
-            except ValueError:
-                y, x = Point(*[float(c) for c in edge_point['point'].split(',')]).coords[0]
+        x, y = edge_point['longitude'], edge_point['latitude']
 
         point.longitude = x
         point.latitude = y
@@ -450,15 +454,21 @@ class DomsPoint(object):
         point.device = edge_point.get('device')
         point.file_url = edge_point.get('fileurl')
 
+        # TODO don't hardcode these fields -- use 'other' fields (non-expected) to determine science fields
         data_fields = [
+            'relative_humidity',
+            'relative_humidity_quality',
+            'air_temperature',
+            'air_temperature_quality',
             'eastward_wind',
             'northward_wind',
-            'wind_direction',
+            'wind_component_quality',
+            'wind_from_direction',
+            'wind_from_direction_quality',
             'wind_speed',
-            'sea_water_temperature',
-            'sea_water_temperature_depth',
-            'sea_water_salinity',
-            'sea_water_salinity_depth',
+            'wind_speed_quality',
+            'air_pressure',
+            'air_pressure_quality'
         ]
         data = []
         # This is for in-situ secondary points
@@ -653,7 +663,7 @@ def match_satellite_to_insitu(tile_ids, primary_b, secondary_b, parameter_b, tt_
         str(datetime.now() - the_time), tile_ids[0], tile_ids[-1]))
 
     # Query edge for all points within the spatial-temporal extents of this partition
-    is_insitu_dataset = edge_endpoints.getEndpointByName(secondary_b.value)
+    is_insitu_dataset = edge_endpoints.get_provider_name(secondary_b.value) is not None
 
     if is_insitu_dataset:
         the_time = datetime.now()
@@ -665,7 +675,7 @@ def match_satellite_to_insitu(tile_ids, primary_b, secondary_b, parameter_b, tt_
                     [str(matchup_min_lon), str(matchup_min_lat), str(matchup_max_lon), str(matchup_max_lat)])
                 edge_response = query_edge(insitudata_name, parameter_b.value, matchup_min_time, matchup_max_time, bbox,
                                            platforms_b.value, depth_min_b.value, depth_max_b.value, session=edge_session)
-                if edge_response['totalResults'] == 0:
+                if edge_response['total'] == 0:
                     continue
                 r = edge_response['results']
                 for p in r:
@@ -679,14 +689,7 @@ def match_satellite_to_insitu(tile_ids, primary_b, secondary_b, parameter_b, tt_
         the_time = datetime.now()
         matchup_points = np.ndarray((len(edge_results), 2), dtype=np.float32)
         for n, edge_point in enumerate(edge_results):
-            try:
-                x, y = wkt.loads(edge_point['point']).coords[0]
-            except WKTReadingError:
-                try:
-                    x, y = Point(*[float(c) for c in edge_point['point'].split(' ')]).coords[0]
-                except ValueError:
-                    y, x = Point(*[float(c) for c in edge_point['point'].split(',')]).coords[0]
-
+            x, y = edge_point['longitude'], edge_point['latitude']
             matchup_points[n][0], matchup_points[n][1] = aeqd_proj(x, y)
     else:
         # Query nexus (cassandra? solr?) to find matching points.
@@ -808,44 +811,47 @@ def query_edge(dataset, variable, startTime, endTime, bbox, platform, depth_min,
         # Assume we were passed a properly formatted string
         pass
 
-    try:
-        platform = platform.split(',')
-    except AttributeError:
-        # Assume we were passed a list
-        pass
+    provider = edge_endpoints.get_provider_name(dataset)
 
-    params = {"startTime": startTime,
-              "endTime": endTime,
-              "bbox": bbox,
-              "minDepth": depth_min,
-              "maxDepth": depth_max,
-              "platform": platform,
-              "itemsPerPage": itemsPerPage, "startIndex": startIndex, "stats": str(stats).lower()}
+    params = {
+        "startIndex": startIndex,
+        "itemsPerPage": itemsPerPage,
+        "startTime": startTime,
+        "endTime": endTime,
+        "bbox": bbox,
+        "minDepth": depth_min,
+        "maxDepth": depth_max,
+        "provider": provider,
+        "project": dataset,
+        "platform": platform,
+    }
 
     if variable is not None:
         params["variable"] = variable
 
-    dataset_url = edge_endpoints.getEndpointByName(dataset)['url']
-    if session is not None:
-        edge_request = session.get(dataset_url, params=params)
-    else:
-        edge_request = requests.get(dataset_url, params=params)
-
-    edge_request.raise_for_status()
-    edge_response = json.loads(edge_request.text)
+    edge_response = {}
 
     # Get all edge results
-    next_page_url = edge_response.get('next', None)
-    while next_page_url is not None:
+    next_page_url = edge_endpoints.getEndpoint()
+    while next_page_url is not None and next_page_url != 'NA':
+        logging.debug(f'Edge request {next_page_url}')
         if session is not None:
-            edge_page_request = session.get(next_page_url)
+            edge_page_request = session.get(next_page_url, params=params)
         else:
-            edge_page_request = requests.get(next_page_url)
+            edge_page_request = requests.get(next_page_url, params=params)
 
-        edge_page_request.raise_for_status()
+        try:
+            edge_page_request.raise_for_status()
+        except requests.exceptions.RequestException as edge_exception:
+            logging.error('Encountered error while querying insitu endpoint', edge_exception)
+            raise MatchupException('Encountered error while querying insitu endpoint') from edge_exception
+
         edge_page_response = json.loads(edge_page_request.text)
 
-        edge_response['results'].extend(edge_page_response['results'])
+        if not edge_response:
+            edge_response = edge_page_response
+        else:
+            edge_response['results'].extend(edge_page_response['results'])
 
         next_page_url = edge_page_response.get('next', None)
 
