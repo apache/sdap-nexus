@@ -73,9 +73,12 @@ if __name__ == "__main__":
            help='time out for solr requests in seconds, default (60) is ok for most deployments'
                 ' when solr performances are not good this might need to be increased')
     define('solr_host', help='solr host and port')
+    define('datastore_store', help='datastore (cassandra or s3)')
     define('cassandra_host', help='cassandra host')
     define('cassandra_username', help='cassandra username')
     define('cassandra_password', help='cassandra password')
+    define('s3_bucket', help='s3 bucket')
+    define('s3_region', help='s3 region')
 
     parse_command_line()
     algorithm_config = inject_args_in_config(options, algorithm_config)
