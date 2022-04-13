@@ -454,7 +454,9 @@ class DomsPoint(object):
         point.device = edge_point.get('device')
         point.file_url = edge_point.get('fileurl')
 
-        # TODO don't hardcode these fields -- use 'other' fields (non-expected) to determine science fields
+        if 'code' in point.platform:
+            point.platform = edge_point.get('platform')['code']
+
         data_fields = [
             'relative_humidity',
             'relative_humidity_quality',
@@ -814,7 +816,6 @@ def query_edge(dataset, variable, startTime, endTime, bbox, platform, depth_min,
     provider = edge_endpoints.get_provider_name(dataset)
 
     params = {
-        "startIndex": startIndex,
         "itemsPerPage": itemsPerPage,
         "startTime": startTime,
         "endTime": endTime,
