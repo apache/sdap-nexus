@@ -11,7 +11,7 @@ class NexusNETCDFRenderer(object):
         tornado_handler.set_header("Content-Type", "application/x-netcdf")
         tornado_handler.set_header("Content-Disposition", "filename=\"%s\"" % self._request.get_argument('filename', "download.nc"))
         try:
-            self.write(result.toNetCDF())
+            tornado_handler.write(result.toNetCDF())
         except:
             traceback.print_exc(file=sys.stdout)
             raise NexusProcessingException(reason="Unable to convert results to NetCDF.")
