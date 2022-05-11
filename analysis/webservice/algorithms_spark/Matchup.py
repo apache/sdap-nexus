@@ -198,12 +198,6 @@ class Matchup(NexusCalcSparkHandler):
         platforms = request.get_argument('platforms', None)
         if platforms is None:
             raise NexusProcessingException(reason="'platforms' argument is required", code=400)
-        try:
-            p_validation = platforms.split(',')
-            p_validation = [int(p) for p in p_validation]
-            del p_validation
-        except:
-            raise NexusProcessingException(reason="platforms must be a comma-delimited list of integers", code=400)
 
         match_once = request.get_boolean_arg("matchOnce", default=False)
 
@@ -458,19 +452,55 @@ class DomsPoint(object):
             point.platform = edge_point.get('platform')['code']
 
         data_fields = [
-            'relative_humidity',
-            'relative_humidity_quality',
+            'air_pressure',
+            'air_pressure_quality',
             'air_temperature',
             'air_temperature_quality',
-            'eastward_wind',
-            'northward_wind',
-            'wind_component_quality',
-            'wind_from_direction',
-            'wind_from_direction_quality',
+            'dew_point_temperature',
+            'dew_point_temperature_quality',
+            'downwelling_longwave_flux_in_air',
+            'downwelling_longwave_flux_in_air_quality',
+            'downwelling_longwave_radiance_in_air',
+            'downwelling_longwave_radiance_in_air_quality',
+            'downwelling_shortwave_flux_in_air',
+            'downwelling_shortwave_flux_in_air_quality',
+            'mass_concentration_of_chlorophyll_in_sea_water',
+            'mass_concentration_of_chlorophyll_in_sea_water_quality',
+            'rainfall_rate',
+            'rainfall_rate_quality',
+            'relative_humidity',
+            'relative_humidity_quality',
+            'sea_surface_salinity',
+            'sea_surface_salinity_quality',
+            'sea_surface_skin_temperature',
+            'sea_surface_skin_temperature_quality',
+            'sea_surface_subskin_temperature',
+            'sea_surface_subskin_temperature_quality',
+            'sea_surface_temperature',
+            'sea_surface_temperature_quality',
+            'sea_water_density',
+            'sea_water_density_quality',
+            'sea_water_electrical_conductivity',
+            'sea_water_electrical_conductivity_quality',
+            'sea_water_practical_salinity',
+            'sea_water_practical_salinity_quality',
+            'sea_water_salinity',
+            'sea_water_salinity_quality',
+            'sea_water_temperature',
+            'sea_water_temperature_quality',
+            'surface_downwelling_photosynthetic_photon_flux_in_air',
+            'surface_downwelling_photosynthetic_photon_flux_in_air_quality',
+            'wet_bulb_temperature',
+            'wet_bulb_temperature_quality',
             'wind_speed',
             'wind_speed_quality',
-            'air_pressure',
-            'air_pressure_quality'
+            'wind_from_direction',
+            'wind_from_direction_quality',
+            'wind_to_direction',
+            'wind_to_direction_quality',
+            'eastward_wind',
+            'northward_wind',
+            'wind_component_quality'
         ]
         data = []
         # This is for in-situ secondary points
@@ -855,5 +885,6 @@ def query_edge(dataset, variable, startTime, endTime, bbox, platform, depth_min,
             edge_response['results'].extend(edge_page_response['results'])
 
         next_page_url = edge_page_response.get('next', None)
+        params = {}  # Remove params, they are already included in above URL
 
     return edge_response
