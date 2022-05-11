@@ -151,6 +151,34 @@ def getEndpoint():
     return INSITU_API_ENDPOINT
 
 
+def getEndpointByName(name):
+    for endpoint in ENDPOINTS:
+        if endpoint["name"].upper() == name.upper():
+            return endpoint
+    return None
+
+
+from enum import Enum
+class InsituSource(Enum):
+    CDMS = 1
+    DOMS = 2
+
+
+def insitu_source(project_name):
+    provider = next((
+        provider for provider in INSITU_PROVIDER_MAP
+        if project_name in map(lambda project: project['name'], provider['projects'])
+    ), None)
+
+    if provider is not None:
+        return InsituSource.CDMS
+
+    if getEndpointByName(project_name) is not None:
+        return  InsituSource.DOMS
+
+    return None
+
+
 def validate_insitu_params(provider_name, project_name, platform_name):
     """
     Validate the provided params. The project should be within the
@@ -176,6 +204,13 @@ def get_provider_name(project_name):
     provider = next((provider for provider in INSITU_PROVIDER_MAP
                      if project_name in map(lambda project: project['name'], provider['projects'])), None)
 
+    if provider is not None:
+        return provider['name']
+
+    # Check DOMS endpoints as well. Eventually we should remove this so
+    # only CDMS insitu endpoints are used.
+    provider = next((provider for provider in ENDPOINTS
+                     if provider['name'] == project_name), None)
     if provider is not None:
         return provider['name']
 
