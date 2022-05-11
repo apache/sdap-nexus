@@ -51,14 +51,6 @@ def iso_time_to_epoch(str_time):
         tzinfo=UTC) - EPOCH).total_seconds()
 
 
-class MatchupException(Exception):
-    """
-    Exception raised by the matchup algorithm. If raised, the message
-    should be passed to the user.
-    """
-    pass
-
-
 @nexus_handler
 class Matchup(NexusCalcSparkHandler):
     name = "Matchup"
@@ -239,9 +231,6 @@ class Matchup(NexusCalcSparkHandler):
             spark_result = spark_matchup_driver(tile_ids, wkt.dumps(bounding_polygon), primary_ds_name,
                                                 secondary_ds_names, parameter_s, depth_min, depth_max, time_tolerance,
                                                 radius_tolerance, platforms, match_once, self.tile_service_factory, sc=self._sc)
-        except MatchupException as matchup_exception:
-            self.log.exception(matchup_exception)
-            raise NexusProcessingException(reason=matchup_exception, code=500)
         except Exception as e:
             self.log.exception(e)
             raise NexusProcessingException(reason="An unknown error occurred while computing matches", code=500)
