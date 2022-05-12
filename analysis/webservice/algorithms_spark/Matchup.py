@@ -860,11 +860,7 @@ def query_edge(dataset, variable, startTime, endTime, bbox, platform, depth_min,
         else:
             edge_page_request = requests.get(next_page_url, params=params)
 
-        try:
-            edge_page_request.raise_for_status()
-        except requests.exceptions.RequestException as edge_exception:
-            logging.error('Encountered error while querying insitu endpoint', edge_exception)
-            raise MatchupException('Encountered error while querying insitu endpoint') from edge_exception
+        edge_page_request.raise_for_status()
 
         edge_page_response = json.loads(edge_page_request.text)
 
