@@ -408,12 +408,12 @@ class DomsNetCDFValueWriter:
         Populate DomsNetCDFValueWriter fields from matchup results dict
         """
         non_data_fields = [
-            'id', 'x', 'y',
+            'id', 'lon', 'lat',
             'source', 'device',
             'platform', 'time', 'matches'
         ]
-        self.lat.append(result_item.get('y', None))
-        self.lon.append(result_item.get('x', None))
+        self.lat.append(result_item.get('lon', None))
+        self.lon.append(result_item.get('lat', None))
         self.time.append(time.mktime(result_item.get('time').timetuple()))
 
         # All other variables are assumed to be science variables.
@@ -462,8 +462,14 @@ class DomsNetCDFValueWriter:
         for variable_name, data in self.data_map.items():
             # Create a variable for each data point
             data_variable = self.group.createVariable(variable_name, 'f4', ('dim',), fill_value=-32767.0)
-            self.__enrichVariable(data_variable, min(data), max(data), has_depth=self.depth)
+            # Find min/max for data variables. It is possible for 'None' to
+            # be in this list, so filter those out when doing the calculation.
+            min_data = min(val for val in data if val is not None)
+            max_data = max(val for val in data if val is not None)
+            self.__enrichVariable(data_variable, min_data, max_data, has_depth=self.depth)
             data_variable[:] = data
+            data_variable.long_name = variable_name
+            data_variable.standard_name = variable_name
 
     #
     # Lists may include 'None" values, to calc min these must be filtered out
@@ -479,8 +485,6 @@ class DomsNetCDFValueWriter:
         if not has_depth:
             coordinates = ['lat', 'lon', 'time']
 
-        var.long_name = var
-        var.standard_name = var
         var.units = 'UNKNOWN'  # TODO populate this field once this metadata is in place
         var.valid_min = var_min
         var.valid_max = var_max
