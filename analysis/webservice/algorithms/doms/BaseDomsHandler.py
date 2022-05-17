@@ -259,11 +259,11 @@ class DomsNetCDFFormatter:
     @staticmethod
     def create(executionId, results, params, details):
 
-        t = tempfile.mkstemp(prefix="doms_", suffix=".nc")
+        t = tempfile.mkstemp(prefix="cdms_", suffix=".nc")
         tempFileName = t[1]
 
         dataset = Dataset(tempFileName, "w", format="NETCDF4")
-        dataset.DOMS_matchID = executionId
+        dataset.CDMS_matchID = executionId
         DomsNetCDFFormatter.__addNetCDFConstants(dataset)
 
         dataset.date_modified = datetime.utcnow().replace(tzinfo=UTC).strftime(ISO_8601)
@@ -271,9 +271,9 @@ class DomsNetCDFFormatter:
         dataset.time_coverage_start = params["startTime"].strftime(ISO_8601)
         dataset.time_coverage_end = params["endTime"].strftime(ISO_8601)
         dataset.time_coverage_resolution = "point"
-        dataset.DOMS_match_up = params["matchup"]
-        dataset.DOMS_num_matchup_matched = details["numInSituMatched"]
-        dataset.DOMS_num_primary_matched = details["numGriddedMatched"]
+        dataset.CDMS_secondary = params["matchup"]
+        dataset.CDMS_num_matchup_matched = details["numInSituMatched"]
+        dataset.CDMS_num_primary_matched = details["numGriddedMatched"]
 
         bbox = geo.BoundingBox(asString=params["bbox"])
         dataset.geospatial_lat_max = bbox.north
@@ -287,22 +287,22 @@ class DomsNetCDFFormatter:
         dataset.geospatial_vertical_units = "m"
         dataset.geospatial_vertical_positive = "down"
 
-        dataset.DOMS_TimeWindow = params["timeTolerance"] / 60 / 60
-        dataset.DOMS_TimeWindow_Units = "hours"
-        dataset.DOMS_SearchRadius = float(params["radiusTolerance"])
-        dataset.DOMS_SearchRadius_Units = "m"
+        dataset.CDMS_TimeWindow = params["timeTolerance"] / 60 / 60
+        dataset.CDMS_TimeWindow_Units = "hours"
+        dataset.CDMS_SearchRadius = float(params["radiusTolerance"])
+        dataset.CDMS_SearchRadius_Units = "m"
         dataset.URI_Matchup = "https://doms.jpl.nasa.gov/domsresults?id=" + executionId + "&output=NETCDF"
-        dataset.DOMS_ParameterPrimary = params["parameter"] if "parameter" in params else ""
-        dataset.DOMS_platforms = params["platforms"]
-        dataset.DOMS_primary = params["primary"]
-        dataset.DOMS_time_to_complete = details["timeToComplete"]
-        dataset.DOMS_time_to_complete_units = "seconds"
+        dataset.CDMS_ParameterPrimary = params["parameter"] if "parameter" in params else ""
+        dataset.CDMS_platforms = params["platforms"]
+        dataset.CDMS_primary = params["primary"]
+        dataset.CDMS_time_to_complete = details["timeToComplete"]
+        dataset.CDMS_time_to_complete_units = "seconds"
 
         insituDatasets = params["matchup"]
         insituLinks = set()
         for insitu in insituDatasets:
             insituLinks.add(config.METADATA_LINKS[insitu])
-        dataset.DOMS_DatasetMetadata = ', '.join(insituLinks)
+        dataset.CDMS_DatasetMetadata = ', '.join(insituLinks)
 
         platforms = set()
         for primaryValue in results:
@@ -339,15 +339,15 @@ class DomsNetCDFFormatter:
     @staticmethod
     def __addNetCDFConstants(dataset):
         dataset.product_version = "1.0"
-        dataset.Conventions = "CF-1.6, ACDD-1.3"
-        dataset.title = "DOMS satellite-insitu machup output file"
-        dataset.history = "Processing_Version = V1.0, Software_Name = DOMS, Software_Version = 1.03"
+        dataset.Conventions = "CF-1.8, ACDD-1.3"
+        dataset.title = "CDMS satellite-insitu machup output file"
+        dataset.history = "Processing_Version = V1.0, Software_Name = CDMS, Software_Version = 1.03"
         dataset.institution = "JPL, FSU, NCAR, Saildrone"
         dataset.source = "doms.jpl.nasa.gov"
         dataset.standard_name_vocabulary = "CF Standard Name Table v27", "BODC controlled vocabulary"
         dataset.cdm_data_type = "Point/Profile, Swath/Grid"
         dataset.processing_level = "4"
-        dataset.project = "Distributed Oceanographic Matchup System (DOMS)"
+        dataset.project = "Cloud-Based Data Matchup Service (CDMS)"
         dataset.keywords_vocabulary = "NASA Global Change Master Directory (GCMD) Science Keywords"
         dataset.keywords = "SATELLITES, OCEAN PLATFORMS, SHIPS, BUOYS, MOORINGS, AUVS, ROV, NASA/JPL/PODAAC, " \
                            "FSU/COAPS, UCAR/NCAR, SALINITY, SEA SURFACE TEMPERATURE, SURFACE WINDS"
