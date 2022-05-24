@@ -88,6 +88,12 @@ function DatasetPopulatePlugin(system) {
         datasets.sort()
 
         props.schema = props.schema.set('enum', datasets)
+
+        if (!(datasets.includes(props.value))) {
+          props.value = ""
+          props.onChange("")
+        }
+
         return system.React.createElement(Original, props)
       }
     },
