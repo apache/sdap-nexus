@@ -390,7 +390,7 @@ class DomsNetCDFFormatter:
 
 
 class DomsNetCDFValueWriter:
-    def __init__(self, group, matchup_parameter):  # TODO how do we want this matchup param to be used?
+    def __init__(self, group, matchup_parameter):
         group.createDimension("dim", size=None)
         self.group = group
 
@@ -456,8 +456,6 @@ class DomsNetCDFValueWriter:
             depthVar = self.group.createVariable('depth', 'f4', ('dim',), fill_value=-32767.0)
             self.__enrichDepth(depthVar, self.__calcMin(self.depth), max(self.depth))
             depthVar[:] = self.depth
-
-        print(self.data_map)
 
         for variable_name, data in self.data_map.items():
             # Create a variable for each data point
