@@ -17,6 +17,10 @@ spec:
     - --cassandra-password={{ include "nexus.credentials.cassandra.password" . }}
     - --solr-host={{ include "nexus.urls.solr" . }}
   sparkVersion: "3.1.1"
+  volumes:
+    - name: collections-config-volume
+      configMap:
+        name: { { include "nexus.collectionsConfig.configmapName" . } }
   restartPolicy:
     type: OnFailure
     onFailureRetries: 10
@@ -24,10 +28,13 @@ spec:
     onSubmissionFailureRetries: 10
     onSubmissionFailureRetryInterval: 10
   driver:
+    volumeMounts:
+      - name: collections-config-volume
+          mountPath: { { include "nexus.collectionsConfig.mountPath" . } }
 {{ .Values.webapp.distributed.driver | toYaml | indent 4 }}
     labels:
       version: 3.1.1
-    serviceAccount: spark-serviceaccount
+  serviceAccount: spark-serviceaccount
   executor:
 {{ .Values.webapp.distributed.executor| toYaml | indent 4 }}
     labels:
