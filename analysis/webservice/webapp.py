@@ -20,6 +20,7 @@ import sys
 import os
 from pathlib import Path
 from functools import partial
+import yaml
 
 import pkg_resources
 import tornado.web
@@ -29,6 +30,8 @@ import webservice.algorithms_spark.NexusCalcSparkHandler
 from nexustiles.nexustiles import NexusTileService
 from webservice import NexusHandler
 from webservice.nexus_tornado.request.handlers import NexusRequestHandler
+from webservice.redirect import RedirectHandler
+from webservice.redirect import RemoteCollectionMatcher
 
 
 def inject_args_in_config(args, config):
@@ -76,6 +79,7 @@ if __name__ == "__main__":
     define('cassandra_host', help='cassandra host')
     define('cassandra_username', help='cassandra username')
     define('cassandra_password', help='cassandra password')
+    define('collections_path', help='collection config path')
 
     parse_command_line()
     algorithm_config = inject_args_in_config(options, algorithm_config)
@@ -159,7 +163,20 @@ if __name__ == "__main__":
         default_host=options.address,
         debug=options.debug
     )
-    app.listen(options.port)
 
+    remote_collection_matcher = RemoteCollectionMatcher(options.collections_path)
+    redirect_handler = (r'/(.*)', RedirectHandler(), remote_collection_matcher.get_redirected_collections())
+    redirect_app = tornado.web.Application(
+        [redirect_handler],
+        default_host=options.address,
+        debug=options.debug)
+
+    router = RuleRouter([
+        Rule(remote_collection_matcher, redirect_app),
+        Rule(AnyMatches(), app)
+    ])
+
+    server = HTTPServer(router)
+    server.listen(options.port)
     log.info("Starting HTTP listener...")
     tornado.ioloop.IOLoop.current().start()
