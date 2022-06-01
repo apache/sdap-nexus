@@ -1,20 +1,19 @@
 import datetime
 import uuid
 import csv
-from webservice.algorithms.doms.BaseDomsHandler import DomsCSVFormatter
+import pytest
+from netCDF4 import Dataset
+import io
+from webservice.algorithms.doms.BaseDomsHandler import DomsCSVFormatter, DomsNetCDFFormatter
 
 
-def test_csv():
-    """
-    Test that CSV is constructed properly given result, params, and
-    details.
-    """
-    test_execution_id = str(uuid.uuid4())
+@pytest.fixture()
+def test_input():
     results = [
         {
             "id": "9c08c026-eff7-30a7-ab1e-413a64f507ff[[0 0 3]]",
-            "x": 173.375,
-            "y": -29.875,
+            "lon": 173.375,
+            "lat": -29.875,
             "source": "MUR25-JPL-L4-GLOB-v04.2",
             "device": "radiometers",
             "platform": "orbiting satellite",
@@ -25,8 +24,8 @@ def test_csv():
             "matches": [
                 {
                     "id": "PCEWYL",
-                    "x": 173.38,
-                    "y": -29.88,
+                    "lon": 173.38,
+                    "lat": -29.88,
                     "source": "icoads",
                     "device": None,
                     "platform": "drifting surface float",
@@ -37,8 +36,8 @@ def test_csv():
         },
         {
             "id": "8ff1b246-16de-34e2-87bb-600c4107a7f8[[ 0  8 15]]",
-            "x": 161.375,
-            "y": -27.875,
+            "lon": 161.375,
+            "lat": -27.875,
             "source": "MUR25-JPL-L4-GLOB-v04.2",
             "device": "radiometers",
             "platform": "orbiting satellite",
@@ -49,8 +48,8 @@ def test_csv():
             "matches": [
                 {
                     "id": "PCY3CI",
-                    "x": 161.38,
-                    "y": -27.88,
+                    "lon": 161.38,
+                    "lat": -27.88,
                     "source": "icoads",
                     "device": None,
                     "platform": "drifting surface float",
@@ -80,6 +79,18 @@ def test_csv():
         'numInSituChecked': 0,
         'timeToComplete': 26
     }
+
+    yield results, params, details
+
+
+def test_csv(test_input):
+    """
+    Test that CSV is constructed properly given result, params, and
+    details.
+    """
+    test_execution_id = str(uuid.uuid4())
+
+    results, params, details = test_input
 
     csv_formatter = DomsCSVFormatter()
     csv_result = csv_formatter.create(
@@ -111,3 +122,32 @@ def test_csv():
 
         if 'id' == row[0]:
             header = row
+
+
+def test_netcdf(test_input):
+    """
+    Test that the /domsresults endpoint results in a properly
+    structured NetCDF file.
+    """
+    test_execution_id = str(uuid.uuid4())
+
+    results, params, details = test_input
+
+    nc_formatter = DomsNetCDFFormatter()
+    nc_result = nc_formatter.create(
+        executionId=test_execution_id,
+        results=results,
+        params=params,
+        details=details
+    )
+
+    ds = Dataset('test', memory=nc_result)
+
+    assert 'PrimaryData' in ds.groups
+    assert 'SecondaryData' in ds.groups
+
+    assert 'sst_anomaly' in ds.groups['PrimaryData'].variables
+    assert 'analysis_error' in ds.groups['PrimaryData'].variables
+    assert 'analysed_sst' in ds.groups['PrimaryData'].variables
+
+    assert 'sea_water_temperature' in ds.groups['SecondaryData'].variables
