@@ -14,7 +14,7 @@ tags:
   - name: Subsetting
     description: Data Subsetting API
 paths:
-  /match_spark:
+  /match_spark_doms:
     get:
       summary: Execute matchup request
       operationId: matchup
@@ -127,6 +127,165 @@ paths:
           schema:
             type: string
             enum: ['sst', 'sss', 'wind']
+            default: sst
+          example: sst
+        - in: query
+          name: matchOnce
+          description: |
+            True/False flag used to determine if more than one match
+            per primary point is returned. If true, only the nearest
+            point will be returned for each primary point. If false,
+            all points within the tolerances will be returned for each
+            primary point.
+          required: false
+          schema:
+            type: boolean
+            default: false
+          example: false
+        - in: query
+          name: resultSizeLimit
+          description: |
+            Optional integer value that limits the number of results
+            returned from the matchup. If the number of primary matches
+            is greater than this limit, the service will respond with
+            (HTTP 202 Accepted) and an empty response body. A value of
+            0 means return all results.
+          required: false
+          schema:
+            type: integer
+            default: 500
+          example: 500
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MatchupResponse'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /match_spark:
+    get:
+      summary: Execute matchup request
+      operationId: matchup
+      tags:
+        - Matchup
+      parameters:
+        - in: query
+          name: primary
+          description: |
+            The primary dataset used to find matches for. One of the
+            satellite "shortName" as supplied by /domslist endpoint.
+          required: true
+          schema:
+            type: string
+            x-dspopulate:
+              - satellite
+          example: avhrr-l4-glob-v2-daily-ncei-ghrsst-sstblend-avhrr-oi-glob-v020-fv020
+        - in: query
+          name: secondary
+          description: |
+            The dataset(s) being searched for measurements that match
+            the measurements in primary. One or more (comma-separated)
+            of the insitu or satellite "name" as supplied by
+            https://doms.jpl.nasa.gov/domslist
+          required: true
+          schema:
+            type: string
+            x-dspopulate:
+              - satellite
+              - insitu
+          example: icoads
+        - in: query
+          name: startTime
+          description: |
+            Starting time in format YYYY-MM-DDTHH:mm:ssZ or seconds
+            since epoch
+          required: true
+          schema:
+            type: string
+            format: date-time
+          example: '2012-09-25T00:00:00Z'
+        - in: query
+          name: endTime
+          description: |
+            Ending time in format YYYY-MM-DDTHH:mm:ssZ or seconds
+            since epoch
+          required: true
+          schema:
+            type: string
+            format: date-time
+          example: '2012-09-30T23:59:59Z'
+        - in: query
+          name: b
+          description: |
+            Minimum (Western) Longitude, Minimum (Southern) Latitude,
+            Maximum (Eastern) Longitude, Maximum (Northern) Latitude
+          required: true
+          schema:
+            type: string
+          example: -45,15,-30,30
+        - in: query
+          name: platforms
+          description: Platforms to include for matchup consideration
+          required: true
+          schema:
+            type: string
+          example: 1,2,3,4,5,6,7,8,9
+        - in: query
+          name: depthMin
+          description: |
+            Minimum depth of measurements allowed to be considered for
+            matchup
+          required: false
+          schema:
+            type: integer
+          example: 0
+        - in: query
+          name: depthMax
+          description: |
+            Maximum depth of measurements allowed to be considered for
+            matchup
+          required: false
+          schema:
+            type: integer
+          example: 5
+        - in: query
+          name: tt
+          description: |
+            Tolerance in time (seconds) when comparing two measurements.
+          required: false
+          schema:
+            type: integer
+            default: 86400
+          example: 86400
+        - in: query
+          name: rt
+          description: |
+            Tolerance in radius (meters) when comparing two
+            measurements.
+          required: false
+          schema:
+            type: number
+            default: 1000.0
+          example: 1000.0
+        - in: query
+          name: parameter
+          description: |
+            The parameter of interest used for the match up.
+          required: false
+          schema:
+            type: string
             default: sst
           example: sst
         - in: query

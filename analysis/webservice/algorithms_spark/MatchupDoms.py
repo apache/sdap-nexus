@@ -52,9 +52,9 @@ def iso_time_to_epoch(str_time):
 
 
 @nexus_handler
-class Matchup(NexusCalcSparkHandler):
-    name = "Matchup"
-    path = "/match_spark"
+class MatchupDoms(NexusCalcSparkHandler):
+    name = "MatchupDoms"
+    path = "/match_spark_doms"
     description = "Match measurements between two or more datasets"
 
     params = {
@@ -190,6 +190,12 @@ class Matchup(NexusCalcSparkHandler):
         platforms = request.get_argument('platforms', None)
         if platforms is None:
             raise NexusProcessingException(reason="'platforms' argument is required", code=400)
+        try:
+            p_validation = platforms.split(',')
+            p_validation = [int(p) for p in p_validation]
+            del p_validation
+        except:
+            raise NexusProcessingException(reason="platforms must be a comma-delimited list of integers", code=400)
 
         match_once = request.get_boolean_arg("matchOnce", default=False)
 
@@ -266,7 +272,7 @@ class Matchup(NexusCalcSparkHandler):
             "numGriddedMatched": total_keys
         }
 
-        matches = Matchup.convert_to_matches(spark_result)
+        matches = MatchupDoms.convert_to_matches(spark_result)
 
         def do_result_insert():
             with ResultsStorage(self.config) as storage:
@@ -318,7 +324,6 @@ class DataPoint:
     """
     Represents a single point of data. This is used to construct the
     output of the matchup algorithm.
-
     :attribute variable_name: The name of the NetCDF variable.
     :attribute cf_variable_name: The CF standard_name of the
     NetCDF variable. This will be None if the standard_name does not
@@ -358,7 +363,6 @@ class DomsPoint(object):
         the correct device is. This method will only be used for
         satellite measurements, so the only options are 'scatterometers'
         or 'radiometers'
-
         :param variables: List of variable names
         :return: device id integer
         """
@@ -425,7 +429,14 @@ class DomsPoint(object):
     @staticmethod
     def from_edge_point(edge_point):
         point = DomsPoint()
-        x, y = edge_point['longitude'], edge_point['latitude']
+
+        try:
+            x, y = wkt.loads(edge_point['point']).coords[0]
+        except WKTReadingError:
+            try:
+                x, y = Point(*[float(c) for c in edge_point['point'].split(' ')]).coords[0]
+            except ValueError:
+                y, x = Point(*[float(c) for c in edge_point['point'].split(',')]).coords[0]
 
         point.longitude = x
         point.latitude = y
@@ -437,59 +448,15 @@ class DomsPoint(object):
         point.device = edge_point.get('device')
         point.file_url = edge_point.get('fileurl')
 
-        if 'code' in point.platform:
-            point.platform = edge_point.get('platform')['code']
-
         data_fields = [
-            'air_pressure',
-            'air_pressure_quality',
-            'air_temperature',
-            'air_temperature_quality',
-            'dew_point_temperature',
-            'dew_point_temperature_quality',
-            'downwelling_longwave_flux_in_air',
-            'downwelling_longwave_flux_in_air_quality',
-            'downwelling_longwave_radiance_in_air',
-            'downwelling_longwave_radiance_in_air_quality',
-            'downwelling_shortwave_flux_in_air',
-            'downwelling_shortwave_flux_in_air_quality',
-            'mass_concentration_of_chlorophyll_in_sea_water',
-            'mass_concentration_of_chlorophyll_in_sea_water_quality',
-            'rainfall_rate',
-            'rainfall_rate_quality',
-            'relative_humidity',
-            'relative_humidity_quality',
-            'sea_surface_salinity',
-            'sea_surface_salinity_quality',
-            'sea_surface_skin_temperature',
-            'sea_surface_skin_temperature_quality',
-            'sea_surface_subskin_temperature',
-            'sea_surface_subskin_temperature_quality',
-            'sea_surface_temperature',
-            'sea_surface_temperature_quality',
-            'sea_water_density',
-            'sea_water_density_quality',
-            'sea_water_electrical_conductivity',
-            'sea_water_electrical_conductivity_quality',
-            'sea_water_practical_salinity',
-            'sea_water_practical_salinity_quality',
-            'sea_water_salinity',
-            'sea_water_salinity_quality',
-            'sea_water_temperature',
-            'sea_water_temperature_quality',
-            'surface_downwelling_photosynthetic_photon_flux_in_air',
-            'surface_downwelling_photosynthetic_photon_flux_in_air_quality',
-            'wet_bulb_temperature',
-            'wet_bulb_temperature_quality',
-            'wind_speed',
-            'wind_speed_quality',
-            'wind_from_direction',
-            'wind_from_direction_quality',
-            'wind_to_direction',
-            'wind_to_direction_quality',
             'eastward_wind',
             'northward_wind',
-            'wind_component_quality'
+            'wind_direction',
+            'wind_speed',
+            'sea_water_temperature',
+            'sea_water_temperature_depth',
+            'sea_water_salinity',
+            'sea_water_salinity_depth',
         ]
         data = []
         # This is for in-situ secondary points
@@ -684,7 +651,7 @@ def match_satellite_to_insitu(tile_ids, primary_b, secondary_b, parameter_b, tt_
         str(datetime.now() - the_time), tile_ids[0], tile_ids[-1]))
 
     # Query edge for all points within the spatial-temporal extents of this partition
-    is_insitu_dataset = edge_endpoints.get_provider_name(secondary_b.value) is not None
+    is_insitu_dataset = edge_endpoints.getEndpointByName(secondary_b.value)
 
     if is_insitu_dataset:
         the_time = datetime.now()
@@ -696,7 +663,7 @@ def match_satellite_to_insitu(tile_ids, primary_b, secondary_b, parameter_b, tt_
                     [str(matchup_min_lon), str(matchup_min_lat), str(matchup_max_lon), str(matchup_max_lat)])
                 edge_response = query_edge(insitudata_name, parameter_b.value, matchup_min_time, matchup_max_time, bbox,
                                            platforms_b.value, depth_min_b.value, depth_max_b.value, session=edge_session)
-                if edge_response['total'] == 0:
+                if edge_response['totalResults'] == 0:
                     continue
                 r = edge_response['results']
                 for p in r:
@@ -710,7 +677,14 @@ def match_satellite_to_insitu(tile_ids, primary_b, secondary_b, parameter_b, tt_
         the_time = datetime.now()
         matchup_points = np.ndarray((len(edge_results), 2), dtype=np.float32)
         for n, edge_point in enumerate(edge_results):
-            x, y = edge_point['longitude'], edge_point['latitude']
+            try:
+                x, y = wkt.loads(edge_point['point']).coords[0]
+            except WKTReadingError:
+                try:
+                    x, y = Point(*[float(c) for c in edge_point['point'].split(' ')]).coords[0]
+                except ValueError:
+                    y, x = Point(*[float(c) for c in edge_point['point'].split(',')]).coords[0]
+
             matchup_points[n][0], matchup_points[n][1] = aeqd_proj(x, y)
     else:
         # Query nexus (cassandra? solr?) to find matching points.
@@ -767,7 +741,7 @@ def match_satellite_to_insitu(tile_ids, primary_b, secondary_b, parameter_b, tt_
 def match_tile_to_point_generator(tile_service, tile_id, m_tree, edge_results, search_domain_bounding_wkt,
                                   search_parameter, radius_tolerance, aeqd_proj):
     from nexustiles.model.nexusmodel import NexusPoint
-    from webservice.algorithms_spark.Matchup import DomsPoint  # Must import DomsPoint or Spark complains
+    from webservice.algorithms_spark.MatchupDoms import DomsPoint  # Must import DomsPoint or Spark complains
 
     # Load tile
     try:
@@ -832,44 +806,45 @@ def query_edge(dataset, variable, startTime, endTime, bbox, platform, depth_min,
         # Assume we were passed a properly formatted string
         pass
 
-    provider = edge_endpoints.get_provider_name(dataset)
+    try:
+        platform = platform.split(',')
+    except AttributeError:
+        # Assume we were passed a list
+        pass
 
-    params = {
-        "itemsPerPage": itemsPerPage,
-        "startTime": startTime,
-        "endTime": endTime,
-        "bbox": bbox,
-        "minDepth": depth_min,
-        "maxDepth": depth_max,
-        "provider": provider,
-        "project": dataset,
-        "platform": platform,
-    }
+    params = {"startTime": startTime,
+              "endTime": endTime,
+              "bbox": bbox,
+              "minDepth": depth_min,
+              "maxDepth": depth_max,
+              "platform": platform,
+              "itemsPerPage": itemsPerPage, "startIndex": startIndex, "stats": str(stats).lower()}
 
     if variable is not None:
         params["variable"] = variable
 
-    edge_response = {}
+    dataset_url = edge_endpoints.getEndpointByName(dataset)['url']
+    if session is not None:
+        edge_request = session.get(dataset_url, params=params)
+    else:
+        edge_request = requests.get(dataset_url, params=params)
+
+    edge_request.raise_for_status()
+    edge_response = json.loads(edge_request.text)
 
     # Get all edge results
-    next_page_url = edge_endpoints.getEndpoint()
-    while next_page_url is not None and next_page_url != 'NA':
-        logging.debug(f'Edge request {next_page_url}')
+    next_page_url = edge_response.get('next', None)
+    while next_page_url is not None:
         if session is not None:
-            edge_page_request = session.get(next_page_url, params=params)
+            edge_page_request = session.get(next_page_url)
         else:
-            edge_page_request = requests.get(next_page_url, params=params)
+            edge_page_request = requests.get(next_page_url)
 
         edge_page_request.raise_for_status()
-
         edge_page_response = json.loads(edge_page_request.text)
 
-        if not edge_response:
-            edge_response = edge_page_response
-        else:
-            edge_response['results'].extend(edge_page_response['results'])
+        edge_response['results'].extend(edge_page_response['results'])
 
         next_page_url = edge_page_response.get('next', None)
-        params = {}  # Remove params, they are already included in above URL
 
     return edge_response

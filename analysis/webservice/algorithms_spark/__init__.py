@@ -21,6 +21,7 @@ from . import CorrMapSpark
 from . import DailyDifferenceAverageSpark
 from . import HofMoellerSpark
 from . import Matchup
+from . import MatchupDoms
 from . import MaximaMinimaSpark
 from . import NexusCalcSparkHandler
 from . import TimeAvgMapSpark

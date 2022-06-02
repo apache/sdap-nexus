@@ -119,7 +119,9 @@ if __name__ == "__main__":
                         tile_service_factory=tile_service_factory,
                         sc=spark_context,
                         thread_pool=request_thread_pool)
-            if clazzWrapper == webservice.algorithms_spark.Matchup.Matchup or issubclass(clazzWrapper, webservice.algorithms.doms.BaseDomsHandler.BaseDomsQueryCalcHandler):
+            if clazzWrapper == webservice.algorithms_spark.Matchup.Matchup \
+                    or clazzWrapper == webservice.algorithms_spark.MatchupDoms.MatchupDoms \
+                    or issubclass(clazzWrapper, webservice.algorithms.doms.BaseDomsHandler.BaseDomsQueryCalcHandler):
                 args['config'] = algorithm_config
 
             handlers.append((clazzWrapper.path,
