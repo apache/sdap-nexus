@@ -1,0 +1,20 @@
+collections:
+  - id: gmu-pm25
+    path: https://aq-sdap.stcenter.net/nexus/
+    remote-id: pm25
+  - id: ECCO_v4_r4_EVELMASS_latlon
+    path: /data/datasets/ecco-distribution-archive/nexus-ingest/EVELMASSv4r4/*.nc
+    priority: 6
+    forward-processing-priority: 7
+    projection: Grid
+    dimensionNames:
+      latitude: latitude
+      longitude: longitude
+      depth: Z
+      time: time
+      variable: EVELMASS
+    slices:
+      time: 1
+      i: 30
+      j: 30
+      k: 1
