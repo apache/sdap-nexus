@@ -1,4 +1,4 @@
-apiVersion: extensions/v1beta1
+apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
   name: nexus-webapp
@@ -14,20 +14,29 @@ spec:
   rules:
   - http:
       paths:
-      {{ if .Values.rootWebpage.enabled }}
-      - path: /
-        backend:
-          serviceName: root-webpage
-          servicePort: http
-      {{ end }}
-      - path: /nexus/?(.*)
-        backend:
-          serviceName: nexus-webapp
-          servicePort: webapp
-      {{ if ne .Values.onEarthProxyIP "" }}
-      - path: /onearth/?(.*)
-        backend:
-          serviceName: onearth
-          servicePort: 80
-      {{ end }}
-      
+        {{ if .Values.rootWebpage.enabled }}
+        - path: /
+          pathType: ImplementationSpecific
+          backend:
+            service:
+              name: root-webpage
+              port:
+                number: 80
+        {{ end }}
+        - path: /nexus/?(.*)
+          pathType: ImplementationSpecific
+          backend:
+            service:
+              name: nexus-webapp
+              port:
+                number: 8083
+        {{ if ne .Values.onEarthProxyIP "" }}
+        - path: /onearth/?(.*)
+          pathType: ImplementationSpecific
+          backend:
+            service:
+              name: onearth
+              port:
+                number: 80
+        {{ end }}
+

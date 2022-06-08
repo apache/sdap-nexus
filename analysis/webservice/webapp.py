@@ -14,24 +14,18 @@
 # limitations under the License.
 
 import configparser
-import importlib
+
 import logging
 import sys
 import os
-from pathlib import Path
-from functools import partial
-import yaml
 
-import pkg_resources
 import tornado.web
+from tornado.routing import Rule, RuleRouter, AnyMatches
 from tornado.options import define, options, parse_command_line
 
-import webservice.algorithms_spark.NexusCalcSparkHandler
-from nexustiles.nexustiles import NexusTileService
-from webservice import NexusHandler
-from webservice.nexus_tornado.request.handlers import NexusRequestHandler
-from webservice.redirect import RedirectHandler
 from webservice.redirect import RemoteCollectionMatcher
+from webservice.nexus_tornado.app_builders import NexusAppBuilder
+from webservice.nexus_tornado.app_builders import RedirectAppBuilder
 
 
 def inject_args_in_config(args, config):
@@ -54,24 +48,25 @@ def inject_args_in_config(args, config):
     return config
 
 
-if __name__ == "__main__":
+def main():
 
     logging.basicConfig(
         level=logging.DEBUG,
         format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-        datefmt="%Y-%m-%dT%H:%M:%S", stream=sys.stdout)
+        datefmt="%Y-%m-%dT%H:%M:%S", stream=sys.stdout
+    )
 
     log = logging.getLogger(__name__)
 
-    webconfig = configparser.RawConfigParser()
-    webconfig.read_file(open(os.path.join(os.path.dirname(__file__), "config", "web.ini")))
+    web_config = configparser.RawConfigParser()
+    web_config.read_file(open(os.path.join(os.path.dirname(__file__), "config", "web.ini")))
 
     algorithm_config = configparser.RawConfigParser()
     algorithm_config.read_file(open(os.path.join(os.path.dirname(__file__), "config", "algorithms.ini")))
 
     define("debug", default=False, help="run in debug mode")
-    define("port", default=webconfig.get("global", "server.socket_port"), help="run on the given port", type=int)
-    define("address", default=webconfig.get("global", "server.socket_host"), help="Bind to the given address")
+    define("port", default=web_config.get("global", "server.socket_port"), help="run on the given port", type=int)
+    define("address", default=web_config.get("global", "server.socket_host"), help="Bind to the given address")
     define('solr_time_out', default=60,
            help='time out for solr requests in seconds, default (60) is ok for most deployments'
                 ' when solr performances are not good this might need to be increased')
@@ -84,97 +79,43 @@ if __name__ == "__main__":
     parse_command_line()
     algorithm_config = inject_args_in_config(options, algorithm_config)
 
-    moduleDirs = webconfig.get("modules", "module_dirs").split(",")
-    for moduleDir in moduleDirs:
-        log.info("Loading modules from %s" % moduleDir)
-        importlib.import_module(moduleDir)
+    remote_collection_matcher = RemoteCollectionMatcher(options.collections_path)
 
-    staticDir = webconfig.get("static", "static_dir")
-    staticEnabled = webconfig.get("static", "static_enabled") == "true"
+    # build nexus app
+    nexus_app_builder = NexusAppBuilder().set_modules(
+        web_config.get("modules", "module_dirs").split(","),
+        algorithm_config,
+        remote_collection_matcher.get_remote_collections()
+    )
+
+    if web_config.get("static", "static_enabled") == "true":
+        nexus_app_builder.enable_static(
+            web_config.get("static", "static_dir")
+        )
+    else:
+        log.info("Static resources disabled")
+
+    local_sdap_app = nexus_app_builder.build(host=options.address, debug=options.debug)
+
+    # build redirect app
+    remote_sdap_app = RedirectAppBuilder(remote_collection_matcher).build(
+        host=options.address,
+        debug=options.debug)
+
+    router = RuleRouter([
+        Rule(remote_collection_matcher, remote_sdap_app),
+        Rule(AnyMatches(), local_sdap_app)
+        ]
+    )
 
     log.info("Initializing on host address '%s'" % options.address)
     log.info("Initializing on port '%s'" % options.port)
     log.info("Starting web server in debug mode: %s" % options.debug)
-    if staticEnabled:
-        log.info("Using static root path '%s'" % staticDir)
-    else:
-        log.info("Static resources disabled")
-
-    handlers = []
-
-    log.info("Running Nexus Initializers")
-    NexusHandler.executeInitializers(algorithm_config)
-
-    max_request_threads = webconfig.getint("global", "server.max_simultaneous_requests")
-    log.info("Initializing request ThreadPool to %s" % max_request_threads)
-    request_thread_pool = tornado.concurrent.futures.ThreadPoolExecutor(max_request_threads)
-
-    tile_service_factory = partial(NexusTileService, False, False, algorithm_config)
-    spark_context = None
-    for clazzWrapper in NexusHandler.AVAILABLE_HANDLERS:
-        if issubclass(clazzWrapper, webservice.algorithms_spark.NexusCalcSparkHandler.NexusCalcSparkHandler):
-            if spark_context is None:
-                from pyspark.sql import SparkSession
-
-                spark = SparkSession.builder.appName("nexus-analysis").getOrCreate()
-                spark_context = spark.sparkContext
-
-            args = dict(clazz=clazzWrapper,
-                        tile_service_factory=tile_service_factory,
-                        sc=spark_context,
-                        thread_pool=request_thread_pool)
-            if clazzWrapper == webservice.algorithms_spark.Matchup.Matchup or issubclass(clazzWrapper, webservice.algorithms.doms.BaseDomsHandler.BaseDomsQueryCalcHandler):
-                args['config'] = algorithm_config
-
-            handlers.append((clazzWrapper.path,
-                             NexusRequestHandler,
-                             args))
-        else:
-            args = dict(clazz=clazzWrapper,
-                        tile_service_factory=tile_service_factory,
-                        thread_pool=request_thread_pool)
-            if clazzWrapper == webservice.algorithms.doms.ResultsRetrieval.DomsResultsRetrievalHandler or clazzWrapper == webservice.algorithms.doms.ResultsPlotQuery.DomsResultsPlotHandler:
-                args['config'] = algorithm_config
-            handlers.append((clazzWrapper.path,
-                             NexusRequestHandler,
-                             args))
-
-    class VersionHandler(tornado.web.RequestHandler):
-        def get(self):
-            self.write(pkg_resources.get_distribution("nexusanalysis").version)
-
-    handlers.append((r"/version", VersionHandler))
-
-    handlers.append(
-        (r'/apidocs', tornado.web.RedirectHandler, {"url": "/apidocs/"}))
-
-    apidocs_path = Path(__file__).parent.joinpath('apidocs').resolve()
-    handlers.append(
-        (r'/apidocs/(.*)', tornado.web.StaticFileHandler, {'path': str(apidocs_path), "default_filename": "index.html"}))
-
-    if staticEnabled:
-        handlers.append(
-            (r'/(.*)', tornado.web.StaticFileHandler, {'path': staticDir, "default_filename": "index.html"}))
-
-    app = tornado.web.Application(
-        handlers,
-        default_host=options.address,
-        debug=options.debug
-    )
-
-    remote_collection_matcher = RemoteCollectionMatcher(options.collections_path)
-    redirect_handler = (r'/(.*)', RedirectHandler(), remote_collection_matcher.get_redirected_collections())
-    redirect_app = tornado.web.Application(
-        [redirect_handler],
-        default_host=options.address,
-        debug=options.debug)
-
-    router = RuleRouter([
-        Rule(remote_collection_matcher, redirect_app),
-        Rule(AnyMatches(), app)
-    ])
-
-    server = HTTPServer(router)
+    server = tornado.web.HTTPServer(router)
     server.listen(options.port)
     log.info("Starting HTTP listener...")
     tornado.ioloop.IOLoop.current().start()
+
+
+if __name__ == "__main__":
+    main()
