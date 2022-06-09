@@ -232,11 +232,11 @@ def test_calc(test_matchup_args):
         assert len(json_matchup_result['data'][1]['matches']) == 2
 
         for data in json_matchup_result['data']:
-            assert data['x'] == '-180'
-            assert data['y'] == '-90'
+            assert data['lon'] == '-180'
+            assert data['lat'] == '-90'
             for matches in data['matches']:
-                assert matches['x'] == '-180'
-                assert matches['y'] == '-90'
+                assert matches['lon'] == '-180'
+                assert matches['lat'] == '-90'
 
         assert json_matchup_result['data'][0]['primary'][0]['variable_value'] == 10.0
         assert json_matchup_result['data'][1]['primary'][0]['variable_value'] == 20.0
