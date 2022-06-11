@@ -15,17 +15,20 @@
 
 import logging
 import os
+import io
 import tempfile
 import zipfile
+from pytz import timezone
 from datetime import datetime
 
 import requests
 
 from . import BaseDomsHandler
 from webservice.NexusHandler import nexus_handler
-from webservice.webmodel import NexusProcessingException
+from webservice.webmodel import NexusProcessingException, NexusResults
 
 ISO_8601 = '%Y-%m-%dT%H:%M:%S%z'
+EPOCH = timezone('UTC').localize(datetime(1970, 1, 1))
 
 
 def is_blank(my_string):
@@ -121,14 +124,14 @@ class DomsResultsRetrievalHandler(BaseDomsHandler.BaseDomsQueryCalcHandler):
 
         try:
             start_time = request.get_start_datetime()
-            start_time = start_time.strftime("%Y-%m-%dT%H:%M:%SZ")
+            start_time = int((start_time - EPOCH).total_seconds())
         except:
             raise NexusProcessingException(
                 reason="'startTime' argument is required. Can be int value seconds from epoch or string format YYYY-MM-DDTHH:mm:ssZ",
                 code=400)
         try:
             end_time = request.get_end_datetime()
-            end_time = end_time.strftime("%Y-%m-%dT%H:%M:%SZ")
+            end_time = int((end_time - EPOCH).total_seconds())
         except:
             raise NexusProcessingException(
                 reason="'endTime' argument is required. Can be int value seconds from epoch or string format YYYY-MM-DDTHH:mm:ssZ",
@@ -167,6 +170,55 @@ class DomsResultsRetrievalHandler(BaseDomsHandler.BaseDomsQueryCalcHandler):
                bounding_polygon, depth_min, depth_max, platforms
 
     def calc(self, request, **args):
+        primary_ds_name, matchup_ds_names, parameter_s, start_time, end_time, \
+        bounding_polygon, depth_min, depth_max, platforms = self.parse_arguments(request)
+
+        min_lat = max_lat = min_lon = max_lon = None
+        if bounding_polygon:
+            min_lat = bounding_polygon.bounds[1]
+            max_lat = bounding_polygon.bounds[3]
+            min_lon = bounding_polygon.bounds[0]
+            max_lon = bounding_polygon.bounds[2]
+
+            tiles = self._get_tile_service().get_tiles_bounded_by_box(min_lat, max_lat, min_lon,
+                                                                      max_lon, primary_ds_name, start_time,
+                                                                      end_time)
+        else:
+            tiles = []  # todo
+            # tiles = self._get_tile_service().get_tiles_by_metadata(metadata_filter, ds, start_time,
+            #                                                        end_time)
+
+        data = []
+        for tile in tiles:
+            for nexus_point in tile.nexus_point_generator():
+                if tile.is_multi:
+                    data_points = {
+                        tile.variables[idx].standard_name: nexus_point.data_vals[idx]
+                        for idx in range(len(tile.variables))
+                    }
+                else:
+                    data_points = {tile.variables[0].standard_name: nexus_point.data_vals}
+                data.append({
+                    'latitude': nexus_point.latitude,
+                    'longitude': nexus_point.longitude,
+                    'time': nexus_point.time,
+                    'data': data_points
+                })
+        if len(tiles) > 0:
+            meta = [tile.get_summary() for tile in tiles]
+        else:
+            meta = None
+
+        result = SubsetResult(
+            results=data,
+            meta=meta
+        )
+
+        result.extendMeta(min_lat, max_lat, min_lon, max_lon, "", start_time, end_time)
+
+        return result
+
+    def calc2(self, request, **args):
 
         primary_ds_name, matchup_ds_names, parameter_s, start_time, end_time, \
         bounding_polygon, depth_min, depth_max, platforms = self.parse_arguments(request)
@@ -235,18 +287,50 @@ class DomsResultsRetrievalHandler(BaseDomsHandler.BaseDomsQueryCalcHandler):
         return SubsetResult(zip_path)
 
 
-class SubsetResult(object):
-    def __init__(self, zip_path):
-        self.zip_path = zip_path
-
+class SubsetResult(NexusResults):
     def toJson(self):
         raise NotImplementedError
 
-    def toZip(self):
-        with open(self.zip_path, 'rb') as zip_file:
-            zip_contents = zip_file.read()
+    def toCsv(self):
+        """
+        Convert results to CSV
+        """
+        rows = []
 
-        return zip_contents
+        headers = [
+            'longitude',
+            'latitude',
+            'time'
+        ]
+
+        results = self.results()
+
+        data_variables = set([keys for result in results for keys in result['data'].keys()])
+        headers.extend(data_variables)
+        for i, result in enumerate(results):
+            cols = []
+
+            cols.append(result['longitude'])
+            cols.append(result['latitude'])
+            cols.append(datetime.utcfromtimestamp(result['time']).strftime('%Y-%m-%dT%H:%M:%SZ'))
+
+            for var in data_variables:
+                cols.append(result['data'][var])
+            if i == 0:
+                rows.append(','.join(headers))
+            rows.append(','.join(map(str, cols)))
+
+        return "\r\n".join(rows)
+
+    def toZip(self):
+        csv_contents = self.toCsv()
+
+        buffer = io.BytesIO()
+        with zipfile.ZipFile(buffer, 'a', zipfile.ZIP_DEFLATED) as zip_file:
+            zip_file.writestr('result.csv', csv_contents)
+
+        buffer.seek(0)
+        return buffer.read()
 
     def cleanup(self):
         os.remove(self.zip_path)

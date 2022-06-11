@@ -126,22 +126,30 @@ class Tile(object):
         return summary
 
     def nexus_point_generator(self, include_nan=False):
+        indices = self.get_indices(include_nan)
+
         if include_nan:
-            for index in np.ndindex(self.data.shape):
+            for index in indices:
                 time = self.times[index[0]]
                 lat = self.latitudes[index[1]]
                 lon = self.longitudes[index[2]]
-                data_val = self.data[index]
-                point = NexusPoint(lat, lon, None, time, index, data_val)
+                if self.is_multi:
+                    data_vals = [data[index] for data in self.data]
+                else:
+                    data_vals = self.data[index]
+                point = NexusPoint(lat, lon, None, time, index, data_vals)
                 yield point
         else:
-            for index in np.transpose(np.ma.nonzero(self.data)):
+            for index in indices:
                 index = tuple(index)
                 time = self.times[index[0]]
                 lat = self.latitudes[index[1]]
                 lon = self.longitudes[index[2]]
-                data_val = self.data[index]
-                point = NexusPoint(lat, lon, None, time, index, data_val)
+                if self.is_multi:
+                    data_vals = [data[index] for data in self.data]
+                else:
+                    data_vals = self.data[index]
+                point = NexusPoint(lat, lon, None, time, index, data_vals)
                 yield point
 
     def get_indices(self, include_nan=False):

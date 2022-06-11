@@ -260,6 +260,7 @@ class NexusTileService(object):
     def get_tiles_bounded_by_box(self, min_lat, max_lat, min_lon, max_lon, ds=None, start_time=0, end_time=-1,
                                  **kwargs):
         tiles = self.find_tiles_in_box(min_lat, max_lat, min_lon, max_lon, ds, start_time, end_time, **kwargs)
+        tiles = tiles[:1] # TODO REMOVE ME!!!
         tiles = self.mask_tiles_to_bbox(min_lat, max_lat, min_lon, max_lon, tiles)
         if 0 <= start_time <= end_time:
             tiles = self.mask_tiles_to_time_range(start_time, end_time, tiles)
@@ -423,7 +424,16 @@ class NexusTileService(object):
                             | ma.getmaskarray(tile.latitudes)[np.newaxis, :, np.newaxis] \
                             | ma.getmaskarray(tile.longitudes)[np.newaxis, np.newaxis, :]
 
-                tile.data = ma.masked_where(data_mask, tile.data)
+                # If this is multi-var, need to mask each variable separately.
+                if tile.is_multi:
+                    # Combine space/time mask with existing mask on data
+                    data_mask = reduce(np.logical_or, [tile.data[0].mask, data_mask])
+
+                    num_vars = len(tile.data)
+                    multi_data_mask = np.repeat(data_mask[np.newaxis, ...], num_vars, axis=0)
+                    tile.data = ma.masked_where(multi_data_mask, tile.data)
+                else:
+                    tile.data = ma.masked_where(data_mask, tile.data)
 
             tiles[:] = [tile for tile in tiles if not tile.data.mask.all()]
 
