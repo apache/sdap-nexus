@@ -18,6 +18,11 @@
 import boto3
 import nexusproto.DataTile_pb2 as nexusproto
 
+import xarray as xr
+import fsspec, s3fs
+import numpy as np
+
+
 class ZarrProxy(object):
     def __init__(self, config):
         self.config = config
