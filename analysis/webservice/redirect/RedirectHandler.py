@@ -1,6 +1,8 @@
 import tornado
+import logging
 from webservice.webmodel.RequestParameters import RequestParameters
 
+logger = logging.getLogger(__name__)
 
 class RedirectHandler(tornado.web.RequestHandler):
 
@@ -23,7 +25,7 @@ class RedirectHandler(tornado.web.RequestHandler):
             dataset_param = f"ds={collection_id}"
             new_dataset_param = f"ds={collection['remote_id']}"
             new_full_url = new_full_url.replace(dataset_param, new_dataset_param)
-
+        logger.info("redirect request to ", new_full_url)
         self.redirect(
             new_full_url,
             permanent=True
