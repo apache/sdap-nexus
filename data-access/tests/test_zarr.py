@@ -15,18 +15,3 @@
 
 # IMPORTS HERE
 
-import boto3
-import nexusproto.DataTile_pb2 as nexusproto
-
-class ZarrProxy(object):
-    def __init__(self, config):
-        self.config = config
-        self.__s3_bucketname = config.get("s3", "bucket")
-        self.__s3_region = config.get("s3", "region")
-        self.__s3 = boto3.resource('s3')
-        self.__nexus_tile = None
-
-    def fetch_nexus_tiles(self, *tile_ids):
-        pass
-
-    #TODO: Determine how Zarr arrays/chunks will be addressed (Tues 6/14 mtg)
