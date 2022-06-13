@@ -29,6 +29,7 @@ from shapely.geometry import MultiPolygon, box
 from .dao import CassandraProxy
 from .dao import DynamoProxy
 from .dao import S3Proxy
+from .dao import ZarrProxy
 from .dao import SolrProxy
 from .dao import ElasticsearchProxy
 
@@ -97,6 +98,8 @@ class NexusTileService(object):
                 self._datastore = S3Proxy.S3Proxy(self._config)
             elif datastore == "dynamo":
                 self._datastore = DynamoProxy.DynamoProxy(self._config)
+            elif datastore == "zarrS3":
+                self._datastore = ZarrProxy.ZarrProxy(self._config)
             else:
                 raise ValueError("Error reading datastore from config file")
 
