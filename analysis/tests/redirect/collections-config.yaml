@@ -1,7 +1,7 @@
 collections:
   - id: gmu-pm25
     path: https://aq-sdap.stcenter.net/nexus/
-    remote-id: pm25
+    remote-id: PM25
   - id: ECCO_v4_r4_EVELMASS_latlon
     path: /data/datasets/ecco-distribution-archive/nexus-ingest/EVELMASSv4r4/*.nc
     priority: 6
