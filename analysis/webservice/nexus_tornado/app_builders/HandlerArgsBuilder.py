@@ -14,9 +14,11 @@ class HandlerArgsBuilder:
     def handler_needs_algorithm_config(class_wrapper):
         return (
                 class_wrapper == webservice.algorithms_spark.Matchup.Matchup
+                or class_wrapper == webservice.algorithms_spark.MatchupDoms.MatchupDoms
                 or issubclass(class_wrapper, webservice.algorithms.doms.BaseDomsHandler.BaseDomsQueryCalcHandler)
                 or class_wrapper == webservice.algorithms.doms.ResultsRetrieval.DomsResultsRetrievalHandler
                 or class_wrapper == webservice.algorithms.doms.ResultsPlotQuery.DomsResultsPlotHandler
+
         )
     @staticmethod
     def handler_needs_remote_collections(class_wrapper):
