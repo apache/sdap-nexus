@@ -18,8 +18,8 @@ class HandlerArgsBuilder:
                 or issubclass(class_wrapper, webservice.algorithms.doms.BaseDomsHandler.BaseDomsQueryCalcHandler)
                 or class_wrapper == webservice.algorithms.doms.ResultsRetrieval.DomsResultsRetrievalHandler
                 or class_wrapper == webservice.algorithms.doms.ResultsPlotQuery.DomsResultsPlotHandler
-
         )
+
     @staticmethod
     def handler_needs_remote_collections(class_wrapper):
         return class_wrapper == webservice.algorithms.DataSeriesList.D
