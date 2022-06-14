@@ -80,11 +80,11 @@ ingestion:
   ## ref: https://github.com/apache/incubator-sdap-ingester/tree/dev/collection_manager#the-collections-configuration-file
   ## Either localDir should be set, or the git options, but not both.
   collections:
-    createCrd: true
+    createCrd: false
 
     ## Name of a ConfigMap containing the Collections Config YAML.
     ## Leave this blank if Git is enabled below.
-    configMap:
+    configMap: collections-config
 
     ## Load the Collections Config file from a git repository.
     git:
@@ -121,7 +121,7 @@ solr:
   image:
     repository: nexusjpl/solr
     tag: 8.11.1
-  replicaCount: 3
+  replicaCount: 1
   authentication:
     enabled: false
   volumeClaimTemplates:

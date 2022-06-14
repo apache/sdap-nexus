@@ -2,8 +2,10 @@ import unittest
 import pkg_resources
 import configparser
 import sys
+import os
 import logging
 import mock
+
 from webservice.webapp import inject_args_in_config
 
 logging.basicConfig(
@@ -63,6 +65,18 @@ class MyTestCase(unittest.TestCase):
 
         # nothing should happend we just check that there is no section named after the option
         self.assertEqual(False, algorithm_config.has_section('port'))
+
+    @mock.patch('tornado.options')
+    @mock.patch('tornado.options._Option')
+    def test_sdap_redirection(self):
+        mock_option.name = 'collections_path'
+        mock_option.value.return_value = os.path.join(
+            os.path.dirname(__file__),
+            'collections_config.yaml'
+        )
+        mock_options._options = {'collections_path': mock_option}
+
+
 
 
 if __name__ == '__main__':
