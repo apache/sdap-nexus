@@ -15,3 +15,24 @@
 
 # IMPORTS HERE
 
+from nexustiles.dao.ZarrProxy import ZarrProxy
+from nexustiles.nexustiles import NexusTileService
+
+import configparser
+import io
+
+cfg = """
+[s3]
+bucket=s3://mur-sst/zarr
+region=us-west-2
+"""
+
+buf = io.StringIO(cfg)
+config = configparser.ConfigParser()
+config.read_file(buf)
+
+proxy = ZarrProxy(config)
+
+print(proxy.list())
+
+
