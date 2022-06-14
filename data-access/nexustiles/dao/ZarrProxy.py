@@ -22,7 +22,7 @@ from botocore import UNSIGNED
 from botocore.client import Config
 
 import xarray as xr
-import fsspec, s3fs
+import fsspec, s3fs, json
 import numpy as np
 
 class NexusDataTile(object):
