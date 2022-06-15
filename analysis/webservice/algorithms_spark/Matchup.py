@@ -854,13 +854,14 @@ def query_edge(dataset, variable, startTime, endTime, bbox, platform, depth_min,
     # Get all edge results
     next_page_url = edge_endpoints.getEndpoint()
     while next_page_url is not None and next_page_url != 'NA':
-        logging.debug(f'Edge request {next_page_url}')
+        the_time = datetime.now()
         if session is not None:
             edge_page_request = session.get(next_page_url, params=params)
         else:
             edge_page_request = requests.get(next_page_url, params=params)
 
         edge_page_request.raise_for_status()
+        logging.info("%s Time to query edge %s", datetime.now() - the_time, edge_page_request.url)
 
         edge_page_response = json.loads(edge_page_request.text)
 
