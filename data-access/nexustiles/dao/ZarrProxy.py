@@ -141,7 +141,7 @@ class ZarrProxy(object):
 
         res = []
 
-        zarr_config = json.loads(self.getZarrConfig(self.config.get("s3", "key") + "analysed_sst"))
+        zarr_config = self.getZarrConfig(self.config.get("s3", "key") + "analysed_sst")
 
         for tid in tile_ids:
             nexus_tile = NexusDataTile(zarr_data, tid, zarr_config)
