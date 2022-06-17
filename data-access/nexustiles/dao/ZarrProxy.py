@@ -13,8 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# IMPORTS HERE
-
 import boto3
 import nexusproto.DataTile_pb2 as nexusproto
 from nexusproto.serialization import to_shaped_array, from_shaped_array
@@ -58,8 +56,21 @@ class NexusDataTile(object):
         self.zarr_cfg = zarr_cfg
 
     def _get_time_index(self, time):
-        return 0 # pass
-        #TODO: Figure out how to get the index into the data array time dimension that is closest to the time encoded in tid
+        if not isinstance(time, np.datetime64):
+            time = np.datetime64(time)
+
+        min_delta = None
+        min_td = None
+
+        for i in range(0, len(self.__data.time) - 1):
+            t = np.array([self.__data.time.item(i)], dtype='datetime64[ns]')[0]
+            delta = abs(time - t)
+
+            if min_delta is None or delta < min_delta:
+                min_delta = delta
+                min_td = i
+
+        return min_td
 
     def _get_nexus_tile(self):
         if self.__nexus_tile is None:
@@ -67,11 +78,9 @@ class NexusDataTile(object):
 
             tile.tile_id = self.tile_id
 
-            #Assumption: Tile type is stored in metadata
-
             metadata = self.__data.attrs
 
-            tile_type = 'grid_tile' # metadata['tiletype']
+            tile_type = 'grid_tile'
 
             if tile_type == 'grid_tile':
                 tdata = nexusproto.GridTile()
@@ -91,10 +100,6 @@ class NexusDataTile(object):
                 tdata.meta_data = metadata
 
                 tile.grid_tile = tdata
-
-                # Add shaped arrays for lat/lon and data
-                #time & depth
-                #metadata???
             else:
                 raise NotImplementedError("Only supports grid_tile")
 
@@ -120,7 +125,6 @@ class NexusDataTile(object):
             grid_tile_data = grid_tile_data[np.newaxis, :]
 
         return latitude_data, longitude_data, np.array(grid_tile.time), grid_tile_data, grid_tile.meta_data, isMultiVar
-
 
 class ZarrProxy(object):
     def __init__(self, config):
