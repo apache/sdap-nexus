@@ -42,7 +42,7 @@ class NexusDataTile(object):
         if self.tile_id is None:
             self.tile_id = _tile_id
 
-        if not re.search("^MUR_[0-9-T]*_[0-9]*_[0-9]", self.tile_id):
+        if not re.search("^MUR_[0-9-T:.]*_[0-9]*_[0-9]", self.tile_id):
             raise ValueError("Bad tile id")
 
         c = re.split("_", self.tile_id)
