@@ -14,6 +14,7 @@
 # limitations under the License.
 
 import argparse
+import string
 from netCDF4 import Dataset, num2date
 import sys
 import datetime
@@ -21,7 +22,10 @@ import csv
 from collections import OrderedDict
 import logging
 
-LOGGER = logging.getLogger("doms_reader")
+#TODO: Get rid of numpy errors?
+#TODO: Update big SDAP README
+
+LOGGER =  logging.getLogger("doms_reader")
 
 def assemble_matches(filename):
     """
@@ -42,7 +46,7 @@ def assemble_matches(filename):
         matches[m][GROUP]['GROUPID']: GROUP dim dimension ID for the record
         matches[m][GROUP][VARIABLE]: variable value 
     """
-    
+   
     try:
         # Open the netCDF file
         with Dataset(filename, 'r') as doms_nc:
@@ -63,7 +67,7 @@ def assemble_matches(filename):
                     match_dict[group]['matchID'] = match
                     ID = doms_nc.variables['matchIDs'][match][group_num]
                     match_dict[group][group + 'ID'] = ID
-                    for var in list(doms_nc.groups[group].variables.keys()):
+                    for var in doms_nc.groups[group].variables.keys():
                         match_dict[group][var] = doms_nc.groups[group][var][ID]
                     
                     # Create a UTC datetime field from timestamp
@@ -94,8 +98,8 @@ def matches_to_csv(matches, csvfile):
     # Create a header for the CSV. Column names are GROUP_VARIABLE or
     # GROUP_GROUPID.
     header = []
-    for key, value in list(matches[0].items()):
-        for otherkey in list(value.keys()):
+    for key, value in matches[0].items():
+        for otherkey in value.keys():
             header.append(key + "_" + otherkey)
     
     try:
@@ -105,39 +109,141 @@ def matches_to_csv(matches, csvfile):
             csv_writer.writerow(header)
             for match in matches:
                 row = []
-                for group, data in list(match.items()):
-                    for value in list(data.values()):
+                for group, data in match.items():
+                    for value in data.values():
                         row.append(value)
                 csv_writer.writerow(row)
     except (OSError, IOError) as err:
         LOGGER.exception("Error writing CSV file " + csvfile)
         raise err
 
+def get_globals(filename):
+    """
+    Write the CDMS/DOMS  global attributes to a text file. Additionally,
+     within the file there will be a description of where all the different
+     outputs go and how to best utlize this program.
+    
+    Parameters
+    ----------      
+    filename : str
+        The name of the original '.nc' input file.
+    
+    """
+    x0 = "README / doms_reader.py Program Use and Description:\n"
+    x1 = "\nThe doms_reader.py program reads a DOMS netCDF (a NETCDF file with a matchIDs variable)\n"
+    x2 = "file into memory, assembles a list of matches of satellite and in situ data\n"
+    x3 = "(or a primary and secondary dataset), and optionally\n"
+    x4 = "output the matches to a CSV file. Each matched pair contains one satellite\n"
+    x5 = "data record and one in situ data record.\n"
+    x6 = "\nBelow, this file wil list the global attributes of the .nc (NETCDF) file.\n"
+    x7 = "If you wish to see a full dump of the data from the .nc file,\n"
+    x8 = "please utilize the ncdump command from NETCDF (or look at the CSV file).\n"
+    try:
+        with Dataset(filename, "r", format="NETCDF4") as ncFile:
+            txtName = filename.replace(".nc", ".txt")
+            with open(txtName, "w") as txt:
+                txt.write(x0 + x1 +x2 +x3 + x4 + x5 + x6 + x7 + x8)
+                txt.write("\nGlobal Attributes:")
+                for x in ncFile.ncattrs():
+                    txt.write(f'\t :{x} = "{ncFile.getncattr(x)}" ;\n')
+
+
+    except (OSError, IOError) as err:
+        LOGGER.exception("Error reading netCDF file " + filename)
+        print("Error reading file!")
+        raise err
+
+def create_logs(user_option, logName):
+    """
+    Write the CDMS/DOMS  log information to a file. Additionally, the user may
+    opt to print this information directly to stdout, or discard it entirely.
+    
+    Parameters
+    ----------      
+    user_option : str
+        The result of the arg.log 's interpretation of
+         what option the user selected.
+    logName : str
+        The name of the log file we wish to write to,
+        assuming the user did not use the -l option.
+    """
+    if user_option == 'N':
+        print("** Note: No log was created **")
+
+
+    elif user_option == '1':
+        #prints the log contents to stdout
+        logging.basicConfig(format='%(asctime)s %(levelname)-8s %(message)s',
+                        level=logging.INFO,
+                        datefmt='%Y-%m-%d %H:%M:%S',
+                        handlers=[
+                            logging.StreamHandler(sys.stdout)
+                            ])
+                
+    else:
+        #prints log to a .log file
+        logging.basicConfig(format='%(asctime)s %(levelname)-8s %(message)s',
+                        level=logging.INFO,
+                        datefmt='%Y-%m-%d %H:%M:%S',
+                        handlers=[
+                            logging.FileHandler(logName)
+                            ])
+        if user_option != 1 and user_option != 'Y':
+            print(f"** Bad usage of log option. Log will print to {logName} **")
+
+    
+
+
+
 if __name__ == '__main__':
     """
     Execution:
         python doms_reader.py filename
         OR
-        python3 doms_reader.py filename
-    """
-    logging.basicConfig(format='%(asctime)s %(levelname)-8s %(message)s',
-                    level=logging.INFO,
-                    datefmt='%Y-%m-%d %H:%M:%S')
+        python3 doms_reader.py filename 
+        OR
+        python3 doms_reader.py filename -c -g 
+        OR
+        python3 doms_reader.py filename --csv --meta
 
-    p = argparse.ArgumentParser()
+    Note (For Help Try):
+            python3 doms_reader.py -h
+            OR
+            python3 doms_reader.py --help
+
+    """
+   
+    u0 = '\n%(prog)s -h OR --help \n'
+    u1 = '%(prog)s -c -g\n%(prog)s --csv --meta\n'
+    u2 ='Use -l OR -l1 to modify destination of logs'
+    p = argparse.ArgumentParser(usage= u0 + u1 + u2)
+
+    #below block is to customize user options
     p.add_argument('filename', help='DOMS netCDF file to read')
+    p.add_argument('-c', '--csv', nargs='?', const= 'Y', default='N',
+     help='Use -c or --csv to retrieve CSV output')
+    p.add_argument('-g', '--meta', nargs='?', const='Y', default='N',
+     help='Use -g or --meta to retrieve global attributes / metadata')
+    p.add_argument('-l', '--log', nargs='?', const='N', default='Y',
+     help='Use -l or --log to AVOID creating log files, OR use -l1 to print to stdout/console') 
+
+    #arguments are processed by the next line
     args = p.parse_args()
 
+    logName = args.filename.replace(".nc", ".log")
+    create_logs(args.log, logName)
+    
     doms_matches = assemble_matches(args.filename)
 
-    matches_to_csv(doms_matches, 'doms_matches.csv')
-    
-    
-    
-    
-    
-    
-    
+    if args.csv == 'Y' :
+        matches_to_csv(doms_matches, args.filename.replace(".nc",".csv"))
+
+    if args.meta == 'Y' :
+        get_globals(args.filename)
+
+
+
+
     
 
     
