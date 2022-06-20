@@ -25,16 +25,16 @@ import logging
 #TODO: Get rid of numpy errors?
 #TODO: Update big SDAP README
 
-LOGGER =  logging.getLogger("doms_reader")
+LOGGER =  logging.getLogger("cdms_reader")
 
 def assemble_matches(filename):
     """
-    Read a DOMS netCDF file and return a list of matches.
+    Read a CDMS netCDF file and return a list of matches.
     
     Parameters
     ----------
     filename : str
-        The DOMS netCDF file name.
+        The CDMS netCDF file name.
     
     Returns
     -------
@@ -49,30 +49,30 @@ def assemble_matches(filename):
    
     try:
         # Open the netCDF file
-        with Dataset(filename, 'r') as doms_nc:
+        with Dataset(filename, 'r') as cdms_nc:
             # Check that the number of groups is consistent w/ the MatchedGroups
             # dimension
-            assert len(doms_nc.groups) == doms_nc.dimensions['MatchedGroups'].size,\
+            assert len(cdms_nc.groups) == cdms_nc.dimensions['MatchedGroups'].size,\
                 ("Number of groups isn't the same as MatchedGroups dimension.")
             
             matches = []
-            matched_records = doms_nc.dimensions['MatchedRecords'].size
+            matched_records = cdms_nc.dimensions['MatchedRecords'].size
             
             # Loop through the match IDs to assemble matches
             for match in range(0, matched_records):
                 match_dict = OrderedDict()
                 # Grab the data from each platform (group) in the match
-                for group_num, group in enumerate(doms_nc.groups):
+                for group_num, group in enumerate(cdms_nc.groups):
                     match_dict[group] = OrderedDict()
                     match_dict[group]['matchID'] = match
-                    ID = doms_nc.variables['matchIDs'][match][group_num]
+                    ID = cdms_nc.variables['matchIDs'][match][group_num]
                     match_dict[group][group + 'ID'] = ID
-                    for var in doms_nc.groups[group].variables.keys():
-                        match_dict[group][var] = doms_nc.groups[group][var][ID]
+                    for var in cdms_nc.groups[group].variables.keys():
+                        match_dict[group][var] = cdms_nc.groups[group][var][ID]
                     
                     # Create a UTC datetime field from timestamp
                     dt = num2date(match_dict[group]['time'],
-                                  doms_nc.groups[group]['time'].units)
+                                  cdms_nc.groups[group]['time'].units)
                     match_dict[group]['datetime'] = dt
                 LOGGER.info(match_dict)
                 matches.append(match_dict)
@@ -84,13 +84,13 @@ def assemble_matches(filename):
     
 def matches_to_csv(matches, csvfile):
     """
-    Write the DOMS matches to a CSV file. Include a header of column names
+    Write the CDMS matches to a CSV file. Include a header of column names
     which are based on the group and variable names from the netCDF file.
     
     Parameters
     ----------
     matches : list
-        The list of dictionaries containing the DOMS matches as returned from
+        The list of dictionaries containing the CDMS matches as returned from
         assemble_matches.      
     csvfile : str
         The name of the CSV output file.
@@ -119,7 +119,7 @@ def matches_to_csv(matches, csvfile):
 
 def get_globals(filename):
     """
-    Write the CDMS/DOMS  global attributes to a text file. Additionally,
+    Write the CDMS  global attributes to a text file. Additionally,
      within the file there will be a description of where all the different
      outputs go and how to best utlize this program.
     
@@ -129,8 +129,8 @@ def get_globals(filename):
         The name of the original '.nc' input file.
     
     """
-    x0 = "README / doms_reader.py Program Use and Description:\n"
-    x1 = "\nThe doms_reader.py program reads a DOMS netCDF (a NETCDF file with a matchIDs variable)\n"
+    x0 = "README / cdms_reader.py Program Use and Description:\n"
+    x1 = "\nThe cdms_reader.py program reads a CDMS netCDF (a NETCDF file with a matchIDs variable)\n"
     x2 = "file into memory, assembles a list of matches of satellite and in situ data\n"
     x3 = "(or a primary and secondary dataset), and optionally\n"
     x4 = "output the matches to a CSV file. Each matched pair contains one satellite\n"
@@ -155,7 +155,7 @@ def get_globals(filename):
 
 def create_logs(user_option, logName):
     """
-    Write the CDMS/DOMS  log information to a file. Additionally, the user may
+    Write the CDMS log information to a file. Additionally, the user may
     opt to print this information directly to stdout, or discard it entirely.
     
     Parameters
@@ -198,28 +198,28 @@ def create_logs(user_option, logName):
 if __name__ == '__main__':
     """
     Execution:
-        python doms_reader.py filename
+        python cdms_reader.py filename
         OR
-        python3 doms_reader.py filename 
+        python3 cdms_reader.py filename 
         OR
-        python3 doms_reader.py filename -c -g 
+        python3 cdms_reader.py filename -c -g 
         OR
-        python3 doms_reader.py filename --csv --meta
+        python3 cdms_reader.py filename --csv --meta
 
     Note (For Help Try):
-            python3 doms_reader.py -h
+            python3 cdms_reader.py -h
             OR
-            python3 doms_reader.py --help
+            python3 cdms_reader.py --help
 
     """
    
     u0 = '\n%(prog)s -h OR --help \n'
-    u1 = '%(prog)s -c -g\n%(prog)s --csv --meta\n'
+    u1 = '%(prog)s filename -c -g\n%(prog)s filename --csv --meta\n'
     u2 ='Use -l OR -l1 to modify destination of logs'
     p = argparse.ArgumentParser(usage= u0 + u1 + u2)
 
     #below block is to customize user options
-    p.add_argument('filename', help='DOMS netCDF file to read')
+    p.add_argument('filename', help='CDMS netCDF file to read')
     p.add_argument('-c', '--csv', nargs='?', const= 'Y', default='N',
      help='Use -c or --csv to retrieve CSV output')
     p.add_argument('-g', '--meta', nargs='?', const='Y', default='N',
@@ -233,10 +233,10 @@ if __name__ == '__main__':
     logName = args.filename.replace(".nc", ".log")
     create_logs(args.log, logName)
     
-    doms_matches = assemble_matches(args.filename)
+    cdms_matches = assemble_matches(args.filename)
 
     if args.csv == 'Y' :
-        matches_to_csv(doms_matches, args.filename.replace(".nc",".csv"))
+        matches_to_csv(cdms_matches, args.filename.replace(".nc",".csv"))
 
     if args.meta == 'Y' :
         get_globals(args.filename)

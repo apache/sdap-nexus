@@ -1,7 +1,7 @@
-# doms_reader.py
-The functions in doms_reader.py read a DOMS netCDF file into memory, assemble a list of matches of satellite and in situ data (or a primary and secondary data set), and optionally output the matches to a CSV file. Each matched pair contains one satellite data record and one in situ data record.
+# CDMS_reader.py
+The functions in cdms_reader.py read a CDMS netCDF file into memory, assemble a list of matches of satellite and in situ data (or a primary and secondary data set), and optionally output the matches to a CSV file. Each matched pair contains one satellite data record and one in situ data record.
 
-The DOMS netCDF files hold satellite data and in situ data in different groups (`SatelliteData` and `InsituData`). The `matchIDs` netCDF variable contains pairs of IDs (matches) which reference a satellite data record and an in situ data record in their respective groups. These records have a many-to-many relationship; one satellite record may match to many in situ records, and one in situ record may match to many satellite records. The `assemble_matches` function assembles the individual data records into pairs based on their `dim` group dimension IDs as paired in the `matchIDs` variable.
+The CDMS netCDF files hold satellite data and in situ data in different groups (`SatelliteData` and `InsituData`). The `matchIDs` netCDF variable contains pairs of IDs (matches) which reference a satellite data record and an in situ data record in their respective groups. These records have a many-to-many relationship; one satellite record may match to many in situ records, and one in situ record may match to many satellite records. The `assemble_matches` function assembles the individual data records into pairs based on their `dim` group dimension IDs as paired in the `matchIDs` variable.
 
 ## Requirements
 This tool was developed and tested with Python 3.9.13.
@@ -18,10 +18,10 @@ Imported packages:
 
 ## Functions
 ### Function: `assemble_matches(filename)`
-Read a DOMS netCDF file into memory and return a list of matches from the file.
+Read a CDMS netCDF file into memory and return a list of matches from the file.
 
 #### Parameters 
-- `filename` (str): the DOMS netCDF file name.
+- `filename` (str): the CDMS netCDF file name.
     
 #### Returns
 - `matches` (list): List of matches. 
@@ -44,14 +44,14 @@ matches[0]['InsituData']['InsituDataID']
 
         
 ### Function: `matches_to_csv(matches, csvfile)`
-Write the DOMS matches to a CSV file. Include a header of column names which are based on the group and variable names from the netCDF file.
+Write the CDMS matches to a CSV file. Include a header of column names which are based on the group and variable names from the netCDF file.
     
 #### Parameters:
-- `matches` (list): the list of dictionaries containing the DOMS matches as returned from the `assemble_matches` function.
+- `matches` (list): the list of dictionaries containing the CDMS matches as returned from the `assemble_matches` function.
 - `csvfile` (str): the name of the CSV output file.
 
 ### Function: `get_globals(filename)`
-Write the CDMS/DOMS  global attributes to a text file. Additionally,
+Write the CDMS global attributes to a text file. Additionally,
 within the file there will be a description of where all the different
 outputs go and how to best utlize this program.
 
@@ -59,7 +59,7 @@ outputs go and how to best utlize this program.
 - `filename` (str): the name of the original '.nc' input file
 
 ### Function: `create_logs(user_option, logName)`
-Write the CDMS/DOMS  log information to a file. Additionally, the user may
+Write the CDMS log information to a file. Additionally, the user may
 opt to print this information directly to stdout, or discard it entirely.
 
 #### Parameters
@@ -69,17 +69,17 @@ what option the user selected.
 assuming the user did not use the -l option.
 
 ## Usage
-For example, to read some DOMS netCDF file called `doms_file.nc`:
+For example, to read some CDMS netCDF file called `cdms_file.nc`:
 ### Command line
-The main function for `doms_reader.py` takes one `filename` parameter (`doms_file.nc` argument in this example) for the DOMS netCDF file to read and calls the `assemble_matches` function. If the -c parameter is utilized, the `matches_to_csv` function is called to write the matches to a CSV file `doms_file.csv`. If the -g parameter is utilized, the `get_globals` function is called to show them the files globals attributes as well as a short explanation of how the files can be best utlized. Logs of the program are kept automatically in `doms_file.log` but can be omitted or rerouted with the -l parameter.
+The main function for `cdms_reader.py` takes one `filename` parameter (`cdms_file.nc` argument in this example) for the CDMS netCDF file to read and calls the `assemble_matches` function. If the -c parameter is utilized, the `matches_to_csv` function is called to write the matches to a CSV file `cdms_file.csv`. If the -g parameter is utilized, the `get_globals` function is called to show them the files globals attributes as well as a short explanation of how the files can be best utlized. Logs of the program are kept automatically in `cdms_file.log` but can be omitted or rerouted with the -l parameter. P.S. when using the --csv, --log, or --meta options, these are the same three commands but --log cannot take any parameters like its' recommended syntax (-l) does.
 ```
-python doms_reader.py doms_file.nc -c -g
+python cdms_reader.py cdms_file.nc -c -g
 ```
+python3 cdms_reader.py cdms_file.nc -c -g
 ```
-python3 doms_reader.py doms_file.nc -c -g
-```
+python3 cdms_reader.py cdms_file.nc --csv --meta
 ### Importing `assemble_matches`
 ```python
-from doms_reader import assemble_matches
-matches = assemble_matches('doms_file.nc')
+from cdms_reader import assemble_matches
+matches = assemble_matches('cdms_file.nc')
 ```
