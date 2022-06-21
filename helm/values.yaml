@@ -1,5 +1,8 @@
 onEarthProxyIP: ""
 
+insituAPI:
+  enabled: true
+  
 rootWebpage:
   enabled: true
 
