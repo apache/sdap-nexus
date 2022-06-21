@@ -30,6 +30,13 @@ spec:
               name: nexus-webapp
               port:
                 number: 8083
+        - backend:
+            service:
+              name: parquet-t1-parquet-spark-helm
+              port:
+                number: 9801
+          path: /(insitu.*)
+          pathType: ImplementationSpecific
         {{ if ne .Values.onEarthProxyIP "" }}
         - path: /onearth/?(.*)
           pathType: ImplementationSpecific
