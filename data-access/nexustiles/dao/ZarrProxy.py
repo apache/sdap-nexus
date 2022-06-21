@@ -85,21 +85,22 @@ class NexusDataTile(object):
             if tile_type == 'grid_tile':
                 tdata = nexusproto.GridTile()
 
-                tdata.latitude = to_shaped_array(self.__data.lat)
-                tdata.longitude = to_shaped_array(self.__data.lon)
-                tdata.time = self.__data.time[self.chunk_coords['time']]
-
                 min_lat = self.chunk_coords['lat_chunk'] * self.zarr_cfg['chunks'][1]
                 max_lat = min_lat + self.zarr_cfg['chunks'][1] - 1
 
                 min_lon = self.chunk_coords['lon_chunk'] * self.zarr_cfg['chunks'][2]
                 max_lon = min_lon + self.zarr_cfg['chunks'][2] - 1
 
-                tdata.variable_data = to_shaped_array(self.__data.analysed_sst[self.chunk_coords['time'], min_lat:max_lat, min_lon:max_lon]) #POC for MUR data
+                tdata.latitude.CopyFrom(to_shaped_array(self.__data.lat[min_lat:max_lat]))
+                tdata.longitude.CopyFrom(to_shaped_array(self.__data.lon[min_lon:max_lon]))
+                tdata.time = self.__data.time.item(self.chunk_coords['time'])
 
-                tdata.meta_data = metadata
+                tdata.variable_data.CopyFrom(to_shaped_array(self.__data.analysed_sst[self.chunk_coords['time'], min_lat:max_lat, min_lon:max_lon])) #POC for MUR data
 
-                tile.grid_tile = tdata
+                # tdata.meta_data = metadata
+                #TODO: Properly handle metadata (ask!!!)
+
+                tile.grid_tile.CopyFrom(tdata)
             else:
                 raise NotImplementedError("Only supports grid_tile")
 
@@ -124,7 +125,9 @@ class NexusDataTile(object):
         if len(grid_tile_data.shape) == 2:
             grid_tile_data = grid_tile_data[np.newaxis, :]
 
-        return latitude_data, longitude_data, np.array(grid_tile.time), grid_tile_data, grid_tile.meta_data, isMultiVar
+        #return latitude_data, longitude_data, np.array(grid_tile.time), grid_tile_data, grid_tile.meta_data, isMultiVar
+        return latitude_data, longitude_data, np.array(grid_tile.time), grid_tile_data, self.__data.attrs, isMultiVar
+
 
 class ZarrProxy(object):
     def __init__(self, config):
@@ -147,11 +150,24 @@ class ZarrProxy(object):
 
         zarr_config = self.getZarrConfig(self.config.get("s3", "key") + "analysed_sst")
 
+        if len(tile_ids) == 1 and type(tile_ids[0] == type([])):
+            tile_ids = tile_ids [0]
+
         for tid in tile_ids:
             nexus_tile = NexusDataTile(zarr_data, tid, zarr_config)
             res.append(nexus_tile)
 
         return res
+
+    def list(self):
+        s3 = s3fs.S3FileSystem(anon=self.__s3_public)
+
+        return s3.ls(self.__s3_bucketname + '/' + self.config.get("s3", "key"))
+
+    def cat(self):
+        s3 = s3fs.S3FileSystem(anon=self.__s3_public)
+
+        return s3.cat(self.__s3_bucketname + '/' + self.config.get("s3", "key"))
 
     def getZarrConfig(self, array_key):
         s3 = None
