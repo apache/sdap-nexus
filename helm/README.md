@@ -321,6 +321,37 @@ collections:
       lon: 60
 ```
 
+In addition, renote collections, handled by an atlernate SDAP deployment, can be configured, as follow:
+
+```yaml
+
+  - id: gmu-pm25
+    path: https://aq-sdap.stcenter.net/nexus/
+    remote-id: PM25
+
+```
+
+This collections will be proposed in the /list end point, as follow:
+
+```json
+  ...
+, {
+    "shortName": "gmu-no2", 
+    "remoteUrl": "https://aq-sdap.stcenter.net/nexus/", 
+    "remoteShortName": "NO2"
+  }
+  ...
+```
+
+The collection can be requested on the main SDAP, with any client library supporting HTTP redirection. The most commonly library used as SDAP clients: python's `requests` or javascript's `XMLHTTPRequest` support the redirection by default.
+
+For example the remote collection can be requested with usual requests on the main SDAP server, for example: 
+
+https://digitaltwin.jpl.nasa.gov/nexus/timeSeriesSpark?ds=gmu-no2&minLon=-118.31&minLat=33.61&maxLon=-118.09&maxLat=33.87&startTime=2021-10-01T00:00:00Z&endTime=2021-12-31T00:00:00Z
+
+Seamlessly, transparently from the user point of view, the processing of the timeSeriesSpark or any other algorithm will be invoked on the alternate SDAP server (deployed on https://aq-sdap.stcenter.net/nexus/). The invocation of the alternate SDAP is done automatically by an HTTP redirection directive (status 302) sent to the client.  
+
+
 ### Ingesting from S3
 
 To ingest granules that are stored in an S3 bucket, you must provide the name of the S3 bucket to read from, as well as the S3 credentials as environment variables.
