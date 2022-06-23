@@ -22,7 +22,7 @@ NONE
 
 7 active developers have committed on the project during the reporting period (since November 2021).
 
-XX deployed servers
+<font color="red">XX deployed servers</font>
 
 
 ### How has the project developed since the last report?
@@ -57,8 +57,8 @@ Please feel free to add your own commentary.
 
 ### When were the last committers or PPMC members elected?
 
-
 TO BE COMPLETED
+
 
 ### Have your mentors been helpful and responsive?
 
@@ -70,6 +70,8 @@ We had difficulties to report regularly on our activity but we set an organizati
 
 
 ### Is the PPMC managing the podling's brand / trademarks?
+
+<fond color="red">K don't know what this is about</font>
 
 Are 3rd parties respecting and correctly using the podlings
 name and brand? If not what actions has the PPMC taken to
