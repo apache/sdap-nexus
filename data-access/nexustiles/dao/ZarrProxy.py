@@ -45,7 +45,7 @@ class NexusDataTile(object):
         if self.tile_id is None:
             self.tile_id = _tile_id
 
-        if not re.search("^MUR_[0-9-T:.]*_[0-9-T:.]*_[0-9.-]*_[0-9.-]*_[0-9.-]*_[0-9.-]*", self.tile_id):
+        if not re.search("^MUR_[0-9-T :.+]*_[0-9-T :.+]*_[0-9.-]*_[0-9.-]*_[0-9.-]*_[0-9.-]*", self.tile_id):
             raise ValueError("Bad tile id")
 
         self.__lat, self.__lon, self.__time, self.__vdata, self.__meta, self.__mv = self._get_data()
@@ -89,6 +89,8 @@ class ZarrProxy(object):
         self.__s3 = boto3.resource('s3')
         self.__nexus_tile = None
 
+        logger.info('Opening Zarr proxy')
+
         if self.__s3_public:
             store = f"https://{self.__s3_bucket_name}.s3.{self.__s3_region}.amazonaws.com/{self.config.get('s3', 'key')}"
         else:
@@ -99,6 +101,8 @@ class ZarrProxy(object):
         zarr_data = xr.open_zarr(store=store, consolidated=True, mask_and_scale=False)
         zarr_data.analysed_sst.attrs['_FillValue'] = -32768
         zarr_data = xr.decode_cf(zarr_data, mask_and_scale=True)
+
+        logger.info('Successfully opened Zarr proxy')
 
         self.__zarr_data = zarr_data
 
@@ -124,7 +128,16 @@ class ZarrProxy(object):
                 'max_lon': float(c[6])
             }
 
+            tz_regex = "\\+00:00$"
+
+            if re.search(tz_regex, parts['start_time']):
+                parts['start_time'] = re.split(tz_regex, parts['start_time'])[0]
+
+            if re.search(tz_regex, parts['end_time']):
+                parts['end_time'] = re.split(tz_regex, parts['end_time'])[0]
+
             logger.debug(f"getting {parts['id']}")
+
             times = slice(parts['start_time'], parts['end_time'])
             lats = slice(parts['min_lat'], parts['max_lat'])
             lons = slice(parts['min_lon'], parts['max_lon'])

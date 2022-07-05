@@ -217,12 +217,17 @@ class Matchup(NexusCalcSparkHandler):
 
         self.log.debug("Querying for tiles in search domain")
         # Get tile ids in box
-        tile_ids = [tile.tile_id for tile in
-                    self._get_tile_service().find_tiles_in_polygon(bounding_polygon, primary_ds_name,
-                                                             start_seconds_from_epoch, end_seconds_from_epoch,
-                                                             fetch_data=False, fl='id',
-                                                             sort=['tile_min_time_dt asc', 'tile_min_lon asc',
-                                                                   'tile_min_lat asc'], rows=5000)]
+        if not self._get_tile_service().supports_direct_bounds_to_tile():
+            tile_ids = [tile.tile_id for tile in
+                        self._get_tile_service().find_tiles_in_polygon(bounding_polygon, primary_ds_name,
+                                                                 start_seconds_from_epoch, end_seconds_from_epoch,
+                                                                 fetch_data=False, fl='id',
+                                                                 sort=['tile_min_time_dt asc', 'tile_min_lon asc',
+                                                                       'tile_min_lat asc'], rows=5000)]
+        else:
+            bb = bounding_polygon.bounds
+
+            tile_ids = [self._get_tile_service().bounds_to_direct_tile_id(bb[1], bb[0], bb[3], bb[2], start_time, end_time)]
 
         self.log.info('Found %s tile_ids', len(tile_ids))
         # Call spark_matchup
@@ -657,9 +662,28 @@ def match_satellite_to_insitu(tile_ids, primary_b, secondary_b, parameter_b, tt_
     tile_service = tile_service_factory()
 
     # Determine the spatial temporal extents of this partition of tiles
-    tiles_bbox = tile_service.get_bounding_box(tile_ids)
-    tiles_min_time = tile_service.get_min_time(tile_ids)
-    tiles_max_time = tile_service.get_max_time(tile_ids)
+    if not tile_service.supports_direct_bounds_to_tile():
+        tiles_bbox = tile_service.get_bounding_box(tile_ids)
+        tiles_min_time = tile_service.get_min_time(tile_ids)
+        tiles_max_time = tile_service.get_max_time(tile_ids)
+    else:
+        import re
+        from dateutil import parser
+
+        c = re.split("_", tile_ids[0])
+
+        parts = {
+            'start_time': c[1],
+            'end_time': c[2],
+            'min_lat': float(c[3]),
+            'max_lat': float(c[4]),
+            'min_lon': float(c[5]),
+            'max_lon': float(c[6])
+        }
+
+        tiles_bbox = box(parts['min_lon'], parts['min_lat'], parts['max_lon'], parts['max_lat'])
+        tiles_min_time = int((parser.parse(parts['start_time']) - EPOCH).total_seconds())
+        tiles_max_time = int((parser.parse(parts['end_time']) - EPOCH).total_seconds())
 
     # Increase spatial extents by the radius tolerance
     matchup_min_lon, matchup_min_lat = add_meters_to_lon_lat(tiles_bbox.bounds[0], tiles_bbox.bounds[1],
@@ -721,15 +745,24 @@ def match_satellite_to_insitu(tile_ids, primary_b, secondary_b, parameter_b, tt_
         polygon = Polygon(
             [(west, south), (east, south), (east, north), (west, north), (west, south)])
 
-        matchup_tiles = tile_service.find_tiles_in_polygon(
-            bounding_polygon=polygon,
-            ds=secondary_b.value,
-            start_time=matchup_min_time,
-            end_time=matchup_max_time,
-            fetch_data=True,
-            sort=['tile_min_time_dt asc', 'tile_min_lon asc', 'tile_min_lat asc'],
-            rows=5000
-        )
+        if not tile_service.supports_direct_bounds_to_tile():
+            matchup_tiles = tile_service.find_tiles_in_polygon(
+                bounding_polygon=polygon,
+                ds=secondary_b.value,
+                start_time=matchup_min_time,
+                end_time=matchup_max_time,
+                fetch_data=True,
+                sort=['tile_min_time_dt asc', 'tile_min_lon asc', 'tile_min_lat asc'],
+                rows=5000
+            )
+        else:
+            matchup_tiles = tile_service.get_nexus_data_for_bounds(matchup_min_lat, matchup_min_lon,
+                                                                   matchup_max_lat, matchup_max_lon,
+                                                                   matchup_min_time, matchup_max_time)
+
+            tile_ids = [tile_service.bounds_to_direct_tile_id(matchup_min_lat, matchup_min_lon,
+                                                                   matchup_max_lat, matchup_max_lon,
+                                                                   matchup_min_time, matchup_max_time)]
 
         # Convert Tile IDS to tiles and convert to UTM lat/lon projection.
         matchup_points = []
@@ -747,6 +780,9 @@ def match_satellite_to_insitu(tile_ids, primary_b, secondary_b, parameter_b, tt_
             edge_results.extend(tile_to_edge_points(matchup_tile))
 
         matchup_points = np.array(matchup_points)
+
+
+    print(tile_ids)
 
     print("%s Time to convert match points for partition %s to %s" % (
         str(datetime.now() - the_time), tile_ids[0], tile_ids[-1]))
@@ -768,12 +804,16 @@ def match_tile_to_point_generator(tile_service, tile_id, m_tree, edge_results, s
                                   search_parameter, radius_tolerance, aeqd_proj):
     from nexustiles.model.nexusmodel import NexusPoint
     from webservice.algorithms_spark.Matchup import DomsPoint  # Must import DomsPoint or Spark complains
+    from nexustiles.dao import ZarrProxy
 
     # Load tile
     try:
         the_time = datetime.now()
-        tile = tile_service.mask_tiles_to_polygon(wkt.loads(search_domain_bounding_wkt),
-                                                  tile_service.find_tile_by_id(tile_id))[0]
+        if not tile_service.supports_direct_bounds_to_tile():
+            tile = tile_service.mask_tiles_to_polygon(wkt.loads(search_domain_bounding_wkt),
+                                                      tile_service.find_tile_by_id(tile_id))[0]
+        else:
+            tile = tile_service.fetch_direct_by_id(tile_id)
         print("%s Time to load tile %s" % (str(datetime.now() - the_time), tile_id))
     except IndexError:
         # This should only happen if all measurements in a tile become masked after applying the bounding polygon
@@ -783,6 +823,8 @@ def match_tile_to_point_generator(tile_service, tile_id, m_tree, edge_results, s
     # Convert valid tile lat,lon tuples to UTM tuples
     the_time = datetime.now()
     # Get list of indices of valid values
+
+    #TODO: Look at handling this (AttributeError: 'list' object has no attribute 'get_indices')
     valid_indices = tile.get_indices()
     primary_points = np.array(
         [aeqd_proj(tile.longitudes[aslice[2]], tile.latitudes[aslice[1]]) for
