@@ -1,3 +1,18 @@
+# Licensed to the Apache Software Foundation (ASF) under one or more
+# contributor license agreements.  See the NOTICE file distributed with
+# this work for additional information regarding copyright ownership.
+# The ASF licenses this file to You under the Apache License, Version 2.0
+# (the "License"); you may not use this file except in compliance with
+# the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 import boto3
 
 import xarray as xr
@@ -20,9 +35,6 @@ logger.addHandler(h)
 class NexusDataTile(object):
     __data = None
     tile_id = None
-
-    tile_context= None
-    zarr_cfg = None
 
     def __init__(self, data, _tile_id):   #change to data (dataset subset w/ temporal range), tid, coords
         import re
@@ -98,7 +110,6 @@ class ZarrProxy(object):
             tile_ids = [str(tile.tile_id) for tile in tile_ids]
 
         res = []
-        tiles = []
 
         for tid in tile_ids:
             c = re.split("_", tid)
@@ -113,15 +124,12 @@ class ZarrProxy(object):
                 'max_lon': float(c[6])
             }
 
-            tiles.append(parts)
+            logger.debug(f"getting {parts['id']}")
+            times = slice(parts['start_time'], parts['end_time'])
+            lats = slice(parts['min_lat'], parts['max_lat'])
+            lons = slice(parts['min_lon'], parts['max_lon'])
 
-        for tile in tiles:
-            logger.debug(f"getting {tile['id']}")
-            times = slice(tile['start_time'], tile['end_time'])
-            lats = slice(tile['min_lat'], tile['max_lat'])
-            lons = slice(tile['min_lon'], tile['max_lon'])
-
-            nexus_tile = NexusDataTile(self.__zarr_data.sel(time=times, lat=lats, lon=lons), tile['id'])
+            nexus_tile = NexusDataTile(self.__zarr_data.sel(time=times, lat=lats, lon=lons), parts['id'])
             res.append(nexus_tile)
 
         return res
