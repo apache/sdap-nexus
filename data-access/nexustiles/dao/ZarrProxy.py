@@ -69,6 +69,14 @@ class NexusDataTile(object):
         tile.meta_data = self.__meta
         tile.tile_id = self.tile_id
 
+        tile.dataset = self.__meta['main']['id']
+        tile.dataset_id = self.__meta['main']['uuid']
+
+        try:
+            tile.granule = self.__data['main']['granules']
+        except:
+            pass
+
         variables = []
 
         for var in self.__data.data_vars:
