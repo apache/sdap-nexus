@@ -16,7 +16,7 @@ spec:
     - --cassandra-username={{ include "nexus.credentials.cassandra.username" . }}
     - --cassandra-password={{ include "nexus.credentials.cassandra.password" . }}
     - --solr-host={{ include "nexus.urls.solr" . }}
-    - --collections-path={{ include "nexus.collectionsConfig.mountPath" . }}/collections-config.yaml
+    - --collections-path={{ include "nexus.collectionsConfig.mountPath" . }}/collections.yml
   sparkVersion: "3.1.1"
   volumes:
     - name: collections-config-volume
@@ -35,7 +35,7 @@ spec:
 {{ .Values.webapp.distributed.driver | toYaml | indent 4 }}
     labels:
       version: 3.1.1
-  serviceAccount: spark-serviceaccount
+    serviceAccount: spark-serviceaccount
   executor:
 {{ .Values.webapp.distributed.executor| toYaml | indent 4 }}
     labels:
