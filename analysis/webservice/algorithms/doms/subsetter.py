@@ -37,9 +37,9 @@ def is_blank(my_string):
 
 @nexus_handler
 class DomsResultsRetrievalHandler(BaseDomsHandler.BaseDomsQueryCalcHandler):
-    name = "DOMS Subsetter"
-    path = "/domssubset"
-    description = "Subset DOMS sources given the search domain"
+    name = "CDMS Subsetter"
+    path = "/cdmssubset"
+    description = "Subset CDMS sources given the search domain"
 
     params = {
         "dataset": {
@@ -204,87 +204,20 @@ class DomsResultsRetrievalHandler(BaseDomsHandler.BaseDomsQueryCalcHandler):
                     'time': nexus_point.time,
                     'data': data_points
                 })
+        data_dict = {primary_ds_name: data}
         if len(tiles) > 0:
             meta = [tile.get_summary() for tile in tiles]
         else:
             meta = None
 
         result = SubsetResult(
-            results=data,
+            results=data_dict,
             meta=meta
         )
 
         result.extendMeta(min_lat, max_lat, min_lon, max_lon, "", start_time, end_time)
 
         return result
-
-    def calc2(self, request, **args):
-
-        primary_ds_name, matchup_ds_names, parameter_s, start_time, end_time, \
-        bounding_polygon, depth_min, depth_max, platforms = self.parse_arguments(request)
-
-        primary_url = "https://doms.jpl.nasa.gov/datainbounds"
-        primary_params = {
-            'ds': primary_ds_name,
-            'parameter': parameter_s,
-            'b': ','.join([str(bound) for bound in bounding_polygon.bounds]),
-            'startTime': start_time,
-            'endTime': end_time,
-            'output': "CSV"
-        }
-
-        matchup_url = "https://doms.jpl.nasa.gov/domsinsitusubset"
-        matchup_params = {
-            'source': None,
-            'parameter': parameter_s,
-            'startTime': start_time,
-            'endTime': end_time,
-            'b': ','.join([str(bound) for bound in bounding_polygon.bounds]),
-            'depthMin': depth_min,
-            'depthMax': depth_max,
-            'platforms': platforms,
-            'output': 'CSV'
-        }
-
-        primary_temp_file_path = None
-        matchup_downloads = None
-
-        with requests.session() as session:
-
-            if not is_blank(primary_ds_name):
-                # Download primary
-                primary_temp_file, primary_temp_file_path = tempfile.mkstemp(suffix='.csv')
-                download_file(primary_url, primary_temp_file_path, session, params=primary_params)
-
-            if matchup_ds_names is not None and len(matchup_ds_names) > 0:
-                # Download matchup
-                matchup_downloads = {}
-                for matchup_ds in matchup_ds_names:
-                    matchup_downloads[matchup_ds] = tempfile.mkstemp(suffix='.csv')
-                    matchup_params['source'] = matchup_ds
-                    download_file(matchup_url, matchup_downloads[matchup_ds][1], session, params=matchup_params)
-
-        # Zip downloads
-        date_range = "%s-%s" % (datetime.strptime(start_time, "%Y-%m-%dT%H:%M:%SZ").strftime("%Y%m%d"),
-                                datetime.strptime(end_time, "%Y-%m-%dT%H:%M:%SZ").strftime("%Y%m%d"))
-        bounds = '%.4fW_%.4fS_%.4fE_%.4fN' % bounding_polygon.bounds
-        zip_dir = tempfile.mkdtemp()
-        zip_path = '%s/subset.%s.%s.zip' % (zip_dir, date_range, bounds)
-        with zipfile.ZipFile(zip_path, 'w') as my_zip:
-            if primary_temp_file_path:
-                my_zip.write(primary_temp_file_path, arcname='%s.%s.%s.csv' % (primary_ds_name, date_range, bounds))
-            if matchup_downloads:
-                for matchup_ds, download in matchup_downloads.items():
-                    my_zip.write(download[1], arcname='%s.%s.%s.csv' % (matchup_ds, date_range, bounds))
-
-        # Clean up
-        if primary_temp_file_path:
-            os.remove(primary_temp_file_path)
-        if matchup_downloads:
-            for matchup_ds, download in matchup_downloads.items():
-                os.remove(download[1])
-
-        return SubsetResult(zip_path)
 
 
 class SubsetResult(NexusResults):
@@ -303,31 +236,35 @@ class SubsetResult(NexusResults):
             'time'
         ]
 
-        results = self.results()
+        dataset_results = self.results()
+        csv_results = {}
 
-        data_variables = set([keys for result in results for keys in result['data'].keys()])
-        headers.extend(data_variables)
-        for i, result in enumerate(results):
-            cols = []
+        for dataset_name, results in dataset_results.items():
+            data_variables = set([keys for result in results for keys in result['data'].keys()])
+            headers.extend(data_variables)
+            for i, result in enumerate(results):
+                cols = []
 
-            cols.append(result['longitude'])
-            cols.append(result['latitude'])
-            cols.append(datetime.utcfromtimestamp(result['time']).strftime('%Y-%m-%dT%H:%M:%SZ'))
+                cols.append(result['longitude'])
+                cols.append(result['latitude'])
+                cols.append(datetime.utcfromtimestamp(result['time']).strftime('%Y-%m-%dT%H:%M:%SZ'))
 
-            for var in data_variables:
-                cols.append(result['data'][var])
-            if i == 0:
-                rows.append(','.join(headers))
-            rows.append(','.join(map(str, cols)))
+                for var in data_variables:
+                    cols.append(result['data'][var])
+                if i == 0:
+                    rows.append(','.join(headers))
+                rows.append(','.join(map(str, cols)))
 
-        return "\r\n".join(rows)
+            csv_results[dataset_name] = '\r\n'.join(rows)
+        return csv_results
 
     def toZip(self):
-        csv_contents = self.toCsv()
+        csv_results = self.toCsv()
 
         buffer = io.BytesIO()
         with zipfile.ZipFile(buffer, 'a', zipfile.ZIP_DEFLATED) as zip_file:
-            zip_file.writestr('result.csv', csv_contents)
+            for dataset_name, csv_contents in csv_results.items():
+                zip_file.writestr(f'{dataset_name}.csv', csv_contents)
 
         buffer.seek(0)
         return buffer.read()
