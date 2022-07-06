@@ -411,7 +411,10 @@ class DomsPoint(object):
         point.longitude = nexus_point.longitude.item()
         point.latitude = nexus_point.latitude.item()
 
-        point.time = datetime.utcfromtimestamp(nexus_point.time).strftime('%Y-%m-%dT%H:%M:%SZ')
+        if not isinstance(nexus_point.time, np.datetime64):
+            point.time = datetime.utcfromtimestamp(nexus_point.time).strftime('%Y-%m-%dT%H:%M:%SZ')
+        else:
+            point.time = np.datetime_as_string(np.array([nexus_point.time]), unit='s', timezone='UTC')[0]
 
         try:
             point.depth = nexus_point.depth
@@ -781,9 +784,6 @@ def match_satellite_to_insitu(tile_ids, primary_b, secondary_b, parameter_b, tt_
 
         matchup_points = np.array(matchup_points)
 
-
-    print(tile_ids)
-
     print("%s Time to convert match points for partition %s to %s" % (
         str(datetime.now() - the_time), tile_ids[0], tile_ids[-1]))
 
@@ -813,7 +813,7 @@ def match_tile_to_point_generator(tile_service, tile_id, m_tree, edge_results, s
             tile = tile_service.mask_tiles_to_polygon(wkt.loads(search_domain_bounding_wkt),
                                                       tile_service.find_tile_by_id(tile_id))[0]
         else:
-            tile = tile_service.fetch_direct_by_id(tile_id)
+            tile = tile_service.fetch_direct_by_id(tile_id)[0].as_model_tile()
         print("%s Time to load tile %s" % (str(datetime.now() - the_time), tile_id))
     except IndexError:
         # This should only happen if all measurements in a tile become masked after applying the bounding polygon
@@ -824,7 +824,6 @@ def match_tile_to_point_generator(tile_service, tile_id, m_tree, edge_results, s
     the_time = datetime.now()
     # Get list of indices of valid values
 
-    #TODO: Look at handling this (AttributeError: 'list' object has no attribute 'get_indices')
     valid_indices = tile.get_indices()
     primary_points = np.array(
         [aeqd_proj(tile.longitudes[aslice[2]], tile.latitudes[aslice[1]]) for

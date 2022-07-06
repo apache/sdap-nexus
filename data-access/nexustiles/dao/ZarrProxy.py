@@ -23,7 +23,7 @@ from dask.diagnostics import ProgressBar
 
 import logging
 
-logger = logging.getLogger('Zarr S3 Proxy - Proof of Concept')
+logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
 h = logging.StreamHandler()
@@ -55,6 +55,33 @@ class NexusDataTile(object):
 
     def get_lat_lon_time_data_meta(self):
         return self.__lat, self.__lon, self.__time, self.__vdata, self.__meta, self.__mv
+
+    def as_model_tile(self):
+        from nexustiles.model.nexusmodel import Tile, TileVariable
+
+        tile = Tile()
+
+        tile.latitudes = self.__lat
+        tile.longitudes = self.__lon
+        tile.times = self.__time
+        tile.data = self.__vdata
+        tile.is_multi = self.__mv
+        tile.meta_data = self.__meta
+        tile.tile_id = self.tile_id
+
+        variables = []
+
+        for var in self.__data.data_vars:
+            try:
+                standard_name = self.__meta[var]['standard_name']
+            except:
+                standard_name = None
+
+            variables.append(TileVariable(var, standard_name))
+
+        tile.variables = variables
+
+        return tile
 
     def _get_data(self):
         isMultiVar = False
