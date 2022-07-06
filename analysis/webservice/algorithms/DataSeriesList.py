@@ -32,6 +32,11 @@ class DataSeriesListCalcHandlerImpl(NexusCalcHandler):
     description = "Lists datasets currently available for analysis"
     params = {}
 
+    def __init__(self, tile_service_factory, remote_collections, **kwargs):
+        super().__init__(tile_service_factory, **kwargs)
+        self._remote_collections = remote_collections
+
+
     @cached(ttl=(60 * 60 * 1000))  # 1 hour cached
     def calc(self, computeOptions, **args):
         class SimpleResult(object):
@@ -41,4 +46,16 @@ class DataSeriesListCalcHandlerImpl(NexusCalcHandler):
             def toJson(self):
                 return json.dumps(self.result)
 
-        return SimpleResult(self._get_tile_service().get_dataseries_list())
+        collection_list = self._get_tile_service().get_dataseries_list()
+
+        # add remote collections
+        for collection in self._remote_collections.values():
+            collection_list.append(
+                {
+                    "shortName": collection["id"],
+                    "remoteUrl": collection["path"],
+                    "remoteShortName": collection["remote_id"] if 'remote_id' in collection else collection["id"]
+                }
+            )
+
+        return SimpleResult(collection_list)
