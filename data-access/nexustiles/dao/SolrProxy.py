@@ -182,6 +182,7 @@ class SolrProxy(object):
             "facet.limit": "-1"
         }
 
+
         response = self.do_query_raw(*(search, None, None, False, None), **params)
         l = []
         for g, v in zip(*[iter(response.facets["facet_fields"]["dataset_s"])]*2):
@@ -639,6 +640,7 @@ class SolrProxy(object):
             response = self.solrcon.search(args[0], **params)
 
         return response
+
 
     def do_query_all(self, *args, **params):
 
