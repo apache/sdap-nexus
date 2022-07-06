@@ -21,6 +21,7 @@ import pkg_resources
 
 from cassandra.auth import PlainTextAuthProvider
 from cassandra.cluster import Cluster
+from cassandra.cluster import NoHostAvailable
 from cassandra.policies import (DCAwareRoundRobinPolicy, TokenAwarePolicy,
                                 WhiteListRoundRobinPolicy)
 from webservice.NexusHandler import nexus_initializer
@@ -32,8 +33,8 @@ class DomsInitializer:
         pass
 
     def init(self, config):
-        log = logging.getLogger(__name__)
-        log.info("*** STARTING DOMS INITIALIZATION ***")
+        self.log = logging.getLogger(__name__)
+        self.log.info("*** STARTING DOMS INITIALIZATION ***")
 
         domsconfig = configparser.SafeConfigParser()
         domsconfig.read(DomsInitializer._get_config_files('domsconfig.ini'))
@@ -52,11 +53,11 @@ class DomsInitializer:
         except configparser.NoOptionError:
             cassCreateKeyspaceGranted = "True"
 
-        log.info("Cassandra Host(s): %s" % (cassHost))
-        log.info("Cassandra Keyspace: %s" % (cassKeyspace))
-        log.info("Cassandra Datacenter: %s" % (cassDatacenter))
-        log.info("Cassandra Protocol Version: %s" % (cassVersion))
-        log.info("Cassandra DC Policy: %s" % (cassPolicy))
+        self.log.info("Cassandra Host(s): %s" % (cassHost))
+        self.log.info("Cassandra Keyspace: %s" % (cassKeyspace))
+        self.log.info("Cassandra Datacenter: %s" % (cassDatacenter))
+        self.log.info("Cassandra Protocol Version: %s" % (cassVersion))
+        self.log.info("Cassandra DC Policy: %s" % (cassPolicy))
 
         if cassPolicy == 'DCAwareRoundRobinPolicy':
             dc_policy = DCAwareRoundRobinPolicy(cassDatacenter)
@@ -69,19 +70,24 @@ class DomsInitializer:
         else:
             auth_provider = None
 
-        with Cluster([host for host in cassHost.split(',')],
-                     port=int(cassPort),
-                     load_balancing_policy=token_policy,
-                     protocol_version=cassVersion,
-                     auth_provider=auth_provider) as cluster:
-            session = cluster.connect()
+        try:
+            with Cluster([host for host in cassHost.split(',')],
+                         port=int(cassPort),
+                         load_balancing_policy=token_policy,
+                         protocol_version=cassVersion,
+                         auth_provider=auth_provider) as cluster:
+                session = cluster.connect()
 
-            if cassCreateKeyspaceGranted in ["True", "true"]:
-                self.createKeyspace(session, cassKeyspace)
-            else:
-                session.set_keyspace(cassKeyspace)
+                if cassCreateKeyspaceGranted in ["True", "true"]:
+                    self.createKeyspace(session, cassKeyspace)
+                else:
+                    session.set_keyspace(cassKeyspace)
 
-            self.createTables(session)
+                self.createTables(session)
+
+        except NoHostAvailable as e:
+            self.log.error("Unable to connect to Cassandra, Nexus will not be able to access local data ", e)
+
 
     def override_config(self, first, second):
         for section in second.sections():
