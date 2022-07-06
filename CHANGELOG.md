@@ -6,6 +6,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 ### Added
+- SDAP-388: Enable SDAP to proxy/redirect to alternate SDAP
 - SDAP-372: Updated matchup algorithm to point to AWS insitu API endpoint
 - SDAP-372: Added new matchup endpoint `match_spark_doms` that points to DOMS insitu endpoint
 - SDAP-372: Updated `match_spark_doms` to interface with samos_cdms endpoint 
