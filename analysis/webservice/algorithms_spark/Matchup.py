@@ -280,7 +280,7 @@ class Matchup(NexusCalcSparkHandler):
             result = DomsQueryResults(results=None, args=args, details=details, bounds=None, count=None,
                                       computeOptions=None, executionId=execution_id, status_code=202)
         else:
-            result = DomsQueryResults(results=matches, args=args, details=details, bounds=None, count=None,
+            result = DomsQueryResults(results=matches, args=args, details=details, bounds=None, count=len(matches),
                                       computeOptions=None, executionId=execution_id)
 
         return result
