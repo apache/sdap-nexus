@@ -260,7 +260,6 @@ class NexusTileService(object):
     def get_tiles_bounded_by_box(self, min_lat, max_lat, min_lon, max_lon, ds=None, start_time=0, end_time=-1,
                                  **kwargs):
         tiles = self.find_tiles_in_box(min_lat, max_lat, min_lon, max_lon, ds, start_time, end_time, **kwargs)
-        tiles = tiles[:1] # TODO REMOVE ME!!!
         tiles = self.mask_tiles_to_bbox(min_lat, max_lat, min_lon, max_lon, tiles)
         if 0 <= start_time <= end_time:
             tiles = self.mask_tiles_to_time_range(start_time, end_time, tiles)
