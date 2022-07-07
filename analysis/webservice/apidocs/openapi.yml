@@ -333,10 +333,10 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
-  /domssubset:
+  /cdmssubset:
     get:
-      summary: Subset DOMS sources given the search domain
-      operationId: domssubset
+      summary: Subset CDMS sources given the search domain
+      operationId: cdmssubset
       tags:
         - Subsetting
       parameters:

@@ -16,16 +16,14 @@
 import logging
 import os
 import io
-import tempfile
 import zipfile
 from pytz import timezone
 from datetime import datetime
 
-import requests
-
 from . import BaseDomsHandler
 from webservice.NexusHandler import nexus_handler
 from webservice.webmodel import NexusProcessingException, NexusResults
+from webservice.algorithms.doms.insitu import query_insitu
 
 ISO_8601 = '%Y-%m-%dT%H:%M:%S%z'
 EPOCH = timezone('UTC').localize(datetime(1970, 1, 1))
@@ -55,7 +53,7 @@ class DomsResultsRetrievalHandler(BaseDomsHandler.BaseDomsQueryCalcHandler):
         "parameter": {
             "name": "Data Parameter",
             "type": "string",
-            "description": "The parameter of interest. One of 'sst', 'sss', 'wind'. Required"
+            "description": "The insitu parameter of interest. Only required if insitu is present."
         },
         "startTime": {
             "name": "Start Time",
@@ -76,12 +74,12 @@ class DomsResultsRetrievalHandler(BaseDomsHandler.BaseDomsQueryCalcHandler):
         "depthMin": {
             "name": "Minimum Depth",
             "type": "float",
-            "description": "Minimum depth of measurements. Must be less than depthMax. Optional"
+            "description": "Minimum depth of measurements. Must be less than depthMax. Default 0. Optional"
         },
         "depthMax": {
             "name": "Maximum Depth",
             "type": "float",
-            "description": "Maximum depth of measurements. Must be greater than depthMin. Optional"
+            "description": "Maximum depth of measurements. Must be greater than depthMin. Default 5. Optional"
         },
         "platforms": {
             "name": "Platforms",
@@ -116,11 +114,13 @@ class DomsResultsRetrievalHandler(BaseDomsHandler.BaseDomsQueryCalcHandler):
                 matchup_ds_names = matchup_ds_names.split(',')
             except:
                 raise NexusProcessingException(reason="'insitu' argument should be a comma-seperated list", code=400)
+        else:
+            matchup_ds_names = []
 
         parameter_s = request.get_argument('parameter', None)
-        if parameter_s not in ['sst', 'sss', 'wind']:
+        if parameter_s is None and len(matchup_ds_names) > 0:
             raise NexusProcessingException(
-                reason="Parameter %s not supported. Must be one of 'sst', 'sss', 'wind'." % parameter_s, code=400)
+                reason="Parameter must be provided for insitu subset." % parameter_s, code=400)
 
         try:
             start_time = request.get_start_datetime()
@@ -150,8 +150,8 @@ class DomsResultsRetrievalHandler(BaseDomsHandler.BaseDomsQueryCalcHandler):
                 reason="'b' argument is required. Must be comma-delimited float formatted as Minimum (Western) Longitude, Minimum (Southern) Latitude, Maximum (Eastern) Longitude, Maximum (Northern) Latitude",
                 code=400)
 
-        depth_min = request.get_decimal_arg('depthMin', default=None)
-        depth_max = request.get_decimal_arg('depthMax', default=None)
+        depth_min = request.get_decimal_arg('depthMin', default=0)
+        depth_max = request.get_decimal_arg('depthMax', default=5)
 
         if depth_min is not None and depth_max is not None and depth_min >= depth_max:
             raise NexusProcessingException(
@@ -180,15 +180,15 @@ class DomsResultsRetrievalHandler(BaseDomsHandler.BaseDomsQueryCalcHandler):
             min_lon = bounding_polygon.bounds[0]
             max_lon = bounding_polygon.bounds[2]
 
-            tiles = self._get_tile_service().get_tiles_bounded_by_box(min_lat, max_lat, min_lon,
-                                                                      max_lon, primary_ds_name, start_time,
-                                                                      end_time)
-        else:
-            tiles = []  # todo
-            # tiles = self._get_tile_service().get_tiles_by_metadata(metadata_filter, ds, start_time,
-            #                                                        end_time)
+        tiles = self._get_tile_service().get_tiles_bounded_by_box(
+            min_lat=min_lat, max_lat=max_lat, min_lon=min_lon,
+            max_lon=max_lon, ds=primary_ds_name, start_time=start_time,
+            end_time=end_time
+        )
 
+        # Satellite
         data = []
+        data_dict = {}
         for tile in tiles:
             for nexus_point in tile.nexus_point_generator():
                 if tile.is_multi:
@@ -204,7 +204,42 @@ class DomsResultsRetrievalHandler(BaseDomsHandler.BaseDomsQueryCalcHandler):
                     'time': nexus_point.time,
                     'data': data_points
                 })
-        data_dict = {primary_ds_name: data}
+        data_dict[primary_ds_name] = data
+
+        # In-situ
+        non_data_fields = [
+            'meta',
+            'platform',
+            'job_id',
+            'latitude',
+            'longitude',
+            'time',
+        ]
+        for insitu_dataset in matchup_ds_names:
+            data = []
+            edge_response = query_insitu(
+                dataset=insitu_dataset,
+                variable=parameter_s,
+                start_time=start_time,
+                end_time=end_time,
+                bbox=','.join(list(map(str, [min_lon, min_lat, max_lon, max_lat]))),
+                platform=platforms,
+                depth_min=depth_min,
+                depth_max=depth_max
+            )
+            for result in edge_response['results']:
+                data_points = {
+                    key: value for key, value in result.items()
+                    if value is not None and key not in non_data_fields
+                }
+                data.append({
+                    'latitude': result['latitude'],
+                    'longitude': result['longitude'],
+                    'time': (datetime.strptime(result['time'], '%Y-%m-%dT%H:%M:%SZ') - datetime.fromtimestamp(0)).total_seconds(),
+                    'data': data_points
+                })
+            data_dict[insitu_dataset] = data
+
         if len(tiles) > 0:
             meta = [tile.get_summary() for tile in tiles]
         else:
@@ -226,21 +261,21 @@ class SubsetResult(NexusResults):
 
     def toCsv(self):
         """
-        Convert results to CSV
+        Convert results to csv
         """
-        rows = []
-
-        headers = [
-            'longitude',
-            'latitude',
-            'time'
-        ]
-
         dataset_results = self.results()
         csv_results = {}
 
         for dataset_name, results in dataset_results.items():
-            data_variables = set([keys for result in results for keys in result['data'].keys()])
+            rows = []
+
+            headers = [
+                'longitude',
+                'latitude',
+                'time'
+            ]
+            data_variables = list(set([keys for result in results for keys in result['data'].keys()]))
+            data_variables.sort()
             headers.extend(data_variables)
             for i, result in enumerate(results):
                 cols = []
@@ -259,6 +294,10 @@ class SubsetResult(NexusResults):
         return csv_results
 
     def toZip(self):
+        """
+        Convert csv results to zip. Each subsetted dataset becomes a csv
+        inside the zip named as <dataset-short-name>.csv
+        """
         csv_results = self.toCsv()
 
         buffer = io.BytesIO()
@@ -271,11 +310,3 @@ class SubsetResult(NexusResults):
 
     def cleanup(self):
         os.remove(self.zip_path)
-
-
-def download_file(url, filepath, session, params=None):
-    r = session.get(url, params=params, stream=True)
-    with open(filepath, 'wb') as f:
-        for chunk in r.iter_content(chunk_size=1024):
-            if chunk:  # filter out keep-alive new chunks
-                f.write(chunk)
