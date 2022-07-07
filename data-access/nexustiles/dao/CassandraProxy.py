@@ -21,6 +21,7 @@ import nexusproto.DataTile_pb2 as nexusproto
 import numpy as np
 from cassandra.auth import PlainTextAuthProvider
 from cassandra.cqlengine import columns, connection, CQLEngineException
+from cassandra.cluster import NoHostAvailable
 from cassandra.cqlengine.models import Model
 from cassandra.policies import TokenAwarePolicy, DCAwareRoundRobinPolicy, WhiteListRoundRobinPolicy
 from multiprocessing.synchronize import Lock
@@ -296,11 +297,15 @@ class CassandraProxy(object):
             auth_provider = PlainTextAuthProvider(username=self.__cass_username, password=self.__cass_password)
         else:
             auth_provider = None
-
-        connection.setup([host for host in self.__cass_url.split(',')], self.__cass_keyspace,
-                         protocol_version=self.__cass_protocol_version, load_balancing_policy=token_policy,
-                         port=self.__cass_port,
-                         auth_provider=auth_provider)
+        try:
+            connection.setup(
+                [host for host in self.__cass_url.split(',')], self.__cass_keyspace,
+                protocol_version=self.__cass_protocol_version, load_balancing_policy=token_policy,
+                port=self.__cass_port,
+                auth_provider=auth_provider
+            )
+        except NoHostAvailable as e:
+            logger.error("Cassandra is not accessible, SDAP will not server local datasets", e)
 
     def fetch_nexus_tiles(self, *tile_ids):
         tile_ids = [uuid.UUID(str(tile_id)) for tile_id in tile_ids if
