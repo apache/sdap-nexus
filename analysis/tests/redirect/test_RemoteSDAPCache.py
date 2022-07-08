@@ -1,9 +1,12 @@
 import unittest
 from unittest import mock
 import requests
+from datetime import datetime
+from datetime import timedelta
 
 from webservice.redirect import RemoteSDAPCache
-
+from webservice.redirect import CollectionNotFound
+from webservice.redirect.RemoteSDAPCache import RemoteSDAPList
 
 class MockResponse:
     def __init__(self, json_data, status_code):
@@ -13,8 +16,7 @@ class MockResponse:
     def json(self):
         return self.json_data
 
-def mocked_requests_get(*asgs, **kwargs):
-    json_data = [
+LIST_CONTENT = [
       {
         "shortName": "PM25",
         "title": "PM25",
@@ -25,11 +27,21 @@ def mocked_requests_get(*asgs, **kwargs):
         "iso_end": "2021-12-31T23:00:00+0000"
       }
     ]
-    return MockResponse(json_data, 200)
+
+LIST_CONTENT_FORMER = [LIST_CONTENT[0].copy()]
+LIST_CONTENT_FORMER[0]['start'] = 0
+
+def mocked_requests_get(*asgs, **kwargs):
+    return MockResponse(LIST_CONTENT, 200)
 
 
 def mocked_requests_get_timeout(*asgs, **kwargs):
     raise requests.exceptions.ConnectTimeout()
+
+
+def mocked_requests_get_not_found(*asgs, **kwargs):
+    return MockResponse({}, 404)
+
 
 
 class MyTestCase(unittest.TestCase):
@@ -40,6 +52,50 @@ class MyTestCase(unittest.TestCase):
 
         collection = remote_sdap_cache.get('https://aq-sdap.stcenter.net/nexus/', 'PM25')
         self.assertEqual(collection["start"], 1514818800.0)
+
+    @mock.patch('requests.get', side_effect=mocked_requests_get_timeout)
+    def test_get_timeout(self, mock_get):
+        remote_sdap_cache = RemoteSDAPCache()
+        with self.assertRaises(CollectionNotFound):
+            remote_sdap_cache.get('https://aq-sdap.stcenter.net/nexus/', 'PM25')
+
+
+    @mock.patch('requests.get', side_effect=mocked_requests_get_not_found)
+    def test_get_not_found(self, mock_get):
+        remote_sdap_cache = RemoteSDAPCache()
+        with self.assertRaises(CollectionNotFound):
+            remote_sdap_cache.get('https://aq-sdap.stcenter.net/nexus/', 'PM25')
+
+    @mock.patch('requests.get', side_effect=mocked_requests_get)
+    def test_get_expired(self, mock_get):
+        remote_sdap_cache = RemoteSDAPCache()
+
+        remote_sdap_cache.sdap_lists['https://aq-sdap.stcenter.net/nexus/'] = RemoteSDAPList(
+            list=LIST_CONTENT_FORMER,
+            outdated_at=datetime.now() - timedelta(seconds=3600*25)
+        )
+
+        collection = remote_sdap_cache.get('https://aq-sdap.stcenter.net/nexus/', 'PM25')
+
+        # check requests.get is called once
+        self.assertEqual(mock_get.call_count, 1)
+        self.assertEqual(collection["start"], 1514818800.0)
+
+    @mock.patch('requests.get', side_effect=mocked_requests_get)
+    def test_get_cached_valid(self, mock_get):
+        remote_sdap_cache = RemoteSDAPCache()
+
+        remote_sdap_cache.sdap_lists['https://aq-sdap.stcenter.net/nexus'] = RemoteSDAPList(
+            list=LIST_CONTENT_FORMER,
+            outdated_at=datetime.now() - timedelta(seconds=3600 * 23)
+        )
+
+        collection = remote_sdap_cache.get('https://aq-sdap.stcenter.net/nexus/', 'PM25')
+
+        # check requests.get is called once
+        self.assertEqual(mock_get.call_count, 0)
+        self.assertEqual(collection["start"], 0)
+
 
 
 if __name__ == '__main__':

@@ -20,14 +20,17 @@ class RemoteSDAPCache:
 
     def _add(self, url, timeout=2, max_age=3600*24):
         list_url = f"{url}/list"
-        r = requests.get(list_url, timeout=timeout)
-        if r.status_code == 200:
-            self.sdap_lists[url] = RemoteSDAPList(
-                list=r.json(),
-                outdated_at=datetime.now()+timedelta(seconds=max_age)
-            )
-        else:
-            raise CollectionNotFound("url %s was not reachable, responded with status %s", list_url, r.status_code)
+        try:
+            r = requests.get(list_url, timeout=timeout)
+            if r.status_code == 200:
+                self.sdap_lists[url] = RemoteSDAPList(
+                    list=r.json(),
+                    outdated_at=datetime.now()+timedelta(seconds=max_age)
+                )
+            else:
+                raise CollectionNotFound("url %s was not reachable, responded with status %s", list_url, r.status_code)
+        except requests.exceptions.ConnectTimeout as e:
+            raise CollectionNotFound("url %s was not reachable in %i s",  list_url, timeout)
 
     def get(self, url, short_name):
         stripped_url = url.strip('/')

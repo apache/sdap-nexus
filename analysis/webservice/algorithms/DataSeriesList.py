@@ -49,8 +49,7 @@ class DataSeriesListCalcHandlerImpl(NexusCalcHandler):
             def toJson(self):
                 return json.dumps(self.result)
 
-        #collection_list = self._get_tile_service().get_dataseries_list()
-        collection_list = []
+        collection_list = self._get_tile_service().get_dataseries_list()
 
         # add remote collections
         if self._remote_collections:
