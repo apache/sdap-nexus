@@ -40,6 +40,7 @@ from webservice.algorithms.doms import config as edge_endpoints
 from webservice.algorithms.doms import values as doms_values
 from webservice.algorithms.doms.BaseDomsHandler import DomsQueryResults
 from webservice.algorithms.doms.ResultsStorage import ResultsStorage
+from webservice.algorithms.doms.insitu import query_insitu as query_edge
 from webservice.webmodel import NexusProcessingException
 
 EPOCH = timezone('UTC').localize(datetime(1970, 1, 1))
@@ -816,60 +817,3 @@ def match_tile_to_point_generator(tile_service, tile_id, m_tree, edge_results, s
             for m_point_index in point_matches:
                 m_doms_point = DomsPoint.from_edge_point(edge_results[m_point_index])
                 yield p_doms_point, m_doms_point
-
-
-def query_edge(dataset, variable, startTime, endTime, bbox, platform, depth_min, depth_max, itemsPerPage=1000,
-               startIndex=0, stats=True, session=None):
-    try:
-        startTime = datetime.utcfromtimestamp(startTime).strftime('%Y-%m-%dT%H:%M:%SZ')
-    except TypeError:
-        # Assume we were passed a properly formatted string
-        pass
-
-    try:
-        endTime = datetime.utcfromtimestamp(endTime).strftime('%Y-%m-%dT%H:%M:%SZ')
-    except TypeError:
-        # Assume we were passed a properly formatted string
-        pass
-
-    provider = edge_endpoints.get_provider_name(dataset)
-
-    params = {
-        "itemsPerPage": itemsPerPage,
-        "startTime": startTime,
-        "endTime": endTime,
-        "bbox": bbox,
-        "minDepth": depth_min,
-        "maxDepth": depth_max,
-        "provider": provider,
-        "project": dataset,
-        "platform": platform,
-    }
-
-    if variable is not None:
-        params["variable"] = variable
-
-    edge_response = {}
-
-    # Get all edge results
-    next_page_url = edge_endpoints.getEndpoint()
-    while next_page_url is not None and next_page_url != 'NA':
-        logging.debug(f'Edge request {next_page_url}')
-        if session is not None:
-            edge_page_request = session.get(next_page_url, params=params)
-        else:
-            edge_page_request = requests.get(next_page_url, params=params)
-
-        edge_page_request.raise_for_status()
-
-        edge_page_response = json.loads(edge_page_request.text)
-
-        if not edge_response:
-            edge_response = edge_page_response
-        else:
-            edge_response['results'].extend(edge_page_response['results'])
-
-        next_page_url = edge_page_response.get('next', None)
-        params = {}  # Remove params, they are already included in above URL
-
-    return edge_response

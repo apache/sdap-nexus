@@ -11,10 +11,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - SDAP-372: Added new matchup endpoint `match_spark_doms` that points to DOMS insitu endpoint
 - SDAP-372: Updated `match_spark_doms` to interface with samos_cdms endpoint 
 - SDAP-393: Included `insitu` in ingress based on the value of `insituAPI.enabled` in `values.yaml`
+- SDAP-371: Renamed `/domssubset` endpoint to `/cdmssubset`
 ### Changed
 ### Deprecated
 ### Removed
 ### Fixed
 - Fix failing test_matchup unit test
 - Fixed null value for count in matchup response
+- SDAP-371: Fixed DOMS subset endpoint
 ### Security
