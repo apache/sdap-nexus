@@ -40,6 +40,7 @@ from webservice.algorithms.doms import config as edge_endpoints
 from webservice.algorithms.doms import values as doms_values
 from webservice.algorithms.doms.BaseDomsHandler import DomsQueryResults
 from webservice.algorithms.doms.ResultsStorage import ResultsStorage
+from webservice.algorithms.doms.insitu import query_insitu as query_edge
 from webservice.webmodel import NexusProcessingException
 
 EPOCH = timezone('UTC').localize(datetime(1970, 1, 1))
