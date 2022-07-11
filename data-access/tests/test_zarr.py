@@ -13,26 +13,33 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# IMPORTS HERE
-
 from nexustiles.dao.ZarrProxy import ZarrProxy
 from nexustiles.nexustiles import NexusTileService
 
 import configparser
 import io
 
-cfg = """
-[s3]
-bucket=s3://mur-sst/zarr
-region=us-west-2
-"""
+import boto3
+from moto import mock_s3
 
-buf = io.StringIO(cfg)
-config = configparser.ConfigParser()
-config.read_file(buf)
+import pytest
 
-proxy = ZarrProxy(config)
+def setup():
+    pass
 
-print(proxy.list())
+
+if __name__ == '__main__':
+    cfg = """
+    [s3]
+    bucket=s3://mur-sst/zarr
+    region=us-west-2
+    """
+
+    buf = io.StringIO(cfg)
+    config = configparser.ConfigParser()
+    config.read_file(buf)
+
+    proxy = ZarrProxy(config)
+
 
 
