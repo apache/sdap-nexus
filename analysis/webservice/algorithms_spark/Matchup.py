@@ -860,7 +860,7 @@ def match_tile_to_point_generator(tile_service, tile_id, m_tree, edge_results, s
                 yield p_doms_point, m_doms_point
 
 
-def query_edge(dataset, variable, startTime, endTime, bbox, platform, depth_min, depth_max, itemsPerPage=1000,
+def mock_query_edge(dataset, variable, startTime, endTime, bbox, platform, depth_min, depth_max, itemsPerPage=1000,
                startIndex=0, stats=True, session=None):
     mock_response = True
 
