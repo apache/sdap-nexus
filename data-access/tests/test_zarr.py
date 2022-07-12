@@ -20,6 +20,8 @@ import io, os
 
 from moto import mock_s3
 
+import mock, json
+
 import pytest
 
 import numpy as np
@@ -27,6 +29,10 @@ import numpy as np
 class DummyTile:
     def __init__(self, tile_id):
         self.tile_id = tile_id
+
+class MockSparkParam:
+    def __init__(self, value):
+        self.value = value
 
 mock_s3 = mock_s3()
 bucket_name = 'test-zarr'
@@ -96,12 +102,12 @@ def s3():
 @pytest.fixture()
 def bounds():
     yield {
-        'min_lat': 21,
-        'max_lat': 29,
-        'min_lon': -97,
+        'min_lat': 20,
+        'max_lat': 30,
+        'min_lon': -100,
         'max_lon': -79,
-        'start_time': os.getenv('START_TIME', '2017-01-01T09:00:00'),
-        'end_time': os.getenv('END_TIME', '2017-02-01T00:00:00')
+        'start_time': '2018-01-01T09:00:00+00:00',
+        'end_time': '2018-09-01T00:00:00+00:00'
     }
 
 @pytest.fixture()
@@ -166,4 +172,75 @@ def test_bounds(bounds, tile_service):
     assert bounds['end_time'] >= str(np.amax(tile_data.times))
 
 def test_matchup(bounds, tile_service):
-    pass
+    import webservice.algorithms_spark.Matchup as matchup
+    from webservice.algorithms.doms import insitu
+
+    tile_service_factory = mock.MagicMock()
+    tile_service_factory.return_value = tile_service
+
+    tile_id = tile_service.bounds_to_direct_tile_id(
+        bounds['min_lat'],
+        bounds['min_lon'],
+        bounds['max_lat'],
+        bounds['max_lon'],
+        bounds['start_time'],
+        bounds['end_time']
+    )
+
+    tiles = [tile_id]
+
+    with mock.patch('webservice.algorithms_spark.Matchup.edge_endpoints.getEndpointByName') as mock_edge_endpoints:
+
+        match_args = dict(
+            tile_ids=tiles,
+            primary_b=MockSparkParam('MUR25-JPL-L4-GLOB-v04.2'),
+            secondary_b=MockSparkParam('ICOADS Release 3.0'),
+            parameter_b=MockSparkParam(None),
+            tt_b=MockSparkParam(43200),
+            rt_b=MockSparkParam(1000),
+            platforms_b=MockSparkParam('42'),
+            bounding_wkt_b=MockSparkParam('POLYGON((20 -100, 30 -100, 30 -79, 20 -79, 20 -100))'),
+            depth_min_b=MockSparkParam(-20.0),
+            depth_max_b=MockSparkParam(10.0),
+            tile_service_factory=tile_service_factory
+        )
+
+        test_dir = os.path.dirname(os.path.realpath(__file__))
+        test_data_dir = os.path.join(test_dir, 'data')
+
+        mock_edge_endpoints.return_value = {'url': 'http://test-edge-url'}
+        matchup.query_edge = lambda *args, **kwargs: json.load(open(os.path.join(test_data_dir, 'mock_response.json')))
+
+        generator = matchup.match_satellite_to_insitu(**match_args)
+
+        result = list(generator)
+
+        def filter_time(res):
+            filtered = []
+
+            for p in res:
+                if abs(matchup.iso_time_to_epoch(p[0].time) - matchup.iso_time_to_epoch(p[1].time)) <= match_args['tt_b'].value:
+                    filtered.append(p)
+
+            return filtered
+
+        result = filter_time(result)
+
+        # [(k,v),...] -> {k: [v,...],...}
+        def to_map(res):
+            mapped = {}
+
+            for p in res:
+                k = p[0]
+                v = p[1]
+
+                if not k in mapped:
+                    mapped[k] = [v]
+                else:
+                    mapped[k].append(v)
+
+            return mapped
+
+        print(result)
+
+        assert True
