@@ -14,6 +14,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - SDAP-371: Renamed `/domssubset` endpoint to `/cdmssubset`
 - CDMS-122: Added new `ZarrProxy` to access Zarr-formatted data stored in AWS S3
   - Currently only supports single variable & gridded data and the `/matchup_spark` endpoint
+  - Included unit tests
 ### Changed
 ### Deprecated
 ### Removed
