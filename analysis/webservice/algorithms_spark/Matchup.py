@@ -671,19 +671,10 @@ def match_satellite_to_insitu(tile_ids, primary_b, secondary_b, parameter_b, tt_
         tiles_min_time = tile_service.get_min_time(tile_ids)
         tiles_max_time = tile_service.get_max_time(tile_ids)
     else:
-        import re
         from dateutil import parser
+        from nexustiles.dao import ZarrProxy
 
-        c = re.split("_", tile_ids[0])
-
-        parts = {
-            'start_time': c[1],
-            'end_time': c[2],
-            'min_lat': float(c[3]),
-            'max_lat': float(c[4]),
-            'min_lon': float(c[5]),
-            'max_lon': float(c[6])
-        }
+        parts = ZarrProxy.parse_tile_id_to_bounds(tile_ids[0])
 
         tiles_bbox = box(parts['min_lon'], parts['min_lat'], parts['max_lon'], parts['max_lat'])
         tiles_min_time = int((parser.parse(parts['start_time']) - EPOCH).total_seconds())

@@ -113,9 +113,8 @@ class NexusDataTile(object):
 
         return latitude_data, longitude_data, self.__data.time.values, grid_tile_data, metadata, isMultiVar
 
-
 class ZarrProxy(object):
-    def __init__(self, config):
+    def __init__(self, config, test_fs = None):
         self.config = config
         self.__s3_bucket_name = config.get("s3", "bucket")
         self.__s3_region = config.get("s3", "region")
@@ -130,7 +129,7 @@ class ZarrProxy(object):
             store = f"https://{self.__s3_bucket_name}.s3.{self.__s3_region}.amazonaws.com/{self.config.get('s3', 'key')}"
         else:
             s3path = f"s3://{self.__s3_bucket_name}/{self.config.get('s3', 'key')}/"
-            s3 = s3fs.S3FileSystem(self.__s3_public, profile=self.__s3_profile)
+            s3 = s3fs.S3FileSystem(self.__s3_public, profile=self.__s3_profile) if test_fs is None else test_fs
             store = s3fs.S3Map(root=s3path, s3=s3, check=False)
 
         zarr_data = xr.open_zarr(store=store, consolidated=True, mask_and_scale=False)
@@ -181,3 +180,19 @@ class ZarrProxy(object):
             res.append(nexus_tile)
 
         return res
+
+    @staticmethod
+    def parse_tile_id_to_bounds(tile_id):
+        import re
+
+        c = re.split("_", tile_id)
+
+        parts = {
+            'id': tile_id,
+            'start_time': c[1],
+            'end_time': c[2],
+            'min_lat': float(c[3]),
+            'max_lat': float(c[4]),
+            'min_lon': float(c[5]),
+            'max_lon': float(c[6])
+        }
