@@ -672,7 +672,7 @@ def match_satellite_to_insitu(tile_ids, primary_b, secondary_b, parameter_b, tt_
         tiles_max_time = tile_service.get_max_time(tile_ids)
     else:
         from dateutil import parser
-        from nexustiles.dao import ZarrProxy
+        from nexustiles.dao.ZarrProxy import ZarrProxy
 
         parts = ZarrProxy.parse_tile_id_to_bounds(tile_ids[0])
 

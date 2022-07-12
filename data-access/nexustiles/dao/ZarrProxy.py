@@ -196,3 +196,5 @@ class ZarrProxy(object):
             'min_lon': float(c[5]),
             'max_lon': float(c[6])
         }
+
+        return parts
