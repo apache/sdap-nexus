@@ -162,8 +162,8 @@ def test_bounds(bounds, tile_service):
     assert bounds['min_lon'] <= np.amin(tile_data.longitudes)
     assert bounds['max_lon'] >= np.amax(tile_data.longitudes)
 
-    assert bounds['start_time'] <= np.amin(tile_data.times)
-    assert bounds['end_time'] <= np.amax(tile_data.times)
+    assert bounds['start_time'] <= str(np.amin(tile_data.times))
+    assert bounds['end_time'] >= str(np.amax(tile_data.times))
 
 def test_matchup(bounds, tile_service):
     pass
