@@ -200,11 +200,11 @@ class DomsCSVFormatter:
             for match in primaryValue['matches']:
                 platforms.add(match['platform'])
 
-        # insituDatasets = params["matchup"].split(",")
         insituDatasets = params["matchup"]
         insituLinks = set()
         for insitu in insituDatasets:
-            insituLinks.add(config.METADATA_LINKS[insitu])
+            if insitu in config.METADATA_LINKS:
+                insituLinks.add(config.METADATA_LINKS[insitu])
 
 
         global_attrs = [
