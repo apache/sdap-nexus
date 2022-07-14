@@ -19,4 +19,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Fix failing test_matchup unit test
 - Fixed null value for count in matchup response
 - SDAP-371: Fixed DOMS subset endpoint
+- Fixed issue where satellite satellite matchups failed
+- Fixed issue where null results were returned if more than "resultSizeLimit" matches are found
+- Fixed issue where satellite to satellite matchups with the same dataset don't return the expected result
 ### Security
