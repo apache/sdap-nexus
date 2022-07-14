@@ -113,4 +113,4 @@ class DomsDatasetListQueryHandler(BaseDomsHandler.BaseDomsQueryCalcHandler):
             "insitu": insituList
         }
 
-        return BaseDomsHandler.DomsQueryResults(results=values)
+        return BaseDomsHandler.DomsQueryResults(results=values, count=len(satellitesList) + len(insituList))

@@ -19,4 +19,5 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Fix failing test_matchup unit test
 - Fixed null value for count in matchup response
 - SDAP-371: Fixed DOMS subset endpoint
+- Fixed null value for count in domslist response
 ### Security
