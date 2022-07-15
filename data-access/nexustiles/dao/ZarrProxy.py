@@ -114,7 +114,7 @@ class NexusDataTile(object):
         return latitude_data, longitude_data, self.__data.time.values, grid_tile_data, metadata, isMultiVar
 
 class ZarrProxy(object):
-    def __init__(self, config, test_fs = None):
+    def __init__(self, config, test_fs = None, open_direct=False, **kwargs):
         self.config = config
         self.__s3_bucket_name = config.get("s3", "bucket")
         self.__s3_region = config.get("s3", "region")
@@ -122,6 +122,15 @@ class ZarrProxy(object):
         self.__s3_profile = config.get("s3", "profile", fallback=None)
         self.__s3 = boto3.resource('s3')
         self.__nexus_tile = None
+
+        if 'metadata_store' in kwargs:
+            self.__metadata_store = kwargs['metadata_store']
+        else:
+            from .SolrProxy import SolrProxy
+            self.__metadata_store = SolrProxy(self.config)
+
+        if open_direct:
+            pass #TODO: Move below code block into here from open to success log
 
         logger.info('Opening Zarr proxy')
 
@@ -134,6 +143,44 @@ class ZarrProxy(object):
 
         zarr_data = xr.open_zarr(store=store, consolidated=True, mask_and_scale=False)
         zarr_data.analysed_sst.attrs['_FillValue'] = -32768
+        zarr_data = xr.decode_cf(zarr_data, mask_and_scale=True)
+
+        logger.info('Successfully opened Zarr proxy')
+
+        self.__zarr_data = zarr_data
+
+    def _get_ds_info(self, ds):
+        store = self.__metadata_store
+
+        query_response = store.do_query_raw((f'id:{ds}'))
+
+        if not query_response['responseHeader']['status'] == 0:
+            raise Exception("bad solr response")
+
+        if not query_response['response']['numFound'] != 1:
+            raise  Exception(f"wrong number of datasets returned from solr: {query_response['response']['numFound']}")
+
+        ds_info = query_response['response']['docs'][0]
+
+        return ds_info['variables'], ds_info['public_b'], ds_info['s3_uri_s']
+
+    def open_dataset(self, ds):
+        variables, public, path = self._get_ds_info(ds)
+
+        logger.info('Opening Zarr proxy')
+
+        if public:
+            store = path
+        else:
+            s3path = path
+            s3 = s3fs.S3FileSystem(public, profile=self.__s3_profile)
+            store = s3fs.S3Map(root=s3path, s3=s3, check=False)
+
+        zarr_data = xr.open_zarr(store=store, consolidated=True, mask_and_scale=False)
+
+        for variable in variables:
+            zarr_data[variable['name_s']].attrs['_FillValue'] = variable['fill_d']
+
         zarr_data = xr.decode_cf(zarr_data, mask_and_scale=True)
 
         logger.info('Successfully opened Zarr proxy')

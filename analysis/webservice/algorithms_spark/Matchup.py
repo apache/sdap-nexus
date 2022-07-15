@@ -212,6 +212,9 @@ class Matchup(NexusCalcSparkHandler):
         depth_min, depth_max, time_tolerance, radius_tolerance, \
         platforms, match_once, result_size_limit = self.parse_arguments(request)
 
+        if self._get_tile_service().supports_direct_bounds_to_tile():
+            self._get_tile_service().get_datastore().open_dataset(primary_ds_name)
+
         with ResultsStorage(self.config) as resultsStorage:
 
             execution_id = str(resultsStorage.insertExecution(None, start, None, None))

@@ -90,6 +90,13 @@ class NexusTileService(object):
         if config:
             self.override_config(config)
 
+        if not skipMetadatastore:
+            metadatastore = self._config.get("metadatastore", "store", fallback='solr')
+            if metadatastore == "solr":
+                self._metadatastore = SolrProxy.SolrProxy(self._config)
+            elif metadatastore == "elasticsearch":
+                self._metadatastore = ElasticsearchProxy.ElasticsearchProxy(self._config)
+
         if not skipDatastore:
             datastore = self._config.get("datastore", "store")
             if datastore == "cassandra":
@@ -99,16 +106,12 @@ class NexusTileService(object):
             elif datastore == "dynamo":
                 self._datastore = DynamoProxy.DynamoProxy(self._config)
             elif datastore == "zarrS3":
-                self._datastore = ZarrProxy.ZarrProxy(self._config)
+                if not skipMetadatastore and metadatastore == "solr":
+                    self._datastore = ZarrProxy.ZarrProxy(self._config, metadata_store=self._metadatastore)
+                else:
+                    self._datastore = ZarrProxy.ZarrProxy(self._config)
             else:
                 raise ValueError("Error reading datastore from config file")
-
-        if not skipMetadatastore:
-            metadatastore = self._config.get("metadatastore", "store", fallback='solr')
-            if metadatastore == "solr":
-                self._metadatastore = SolrProxy.SolrProxy(self._config)
-            elif metadatastore == "elasticsearch":
-                self._metadatastore = ElasticsearchProxy.ElasticsearchProxy(self._config)
 
     def override_config(self, config):
         for section in config.sections():
@@ -646,6 +649,9 @@ class NexusTileService(object):
             return True
         else:
             return False
+
+    def get_datastore(self):
+        return self._datastore
 
     @staticmethod
     def _get_config_files(filename):
