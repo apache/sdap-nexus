@@ -115,6 +115,10 @@ class NexusDataTile(object):
 
 class ZarrProxy(object):
     def __init__(self, config, test_fs = None, open_direct=False, **kwargs):
+        from .SolrProxy import SolrProxy
+
+        import io, configparser
+
         self.config = config
         self.__s3_bucket_name = config.get("s3", "bucket")
         self.__s3_region = config.get("s3", "region")
@@ -123,11 +127,17 @@ class ZarrProxy(object):
         self.__s3 = boto3.resource('s3')
         self.__nexus_tile = None
 
-        if 'metadata_store' in kwargs:
-            self.__metadata_store = kwargs['metadata_store']
-        else:
-            from .SolrProxy import SolrProxy
-            self.__metadata_store = SolrProxy(self.config)
+        solr_config_txt = f"""
+        [solr]
+        host={config.get("solr", "host")}
+        core=nexusdatasets
+        """
+
+        buf = io.StringIO(solr_config_txt)
+        solr_config = configparser.ConfigParser()
+        solr_config.read_file(buf)
+
+        self.__metadata_store = SolrProxy(solr_config)
 
         if open_direct:
             pass #TODO: Move below code block into here from open to success log
