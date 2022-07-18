@@ -44,7 +44,7 @@ test_data_path = os.getenv('TEST_DATA', 'zarr_test_data/')
 
 #Got this from s3fs test on github
 #https://github.com/fsspec/s3fs/blob/main/s3fs/tests/test_s3fs.py
-@pytest.fixture()
+@pytest.fixture(scope="module")
 def s3():
     import shlex
     import subprocess
