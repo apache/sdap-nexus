@@ -36,7 +36,7 @@ class NexusDataTile(object):
     __data = None
     tile_id = None
 
-    def __init__(self, data, _tile_id):   #change to data (dataset subset w/ temporal range), tid, coords
+    def __init__(self, data, _tile_id, var_name):   #change to data (dataset subset w/ temporal range), tid, coords
         import re
 
         if self.__data is None:
@@ -45,8 +45,10 @@ class NexusDataTile(object):
         if self.tile_id is None:
             self.tile_id = _tile_id
 
-        if not re.search("^MUR_[0-9-T :.+]*_[0-9-T :.+]*_[0-9.-]*_[0-9.-]*_[0-9.-]*_[0-9.-]*", self.tile_id):
+        if not re.search("^.*_[0-9-T :.+]*_[0-9-T :.+]*_[0-9.-]*_[0-9.-]*_[0-9.-]*_[0-9.-]*$", self.tile_id):
             raise ValueError("Bad tile id")
+
+        self.__vars = var_name
 
         self.__lat, self.__lon, self.__time, self.__vdata, self.__meta, self.__mv = self._get_data()
 
@@ -69,13 +71,9 @@ class NexusDataTile(object):
         tile.meta_data = self.__meta
         tile.tile_id = self.tile_id
 
-        tile.dataset = self.__meta['main']['id']
-        tile.dataset_id = self.__meta['main']['uuid']
-
-        try:
-            tile.granule = self.__data['main']['granules']
-        except:
-            pass
+        tile.dataset = self.__meta['main']['id'] if 'id' in self.__meta['main'] else None
+        tile.dataset_id = self.__meta['main']['uuid'] if 'uuid' in self.__meta['main'] else None
+        tile.granule = self.__meta['main']['granules'] if 'granules' in self.__meta['main'] else None
 
         variables = []
 
@@ -94,17 +92,23 @@ class NexusDataTile(object):
     def _get_data(self):
         isMultiVar = False
 
-        metadata = {'main': self.__data.attrs, 'analysed_sst': self.__data.analysed_sst.attrs,
-                    'lat': self.__data.lat.attrs, 'lon': self.__data.lon.attrs, 'time': self.__data.time.attrs}
+        metadata = {'main': self.__data.attrs, 'lat': self.__data.lat.attrs,
+                    'lon': self.__data.lon.attrs, 'time': self.__data.time.attrs}
+
+        for var in self.__vars:
+            metadata[var['name_s']] = self.__data[var['name_s']].attrs
 
         tile_type = 'grid_tile'
+
+        if not isMultiVar:
+            self.__vars = self.__vars[0]
 
         if tile_type == 'grid_tile': #for now, assume gridded
             latitude_data = np.ma.masked_invalid(self.__data.lat)
             longitude_data = np.ma.masked_invalid(self.__data.lon)
 
             with ProgressBar():
-              grid_tile_data = np.ma.masked_invalid(self.__data.analysed_sst)  # POC for MUR data
+              grid_tile_data = np.ma.masked_invalid(self.__data[self.__vars['name_s']])
         else:
             raise NotImplementedError("Only supports grid_tile")
 
@@ -140,24 +144,24 @@ class ZarrProxy(object):
         self._metadata_store = SolrProxy(solr_config)
 
         if open_direct:
-            pass #TODO: Move below code block into here from open to success log
+            logger.info('Opening Zarr proxy')
 
-        logger.info('Opening Zarr proxy')
+            if self.__s3_public:
+                store = f"https://{self.__s3_bucket_name}.s3.{self.__s3_region}.amazonaws.com/{self.config.get('s3', 'key')}"
+            else:
+                s3path = f"s3://{self.__s3_bucket_name}/{self.config.get('s3', 'key')}/"
+                s3 = s3fs.S3FileSystem(self.__s3_public, profile=self.__s3_profile) if test_fs is None else test_fs
+                store = s3fs.S3Map(root=s3path, s3=s3, check=False)
 
-        if self.__s3_public:
-            store = f"https://{self.__s3_bucket_name}.s3.{self.__s3_region}.amazonaws.com/{self.config.get('s3', 'key')}"
-        else:
-            s3path = f"s3://{self.__s3_bucket_name}/{self.config.get('s3', 'key')}/"
-            s3 = s3fs.S3FileSystem(self.__s3_public, profile=self.__s3_profile) if test_fs is None else test_fs
-            store = s3fs.S3Map(root=s3path, s3=s3, check=False)
+            zarr_data = xr.open_zarr(store=store, consolidated=True, mask_and_scale=False)
+            zarr_data.analysed_sst.attrs['_FillValue'] = -32768
+            zarr_data = xr.decode_cf(zarr_data, mask_and_scale=True)
 
-        zarr_data = xr.open_zarr(store=store, consolidated=True, mask_and_scale=False)
-        zarr_data.analysed_sst.attrs['_FillValue'] = -32768
-        zarr_data = xr.decode_cf(zarr_data, mask_and_scale=True)
+            self.__variables = [{"name_s": "analysed_sst", "fill_d": -32768}]
 
-        logger.info('Successfully opened Zarr proxy')
+            logger.info('Successfully opened Zarr proxy')
 
-        self.__zarr_data = zarr_data
+            self.__zarr_data = zarr_data
 
     def _get_ds_info(self, ds):
         store = self._metadata_store
@@ -167,14 +171,14 @@ class ZarrProxy(object):
         if not query_response['responseHeader']['status'] == 0:
             raise Exception("bad solr response")
 
-        if not query_response['response']['numFound'] != 1:
+        if not query_response['response']['numFound'] == 1:
             raise  Exception(f"wrong number of datasets returned from solr: {query_response['response']['numFound']}")
 
         ds_info = query_response['response']['docs'][0]
 
         return ds_info['variables'], ds_info['public_b'], ds_info['s3_uri_s']
 
-    def open_dataset(self, ds):
+    def open_dataset(self, ds, test_fs = None):
         variables, public, path = self._get_ds_info(ds)
 
         logger.info('Opening Zarr proxy')
@@ -183,7 +187,7 @@ class ZarrProxy(object):
             store = path
         else:
             s3path = path
-            s3 = s3fs.S3FileSystem(public, profile=self.__s3_profile)
+            s3 = s3fs.S3FileSystem(public, profile=self.__s3_profile) if test_fs is None else test_fs
             store = s3fs.S3Map(root=s3path, s3=s3, check=False)
 
         zarr_data = xr.open_zarr(store=store, consolidated=True, mask_and_scale=False)
@@ -196,6 +200,7 @@ class ZarrProxy(object):
         logger.info('Successfully opened Zarr proxy')
 
         self.__zarr_data = zarr_data
+        self.__variables = variables
 
     #Interpreting tile id's as: MUR_<start_time>_<end_tim>_<lat_min>_<lat_max>_<lon_min>_<lon_max>
     def fetch_nexus_tiles(self, *tile_ids):
@@ -207,17 +212,7 @@ class ZarrProxy(object):
         res = []
 
         for tid in tile_ids:
-            c = re.split("_", tid)
-
-            parts = {
-                'id': tid,
-                'start_time': c[1],
-                'end_time': c[2],
-                'min_lat': float(c[3]),
-                'max_lat': float(c[4]),
-                'min_lon': float(c[5]),
-                'max_lon': float(c[6])
-            }
+            parts = ZarrProxy.parse_tile_id_to_bounds(tid)
 
             tz_regex = "\\+00:00$"
 
@@ -233,7 +228,7 @@ class ZarrProxy(object):
             lats = slice(parts['min_lat'], parts['max_lat'])
             lons = slice(parts['min_lon'], parts['max_lon'])
 
-            nexus_tile = NexusDataTile(self.__zarr_data.sel(time=times, lat=lats, lon=lons), parts['id'])
+            nexus_tile = NexusDataTile(self.__zarr_data.sel(time=times, lat=lats, lon=lons), parts['id'], self.__variables)
             res.append(nexus_tile)
 
         return res
@@ -246,12 +241,12 @@ class ZarrProxy(object):
 
         parts = {
             'id': tile_id,
-            'start_time': c[1],
-            'end_time': c[2],
-            'min_lat': float(c[3]),
-            'max_lat': float(c[4]),
-            'min_lon': float(c[5]),
-            'max_lon': float(c[6])
+            'start_time': c[-6],
+            'end_time': c[-5],
+            'min_lat': float(c[-4]),
+            'max_lat': float(c[-3]),
+            'min_lon': float(c[-2]),
+            'max_lon': float(c[-1])
         }
 
         return parts

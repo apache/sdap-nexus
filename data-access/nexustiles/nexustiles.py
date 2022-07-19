@@ -481,7 +481,7 @@ class NexusTileService(object):
 
         return tiles
 
-    def bounds_to_direct_tile_id(self, min_lat, min_lon, max_lat, max_lon, start_time, end_time, dataset='MUR'):
+    def bounds_to_direct_tile_id(self, min_lat, min_lon, max_lat, max_lon, start_time, end_time, dataset='TILE'):
         return f"{dataset}_{start_time}_{end_time}_{min_lat}_{max_lat}_{min_lon}_{max_lon}"
 
     def fetch_direct_by_id(self, tid):

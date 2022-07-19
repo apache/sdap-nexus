@@ -23,6 +23,8 @@ import pytest
 import s3fs
 from moto import mock_s3
 from nexustiles.nexustiles import NexusTileService
+import webservice.algorithms_spark.Matchup as matchup
+
 
 class DummyTile:
     def __init__(self, tile_id):
@@ -42,10 +44,11 @@ endpoint = f"http://127.0.0.1:{port}"
 
 test_data_path = os.getenv('TEST_DATA', 'data/zarr_test_data/')
 
-#Got this from s3fs test on github
-#https://github.com/fsspec/s3fs/blob/main/s3fs/tests/test_s3fs.py
 @pytest.fixture(scope="module")
 def s3():
+    # Got this from s3fs test on github
+    # https://github.com/fsspec/s3fs/blob/main/s3fs/tests/test_s3fs.py
+
     import shlex
     import subprocess
     import time
@@ -130,6 +133,8 @@ def ts_config():
 def tile_service_direct(s3, ts_config):
     from nexustiles.dao.ZarrProxy import ZarrProxy
 
+    ts_config.set("s3", "key", "MUR25-JPL-L4-GLOB-v04.2")
+
     svc = NexusTileService(skipMetadatastore=True, config=ts_config, skipDatastore=True)
     svc._datastore = ZarrProxy(ts_config, open_direct=True, test_fs=s3)
 
@@ -142,19 +147,30 @@ def tile_service_direct(s3, ts_config):
     yield svc
 
 @pytest.fixture()
-def tile_service_direct(s3, ts_config):
+def tile_service_indirect(s3, ts_config):
     from nexustiles.dao.ZarrProxy import ZarrProxy
 
     svc = NexusTileService(skipMetadatastore=True, config=ts_config, skipDatastore=True)
     svc._datastore = ZarrProxy(ts_config, test_fs=s3)
 
     def mock_query(ds):
-        pass
+        if ds == "id:MUR25-JPL-L4-GLOB-v04.2":
+            return json.load(open("mock_mur_meta.json"))
+        elif ds == "id:OISSS_L4_multimission_7day_v1":
+            return json.load(open("mock_oisss_meta.json"))
+        else:
+            raise ValueError("unsupported dataset")
 
     mock_solr = mock.MagicMock()
     mock_solr.do_query_raw = mock_query
 
+    svc._datastore._metadata_store = mock_solr
+    svc._datastore.open_dataset("OISSS_L4_multimission_7day_v1", test_fs=s3)
+
     yield svc
+
+def test_setup(s3):
+    assert True
 
 def test_bounds(bounds, tile_service_direct):
     tile_id = tile_service_direct.bounds_to_direct_tile_id(
@@ -178,8 +194,7 @@ def test_bounds(bounds, tile_service_direct):
     assert bounds['start_time'] <= str(np.amin(tile_data.times))
     assert bounds['end_time'] >= str(np.amax(tile_data.times))
 
-
-def filter_time(res):
+def filter_time(res, match_args):
     filtered = []
 
     for p in res:
@@ -187,7 +202,6 @@ def filter_time(res):
             filtered.append(p)
 
     return filtered
-
 
 # [(k,v),...] -> {k: [v,...],...}
 def to_map(res):
@@ -204,7 +218,6 @@ def to_map(res):
 
     return mapped
 
-
 def validate_point(point, time, lon, lat, value, name, cf_name=None, secondary_point=False):
     assert point.time == time
     assert point.longitude == lon
@@ -220,8 +233,6 @@ def validate_point(point, time, lon, lat, value, name, cf_name=None, secondary_p
         assert point.data[1].variable_name == name[1]
 
 def test_matchup_direct_open(bounds, tile_service_direct):
-    import webservice.algorithms_spark.Matchup as matchup
-
     tile_service_factory = mock.MagicMock()
     tile_service_factory.return_value = tile_service_direct
 
@@ -231,7 +242,8 @@ def test_matchup_direct_open(bounds, tile_service_direct):
         bounds['max_lat'],
         bounds['max_lon'],
         bounds['start_time'],
-        bounds['end_time']
+        bounds['end_time'],
+        dataset="MUR"
     )
 
     tiles = [tile_id]
@@ -255,13 +267,11 @@ def test_matchup_direct_open(bounds, tile_service_direct):
         test_data_dir = os.path.join(test_dir, 'data')
 
         mock_edge_endpoints.return_value = {'url': 'http://test-edge-url'}
-        matchup.query_edge = lambda *args, **kwargs: json.load(open(os.path.join(test_data_dir, 'mock_response.json')))
+        matchup.query_edge = lambda *args, **kwargs: json.load(open(os.path.join(test_data_dir, 'mock_response_direct.json')))
 
         generator = matchup.match_satellite_to_insitu(**match_args)
 
-        result = list(generator)
-
-        result = to_map(filter_time(result))
+        result = to_map(filter_time(list(generator), match_args))
 
         assert len(result) == 4
 
@@ -299,13 +309,17 @@ def test_matchup_select_ds(bounds, tile_service_indirect):
     tile_service_factory = mock.MagicMock()
     tile_service_factory.return_value = tile_service_indirect
 
+    bounds['start_time'] = "2017-03-01T09:00:00+00:00"
+    bounds['end_time'] = "2017-06-01T00:00:00+00:00"
+
     tile_id = tile_service_indirect.bounds_to_direct_tile_id(
         bounds['min_lat'],
         bounds['min_lon'],
         bounds['max_lat'],
         bounds['max_lon'],
         bounds['start_time'],
-        bounds['end_time']
+        bounds['end_time'],
+        dataset="OISSS"
     )
 
     tiles = [tile_id]
@@ -313,7 +327,7 @@ def test_matchup_select_ds(bounds, tile_service_indirect):
     with mock.patch('webservice.algorithms_spark.Matchup.edge_endpoints.getEndpointByName') as mock_edge_endpoints:
         match_args = dict(
             tile_ids=tiles,
-            primary_b=MockSparkParam('MUR25-JPL-L4-GLOB-v04.2'),
+            primary_b=MockSparkParam('OISSS_L4_multimission_7day_v1'),
             secondary_b=MockSparkParam('ICOADS Release 3.0'),
             parameter_b=MockSparkParam(None),
             tt_b=MockSparkParam(43200),
@@ -329,39 +343,46 @@ def test_matchup_select_ds(bounds, tile_service_indirect):
         test_data_dir = os.path.join(test_dir, 'data')
 
         mock_edge_endpoints.return_value = {'url': 'http://test-edge-url'}
-        matchup.query_edge = lambda *args, **kwargs: json.load(open(os.path.join(test_data_dir, 'mock_response.json')))
+        matchup.query_edge = lambda *args, **kwargs: json.load(open(os.path.join(test_data_dir, 'mock_response_indirect.json')))
 
         generator = matchup.match_satellite_to_insitu(**match_args)
 
-        result = to_map(filter_time(list(generator)))
+        #result =
 
-        assert len(result) == 4
+        #result = to_map(filter_time(result, match_args))
+        result = to_map(filter_time(list(generator), match_args))
+
+        assert len(result) == 3
 
         keys = list(result.keys())
 
-        validate_point(keys[0], '2018-08-17T09:00:00Z', -90.125, 27.625, 303.447998046875, 'analysed_sst', 'sea_surface_foundation_temperature')
-        validate_point(keys[1], '2018-08-21T09:00:00Z', -90.375, 28.125, 303.49200439453125, 'analysed_sst', 'sea_surface_foundation_temperature')
-        validate_point(keys[2], '2018-08-22T09:00:00Z', -90.125, 28.125, 303.3800048828125, 'analysed_sst', 'sea_surface_foundation_temperature')
-        validate_point(keys[3], '2018-08-27T09:00:00Z', -86.125, 27.625, 303.4729919433594, 'analysed_sst', 'sea_surface_foundation_temperature')
+        validate_point(keys[0], '2017-04-06T00:00:00Z', -90.625, 23.625, 36.32952880859375,  'sss', 'sea_surface_salinity')
+        validate_point(keys[1], '2017-04-10T00:00:00Z', -90.875, 23.875, 36.40681838989258,  'sss', 'sea_surface_salinity')
+        validate_point(keys[2], '2017-04-14T00:00:00Z', -89.125, 24.125, 36.365089416503906, 'sss', 'sea_surface_salinity')
 
         v0 = result[keys[0]]
         v1 = result[keys[1]]
         v2 = result[keys[2]]
-        v3 = result[keys[3]]
 
-        assert len(v0) == 6
-        assert len(v1) == 1
-        assert len(v2) == 1
-        assert len(v3) == 2
+        assert len(v0) == 2
+        assert len(v1) == 2
+        assert len(v2) == 12
 
-        validate_point(v0[0], '2018-08-17T05:00:00Z', -90.13, 27.62, [30.4,1], ['sea_water_temperature', 'sea_water_temperature_quality'], secondary_point=True)
-        validate_point(v0[1], '2018-08-17T05:30:00Z', -90.13, 27.62, [30.4,1], ['sea_water_temperature', 'sea_water_temperature_quality'], secondary_point=True)
-        validate_point(v0[2], '2018-08-17T06:00:00Z', -90.13, 27.62, [30.4,1], ['sea_water_temperature', 'sea_water_temperature_quality'], secondary_point=True)
-        validate_point(v0[3], '2018-08-17T06:30:00Z', -90.13, 27.63, [30.4,1], ['sea_water_temperature', 'sea_water_temperature_quality'], secondary_point=True)
-        validate_point(v0[4], '2018-08-17T07:00:00Z', -90.13, 27.63, [30.4,1], ['sea_water_temperature', 'sea_water_temperature_quality'], secondary_point=True)
-        validate_point(v0[5], '2018-08-17T07:30:00Z', -90.13, 27.63, [30.3,1], ['sea_water_temperature', 'sea_water_temperature_quality'], secondary_point=True)
-        validate_point(v1[0], '2018-08-21T01:00:00Z', -90.38, 28.12, [30.0,1], ['sea_water_temperature', 'sea_water_temperature_quality'], secondary_point=True)
-        validate_point(v2[0], '2018-08-22T01:00:00Z', -90.13, 28.12, [30.3,1], ['sea_water_temperature', 'sea_water_temperature_quality'], secondary_point=True)
-        validate_point(v3[0], '2018-08-27T12:30:00Z', -86.12, 27.62, [30.0,1], ['sea_water_temperature', 'sea_water_temperature_quality'], secondary_point=True)
-        validate_point(v3[1], '2018-08-27T13:00:00Z', -86.13, 27.63, [30.0,1], ['sea_water_temperature', 'sea_water_temperature_quality'], secondary_point=True)
+        validate_point(v0[ 0], '2017-04-06T04:16:12Z', -90.62, 23.63, [25.4,1], ['sea_water_temperature', 'sea_water_temperature_quality'], secondary_point=True)
+        validate_point(v0[ 1], '2017-04-06T05:01:12Z', -90.62, 23.63, [25.4,1], ['sea_water_temperature', 'sea_water_temperature_quality'], secondary_point=True)
 
+        validate_point(v1[ 0], '2017-04-09T23:30:00Z', -90.87, 23.88, [24.8,1], ['sea_water_temperature', 'sea_water_temperature_quality'], secondary_point=True)
+        validate_point(v1[ 1], '2017-04-09T23:34:48Z', -90.88, 23.88, [24.8,1], ['sea_water_temperature', 'sea_water_temperature_quality'], secondary_point=True)
+
+        validate_point(v2[ 0], '2017-04-13T22:30:00Z', -89.12, 24.12, [24.6,1], ['sea_water_temperature', 'sea_water_temperature_quality'], secondary_point=True)
+        validate_point(v2[ 1], '2017-04-13T23:30:00Z', -89.12, 24.12, [24.5,1], ['sea_water_temperature', 'sea_water_temperature_quality'], secondary_point=True)
+        validate_point(v2[ 2], '2017-04-13T23:45:00Z', -89.12, 24.12, [24.5,1], ['sea_water_temperature', 'sea_water_temperature_quality'], secondary_point=True)
+        validate_point(v2[ 3], '2017-04-14T00:00:00Z', -89.12, 24.12, [24.5,1], ['sea_water_temperature', 'sea_water_temperature_quality'], secondary_point=True)
+        validate_point(v2[ 4], '2017-04-14T00:15:00Z', -89.12, 24.13, [24.5,1], ['sea_water_temperature', 'sea_water_temperature_quality'], secondary_point=True)
+        validate_point(v2[ 5], '2017-04-14T00:30:00Z', -89.12, 24.13, [24.5,1], ['sea_water_temperature', 'sea_water_temperature_quality'], secondary_point=True)
+        validate_point(v2[ 6], '2017-04-14T01:15:00Z', -89.12, 24.13, [24.5,1], ['sea_water_temperature', 'sea_water_temperature_quality'], secondary_point=True)
+        validate_point(v2[ 7], '2017-04-14T02:00:00Z', -89.13, 24.13, [24.5,1], ['sea_water_temperature', 'sea_water_temperature_quality'], secondary_point=True)
+        validate_point(v2[ 8], '2017-04-14T02:15:00Z', -89.13, 24.12, [24.5,1], ['sea_water_temperature', 'sea_water_temperature_quality'], secondary_point=True)
+        validate_point(v2[ 9], '2017-04-14T03:45:00Z', -89.13, 24.12, [24.4,1], ['sea_water_temperature', 'sea_water_temperature_quality'], secondary_point=True)
+        validate_point(v2[10], '2017-04-14T04:45:00Z', -89.13, 24.12, [24.4,1], ['sea_water_temperature', 'sea_water_temperature_quality'], secondary_point=True)
+        validate_point(v2[11], '2017-04-14T09:15:00Z', -89.13, 24.12, [24.4,1], ['sea_water_temperature', 'sea_water_temperature_quality'], secondary_point=True)
