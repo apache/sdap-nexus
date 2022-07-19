@@ -129,7 +129,7 @@ class ZarrProxy(object):
 
         solr_config_txt = f"""
         [solr]
-        host={config.get("solr", "host")}
+        host={config.get("solr", "host", fallback='http://localhost:8983')}
         core=nexusdatasets
         """
 
@@ -137,7 +137,7 @@ class ZarrProxy(object):
         solr_config = configparser.ConfigParser()
         solr_config.read_file(buf)
 
-        self.__metadata_store = SolrProxy(solr_config)
+        self._metadata_store = SolrProxy(solr_config)
 
         if open_direct:
             pass #TODO: Move below code block into here from open to success log
@@ -160,7 +160,7 @@ class ZarrProxy(object):
         self.__zarr_data = zarr_data
 
     def _get_ds_info(self, ds):
-        store = self.__metadata_store
+        store = self._metadata_store
 
         query_response = store.do_query_raw((f'id:{ds}'))
 
