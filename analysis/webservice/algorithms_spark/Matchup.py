@@ -490,7 +490,8 @@ class DomsPoint(object):
             'wind_to_direction_quality',
             'eastward_wind',
             'northward_wind',
-            'wind_component_quality'
+            'wind_component_quality',
+            'depth'
         ]
         data = []
         # This is for in-situ secondary points
