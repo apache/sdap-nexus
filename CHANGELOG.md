@@ -19,4 +19,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Fix failing test_matchup unit test
 - Fixed null value for count in matchup response
 - SDAP-371: Fixed DOMS subset endpoint
+- SDAP-397: Added depth to matchup insitu output
+- SDAP-397: Pull ID from insitu api response for matchup
+- SDAP-397: Added null unit field for later use in matchup
 ### Security
