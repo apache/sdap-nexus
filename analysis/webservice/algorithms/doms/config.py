@@ -14,6 +14,7 @@
 # limitations under the License.
 
 INSITU_API_ENDPOINT = 'https://doms.jpl.nasa.gov/insitu/1.0/query_data_doms_custom_pagination'
+INSITU_API_SCHEMA_ENDPOINT = 'https://doms.jpl.nasa.gov/insitu/1.0/cdms_schema'
 
 INSITU_PROVIDER_MAP = [
     {
@@ -149,6 +150,10 @@ except KeyError:
 
 def getEndpoint():
     return INSITU_API_ENDPOINT
+
+
+def getSchemaEndpoint():
+    return INSITU_API_SCHEMA_ENDPOINT
 
 
 def getEndpointByName(name):
