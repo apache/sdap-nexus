@@ -200,11 +200,11 @@ class DomsCSVFormatter:
             for match in primaryValue['matches']:
                 platforms.add(match['platform'])
 
-        # insituDatasets = params["matchup"].split(",")
         insituDatasets = params["matchup"]
         insituLinks = set()
         for insitu in insituDatasets:
-            insituLinks.add(config.METADATA_LINKS[insitu])
+            if insitu in config.METADATA_LINKS:
+                insituLinks.add(config.METADATA_LINKS[insitu])
 
 
         global_attrs = [
@@ -292,7 +292,8 @@ class DomsNetCDFFormatter:
         dataset.CDMS_SearchRadius = float(params["radiusTolerance"])
         dataset.CDMS_SearchRadius_Units = "m"
         dataset.URI_Matchup = "https://doms.jpl.nasa.gov/domsresults?id=" + executionId + "&output=NETCDF"
-        dataset.CDMS_ParameterPrimary = params["parameter"] if "parameter" in params else ""
+
+        dataset.CDMS_ParameterPrimary = params["parameter"] if ("parameter" in params and params['parameter'] is not None) else ""
         dataset.CDMS_platforms = params["platforms"]
         dataset.CDMS_primary = params["primary"]
         dataset.CDMS_time_to_complete = details["timeToComplete"]
@@ -301,8 +302,10 @@ class DomsNetCDFFormatter:
         insituDatasets = params["matchup"]
         insituLinks = set()
         for insitu in insituDatasets:
-            insituLinks.add(config.METADATA_LINKS[insitu])
-        dataset.CDMS_DatasetMetadata = ', '.join(insituLinks)
+            if insitu in config.METADATA_LINKS:
+                insituLinks.add(config.METADATA_LINKS[insitu])
+        if insituLinks:
+            dataset.CDMS_DatasetMetadata = ', '.join(insituLinks)
 
         platforms = set()
         for primaryValue in results:

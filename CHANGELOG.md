@@ -12,6 +12,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - SDAP-372: Updated `match_spark_doms` to interface with samos_cdms endpoint 
 - SDAP-393: Included `insitu` in ingress based on the value of `insituAPI.enabled` in `values.yaml`
 - SDAP-371: Renamed `/domssubset` endpoint to `/cdmssubset`
+- SDAP-396: Added saildrone insitu api to matchup
 - CDMS-122: Added new `ZarrProxy` to access Zarr-formatted data stored in AWS S3
   - Currently only supports single variable & gridded data and the `/matchup_spark` endpoint
   - Included unit tests
@@ -28,4 +29,5 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Fixed issue where satellite satellite matchups failed
 - Fixed issue where null results were returned if more than "resultSizeLimit" matches are found
 - Fixed issue where satellite to satellite matchups with the same dataset don't return the expected result
+- Fixed CSV and NetCDF matchup output bug
 ### Security

@@ -37,6 +37,7 @@ INSITU_PROVIDER_MAP = [
     },
     {
         'name': 'Saildrone',
+        'endpoint': 'https://nasa-cdms.saildrone.com/1.0/query_data_doms_custom_pagination',
         'projects': [
             {
                 'name': '1021_atlantic',
@@ -148,7 +149,16 @@ except KeyError:
     pass
 
 
-def getEndpoint():
+def getEndpoint(provider_name=None):
+    if provider_name is None:
+        return INSITU_API_ENDPOINT
+
+    provider = next((provider for provider in INSITU_PROVIDER_MAP
+                     if provider['name'] == provider_name), None)
+
+    if 'endpoint' in provider:
+        return provider['endpoint']
+
     return INSITU_API_ENDPOINT
 
 
