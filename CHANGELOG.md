@@ -22,4 +22,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - SDAP-397: Added depth to matchup insitu output
 - SDAP-397: Pull ID from insitu api response for matchup
 - SDAP-397: Added null unit field for later use in matchup
+- Fixed issue where satellite satellite matchups failed
+- Fixed issue where null results were returned if more than "resultSizeLimit" matches are found
+- Fixed issue where satellite to satellite matchups with the same dataset don't return the expected result
 ### Security

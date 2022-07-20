@@ -278,12 +278,13 @@ class Matchup(NexusCalcSparkHandler):
 
         threading.Thread(target=do_result_insert).start()
 
-        if 0 < result_size_limit < len(matches):
-            result = DomsQueryResults(results=None, args=args, details=details, bounds=None, count=None,
-                                      computeOptions=None, executionId=execution_id, status_code=202)
-        else:
-            result = DomsQueryResults(results=matches, args=args, details=details, bounds=None, count=len(matches),
-                                      computeOptions=None, executionId=execution_id)
+        # Get only the first "result_size_limit" results
+        matches = matches[0:result_size_limit]
+
+        result = DomsQueryResults(results=matches, args=args,
+                                  details=details, bounds=None,
+                                  count=len(matches), computeOptions=None,
+                                  executionId=execution_id)
 
         return result
 
@@ -594,7 +595,12 @@ def spark_matchup_driver(tile_ids, bounding_wkt, primary_ds_name, secondary_ds_n
             lat1, lon1 = (primary.latitude, primary.longitude)
             lat2, lon2 = (matchup.latitude, matchup.longitude)
             az12, az21, distance = wgs84_geod.inv(lon1, lat1, lon2, lat2)
-            return distance
+            return distance, time_dist(primary, matchup)
+
+        def time_dist(primary, matchup):
+            primary_time = iso_time_to_epoch(primary.time)
+            matchup_time = iso_time_to_epoch(matchup.time)
+            return abs(primary_time - matchup_time)
 
         rdd_filtered = rdd_filtered \
             .map(lambda primary_matchup: tuple([primary_matchup[0], tuple([primary_matchup[1], dist(primary_matchup[0], primary_matchup[1])])])) \
@@ -659,10 +665,11 @@ def tile_to_edge_points(tile):
             data = [tile.data[tuple(idx)]]
 
         edge_point = {
-            'point': f'Point({tile.longitudes[idx[2]]} {tile.latitudes[idx[1]]})',
+            'latitude': tile.latitudes[idx[1]],
+            'longitude': tile.longitudes[idx[2]],
             'time': datetime.utcfromtimestamp(tile.times[idx[0]]).strftime('%Y-%m-%dT%H:%M:%SZ'),
             'source': tile.dataset,
-            'platform': None,
+            'platform': 'orbiting satellite',
             'device': None,
             'fileurl': tile.granule,
             'variables': tile.variables,
