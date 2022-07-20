@@ -7,6 +7,18 @@ from datetime import datetime
 from webservice.algorithms.doms import config as insitu_endpoints
 
 
+def query_insitu_schema():
+    """
+    Query the "cdms_schema" insitu endpoint. This will return the JSON
+    schema used to construct the data, which will contain useful
+    metadata
+    """
+    schema_endpoint = insitu_endpoints.getSchemaEndpoint()
+    response = requests.get(schema_endpoint)
+    response.raise_for_status()
+    return response.json()
+
+
 def query_insitu(dataset, variable, start_time, end_time, bbox, platform, depth_min, depth_max,
                items_per_page=1000, session=None):
     """
