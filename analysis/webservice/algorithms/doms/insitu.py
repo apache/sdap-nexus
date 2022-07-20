@@ -63,13 +63,14 @@ def query_insitu(dataset, variable, start_time, end_time, bbox, platform, depth_
     insitu_response = {}
 
     # Page through all insitu results
-    next_page_url = insitu_endpoints.getEndpoint()
+    next_page_url = insitu_endpoints.getEndpoint(provider)
     while next_page_url is not None and next_page_url != 'NA':
-        logging.debug(f'Insitu request {next_page_url}')
         if session is not None:
             response = session.get(next_page_url, params=params)
         else:
             response = requests.get(next_page_url, params=params)
+
+        logging.debug(f'Insitu request {response.url}')
 
         response.raise_for_status()
         insitu_page_response = response.json()
