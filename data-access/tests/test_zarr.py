@@ -273,6 +273,7 @@ def test_matchup_direct_open(bounds, tile_service_direct):
 
         mock_edge_endpoints.return_value = {'url': 'http://test-edge-url'}
         matchup.query_edge = lambda *args, **kwargs: json.load(open(os.path.join(test_data_dir, 'mock_response_direct.json')))
+        matchup.query_insitu_schema = lambda  *args, **kwargs: json.load(open(os.path.join(test_data_dir, 'mock_insitu_schema.json')))
 
         generator = matchup.match_satellite_to_insitu(**match_args)
 
@@ -352,6 +353,7 @@ def test_matchup_select_ds(bounds, tile_service_indirect):
 
         mock_edge_endpoints.return_value = {'url': 'http://test-edge-url'}
         matchup.query_edge = lambda *args, **kwargs: json.load(open(os.path.join(test_data_dir, 'mock_response_indirect.json')))
+        matchup.query_insitu_schema = lambda  *args, **kwargs: json.load(open(os.path.join(test_data_dir, 'mock_insitu_schema.json')))
 
         generator = matchup.match_satellite_to_insitu(**match_args)
 
