@@ -6,7 +6,6 @@ import requests
 from datetime import datetime
 from webservice.algorithms.doms import config as insitu_endpoints
 
-schema = None
 
 def query_insitu_schema():
     """
@@ -15,15 +14,10 @@ def query_insitu_schema():
     metadata
     """
 
-    global schema
-
-    if schema is None:
-        schema_endpoint = insitu_endpoints.getSchemaEndpoint()
-        response = requests.get(schema_endpoint)
-        response.raise_for_status()
-        schema = response.json()
-
-    return schema
+    schema_endpoint = insitu_endpoints.getSchemaEndpoint()
+    response = requests.get(schema_endpoint)
+    response.raise_for_status()
+    return response.json()
 
 
 def query_insitu(dataset, variable, start_time, end_time, bbox, platform, depth_min, depth_max,

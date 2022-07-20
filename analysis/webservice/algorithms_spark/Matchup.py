@@ -430,8 +430,13 @@ class DomsPoint(object):
         point.device = DomsPoint._variables_to_device(tile.variables)
         return point
 
+    insitu_schema = None
+
     @staticmethod
     def from_edge_point(edge_point):
+        if DomsPoint.insitu_schema is None:
+            DomsPoint.insitu_schema = query_insitu_schema()
+
         point = DomsPoint()
         x, y = edge_point['longitude'], edge_point['latitude']
 
@@ -506,7 +511,7 @@ class DomsPoint(object):
             val = edge_point.get(name)
             if not val:
                 continue
-            unit = get_insitu_unit(name)
+            unit = get_insitu_unit(name, DomsPoint.insitu_schema)
             data.append(DataPoint(
                 variable_name=name,
                 cf_variable_name=name,
@@ -642,12 +647,11 @@ def add_meters_to_lon_lat(lon, lat, meters):
     return longitude, latitude
 
 
-def get_insitu_unit(variable_name):
+def get_insitu_unit(variable_name, insitu_schema):
     """
     Query the insitu API and retrieve the units for the given variable.
     If no units are available for this variable, return "None"
     """
-    insitu_schema = query_insitu_schema()
     properties = insitu_schema.get('definitions', {}).get('observation', {}).get('properties', {})
     for observation_name, observation_value in properties.items():
         if observation_name == variable_name:
