@@ -517,10 +517,12 @@ class DomsPoint(object):
             ) if var_value])
         point.data = data
 
-        try:
-            point.data_id = str(edge_point['id'])
-        except KeyError:
-            point.data_id = "%s:%s:%s" % (point.time, point.longitude, point.latitude)
+        if 'id' in edge_point:
+            point.data_id = edge_point['id']
+        elif 'platform' in edge_point and 'id' in edge_point['platform']:
+            point.data_id = edge_point['platform']['id']
+        else:
+            point.data_id = f'{point.time}:{point.longitude}:{point.latitude}'
 
         return point
 
