@@ -41,6 +41,7 @@ from webservice.algorithms.doms import values as doms_values
 from webservice.algorithms.doms.BaseDomsHandler import DomsQueryResults
 from webservice.algorithms.doms.ResultsStorage import ResultsStorage
 from webservice.algorithms.doms.insitu import query_insitu as query_edge
+from webservice.algorithms.doms.insitu import query_insitu_schema
 from webservice.webmodel import NexusProcessingException
 
 EPOCH = timezone('UTC').localize(datetime(1970, 1, 1))
@@ -306,6 +307,7 @@ class Matchup(NexusCalcSparkHandler):
             "lat": str(domspoint.latitude),
             "point": "Point(%s %s)" % (domspoint.longitude, domspoint.latitude),
             "time": datetime.strptime(domspoint.time, "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=UTC),
+            "depth": domspoint.depth,
             "fileurl": domspoint.file_url,
             "id": domspoint.data_id,
             "source": domspoint.source,
@@ -441,6 +443,7 @@ class DomsPoint(object):
         point.platform = edge_point.get('platform')
         point.device = edge_point.get('device')
         point.file_url = edge_point.get('fileurl')
+        point.depth = edge_point.get('depth')
 
         if 'code' in point.platform:
             point.platform = edge_point.get('platform')['code']
@@ -494,19 +497,21 @@ class DomsPoint(object):
             'wind_to_direction_quality',
             'eastward_wind',
             'northward_wind',
-            'wind_component_quality',
-            'depth'
+            'wind_component_quality'
         ]
         data = []
         # This is for in-situ secondary points
         for name in data_fields:
             val = edge_point.get(name)
-            if val:
-                data.append(DataPoint(
-                    variable_name=name,
-                    variable_value=val,
-                    variable_unit=None
-                ))
+            if not val:
+                continue
+            unit = get_insitu_unit(name)
+            data.append(DataPoint(
+                variable_name=name,
+                cf_variable_name=name,
+                variable_value=val,
+                variable_unit=unit
+            ))
 
 
         # This is for satellite secondary points
@@ -523,10 +528,8 @@ class DomsPoint(object):
             ) if var_value])
         point.data = data
 
-        if 'id' in edge_point:
-            point.data_id = edge_point['id']
-        elif 'platform' in edge_point and 'id' in edge_point['platform']:
-            point.data_id = edge_point['platform']['id']
+        if 'meta' in edge_point:
+            point.data_id = edge_point['meta']
         else:
             point.data_id = f'{point.time}:{point.longitude}:{point.latitude}'
 
@@ -631,6 +634,18 @@ def add_meters_to_lon_lat(lon, lat, meters):
     latitude = lat + (meters / 111111)
 
     return longitude, latitude
+
+
+def get_insitu_unit(variable_name):
+    """
+    Query the insitu API and retrieve the units for the given variable.
+    If no units are available for this variable, return "None"
+    """
+    insitu_schema = query_insitu_schema()
+    properties = insitu_schema.get('definitions', {}).get('observation', {}).get('properties', {})
+    for observation_name, observation_value in properties.items():
+        if observation_name == variable_name:
+            return observation_value.get('units')
 
 
 def tile_to_edge_points(tile):
