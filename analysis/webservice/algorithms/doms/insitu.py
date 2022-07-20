@@ -13,7 +13,6 @@ def query_insitu_schema():
     schema used to construct the data, which will contain useful
     metadata
     """
-
     schema_endpoint = insitu_endpoints.getSchemaEndpoint()
     response = requests.get(schema_endpoint)
     response.raise_for_status()
