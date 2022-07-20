@@ -1,0 +1,33 @@
+{
+  "responseHeader": {
+    "status": 0
+  },
+  "response": {
+    "numFound": 1,
+    "docs": [
+      {
+        "id": "JPL-L4-MRVA-CHLA-GLOB-v3.0",
+        "latest_update_l": 1637632069,
+        "_version_": 1723706460913795072,
+        "dataset_s": "JPL-L4-MRVA-CHLA-GLOB-v3.0",
+        "variables": [{
+            "name_s": "CHLA_analysis",
+            "fill_d": -999.0
+        },{
+            "name_s": "analysis_error",
+            "fill_d": -999.0
+        },{
+            "name_s": "dt_data",
+            "fill_d": -128
+        },{
+            "name_s": "mask",
+            "fill_d": -128
+        }],
+        "s3_uri_s": "s3://cdms-dev-zarr/JPL-L4-MRVA-CHLA-GLOB-v3.0/",
+        "public_b": false,
+        "type_s": "gridded",
+        "chunk_shape": [30, 120, 184]
+      }
+    ]
+  }
+}

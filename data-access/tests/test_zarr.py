@@ -129,6 +129,9 @@ def ts_config():
 
     yield config
 
+def do_nothing(arg):
+    pass
+
 @pytest.fixture()
 def tile_service_direct(s3, ts_config):
     from nexustiles.dao.ZarrProxy import ZarrProxy
@@ -137,6 +140,7 @@ def tile_service_direct(s3, ts_config):
 
     svc = NexusTileService(skipMetadatastore=True, config=ts_config, skipDatastore=True)
     svc._datastore = ZarrProxy(ts_config, open_direct=True, test_fs=s3)
+    svc._datastore.open_dataset = do_nothing
 
     def mock_query(ds):
         pass
@@ -166,6 +170,7 @@ def tile_service_indirect(s3, ts_config):
 
     svc._datastore._metadata_store = mock_solr
     svc._datastore.open_dataset("OISSS_L4_multimission_7day_v1", test_fs=s3)
+    svc._datastore.open_dataset = do_nothing
 
     yield svc
 
@@ -298,8 +303,11 @@ def test_matchup_direct_open(bounds, tile_service_direct):
         validate_point(v0[3], '2018-08-17T06:30:00Z', -90.13, 27.63, [30.4,1], ['sea_water_temperature', 'sea_water_temperature_quality'], secondary_point=True)
         validate_point(v0[4], '2018-08-17T07:00:00Z', -90.13, 27.63, [30.4,1], ['sea_water_temperature', 'sea_water_temperature_quality'], secondary_point=True)
         validate_point(v0[5], '2018-08-17T07:30:00Z', -90.13, 27.63, [30.3,1], ['sea_water_temperature', 'sea_water_temperature_quality'], secondary_point=True)
+
         validate_point(v1[0], '2018-08-21T01:00:00Z', -90.38, 28.12, [30.0,1], ['sea_water_temperature', 'sea_water_temperature_quality'], secondary_point=True)
+
         validate_point(v2[0], '2018-08-22T01:00:00Z', -90.13, 28.12, [30.3,1], ['sea_water_temperature', 'sea_water_temperature_quality'], secondary_point=True)
+
         validate_point(v3[0], '2018-08-27T12:30:00Z', -86.12, 27.62, [30.0,1], ['sea_water_temperature', 'sea_water_temperature_quality'], secondary_point=True)
         validate_point(v3[1], '2018-08-27T13:00:00Z', -86.13, 27.63, [30.0,1], ['sea_water_temperature', 'sea_water_temperature_quality'], secondary_point=True)
 

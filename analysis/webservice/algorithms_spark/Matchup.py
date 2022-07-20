@@ -679,6 +679,8 @@ def match_satellite_to_insitu(tile_ids, primary_b, secondary_b, parameter_b, tt_
 
         parts = ZarrProxy.parse_tile_id_to_bounds(tile_ids[0])
 
+        tile_service.get_datastore().open_dataset(primary_b.value)
+
         tiles_bbox = box(parts['min_lon'], parts['min_lat'], parts['max_lon'], parts['max_lat'])
         tiles_min_time = int((parser.parse(parts['start_time']) - EPOCH).total_seconds())
         tiles_max_time = int((parser.parse(parts['end_time']) - EPOCH).total_seconds())

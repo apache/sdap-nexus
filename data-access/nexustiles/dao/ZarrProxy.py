@@ -118,6 +118,8 @@ class NexusDataTile(object):
         return latitude_data, longitude_data, self.__data.time.values, grid_tile_data, metadata, isMultiVar
 
 class ZarrProxy(object):
+    mock_solr_for_testing = True
+
     def __init__(self, config, test_fs = None, open_direct=False, **kwargs):
         from .SolrProxy import SolrProxy
 
@@ -141,7 +143,16 @@ class ZarrProxy(object):
         solr_config = configparser.ConfigParser()
         solr_config.read_file(buf)
 
-        self._metadata_store = SolrProxy(solr_config)
+        if not ZarrProxy.mock_solr_for_testing:
+            self._metadata_store = SolrProxy(solr_config)
+        else:
+            import mock
+
+            mock_solr = mock.MagicMock()
+            mock_solr.do_query_raw = ZarrProxy.mock_query
+
+            self._metadata_store = mock_solr
+
 
         if open_direct:
             logger.info('Opening Zarr proxy')
@@ -250,3 +261,17 @@ class ZarrProxy(object):
         }
 
         return parts
+
+    @staticmethod
+    def mock_query(ds):
+        import json
+
+        if ds == "id:MUR25-JPL-L4-GLOB-v04.2":
+            return json.load(open("/Users/rileykk/repo/incubator-sdap-nexus/data-access/tests/mock_mur_meta.json"))
+        elif ds == "id:OISSS_L4_multimission_7day_v1":
+            return json.load(open("/Users/rileykk/repo/incubator-sdap-nexus/data-access/tests/mock_oisss_meta.json"))
+        elif ds == "id:JPL-L4-MRVA-CHLA-GLOB-v3.0":
+            return json.load(open("/Users/rileykk/repo/incubator-sdap-nexus/data-access/tests/mock_chla_meta.json"))
+        else:
+            raise ValueError("unsupported dataset")
+

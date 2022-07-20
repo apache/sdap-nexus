@@ -12,7 +12,7 @@
         "dataset_s": "OISSS_L4_multimission_7day_v1",
         "variables": [{
             "name_s": "sss",
-            "fill_d": -1
+            "fill_d": -999.0
         }],
         "s3_uri_s": "s3://cdms-dev-zarr/OISSS_L4_multimission_7day_v1/",
         "public_b": false,
