@@ -14,7 +14,7 @@
 # limitations under the License.
 
 
-
+from typing import Optional
 import json
 import logging
 import threading
@@ -326,10 +326,13 @@ class DataPoint:
     exist in the source data file.
     :attribute variable_value: value at some point for the given
         variable.
+    :attribute variable_unit: Unit of the measurement. Will be None if
+    no unit is known.
     """
     variable_name: str = None
     cf_variable_name: str = None
     variable_value: float = None
+    variable_unit: Optional[str] = None
 
 
 class DomsPoint(object):
@@ -387,7 +390,8 @@ class DomsPoint(object):
                 data.append(DataPoint(
                     variable_name=variable.variable_name,
                     variable_value=data_val,
-                    cf_variable_name=variable.standard_name
+                    cf_variable_name=variable.standard_name,
+                    variable_unit=None
                 ))
         point.data = data
 
@@ -500,7 +504,8 @@ class DomsPoint(object):
             if val:
                 data.append(DataPoint(
                     variable_name=name,
-                    variable_value=val
+                    variable_value=val,
+                    variable_unit=None
                 ))
 
 
@@ -510,7 +515,8 @@ class DomsPoint(object):
             data.extend([DataPoint(
                 variable_name=variable.variable_name,
                 variable_value=var_value,
-                cf_variable_name=variable.standard_name
+                cf_variable_name=variable.standard_name,
+                variable_unit=None
             ) for var_value, variable in zip(
                 edge_point['var_values'],
                 edge_point['variables']
