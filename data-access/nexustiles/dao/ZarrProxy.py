@@ -13,15 +13,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import boto3
-
-import xarray as xr
-import s3fs
-import numpy as np
-
-from dask.diagnostics import ProgressBar
-
 import logging
+
+import boto3
+import numpy as np
+import s3fs
+import xarray as xr
+from dask.diagnostics import ProgressBar
+from webservice.webmodel import NexusProcessingException
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
@@ -46,7 +45,7 @@ class NexusDataTile(object):
             self.tile_id = _tile_id
 
         if not re.search("^.*_[0-9-T :.+]*_[0-9-T :.+]*_[0-9.-]*_[0-9.-]*_[0-9.-]*_[0-9.-]*$", self.tile_id):
-            raise ValueError("Bad tile id")
+            raise NexusProcessingException(reason="Bad tile id", code=500)
 
         self.__vars = var_name
 
@@ -180,10 +179,13 @@ class ZarrProxy(object):
         query_response = store.do_query_raw((f'id:{ds}'))
 
         if not query_response['responseHeader']['status'] == 0:
-            raise Exception("bad solr response")
+            raise NexusProcessingException(reason="bad solr response")
 
         if not query_response['response']['numFound'] == 1:
-            raise  Exception(f"wrong number of datasets returned from solr: {query_response['response']['numFound']}")
+            raise  NexusProcessingException(
+                reason=f"wrong number of datasets returned from solr: {query_response['response']['numFound']}",
+                code=400 if query_response['response']['numFound'] == 0 else 500
+            )
 
         ds_info = query_response['response']['docs'][0]
 

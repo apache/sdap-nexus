@@ -487,7 +487,7 @@ class NexusTileService(object):
     def fetch_direct_by_id(self, tid):
         return self._datastore.fetch_nexus_tiles(*[tid])
 
-    def get_nexus_data_for_bounds(self, min_lat, min_lon, max_lat, max_lon, start_time, end_time, dataset='MUR'):
+    def get_nexus_data_for_bounds(self, min_lat, min_lon, max_lat, max_lon, start_time, end_time, dataset='TILE'):
         """
         Directly fetch tile data that fits to the given bounds without having to query the metadata store first.
         Only works if the data store supports this (ie, ZarrProxy).
