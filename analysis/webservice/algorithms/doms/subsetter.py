@@ -15,17 +15,18 @@
 
 import logging
 import os
-import tempfile
+import io
 import zipfile
+from pytz import timezone
 from datetime import datetime
-
-import requests
 
 from . import BaseDomsHandler
 from webservice.NexusHandler import nexus_handler
-from webservice.webmodel import NexusProcessingException
+from webservice.webmodel import NexusProcessingException, NexusResults
+from webservice.algorithms.doms.insitu import query_insitu
 
 ISO_8601 = '%Y-%m-%dT%H:%M:%S%z'
+EPOCH = timezone('UTC').localize(datetime(1970, 1, 1))
 
 
 def is_blank(my_string):
@@ -34,9 +35,9 @@ def is_blank(my_string):
 
 @nexus_handler
 class DomsResultsRetrievalHandler(BaseDomsHandler.BaseDomsQueryCalcHandler):
-    name = "DOMS Subsetter"
-    path = "/domssubset"
-    description = "Subset DOMS sources given the search domain"
+    name = "CDMS Subsetter"
+    path = "/cdmssubset"
+    description = "Subset CDMS sources given the search domain"
 
     params = {
         "dataset": {
@@ -52,7 +53,7 @@ class DomsResultsRetrievalHandler(BaseDomsHandler.BaseDomsQueryCalcHandler):
         "parameter": {
             "name": "Data Parameter",
             "type": "string",
-            "description": "The parameter of interest. One of 'sst', 'sss', 'wind'. Required"
+            "description": "The insitu parameter of interest. Only required if insitu is present."
         },
         "startTime": {
             "name": "Start Time",
@@ -73,12 +74,12 @@ class DomsResultsRetrievalHandler(BaseDomsHandler.BaseDomsQueryCalcHandler):
         "depthMin": {
             "name": "Minimum Depth",
             "type": "float",
-            "description": "Minimum depth of measurements. Must be less than depthMax. Optional"
+            "description": "Minimum depth of measurements. Must be less than depthMax. Default 0. Optional"
         },
         "depthMax": {
             "name": "Maximum Depth",
             "type": "float",
-            "description": "Maximum depth of measurements. Must be greater than depthMin. Optional"
+            "description": "Maximum depth of measurements. Must be greater than depthMin. Default 5. Optional"
         },
         "platforms": {
             "name": "Platforms",
@@ -113,22 +114,24 @@ class DomsResultsRetrievalHandler(BaseDomsHandler.BaseDomsQueryCalcHandler):
                 matchup_ds_names = matchup_ds_names.split(',')
             except:
                 raise NexusProcessingException(reason="'insitu' argument should be a comma-seperated list", code=400)
+        else:
+            matchup_ds_names = []
 
         parameter_s = request.get_argument('parameter', None)
-        if parameter_s not in ['sst', 'sss', 'wind']:
+        if parameter_s is None and len(matchup_ds_names) > 0:
             raise NexusProcessingException(
-                reason="Parameter %s not supported. Must be one of 'sst', 'sss', 'wind'." % parameter_s, code=400)
+                reason="Parameter must be provided for insitu subset." % parameter_s, code=400)
 
         try:
             start_time = request.get_start_datetime()
-            start_time = start_time.strftime("%Y-%m-%dT%H:%M:%SZ")
+            start_time = int((start_time - EPOCH).total_seconds())
         except:
             raise NexusProcessingException(
                 reason="'startTime' argument is required. Can be int value seconds from epoch or string format YYYY-MM-DDTHH:mm:ssZ",
                 code=400)
         try:
             end_time = request.get_end_datetime()
-            end_time = end_time.strftime("%Y-%m-%dT%H:%M:%SZ")
+            end_time = int((end_time - EPOCH).total_seconds())
         except:
             raise NexusProcessingException(
                 reason="'endTime' argument is required. Can be int value seconds from epoch or string format YYYY-MM-DDTHH:mm:ssZ",
@@ -147,8 +150,8 @@ class DomsResultsRetrievalHandler(BaseDomsHandler.BaseDomsQueryCalcHandler):
                 reason="'b' argument is required. Must be comma-delimited float formatted as Minimum (Western) Longitude, Minimum (Southern) Latitude, Maximum (Eastern) Longitude, Maximum (Northern) Latitude",
                 code=400)
 
-        depth_min = request.get_decimal_arg('depthMin', default=None)
-        depth_max = request.get_decimal_arg('depthMax', default=None)
+        depth_min = request.get_decimal_arg('depthMin', default=0)
+        depth_max = request.get_decimal_arg('depthMax', default=5)
 
         if depth_min is not None and depth_max is not None and depth_min >= depth_max:
             raise NexusProcessingException(
@@ -167,94 +170,143 @@ class DomsResultsRetrievalHandler(BaseDomsHandler.BaseDomsQueryCalcHandler):
                bounding_polygon, depth_min, depth_max, platforms
 
     def calc(self, request, **args):
-
         primary_ds_name, matchup_ds_names, parameter_s, start_time, end_time, \
         bounding_polygon, depth_min, depth_max, platforms = self.parse_arguments(request)
 
-        primary_url = "https://doms.jpl.nasa.gov/datainbounds"
-        primary_params = {
-            'ds': primary_ds_name,
-            'parameter': parameter_s,
-            'b': ','.join([str(bound) for bound in bounding_polygon.bounds]),
-            'startTime': start_time,
-            'endTime': end_time,
-            'output': "CSV"
-        }
+        min_lat = max_lat = min_lon = max_lon = None
+        if bounding_polygon:
+            min_lat = bounding_polygon.bounds[1]
+            max_lat = bounding_polygon.bounds[3]
+            min_lon = bounding_polygon.bounds[0]
+            max_lon = bounding_polygon.bounds[2]
 
-        matchup_url = "https://doms.jpl.nasa.gov/domsinsitusubset"
-        matchup_params = {
-            'source': None,
-            'parameter': parameter_s,
-            'startTime': start_time,
-            'endTime': end_time,
-            'b': ','.join([str(bound) for bound in bounding_polygon.bounds]),
-            'depthMin': depth_min,
-            'depthMax': depth_max,
-            'platforms': platforms,
-            'output': 'CSV'
-        }
+        tiles = self._get_tile_service().get_tiles_bounded_by_box(
+            min_lat=min_lat, max_lat=max_lat, min_lon=min_lon,
+            max_lon=max_lon, ds=primary_ds_name, start_time=start_time,
+            end_time=end_time
+        )
 
-        primary_temp_file_path = None
-        matchup_downloads = None
+        # Satellite
+        data = []
+        data_dict = {}
+        for tile in tiles:
+            for nexus_point in tile.nexus_point_generator():
+                if tile.is_multi:
+                    data_points = {
+                        tile.variables[idx].standard_name: nexus_point.data_vals[idx]
+                        for idx in range(len(tile.variables))
+                    }
+                else:
+                    data_points = {tile.variables[0].standard_name: nexus_point.data_vals}
+                data.append({
+                    'latitude': nexus_point.latitude,
+                    'longitude': nexus_point.longitude,
+                    'time': nexus_point.time,
+                    'data': data_points
+                })
+        data_dict[primary_ds_name] = data
 
-        with requests.session() as session:
+        # In-situ
+        non_data_fields = [
+            'meta',
+            'platform',
+            'job_id',
+            'latitude',
+            'longitude',
+            'time',
+        ]
+        for insitu_dataset in matchup_ds_names:
+            data = []
+            edge_response = query_insitu(
+                dataset=insitu_dataset,
+                variable=parameter_s,
+                start_time=start_time,
+                end_time=end_time,
+                bbox=','.join(list(map(str, [min_lon, min_lat, max_lon, max_lat]))),
+                platform=platforms,
+                depth_min=depth_min,
+                depth_max=depth_max
+            )
+            for result in edge_response['results']:
+                data_points = {
+                    key: value for key, value in result.items()
+                    if value is not None and key not in non_data_fields
+                }
+                data.append({
+                    'latitude': result['latitude'],
+                    'longitude': result['longitude'],
+                    'time': (datetime.strptime(result['time'], '%Y-%m-%dT%H:%M:%SZ') - datetime.fromtimestamp(0)).total_seconds(),
+                    'data': data_points
+                })
+            data_dict[insitu_dataset] = data
 
-            if not is_blank(primary_ds_name):
-                # Download primary
-                primary_temp_file, primary_temp_file_path = tempfile.mkstemp(suffix='.csv')
-                download_file(primary_url, primary_temp_file_path, session, params=primary_params)
+        if len(tiles) > 0:
+            meta = [tile.get_summary() for tile in tiles]
+        else:
+            meta = None
 
-            if matchup_ds_names is not None and len(matchup_ds_names) > 0:
-                # Download matchup
-                matchup_downloads = {}
-                for matchup_ds in matchup_ds_names:
-                    matchup_downloads[matchup_ds] = tempfile.mkstemp(suffix='.csv')
-                    matchup_params['source'] = matchup_ds
-                    download_file(matchup_url, matchup_downloads[matchup_ds][1], session, params=matchup_params)
+        result = SubsetResult(
+            results=data_dict,
+            meta=meta
+        )
 
-        # Zip downloads
-        date_range = "%s-%s" % (datetime.strptime(start_time, "%Y-%m-%dT%H:%M:%SZ").strftime("%Y%m%d"),
-                                datetime.strptime(end_time, "%Y-%m-%dT%H:%M:%SZ").strftime("%Y%m%d"))
-        bounds = '%.4fW_%.4fS_%.4fE_%.4fN' % bounding_polygon.bounds
-        zip_dir = tempfile.mkdtemp()
-        zip_path = '%s/subset.%s.%s.zip' % (zip_dir, date_range, bounds)
-        with zipfile.ZipFile(zip_path, 'w') as my_zip:
-            if primary_temp_file_path:
-                my_zip.write(primary_temp_file_path, arcname='%s.%s.%s.csv' % (primary_ds_name, date_range, bounds))
-            if matchup_downloads:
-                for matchup_ds, download in matchup_downloads.items():
-                    my_zip.write(download[1], arcname='%s.%s.%s.csv' % (matchup_ds, date_range, bounds))
+        result.extendMeta(min_lat, max_lat, min_lon, max_lon, "", start_time, end_time)
 
-        # Clean up
-        if primary_temp_file_path:
-            os.remove(primary_temp_file_path)
-        if matchup_downloads:
-            for matchup_ds, download in matchup_downloads.items():
-                os.remove(download[1])
-
-        return SubsetResult(zip_path)
+        return result
 
 
-class SubsetResult(object):
-    def __init__(self, zip_path):
-        self.zip_path = zip_path
-
+class SubsetResult(NexusResults):
     def toJson(self):
         raise NotImplementedError
 
-    def toZip(self):
-        with open(self.zip_path, 'rb') as zip_file:
-            zip_contents = zip_file.read()
+    def toCsv(self):
+        """
+        Convert results to csv
+        """
+        dataset_results = self.results()
+        csv_results = {}
 
-        return zip_contents
+        for dataset_name, results in dataset_results.items():
+            rows = []
+
+            headers = [
+                'longitude',
+                'latitude',
+                'time'
+            ]
+            data_variables = list(set([keys for result in results for keys in result['data'].keys()]))
+            data_variables.sort()
+            headers.extend(data_variables)
+            for i, result in enumerate(results):
+                cols = []
+
+                cols.append(result['longitude'])
+                cols.append(result['latitude'])
+                cols.append(datetime.utcfromtimestamp(result['time']).strftime('%Y-%m-%dT%H:%M:%SZ'))
+
+                for var in data_variables:
+                    cols.append(result['data'][var])
+                if i == 0:
+                    rows.append(','.join(headers))
+                rows.append(','.join(map(str, cols)))
+
+            csv_results[dataset_name] = '\r\n'.join(rows)
+        return csv_results
+
+    def toZip(self):
+        """
+        Convert csv results to zip. Each subsetted dataset becomes a csv
+        inside the zip named as <dataset-short-name>.csv
+        """
+        csv_results = self.toCsv()
+
+        buffer = io.BytesIO()
+        with zipfile.ZipFile(buffer, 'a', zipfile.ZIP_DEFLATED) as zip_file:
+            for dataset_name, csv_contents in csv_results.items():
+                zip_file.writestr(f'{dataset_name}.csv', csv_contents)
+
+        buffer.seek(0)
+        return buffer.read()
 
     def cleanup(self):
         os.remove(self.zip_path)
-
-
-def download_file(url, filepath, session, params=None):
-    r = session.get(url, params=params, stream=True)
-    with open(filepath, 'wb') as f:
-        for chunk in r.iter_content(chunk_size=1024):
-            if chunk:  # filter out keep-alive new chunks
-                f.write(chunk)

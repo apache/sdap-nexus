@@ -14,6 +14,7 @@
 # limitations under the License.
 
 INSITU_API_ENDPOINT = 'https://doms.jpl.nasa.gov/insitu/1.0/query_data_doms_custom_pagination'
+INSITU_API_SCHEMA_ENDPOINT = 'https://doms.jpl.nasa.gov/insitu/1.0/cdms_schema'
 
 INSITU_PROVIDER_MAP = [
     {
@@ -36,6 +37,7 @@ INSITU_PROVIDER_MAP = [
     },
     {
         'name': 'Saildrone',
+        'endpoint': 'https://nasa-cdms.saildrone.com/1.0/query_data_doms_custom_pagination',
         'projects': [
             {
                 'name': '1021_atlantic',
@@ -147,8 +149,21 @@ except KeyError:
     pass
 
 
-def getEndpoint():
+def getEndpoint(provider_name=None):
+    if provider_name is None:
+        return INSITU_API_ENDPOINT
+
+    provider = next((provider for provider in INSITU_PROVIDER_MAP
+                     if provider['name'] == provider_name), None)
+
+    if 'endpoint' in provider:
+        return provider['endpoint']
+
     return INSITU_API_ENDPOINT
+
+
+def getSchemaEndpoint():
+    return INSITU_API_SCHEMA_ENDPOINT
 
 
 def getEndpointByName(name):

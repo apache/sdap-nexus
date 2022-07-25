@@ -10,7 +10,8 @@ Python module that exposes NEXUS analytical capabilities via a HTTP webservice. 
 1. Setup a separate conda env or activate an existing one
 
     ````
-    conda create --name nexus-analysis python=2.7.17
+    conda create --name nexus-analysis python=3.8
+    conda create -n nexus-analysis-38 --no-default-packages python=3.
     conda activate nexus-analysis
     ````
 
@@ -18,9 +19,7 @@ Python module that exposes NEXUS analytical capabilities via a HTTP webservice. 
 
     ````
     cd analysis
-    conda install pyspark
     conda install -c conda-forge --file conda-requirements.txt
-    #conda install numpy matplotlib mpld3 scipy netCDF4 basemap gdal pyproj=1.9.5.1 libnetcdf=4.3.3.1
     ````
 
 3. Update the configuration for solr and cassandra
@@ -46,7 +45,18 @@ BUT be carefull to remove them when you build the docker image. Otherwise they w
     python setup.py install
     ````
 
-5. Set environment variables (examples):
+5. Launch other requirements, through helm:
+
+   ````
+   cd ../helm/
+   kubectl create namespace sdap 
+   kubectl create configmap collections-config --from-file=../analysis/tests/redirect/ -n sdap
+   helm install nexus . -n sdap
+   kubectl port-forward service/nexus-cassandra 9042:9042 -n sdap
+
+   ````
+
+7. Set environment variables (examples):
 
     ```
     PYTHONUNBUFFERED=1
@@ -54,10 +64,12 @@ BUT be carefull to remove them when you build the docker image. Otherwise they w
     JAVA_HOME=/Library/Java/JavaVirtualMachines/jdk1.8.0_241.jdk/Contents/Home
      ```
 
-5. Launch unit tests
+8. Launch unit tests
 
     pip install pytest
+    pip install -e .
     pytest
+9. 
     
 
 5. Launch `python webservice/webapp.py` in command line or run it from the IDE.
