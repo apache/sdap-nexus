@@ -190,8 +190,6 @@ def test_matchup_spark(host, eid):
 
     bounding_poly = b_to_polygon(params['b'])
 
-    eid['successful'] = True
-
     body = response.json()
     data = body['data']
 
@@ -230,6 +228,8 @@ def test_matchup_spark(host, eid):
     verify_match(data[1], 'Point(-90.125 27.625)', 1534507200, 'Point(-90.13 27.63)', 1534491000, params, bounding_poly)
     verify_match(data[2], 'Point(-90.125 28.125)', 1534939200, 'Point(-90.13 28.12)', 1534899600, params, bounding_poly)
     verify_match(data[3], 'Point(-90.375 28.125)', 1534852800, 'Point(-90.38 28.12)', 1534813200, params, bounding_poly)
+
+    eid['successful'] = True
 
 def test_domsresults_JSON(host, eid):
     check_skip('SKIP_RESULTS')
