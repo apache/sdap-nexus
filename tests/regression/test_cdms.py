@@ -13,19 +13,27 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import copy
 import csv
 import io
 import os
 import warnings
 from datetime import datetime
+from math import cos, radians
+from tempfile import NamedTemporaryFile as Temp
 from urllib.parse import urljoin
 from zipfile import ZipFile
 
+import pandas as pd
 import pytest
 import requests
+from dateutil.parser import parse
 from pytz import timezone, UTC
 from shapely import wkt
 from shapely.geometry import Polygon, Point, box
+
+import cdms_reader
+
 
 #########################
 #
@@ -50,17 +58,27 @@ from shapely.geometry import Polygon, Point, box
 #
 #########################
 
+
 @pytest.fixture()
 def host():
     return os.getenv('TEST_HOST', 'http://doms.jpl.nasa.gov')
 
+
 @pytest.fixture()
 def insitu_endpoint():
-    return os.getenv('INSITU_ENDPOINT', 'http://doms.jpl.nasa.gov/insitu/1.0/query_data_doms_custom_pagination')
+    return os.getenv(
+        'INSITU_ENDPOINT',
+        'http://doms.jpl.nasa.gov/insitu/1.0/query_data_doms_custom_pagination'
+    )
+
 
 @pytest.fixture()
 def insitu_swagger_endpoint():
-    return os.getenv('INSITU_SWAGGER_ENDPOINT', 'http://doms.jpl.nasa.gov/insitu/1.0/insitu_query_swagger/')
+    return os.getenv(
+        'INSITU_SWAGGER_ENDPOINT',
+        'http://doms.jpl.nasa.gov/insitu/1.0/insitu_query_swagger/'
+    )
+
 
 @pytest.fixture(scope="module")
 def eid():
@@ -70,17 +88,21 @@ def eid():
         'params': []
     }
 
-def skip(msg = ""):
+
+def skip(msg=""):
     raise pytest.skip(msg)
+
 
 def check_skip(variable):
     if os.getenv(variable) is not None:
         raise pytest.skip('Manually skipped')
 
+
 def b_to_polygon(b):
     west, south, east, north = [float(p) for p in b.split(",")]
     polygon = Polygon([(west, south), (east, south), (east, north), (west, north), (west, south)])
     return polygon
+
 
 def iso_time_to_epoch(str_time):
     EPOCH = timezone('UTC').localize(datetime(1970, 1, 1))
@@ -88,10 +110,9 @@ def iso_time_to_epoch(str_time):
     return (datetime.strptime(str_time, "%Y-%m-%dT%H:%M:%SZ").replace(
         tzinfo=UTC) - EPOCH).total_seconds()
 
+
 def expand_by_tolerance(point, rt):
     def add_meters_to_lon_lat(point, meters):
-        from math import cos, radians
-
         lon = point.x
         lat = point.y
 
@@ -105,6 +126,7 @@ def expand_by_tolerance(point, rt):
 
     return box(min_lon, min_lat, max_lon, max_lat)
 
+
 def translate_global_rows(rows):
     translated = {}
 
@@ -113,6 +135,7 @@ def translate_global_rows(rows):
         translated[parts[0]] = parts[1]
 
     return translated
+
 
 def translate_matchup_rows(rows):
     headers = rows[0].split(',')
@@ -128,51 +151,60 @@ def translate_matchup_rows(rows):
 
         assert len(headers) == len(fields)
 
-        for i in range(len(fields)):
+        for i, field in enumerate(fields):
             header = headers[i]
 
             if header not in translated_row:
-                translated_row[header] = fields[i]
+                translated_row[header] = field
             else:
-                translated_row[f"{header}_secondary"] = fields[i]
+                translated_row[f"{header}_secondary"] = field
 
         translated_rows.append(translated_row)
 
     return translated_rows
 
+
 def lat_lon_to_point(lat, lon):
     return wkt.loads(f"Point({lon} {lat})")
 
+
 def format_time(timestamp):
-    from dateutil.parser import parse
     t = parse(timestamp)
 
     ISO_8601 = '%Y-%m-%dT%H:%M:%SZ'
 
     return t.strftime(ISO_8601)
 
+
 def verify_match(match, point, time, s_point, s_time, params, bounding_poly):
-    #Check primary point is as expected
+    # Check primary point is as expected
     assert match['point'] == point
     assert match['time'] == time
 
-    #Check primary point within search bounds
-    assert iso_time_to_epoch(params['startTime']) <= match['time'] <= iso_time_to_epoch(params['endTime'])
+    # Check primary point within search bounds
+    assert iso_time_to_epoch(params['startTime']) \
+           <= match['time'] \
+           <= iso_time_to_epoch(params['endTime'])
     assert bounding_poly.contains(wkt.loads(match['point']))
 
     secondary = match['matches'][0]
 
-    #Check secondary point is as expected
+    # Check secondary point is as expected
     assert secondary['point'] == s_point
     assert secondary['time'] == s_time
 
-    #Check secondary point within specified spatial & temporal tolerances for matched primary
-    assert expand_by_tolerance(wkt.loads(match['point']), params['rt']).contains(wkt.loads(secondary['point']))
-    assert (match['time'] - params['tt']) <= secondary['time'] <= (match['time'] + params['tt'])
+    # Check secondary point within specified spatial & temporal tolerances for matched primary
+    assert expand_by_tolerance(
+        wkt.loads(match['point']),
+        params['rt']
+    ).contains(wkt.loads(secondary['point']))
+
+    assert (match['time'] - params['tt']) \
+           <= secondary['time'] \
+           <= (match['time'] + params['tt'])
+
 
 def test_matchup_spark(host, eid):
-    import copy
-
     check_skip('SKIP_MATCHUP')
 
     url = urljoin(host, 'match_spark')
@@ -201,7 +233,7 @@ def test_matchup_spark(host, eid):
     body = response.json()
     data = body['data']
 
-    assert body['count'] == len(data) #This WILL fail until PR 171 is deployed (hopefully)
+    assert body['count'] == len(data) # This WILL fail until PR 171 is deployed (hopefully)
 
     data.sort(key=lambda e: e['point'])
     body['data'] = data
@@ -209,10 +241,29 @@ def test_matchup_spark(host, eid):
     eid['eid'].append(body['executionId'])
     eid['params'].append(copy.deepcopy(params))
 
-    verify_match(data[0], 'Point(-86.125 27.625)', 1535360400, 'Point(-86.13 27.63)', 1535374800, params, bounding_poly)
-    verify_match(data[1], 'Point(-90.125 27.625)', 1534496400, 'Point(-90.13 27.63)', 1534491000, params, bounding_poly)
-    verify_match(data[2], 'Point(-90.125 28.125)', 1534928400, 'Point(-90.13 28.12)', 1534899600, params, bounding_poly)
-    verify_match(data[3], 'Point(-90.375 28.125)', 1534842000, 'Point(-90.38 28.12)', 1534813200, params, bounding_poly)
+    verify_match(
+        data[0],    'Point(-86.125 27.625)',
+        1535360400, 'Point(-86.13 27.63)',
+        1535374800,  params, bounding_poly
+    )
+
+    verify_match(
+        data[1],    'Point(-90.125 27.625)',
+        1534496400, 'Point(-90.13 27.63)',
+        1534491000,  params, bounding_poly
+    )
+
+    verify_match(
+        data[2],    'Point(-90.125 28.125)',
+        1534928400, 'Point(-90.13 28.12)',
+        1534899600,  params, bounding_poly
+    )
+
+    verify_match(
+        data[3],    'Point(-90.375 28.125)',
+        1534842000, 'Point(-90.38 28.12)',
+        1534813200,  params, bounding_poly
+    )
 
     params['primary'] = 'JPL-L4-MRVA-CHLA-GLOB-v3.0'
 
@@ -232,25 +283,45 @@ def test_matchup_spark(host, eid):
     eid['eid'].append(body['executionId'])
     eid['params'].append(copy.deepcopy(params))
 
-    verify_match(data[0], 'Point(-86.125 27.625)', 1535371200, 'Point(-86.13 27.63)', 1535374800, params, bounding_poly)
-    verify_match(data[1], 'Point(-90.125 27.625)', 1534507200, 'Point(-90.13 27.63)', 1534491000, params, bounding_poly)
-    verify_match(data[2], 'Point(-90.125 28.125)', 1534939200, 'Point(-90.13 28.12)', 1534899600, params, bounding_poly)
-    verify_match(data[3], 'Point(-90.375 28.125)', 1534852800, 'Point(-90.38 28.12)', 1534813200, params, bounding_poly)
+    verify_match(
+        data[0],    'Point(-86.125 27.625)',
+        1535371200, 'Point(-86.13 27.63)',
+        1535374800,  params, bounding_poly
+    )
+
+    verify_match(
+        data[1],    'Point(-90.125 27.625)',
+        1534507200, 'Point(-90.13 27.63)',
+        1534491000,  params, bounding_poly
+    )
+
+    verify_match(
+        data[2],    'Point(-90.125 28.125)',
+        1534939200, 'Point(-90.13 28.12)',
+        1534899600,  params, bounding_poly
+    )
+
+    verify_match(
+        data[3],    'Point(-90.375 28.125)',
+        1534852800, 'Point(-90.38 28.12)',
+        1534813200,  params, bounding_poly
+    )
 
     eid['successful'] = True
 
-def test_domsresults_JSON(host, eid):
+
+def test_domsresults_json(host, eid):
     check_skip('SKIP_RESULTS')
     check_skip('SKIP_RESULTS_JSON')
 
     url = urljoin(host, 'domsresults')
 
-    #Skip the test automatically if the matchup request was not successful
+    # Skip the test automatically if the matchup request was not successful
     if not eid['successful']:
         skip('Matchup request was unsuccessful so there are no results to get from domsresults')
 
-    def fetch_result(eid, format):
-        return requests.get(url, params={"id": eid, "output": format})
+    def fetch_result(eid, output):
+        return requests.get(url, params={"id": eid, "output": output})
 
     eids = eid['eid']
     param_list = eid['params']
@@ -274,10 +345,25 @@ def test_domsresults_JSON(host, eid):
     params = param_list[0]
     bounding_poly = b_to_polygon(params['b'])
 
-    verify_match(data[0], 'Point(-86.125 27.625)', 1535360400, 'Point(-86.13 27.63)', 1535374800, params, bounding_poly)
-    verify_match(data[1], 'Point(-90.125 27.625)', 1534496400, 'Point(-90.13 27.63)', 1534491000, params, bounding_poly)
-    verify_match(data[2], 'Point(-90.125 28.125)', 1534928400, 'Point(-90.13 28.12)', 1534899600, params, bounding_poly)
-    verify_match(data[3], 'Point(-90.375 28.125)', 1534842000, 'Point(-90.38 28.12)', 1534813200, params, bounding_poly)
+    verify_match(data[0],    'Point(-86.125 27.625)',
+                 1535360400, 'Point(-86.13 27.63)',
+                 1535374800, params, bounding_poly
+                 )
+
+    verify_match(data[1],    'Point(-90.125 27.625)',
+                 1534496400, 'Point(-90.13 27.63)',
+                 1534491000,  params, bounding_poly
+                 )
+
+    verify_match(data[2],    'Point(-90.125 28.125)',
+                 1534928400, 'Point(-90.13 28.12)',
+                 1534899600,  params, bounding_poly
+                 )
+
+    verify_match(data[3],    'Point(-90.375 28.125)',
+                 1534842000, 'Point(-90.38 28.12)',
+                 1534813200,  params, bounding_poly
+                 )
 
     response = fetch_result(eids[1], "JSON")
 
@@ -298,23 +384,39 @@ def test_domsresults_JSON(host, eid):
     params = param_list[1]
     bounding_poly = b_to_polygon(params['b'])
 
-    verify_match(data[0], 'Point(-86.125 27.625)', 1535371200, 'Point(-86.13 27.63)', 1535374800, params, bounding_poly)
-    verify_match(data[1], 'Point(-90.125 27.625)', 1534507200, 'Point(-90.13 27.63)', 1534491000, params, bounding_poly)
-    verify_match(data[2], 'Point(-90.125 28.125)', 1534939200, 'Point(-90.13 28.12)', 1534899600, params, bounding_poly)
-    verify_match(data[3], 'Point(-90.375 28.125)', 1534852800, 'Point(-90.38 28.12)', 1534813200, params, bounding_poly)
+    verify_match(data[0],    'Point(-86.125 27.625)',
+                 1535371200, 'Point(-86.13 27.63)',
+                 1535374800,  params, bounding_poly
+                 )
 
-def test_domsresults_CSV(host, eid):
+    verify_match(data[1],    'Point(-90.125 27.625)',
+                 1534507200, 'Point(-90.13 27.63)',
+                 1534491000,  params, bounding_poly
+                 )
+
+    verify_match(data[2],    'Point(-90.125 28.125)',
+                 1534939200, 'Point(-90.13 28.12)',
+                 1534899600,  params, bounding_poly
+                 )
+
+    verify_match(data[3],    'Point(-90.375 28.125)',
+                 1534852800, 'Point(-90.38 28.12)',
+                 1534813200,  params, bounding_poly
+                 )
+
+
+def test_domsresults_csv(host, eid):
     check_skip('SKIP_RESULTS')
     check_skip('SKIP_RESULTS_CSV')
 
     url = urljoin(host, 'domsresults')
 
-    #Skip the test automatically if the matchup request was not successful
+    # Skip the test automatically if the matchup request was not successful
     if not eid['successful']:
         skip('Matchup request was unsuccessful so there are no results to get from domsresults')
 
-    def fetch_result(eid, format):
-        return requests.get(url, params={"id": eid, "output": format})
+    def fetch_result(eid, output):
+        return requests.get(url, params={"id": eid, "output": output})
 
     eids = eid['eid']
     param_list = eid['params']
@@ -379,23 +481,21 @@ def test_domsresults_CSV(host, eid):
                <= iso_time_to_epoch(format_time(row['time_secondary'])) \
                <= (iso_time_to_epoch(params['endTime']) + params['tt'])
 
-def test_domsresults_NETCDF(host, eid):
-    warnings.filterwarnings('ignore')
 
-    import cdms_reader
-    from tempfile import NamedTemporaryFile as Temp
+def test_domsresults_netcdf(host, eid):
+    warnings.filterwarnings('ignore')
 
     check_skip('SKIP_RESULTS')
     check_skip('SKIP_RESULTS_NETCDF')
 
     url = urljoin(host, 'domsresults')
 
-    #Skip the test automatically if the matchup request was not successful
+    # Skip the test automatically if the matchup request was not successful
     if not eid['successful']:
         skip('Matchup request was unsuccessful so there are no results to get from domsresults')
 
-    def fetch_result(eid, format):
-        return requests.get(url, params={"id": eid, "output": format})
+    def fetch_result(eid, output):
+        return requests.get(url, params={"id": eid, "output": output})
 
     eids = eid['eid']
     param_list = eid['params']
@@ -424,8 +524,9 @@ def test_domsresults_NETCDF(host, eid):
         primary_point = lat_lon_to_point(row['PrimaryData_lat'], row['PrimaryData_lon'])
 
         assert bounding_poly.contains(primary_point)
-        assert iso_time_to_epoch(params['startTime']) <= float(row['PrimaryData_time']) <= iso_time_to_epoch(
-            params['endTime'])
+        assert iso_time_to_epoch(params['startTime']) \
+               <= float(row['PrimaryData_time']) \
+               <= iso_time_to_epoch(params['endTime'])
 
         secondary_point = lat_lon_to_point(row['SecondaryData_lat'], row['SecondaryData_lon'])
 
@@ -456,8 +557,9 @@ def test_domsresults_NETCDF(host, eid):
         primary_point = lat_lon_to_point(row['PrimaryData_lat'], row['PrimaryData_lon'])
 
         assert bounding_poly.contains(primary_point)
-        assert iso_time_to_epoch(params['startTime']) <= float(row['PrimaryData_time']) <= iso_time_to_epoch(
-            params['endTime'])
+        assert iso_time_to_epoch(params['startTime']) \
+               <= float(row['PrimaryData_time']) \
+               <= iso_time_to_epoch(params['endTime'])
 
         secondary_point = lat_lon_to_point(row['SecondaryData_lat'], row['SecondaryData_lon'])
 
@@ -468,6 +570,7 @@ def test_domsresults_NETCDF(host, eid):
 
     temp_file.close()
     warnings.filterwarnings('default')
+
 
 def test_domslist(host):
     check_skip('SKIP_LIST')
@@ -488,11 +591,10 @@ def test_domslist(host):
     assert num_insitu > 0
     assert num_satellite > 0
 
-    #assert body['count'] == num_satellite + num_insitu
+    # assert body['count'] == num_satellite + num_insitu
+
 
 def test_cdmssubset(host):
-    import pandas as pd
-
     check_skip('SKIP_SUBSET')
 
     url = urljoin(host, 'cdmssubset')
@@ -548,6 +650,7 @@ def test_cdmssubset(host):
     for i in range(0, len(csv_data)):
         validate_row_bounds(csv_data.iloc[i])
 
+
 def test_insitu(insitu_endpoint):
     check_skip('SKIP_INSITU')
 
@@ -578,11 +681,15 @@ def test_insitu(insitu_endpoint):
     bounding_poly = b_to_polygon(params['bbox'])
 
     for result in body['results']:
-        assert bounding_poly.contains(wkt.loads(f"Point({result['longitude']} {result['latitude']})"))
+        assert bounding_poly.contains(
+            wkt.loads(f"Point({result['longitude']} {result['latitude']})")
+        )
+
         if result['depth'] != -99999.0:
             assert params['minDepth'] <= result['depth'] <= params['maxDepth']
 
         assert params['startTime'] <= result['time'] <= params['endTime']
+
 
 def test_swaggerui_sdap(host):
     check_skip('SKIP_SWAGGER_SDAP')
@@ -599,6 +706,7 @@ def test_swaggerui_sdap(host):
     response = requests.get(url)
 
     assert response.status_code == 200
+
 
 def test_swaggerio_insitu(insitu_swagger_endpoint):
     check_skip('SKIP_SWAGGER_INSITU')
