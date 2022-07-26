@@ -1,8 +1,10 @@
 import requests
+import logging
 from datetime import datetime
 from datetime import timedelta
 from dataclasses import dataclass
 
+logger = logging.getLogger(__name__)
 
 @dataclass
 class RemoteSDAPList:
@@ -23,6 +25,7 @@ class RemoteSDAPCache:
         try:
             r = requests.get(list_url, timeout=timeout)
             if r.status_code == 200:
+                logger.info("Caching list for sdap %s: %s", list_url, r.text)
                 self.sdap_lists[url] = RemoteSDAPList(
                     list=r.json(),
                     outdated_at=datetime.now()+timedelta(seconds=max_age)
@@ -38,7 +41,7 @@ class RemoteSDAPCache:
             self._add(stripped_url)
 
         for collection in self.sdap_lists[stripped_url].list:
-            if collection['shortName'] == short_name:
+            if 'shortName' in collection and collection['shortName'] == short_name:
                 return collection
 
         raise CollectionNotFound("collection %s has not been found in url %s", short_name, stripped_url)
