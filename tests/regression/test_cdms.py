@@ -37,12 +37,16 @@ from shapely.geometry import Polygon, Point, box
 # export SKIP_LIST=
 # export SKIP_SUBSET=
 # export SKIP_INSITU=
+# export SKIP_SWAGGER_SDAP=
+# export SKIP_SWAGGER_INSITU=
 #
 # unset SKIP_MATCHUP
 # unset SKIP_RESULTS
 # unset SKIP_LIST
 # unset SKIP_SUBSET
 # unset SKIP_INSITU
+# unset SKIP_SWAGGER_SDAP
+# unset SKIP_SWAGGER_INSITU
 #
 #########################
 
@@ -53,6 +57,10 @@ def host():
 @pytest.fixture()
 def insitu_endpoint():
     return os.getenv('INSITU_ENDPOINT', 'http://doms.jpl.nasa.gov/insitu/1.0/query_data_doms_custom_pagination')
+
+@pytest.fixture()
+def insitu_swagger_endpoint():
+    return os.getenv('INSITU_SWAGGER_ENDPOINT', 'http://doms.jpl.nasa.gov/insitu/1.0/insitu_query_swagger/')
 
 @pytest.fixture(scope="module")
 def eid():
@@ -575,3 +583,33 @@ def test_insitu(insitu_endpoint):
             assert params['minDepth'] <= result['depth'] <= params['maxDepth']
 
         assert params['startTime'] <= result['time'] <= params['endTime']
+
+def test_swaggerui_sdap(host):
+    check_skip('SKIP_SWAGGER_SDAP')
+
+    url = urljoin(host, 'apidocs/')
+
+    response = requests.get(url)
+
+    assert response.status_code == 200
+    assert 'swagger-ui' in response.text
+
+    url = urljoin(url, 'openapi.yml')
+
+    response = requests.get(url)
+
+    assert response.status_code == 200
+
+def test_swaggerio_insitu(insitu_swagger_endpoint):
+    check_skip('SKIP_SWAGGER_INSITU')
+
+    response = requests.get(insitu_swagger_endpoint)
+
+    assert response.status_code == 200
+    assert 'swagger-ui' in response.text
+
+    url = urljoin(insitu_swagger_endpoint, 'insitu-spec-0.0.1.yml')
+
+    response = requests.get(url)
+
+    assert response.status_code == 200
