@@ -41,22 +41,6 @@ import cdms_reader
 # export TEST_HOST=http://localhost:8083/
 # unset TEST_HOST
 #
-# export SKIP_MATCHUP=
-# export SKIP_RESULTS=
-# export SKIP_LIST=
-# export SKIP_SUBSET=
-# export SKIP_INSITU=
-# export SKIP_SWAGGER_SDAP=
-# export SKIP_SWAGGER_INSITU=
-#
-# unset SKIP_MATCHUP
-# unset SKIP_RESULTS
-# unset SKIP_LIST
-# unset SKIP_SUBSET
-# unset SKIP_INSITU
-# unset SKIP_SWAGGER_SDAP
-# unset SKIP_SWAGGER_INSITU
-#
 #########################
 
 
@@ -92,11 +76,6 @@ def eid():
 
 def skip(msg=""):
     raise pytest.skip(msg)
-
-
-def check_skip(variable):
-    if os.getenv(variable) is not None:
-        raise pytest.skip('Manually skipped')
 
 
 def b_to_polygon(b):
@@ -206,8 +185,6 @@ def verify_match(match, point, time, s_point, s_time, params, bounding_poly):
 
 
 def test_matchup_spark(host, eid):
-    check_skip('SKIP_MATCHUP')
-
     url = urljoin(host, 'match_spark')
 
     params = {
@@ -312,9 +289,6 @@ def test_matchup_spark(host, eid):
 
 
 def test_domsresults_json(host, eid):
-    check_skip('SKIP_RESULTS')
-    check_skip('SKIP_RESULTS_JSON')
-
     url = urljoin(host, 'domsresults')
 
     # Skip the test automatically if the matchup request was not successful
@@ -407,9 +381,6 @@ def test_domsresults_json(host, eid):
 
 
 def test_domsresults_csv(host, eid):
-    check_skip('SKIP_RESULTS')
-    check_skip('SKIP_RESULTS_CSV')
-
     url = urljoin(host, 'domsresults')
 
     # Skip the test automatically if the matchup request was not successful
@@ -483,11 +454,9 @@ def test_domsresults_csv(host, eid):
                <= (iso_time_to_epoch(params['endTime']) + params['tt'])
 
 
+@pytest.mark.xfail
 def test_domsresults_netcdf(host, eid):
     warnings.filterwarnings('ignore')
-
-    check_skip('SKIP_RESULTS')
-    check_skip('SKIP_RESULTS_NETCDF')
 
     url = urljoin(host, 'domsresults')
 
@@ -574,8 +543,6 @@ def test_domsresults_netcdf(host, eid):
 
 
 def test_domslist(host):
-    check_skip('SKIP_LIST')
-
     url = urljoin(host, 'domslist')
 
     response = requests.get(url)
@@ -596,8 +563,6 @@ def test_domslist(host):
 
 
 def test_cdmssubset(host):
-    check_skip('SKIP_SUBSET')
-
     url = urljoin(host, 'cdmssubset')
 
     params = {
@@ -653,8 +618,6 @@ def test_cdmssubset(host):
 
 
 def test_insitu(insitu_endpoint):
-    check_skip('SKIP_INSITU')
-
     params = {
         'itemsPerPage': 1000,
         'startTime': '2018-05-15T00:00:00Z',
@@ -693,8 +656,6 @@ def test_insitu(insitu_endpoint):
 
 
 def test_swaggerui_sdap(host):
-    check_skip('SKIP_SWAGGER_SDAP')
-
     url = urljoin(host, 'apidocs/')
 
     response = requests.get(url)
@@ -720,6 +681,8 @@ def test_swaggerui_sdap(host):
         response = requests.get(url)
 
         assert response.status_code == 200
+    except AssertionError:
+        raise
     except:
         try:
             url = urljoin(url, 'openapi.yml')
@@ -735,8 +698,6 @@ def test_swaggerui_sdap(host):
 
 
 def test_swaggerui_insitu(insitu_swagger_endpoint):
-    check_skip('SKIP_SWAGGER_INSITU')
-
     response = requests.get(insitu_swagger_endpoint)
 
     assert response.status_code == 200
@@ -760,6 +721,8 @@ def test_swaggerui_insitu(insitu_swagger_endpoint):
         response = requests.get(url)
 
         assert response.status_code == 200
+    except AssertionError:
+        raise
     except:
         try:
             url = urljoin(insitu_swagger_endpoint, 'insitu-spec-0.0.1.yml')
