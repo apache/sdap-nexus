@@ -27,6 +27,7 @@ from zipfile import ZipFile
 import pandas as pd
 import pytest
 import requests
+from bs4 import BeautifulSoup
 from dateutil.parser import parse
 from pytz import timezone, UTC
 from shapely import wkt
@@ -233,7 +234,7 @@ def test_matchup_spark(host, eid):
     body = response.json()
     data = body['data']
 
-    assert body['count'] == len(data) # This WILL fail until PR 171 is deployed (hopefully)
+    assert body['count'] == len(data)
 
     data.sort(key=lambda e: e['point'])
     body['data'] = data
@@ -275,7 +276,7 @@ def test_matchup_spark(host, eid):
 
     data = body['data']
 
-    assert body['count'] == len(data) #This WILL fail until PR 171 is deployed (hopefully)
+    assert body['count'] == len(data)
 
     data.sort(key=lambda e: e['point'])
     body['data'] = data
@@ -701,14 +702,39 @@ def test_swaggerui_sdap(host):
     assert response.status_code == 200
     assert 'swagger-ui' in response.text
 
-    url = urljoin(url, 'openapi.yml')
+    try:
+        # There's probably a better way to do this, but extract the .yml file for the docs from the returned text
+        soup = BeautifulSoup(response.text, 'html.parser')
 
-    response = requests.get(url)
+        script = str([tag for tag in soup.find_all('script') if tag.attrs == {}][0])
 
-    assert response.status_code == 200
+        start_index = script.find('url:')
+        end_index = script.find('",\n', start_index)
+
+        script = script[start_index:end_index]
+
+        yml_filename = script.split('"')[1]
+
+        url = urljoin(url, yml_filename)
+
+        response = requests.get(url)
+
+        assert response.status_code == 200
+    except:
+        try:
+            url = urljoin(url, 'openapi.yml')
+
+            response = requests.get(url)
+
+            assert response.status_code == 200
+
+            warnings.warn("Could not extract documentation yaml filename from response text, "
+                          "but using an assumed value worked successfully")
+        except:
+            raise ValueError("Could not verify documentation yaml file, assumed value also failed")
 
 
-def test_swaggerio_insitu(insitu_swagger_endpoint):
+def test_swaggerui_insitu(insitu_swagger_endpoint):
     check_skip('SKIP_SWAGGER_INSITU')
 
     response = requests.get(insitu_swagger_endpoint)
@@ -716,8 +742,33 @@ def test_swaggerio_insitu(insitu_swagger_endpoint):
     assert response.status_code == 200
     assert 'swagger-ui' in response.text
 
-    url = urljoin(insitu_swagger_endpoint, 'insitu-spec-0.0.1.yml')
+    try:
+        # There's probably a better way to do this, but extract the .yml file for the docs from the returned text
+        soup = BeautifulSoup(response.text, 'html.parser')
 
-    response = requests.get(url)
+        script = str([tag for tag in soup.find_all('script') if tag.attrs == {}][0])
 
-    assert response.status_code == 200
+        start_index = script.find('url:')
+        end_index = script.find('",\n', start_index)
+
+        script = script[start_index:end_index]
+
+        yml_filename = script.split('"')[1]
+
+        url = urljoin(insitu_swagger_endpoint, yml_filename)
+
+        response = requests.get(url)
+
+        assert response.status_code == 200
+    except:
+        try:
+            url = urljoin(insitu_swagger_endpoint, 'insitu-spec-0.0.1.yml')
+
+            response = requests.get(url)
+
+            assert response.status_code == 200
+
+            warnings.warn("Could not extract documentation yaml filename from response text, "
+                          "but using an assumed value worked successfully")
+        except:
+            raise ValueError("Could not verify documentation yaml file, assumed value also failed")
