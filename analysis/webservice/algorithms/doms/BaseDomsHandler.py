@@ -415,8 +415,8 @@ class DomsNetCDFValueWriter:
             'source', 'device',
             'platform', 'time', 'matches'
         ]
-        self.lat.append(result_item.get('lon', None))
-        self.lon.append(result_item.get('lat', None))
+        self.lat.append(result_item.get('lat', None))
+        self.lon.append(result_item.get('lon', None))
         self.time.append(time.mktime(result_item.get('time').timetuple()))
 
         # All other variables are assumed to be science variables.
