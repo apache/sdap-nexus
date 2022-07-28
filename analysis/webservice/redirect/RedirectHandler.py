@@ -4,6 +4,7 @@ from webservice.webmodel.RequestParameters import RequestParameters
 
 logger = logging.getLogger(__name__)
 
+
 class RedirectHandler(tornado.web.RequestHandler):
 
     def initialize(self, redirected_collections=None):

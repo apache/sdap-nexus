@@ -28,6 +28,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - SDAP-397: Added null unit field for later use in matchup
 - Fixed issue where satellite satellite matchups failed
 - Fixed issue where null results were returned if more than "resultSizeLimit" matches are found
+- Preserve return value of `query_insitu_schema()` in matchup to avoid excessive API hits 
 - Fixed issue where satellite to satellite matchups with the same dataset don't return the expected result
 - Fixed CSV and NetCDF matchup output bug
+- Fixed NetCDF output switching latitude and longitude
 ### Security
