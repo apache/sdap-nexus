@@ -184,6 +184,7 @@ def verify_match(match, point, time, s_point, s_time, params, bounding_poly):
            <= (match['time'] + params['tt'])
 
 
+@pytest.mark.integration
 def test_matchup_spark(host, eid):
     url = urljoin(host, 'match_spark')
 
@@ -288,6 +289,7 @@ def test_matchup_spark(host, eid):
     eid['successful'] = True
 
 
+@pytest.mark.integration
 def test_domsresults_json(host, eid):
     url = urljoin(host, 'domsresults')
 
@@ -380,6 +382,7 @@ def test_domsresults_json(host, eid):
                  )
 
 
+@pytest.mark.integration
 def test_domsresults_csv(host, eid):
     url = urljoin(host, 'domsresults')
 
@@ -454,6 +457,7 @@ def test_domsresults_csv(host, eid):
                <= (iso_time_to_epoch(params['endTime']) + params['tt'])
 
 
+@pytest.mark.integration
 @pytest.mark.xfail
 def test_domsresults_netcdf(host, eid):
     warnings.filterwarnings('ignore')
@@ -542,6 +546,7 @@ def test_domsresults_netcdf(host, eid):
     warnings.filterwarnings('default')
 
 
+@pytest.mark.integration
 def test_domslist(host):
     url = urljoin(host, 'domslist')
 
@@ -562,6 +567,7 @@ def test_domslist(host):
     # assert body['count'] == num_satellite + num_insitu
 
 
+@pytest.mark.integration
 def test_cdmssubset(host):
     url = urljoin(host, 'cdmssubset')
 
@@ -617,6 +623,7 @@ def test_cdmssubset(host):
         validate_row_bounds(csv_data.iloc[i])
 
 
+@pytest.mark.integration
 def test_insitu(insitu_endpoint):
     params = {
         'itemsPerPage': 1000,
@@ -655,6 +662,7 @@ def test_insitu(insitu_endpoint):
         assert params['startTime'] <= result['time'] <= params['endTime']
 
 
+@pytest.mark.integration
 def test_swaggerui_sdap(host):
     url = urljoin(host, 'apidocs/')
 
@@ -697,6 +705,7 @@ def test_swaggerui_sdap(host):
             raise ValueError("Could not verify documentation yaml file, assumed value also failed")
 
 
+@pytest.mark.integration
 def test_swaggerui_insitu(insitu_swagger_endpoint):
     response = requests.get(insitu_swagger_endpoint)
 
