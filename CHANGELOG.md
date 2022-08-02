@@ -14,7 +14,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - SDAP-371: Renamed `/domssubset` endpoint to `/cdmssubset`
 - SDAP-390: Updated NetCDF reader tool for data matchup and added user functionality.
 - SDAP-396: Added saildrone insitu api to matchup
-=======
 ### Changed
 -SDAP-390: Changed `/doms` to `/cdms` and `doms_reader.py` to `cdms_reader.py`
 ### Deprecated
