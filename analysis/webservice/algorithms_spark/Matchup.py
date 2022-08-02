@@ -14,7 +14,7 @@
 # limitations under the License.
 
 
-
+from typing import Optional
 import json
 import logging
 import threading
@@ -41,6 +41,7 @@ from webservice.algorithms.doms import values as doms_values
 from webservice.algorithms.doms.BaseDomsHandler import DomsQueryResults
 from webservice.algorithms.doms.ResultsStorage import ResultsStorage
 from webservice.algorithms.doms.insitu import query_insitu as query_edge
+from webservice.algorithms.doms.insitu import query_insitu_schema
 from webservice.webmodel import NexusProcessingException
 
 EPOCH = timezone('UTC').localize(datetime(1970, 1, 1))
@@ -277,12 +278,13 @@ class Matchup(NexusCalcSparkHandler):
 
         threading.Thread(target=do_result_insert).start()
 
-        if 0 < result_size_limit < len(matches):
-            result = DomsQueryResults(results=None, args=args, details=details, bounds=None, count=None,
-                                      computeOptions=None, executionId=execution_id, status_code=202)
-        else:
-            result = DomsQueryResults(results=matches, args=args, details=details, bounds=None, count=len(matches),
-                                      computeOptions=None, executionId=execution_id)
+        # Get only the first "result_size_limit" results
+        matches = matches[0:result_size_limit]
+
+        result = DomsQueryResults(results=matches, args=args,
+                                  details=details, bounds=None,
+                                  count=len(matches), computeOptions=None,
+                                  executionId=execution_id)
 
         return result
 
@@ -306,6 +308,7 @@ class Matchup(NexusCalcSparkHandler):
             "lat": str(domspoint.latitude),
             "point": "Point(%s %s)" % (domspoint.longitude, domspoint.latitude),
             "time": datetime.strptime(domspoint.time, "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=UTC),
+            "depth": domspoint.depth,
             "fileurl": domspoint.file_url,
             "id": domspoint.data_id,
             "source": domspoint.source,
@@ -326,10 +329,13 @@ class DataPoint:
     exist in the source data file.
     :attribute variable_value: value at some point for the given
         variable.
+    :attribute variable_unit: Unit of the measurement. Will be None if
+    no unit is known.
     """
     variable_name: str = None
     cf_variable_name: str = None
     variable_value: float = None
+    variable_unit: Optional[str] = None
 
 
 class DomsPoint(object):
@@ -387,7 +393,8 @@ class DomsPoint(object):
                 data.append(DataPoint(
                     variable_name=variable.variable_name,
                     variable_value=data_val,
-                    cf_variable_name=variable.standard_name
+                    cf_variable_name=variable.standard_name,
+                    variable_unit=None
                 ))
         point.data = data
 
@@ -423,8 +430,13 @@ class DomsPoint(object):
         point.device = DomsPoint._variables_to_device(tile.variables)
         return point
 
+    insitu_schema = None
+
     @staticmethod
     def from_edge_point(edge_point):
+        if DomsPoint.insitu_schema is None:
+            DomsPoint.insitu_schema = query_insitu_schema()
+
         point = DomsPoint()
         x, y = edge_point['longitude'], edge_point['latitude']
 
@@ -437,6 +449,7 @@ class DomsPoint(object):
         point.platform = edge_point.get('platform')
         point.device = edge_point.get('device')
         point.file_url = edge_point.get('fileurl')
+        point.depth = edge_point.get('depth')
 
         if 'code' in point.platform:
             point.platform = edge_point.get('platform')['code']
@@ -496,11 +509,15 @@ class DomsPoint(object):
         # This is for in-situ secondary points
         for name in data_fields:
             val = edge_point.get(name)
-            if val:
-                data.append(DataPoint(
-                    variable_name=name,
-                    variable_value=val
-                ))
+            if not val:
+                continue
+            unit = get_insitu_unit(name, DomsPoint.insitu_schema)
+            data.append(DataPoint(
+                variable_name=name,
+                cf_variable_name=name,
+                variable_value=val,
+                variable_unit=unit
+            ))
 
 
         # This is for satellite secondary points
@@ -509,17 +526,18 @@ class DomsPoint(object):
             data.extend([DataPoint(
                 variable_name=variable.variable_name,
                 variable_value=var_value,
-                cf_variable_name=variable.standard_name
+                cf_variable_name=variable.standard_name,
+                variable_unit=None
             ) for var_value, variable in zip(
                 edge_point['var_values'],
                 edge_point['variables']
             ) if var_value])
         point.data = data
 
-        try:
-            point.data_id = str(edge_point['id'])
-        except KeyError:
-            point.data_id = "%s:%s:%s" % (point.time, point.longitude, point.latitude)
+        if 'meta' in edge_point:
+            point.data_id = edge_point['meta']
+        else:
+            point.data_id = f'{point.time}:{point.longitude}:{point.latitude}'
 
         return point
 
@@ -582,7 +600,12 @@ def spark_matchup_driver(tile_ids, bounding_wkt, primary_ds_name, secondary_ds_n
             lat1, lon1 = (primary.latitude, primary.longitude)
             lat2, lon2 = (matchup.latitude, matchup.longitude)
             az12, az21, distance = wgs84_geod.inv(lon1, lat1, lon2, lat2)
-            return distance
+            return distance, time_dist(primary, matchup)
+
+        def time_dist(primary, matchup):
+            primary_time = iso_time_to_epoch(primary.time)
+            matchup_time = iso_time_to_epoch(matchup.time)
+            return abs(primary_time - matchup_time)
 
         rdd_filtered = rdd_filtered \
             .map(lambda primary_matchup: tuple([primary_matchup[0], tuple([primary_matchup[1], dist(primary_matchup[0], primary_matchup[1])])])) \
@@ -624,6 +647,17 @@ def add_meters_to_lon_lat(lon, lat, meters):
     return longitude, latitude
 
 
+def get_insitu_unit(variable_name, insitu_schema):
+    """
+    Query the insitu API and retrieve the units for the given variable.
+    If no units are available for this variable, return "None"
+    """
+    properties = insitu_schema.get('definitions', {}).get('observation', {}).get('properties', {})
+    for observation_name, observation_value in properties.items():
+        if observation_name == variable_name:
+            return observation_value.get('units')
+
+
 def tile_to_edge_points(tile):
     indices = tile.get_indices()
     edge_points = []
@@ -635,10 +669,11 @@ def tile_to_edge_points(tile):
             data = [tile.data[tuple(idx)]]
 
         edge_point = {
-            'point': f'Point({tile.longitudes[idx[2]]} {tile.latitudes[idx[1]]})',
+            'latitude': tile.latitudes[idx[1]],
+            'longitude': tile.longitudes[idx[2]],
             'time': datetime.utcfromtimestamp(tile.times[idx[0]]).strftime('%Y-%m-%dT%H:%M:%SZ'),
             'source': tile.dataset,
-            'platform': None,
+            'platform': 'orbiting satellite',
             'device': None,
             'fileurl': tile.granule,
             'variables': tile.variables,

@@ -1,2 +1,4 @@
 from .RedirectHandler import RedirectHandler
 from .RemoteCollectionMatcher import RemoteCollectionMatcher
+from .RemoteSDAPCache import RemoteSDAPCache
+from .RemoteSDAPCache import CollectionNotFound
