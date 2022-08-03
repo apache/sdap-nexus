@@ -17,10 +17,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Currently only supports single variable & gridded data and the `/matchup_spark` endpoint
   - Included unit tests
 ### Changed
+- domslist endpoint points to AWS insitu instead of doms insitu
 ### Deprecated
 ### Removed
+- removed dropdown from matchup doms endpoint secondary param
 ### Fixed
 - Fix failing test_matchup unit test
+- Fixed bug in OpenAPI spec where both matchup endpoints shared the same id
 - Fixed null value for count in matchup response
 - SDAP-371: Fixed DOMS subset endpoint
 - SDAP-397: Added depth to matchup insitu output
