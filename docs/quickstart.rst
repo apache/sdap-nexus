@@ -145,7 +145,7 @@ Starting Cassandra
 
 SDAP is tested with Cassandra version 3.11.6.
 
-.. note:: Similar to the Solr container, using a volume is recommended but not required.
+.. note:: Similar to the Solr container, using a volume is recommended but not required. Be aware that the second ``-v`` option is required.
 
 Before starting Cassandra, we need to prepare a script to initialize the database.
 
@@ -349,3 +349,20 @@ Congratulations you have completed the quickstart! In this example you:
 #. Learned how to start the NEXUS webservice
 #. Learned how to start a Jupyter Notebook
 #. Ran a time series analysis on 1 month of AVHRR OI data and plotted the result
+
+Cleanup
+========
+
+To shut down the Solr container cleanly, run the following command:
+
+.. code-block:: bash
+
+  docker exec solr /opt/bitnami/solr/bin/solr stop -p 8983
+
+The remaining containers can safely be stopped using Docker Desktop or by running
+
+.. code-block:: bash
+
+  docker stop <container-name>
+
+
