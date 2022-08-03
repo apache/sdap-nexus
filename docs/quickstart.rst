@@ -67,9 +67,9 @@ Pull the necessary Docker images from the `SDAP repository <https://hub.docker.c
 Create a new Docker Bridge Network
 ------------------------------------
 
-This quickstart constsists of launching several Docker containers that need to communicate with one another. To facilitate this communication, we want to be able to reference containers via hostname instead of IP address. The default bridge network used by Docker only supports this by using the ``--link`` option wich is now considered to be `deprecated <https://docs.docker.com/network/links/>`_.
+This quickstart consists of launching several Docker containers that need to communicate with one another. To facilitate this communication, we want to be able to reference containers via hostname instead of IP address. The default bridge network used by Docker only supports this by using the ``--link`` option which is now considered to be `deprecated <https://docs.docker.com/network/links/>`_.
 
-The currently recommended way to acheive what we want is to use a `user defined bridge network <https://docs.docker.com/network/bridge/##differences-between-user-defined-bridges-and-the-default-bridge>`_ and launch all of the containers into that network.
+The currently recommended way to achieve what we want is to use a `user defined bridge network <https://docs.docker.com/network/bridge/##differences-between-user-defined-bridges-and-the-default-bridge>`_ and launch all of the containers into that network.
 
 The network we will be using for this quickstart will be called ``sdap-net``. Create it using the following command:
 
@@ -136,7 +136,7 @@ This will start an instance of Solr. To initialize it, we need to run the ``solr
 
   docker run -it --rm --name solr-init --network sdap-net -e SDAP_ZK_SOLR="host.docker.internal:2181/solr" -e SDAP_SOLR_URL="http://host.docker.internal:8983/solr/" -e CREATE_COLLECTION_PARAMS="name=nexustiles&numShards=1&waitForFinalState=true" nexusjpl/solr-cloud-init:${SOLR_CLOUD_INIT_VERSION}
 
-When the init scrip finishes, kill the container by typing ``Ctrl + C``
+When the init script finishes, kill the container by typing ``Ctrl + C``
 
 .. _quickstart-step6:
 
@@ -297,7 +297,7 @@ Now that the data is being (has been) ingested, we need to start the webapp that
 
   - docker run -d --name nexus-webapp --network sdap-net -p 8083:8083 nexusjpl/nexus-webapp:${WEBAPP_VERSION} python3 /incubator-sdap-nexus/analysis/webservice/webapp.py --solr_host="http://host.docker.internal:8983" --cassandra_host=host.docker.internal --cassandra_username=cassandra --cassandra_password=cassandra
 
-.. note:: If you see a messasge like ``docker: invalid reference format`` it likely means you need to re-export the ``WEBAPP_VERSION`` environment variable again. This can happen when you open a new terminal window or tab.
+.. note:: If you see a message like ``docker: invalid reference format`` it likely means you need to re-export the ``WEBAPP_VERSION`` environment variable again. This can happen when you open a new terminal window or tab.
 
 This command starts the nexus webservice and connects it to the Solr and Cassandra containers. It also sets the configuration for Spark to use local mode with 4 executors.
 
