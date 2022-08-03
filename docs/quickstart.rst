@@ -44,7 +44,10 @@ Pull the necessary Docker images from the `SDAP repository <https://hub.docker.c
   export GRANULE_INGESTER_VERSION=0.1.6a30
   export WEBAPP_VERSION=distributed.0.4.5a49
   export SOLR_VERSION=8.11.1
+  export SOLR_CLOUD_INIT_VERSION=1.0.2
   export ZK_VERSION=3.5.5
+
+  export JUPYTER_VERSION=1.0.0-rc1
 
 .. code-block:: bash
 
@@ -54,7 +57,10 @@ Pull the necessary Docker images from the `SDAP repository <https://hub.docker.c
   docker pull nexusjpl/granule-ingester:${GRANULE_INGESTER_VERSION}
   docker pull nexusjpl/nexus-webapp:${WEBAPP_VERSION}
   docker pull nexusjpl/solr:${SOLR_VERSION}
+  docker pull nexusjpl/solr-cloud-init:${SOLR_CLOUD_INIT_VERSION}
   docker pull zookeeper:${ZK_VERSION}
+
+  docker pull nexusjpl/jupyter:${JUPYTER_VERSION}
 
 .. _quickstart-step2:
 
@@ -90,6 +96,8 @@ Choose a location that is mountable by Docker (typically needs to be under the U
 
 Now we can start up the data storage components. We will be using Solr and Cassandra to store the tile metadata and data respectively.
 
+.. _quickstart-step4:
+
 Start Zookeeper
 ---------------
 
@@ -97,13 +105,15 @@ In order to run Solr in cloud mode, we must first run Zookeeper.
 
 .. code-block:: bash
 
-    docker run --name zookeeper -dp 2181:2181 zookeeper:3.5.5
+    docker run --name zookeeper -dp 2181:2181 zookeeper:${ZK_VERSION}
 
 We then need to ensure the ``/solr`` znode is present.
 
 .. code-block:: bash
 
   docker exec zookeeper bash -c "bin/zkCli.sh create /solr"
+
+.. _quickstart-step5:
 
 Start Solr
 -----------
@@ -118,13 +128,17 @@ To start Solr using a volume mount and expose the admin webapp on port 8983:
 
   export SOLR_DATA=~/nexus-quickstart/solr
   mkdir -p ${SOLR_DATA}
-  docker run --name solr --network sdap-net -v ${SOLR_DATA}/:/opt/solr/server/solr/nexustiles/data -p 8983:8983 -e ZK_HOST="host.docker.internal:2181/solr" -d nexusjpl/solr:8.11.1
+  docker run --name solr --network sdap-net -v ${SOLR_DATA}/:/opt/solr/server/solr/nexustiles/data -p 8983:8983 -e ZK_HOST="host.docker.internal:2181/solr" -d nexusjpl/solr:${SOLR_VERSION}
 
 This will start an instance of Solr. To initialize it, we need to run the ``solr-cloud-init`` image.
 
 .. code-block:: bash
 
-  docker run -it --rm --name solr-init --network sdap-net -e SDAP_ZK_SOLR="host.docker.internal:2181/solr" -e SDAP_SOLR_URL="http://host.docker.internal:8983/solr/" -e CREATE_COLLECTION_PARAMS="name=nexustiles&numShards=1&waitForFinalState=true" nexusjpl/solr-cloud-init:1.0.2
+  docker run -it --rm --name solr-init --network sdap-net -e SDAP_ZK_SOLR="host.docker.internal:2181/solr" -e SDAP_SOLR_URL="http://host.docker.internal:8983/solr/" -e CREATE_COLLECTION_PARAMS="name=nexustiles&numShards=1&waitForFinalState=true" nexusjpl/solr-cloud-init:${SOLR_CLOUD_INIT_VERSION}
+
+When the init scrip finishes, kill the container by typing ``Ctrl + C``
+
+.. _quickstart-step6:
 
 Starting Cassandra
 -------------------
@@ -154,13 +168,15 @@ Now we can start the image and run the initialization script.
 
   export CASSANDRA_DATA=~/nexus-quickstart/cassandra
   mkdir -p ${CASSANDRA_DATA}
-  docker run --name cassandra --network sdap-net -p 9042:9042 -v ${CASSANDRA_DATA}/cassandra/:/var/lib/cassandra -v "${CASSANDRA_INIT}/initdb.cql:/scripts/initdb.cql" -d bitnami/cassandra:3.11.6-debian-10-r138
+  docker run --name cassandra --network sdap-net -p 9042:9042 -v ${CASSANDRA_DATA}/cassandra/:/var/lib/cassandra -v "${CASSANDRA_INIT}/initdb.cql:/scripts/initdb.cql" -d bitnami/cassandra:${CASSANDRA_VERSION}
 
   # Wait a few moments for the database to start
 
   docker exec  cassandra bash -c "cqlsh -u cassandra -p cassandra -f /scripts/initdb.cql"
 
 With Solr and Cassandra started and initialized, we can now start the collection manager and granule ingester(s).
+
+.. _quickstart-step7:
 
 Start RabbitMQ
 ----------------
@@ -169,7 +185,9 @@ The collection manager and granule ingester(s) use RabbitMQ to communicate, so w
 
 .. code-block:: bash
 
-  docker run -dp 5672:5672 -p 15672:15672 --name rmq --network sdap-net bitnami/rabbitmq:3.8.9-debian-10-r37
+  docker run -dp 5672:5672 -p 15672:15672 --name rmq --network sdap-net bitnami/rabbitmq:${RMQ_VERSION}
+
+.. _quickstart-step8:
 
 Start the Granule Ingester(s)
 -----------------------------
@@ -178,8 +196,10 @@ The granule ingester(s) read new granules from the message queue and process the
 
 .. code-block:: bash
 
-  docker run --name granule-ingester-1 --network sdap-net -e RABBITMQ_HOST="host.docker.internal:5672" -e RABBITMQ_USERNAME="user" -e RABBITMQ_PASSWORD="bitnami" -d -e CASSANDRA_CONTACT_POINTS=host.docker.internal -e CASSANDRA_USERNAME=cassandra -e CASSANDRA_PASSWORD=cassandra -e SOLR_HOST_AND_PORT="http://host.docker.internal:8983" -v ${DATA_DIRECTORY}:/data/granules/ nexusjpl/granule-ingester:0.1.6a30
-  docker run --name granule-ingester-2 --network sdap-net -e RABBITMQ_HOST="host.docker.internal:5672" -e RABBITMQ_USERNAME="user" -e RABBITMQ_PASSWORD="bitnami" -d -e CASSANDRA_CONTACT_POINTS=host.docker.internal -e CASSANDRA_USERNAME=cassandra -e CASSANDRA_PASSWORD=cassandra -e SOLR_HOST_AND_PORT="http://host.docker.internal:8983" -v ${DATA_DIRECTORY}:/data/granules/ nexusjpl/granule-ingester:0.1.6a30
+  docker run --name granule-ingester-1 --network sdap-net -e RABBITMQ_HOST="host.docker.internal:5672" -e RABBITMQ_USERNAME="user" -e RABBITMQ_PASSWORD="bitnami" -d -e CASSANDRA_CONTACT_POINTS=host.docker.internal -e CASSANDRA_USERNAME=cassandra -e CASSANDRA_PASSWORD=cassandra -e SOLR_HOST_AND_PORT="http://host.docker.internal:8983" -v ${DATA_DIRECTORY}:/data/granules/ nexusjpl/granule-ingester:${GRANULE_INGESTER_VERSION}
+  docker run --name granule-ingester-2 --network sdap-net -e RABBITMQ_HOST="host.docker.internal:5672" -e RABBITMQ_USERNAME="user" -e RABBITMQ_PASSWORD="bitnami" -d -e CASSANDRA_CONTACT_POINTS=host.docker.internal -e CASSANDRA_USERNAME=cassandra -e CASSANDRA_PASSWORD=cassandra -e SOLR_HOST_AND_PORT="http://host.docker.internal:8983" -v ${DATA_DIRECTORY}:/data/granules/ nexusjpl/granule-ingester:${GRANULE_INGESTER_VERSION}
+
+.. _quickstart-optional-step:
 
 [OPTIONAL] Run Message Queue Monitor
 -------------------------------------
@@ -199,6 +219,8 @@ And then run it in a separate shell
 .. code-block:: bash
 
   python monitor.py
+
+.. _quickstart-step9:
 
 Create Collection Configuration
 --------------------------------
@@ -232,6 +254,8 @@ The collection configuration is a ``.yml`` file that tells the collection manage
 
   Feel free to edit the tile size in the configuration we just created, but keep the aforementioned tradeoff in mind.
 
+.. _quickstart-step10:
+
 Start the Collection Manager
 -----------------------------
 
@@ -239,7 +263,9 @@ Now we can start the collection manager.
 
 .. code-block:: bash
 
-  docker run --name collection-manager --network sdap-net -v ${DATA_DIRECTORY}:/data/granules/ -v ${CONFIG_DIR}:/home/ingester/config/ -e COLLECTIONS_PATH="/home/ingester/config/collectionConfig.yml" -e HISTORY_URL="http://host.docker.internal:8983/" -e RABBITMQ_HOST="host.docker.internal:5672" -e RABBITMQ_USERNAME="user" -e RABBITMQ_PASSWORD="bitnami" -d nexusjpl/collection-manager:0.1.6a14
+  docker run --name collection-manager --network sdap-net -v ${DATA_DIRECTORY}:/data/granules/ -v ${CONFIG_DIR}:/home/ingester/config/ -e COLLECTIONS_PATH="/home/ingester/config/collectionConfig.yml" -e HISTORY_URL="http://host.docker.internal:8983/" -e RABBITMQ_HOST="host.docker.internal:5672" -e RABBITMQ_USERNAME="user" -e RABBITMQ_PASSWORD="bitnami" -d nexusjpl/collection-manager:${COLLECTION_MANAGER_VERSION}
+
+.. _quickstart-step11:
 
 Download Sample Data
 ---------------------
@@ -260,6 +286,8 @@ Then go ahead and download 1 month worth of AVHRR netCDF files.
 
 You should now have 30 files downloaded to your data directory, one for each day in November 2015.
 
+.. _quickstart-step12:
+
 Start the Webapp
 =================
 
@@ -267,9 +295,9 @@ Now that the data is being (has been) ingested, we need to start the webapp that
 
 .. code-block:: bash
 
-  - docker run -d --name nexus-webapp --network sdap-net -p 8083:8083  nexusjpl/nexus-webapp:distributed.0.4.5a50 python3 /incubator-sdap-nexus/analysis/webservice/webapp.py --solr_host="http://host.docker.internal:8983" --cassandra_host=host.docker.internal --cassandra_username=cassandra --cassandra_password=cassandra
+  - docker run -d --name nexus-webapp --network sdap-net -p 8083:8083 nexusjpl/nexus-webapp:${WEBAPP_VERSION} python3 /incubator-sdap-nexus/analysis/webservice/webapp.py --solr_host="http://host.docker.internal:8983" --cassandra_host=host.docker.internal --cassandra_username=cassandra --cassandra_password=cassandra
 
-.. note:: If you see a messasge like ``docker: invalid reference format`` it likely means you need to re-export the ``VERSION`` environment variable again. This can happen when you open a new terminal window or tab.
+.. note:: If you see a messasge like ``docker: invalid reference format`` it likely means you need to re-export the ``WEBAPP_VERSION`` environment variable again. This can happen when you open a new terminal window or tab.
 
 This command starts the nexus webservice and connects it to the Solr and Cassandra containers. It also sets the configuration for Spark to use local mode with 4 executors.
 
@@ -283,7 +311,7 @@ After running this command you should be able to access the NEXUS webservice by 
 
   You may need to wait a few moments before the webservice is available.
 
-.. _quickstart-step8:
+.. _quickstart-step13:
 
 Launch Jupyter
 ================
@@ -294,7 +322,7 @@ To launch the Jupyter notebook use the following command:
 
 .. code-block:: bash
 
-  docker run -it --rm --name jupyter --network sdap-net -p 8888:8888 nexusjpl/jupyter:${VERSION} start-notebook.sh --NotebookApp.password='sha1:a0d7f85e5fc4:0c173bb35c7dc0445b13865a38d25263db592938'
+  docker run -it --rm --name jupyter --network sdap-net -p 8888:8888 nexusjpl/jupyter:${JUPYTER_VERSION} start-notebook.sh --NotebookApp.password='sha1:a0d7f85e5fc4:0c173bb35c7dc0445b13865a38d25263db592938'
 
 This command launches a Juypter container and exposes it on port 8888.
 
@@ -310,7 +338,7 @@ Click on the ``Quickstart`` directory to open it. You should see a notebook call
 
 Click on the ``Time Series Example`` notebook to start it. This will open the notebook and allow you to run the two cells and execute a Time Series command against your local instance of NEXUS.
 
-.. _quickstart-step9:
+.. _quickstart-finished:
 
 Finished!
 ================
