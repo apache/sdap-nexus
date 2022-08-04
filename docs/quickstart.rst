@@ -34,7 +34,7 @@ Start downloading the Docker images and data files.
 Pull Docker Images
 -------------------
 
-Pull the necessary Docker images from the `SDAP repository <https://hub.docker.com/u/sdap>`_ on Docker Hub. Please check the repository for the latest version tag.
+Pull the necessary Docker images from the `NEXUS JPL repository <https://hub.docker.com/u/nexusjpl>`_ on Docker Hub. Please check the repository for the latest version tag.
 
 .. code-block:: bash
 
