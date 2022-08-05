@@ -1,7 +1,7 @@
 # CDMS_reader.py
-The functions in cdms_reader.py read a CDMS netCDF file into memory, assemble a list of matches of satellite and in situ data (or a primary and secondary data set), and optionally output the matches to a CSV file. Each matched pair contains one satellite data record and one in situ data record.
+The functions in cdms_reader.py read a CDMS netCDF file into memory, assemble a list of matches from a primary and secondary data set, and optionally outputs the matches to a CSV file. Each matched pair contains one primary data record and one in secondary data record.
 
-The CDMS netCDF files hold satellite data and in situ data in different groups (`SatelliteData` and `InsituData`). The `matchIDs` netCDF variable contains pairs of IDs (matches) which reference a satellite data record and an in situ data record in their respective groups. These records have a many-to-many relationship; one satellite record may match to many in situ records, and one in situ record may match to many satellite records. The `assemble_matches` function assembles the individual data records into pairs based on their `dim` group dimension IDs as paired in the `matchIDs` variable.
+The CDMS netCDF files holds the two groups (`PrimaryData` and `SecondaryData`). The `matchIDs` netCDF variable contains pairs of IDs (matches) which reference a primary data record and a secondary data record in their respective groups. These records have a many-to-many relationship; one primary record may match to many in secondary records, and one secondary record may match to many primary records. The `assemble_matches` function assembles the individual data records into pairs based on their `dim` group dimension IDs as paired in the `matchIDs` variable.
 
 ## Requirements
 This tool was developed and tested with Python 3.9.13.
@@ -27,19 +27,19 @@ Read a CDMS netCDF file into memory and return a list of matches from the file.
 - `matches` (list): List of matches. 
 
 Each list element in `matches` is a dictionary organized as follows:
-    For match `m`, netCDF group `GROUP` ('SatelliteData' or 'InsituData'), and netCDF group variable `VARIABLE`:
+    For match `m`, netCDF group `GROUP` ('PrimaryData' or 'SecondaryData'), and netCDF group variable `VARIABLE`:
 
 `matches[m][GROUP]['matchID']`: netCDF `MatchedRecords` dimension ID for the match
 `matches[m][GROUP]['GROUPID']`: GROUP netCDF `dim` dimension ID for the record
 `matches[m][GROUP][VARIABLE]`: variable value 
 
-For example, to access the timestamps of the satellite data and the in situ data of the first match in the list, along with the `MatchedRecords` dimension ID and the groups' `dim` dimension ID:
+For example, to access the timestamps of the primary data and the secondary data of the first match in the list, along with the `MatchedRecords` dimension ID and the groups' `dim` dimension ID:
 ```python
-matches[0]['SatelliteData']['time']
-matches[0]['InsituData']['time']
-matches[0]['SatelliteData']['matchID']
-matches[0]['SatelliteData']['SatelliteDataID']
-matches[0]['InsituData']['InsituDataID']
+matches[0]['PrimaryData']['time']
+matches[0]['SecondaryData']['time']
+matches[0]['PrimaryData']['matchID']
+matches[0]['PrimaryData']['PrimaryDataID']
+matches[0]['SecondaryData']['SecondaryDataID']
 ```
 
         
