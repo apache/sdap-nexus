@@ -40,7 +40,7 @@ def assemble_matches(filename):
     -------
     matches : list
         List of matches. Each list element is a dictionary.
-        For match m, netCDF group GROUP (SatelliteData or InsituData), and
+        For match m, netCDF group GROUP (PrimaryData or SecondaryData), and
         group variable VARIABLE:
         matches[m][GROUP]['matchID']: MatchedRecords dimension ID for the match
         matches[m][GROUP]['GROUPID']: GROUP dim dimension ID for the record
