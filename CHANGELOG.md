@@ -32,4 +32,5 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Fixed issue where satellite to satellite matchups with the same dataset don't return the expected result
 - Fixed CSV and NetCDF matchup output bug
 - Fixed NetCDF output switching latitude and longitude
+- Fixed import error causing `/timeSeriesSpark` queries to fail.
 ### Security
