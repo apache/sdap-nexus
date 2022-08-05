@@ -34,4 +34,5 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Fixed NetCDF output switching latitude and longitude
 - CDMS-159: Updated quickstart guide for standalone docker deployment of SDAP.
 - CDMS-159: Updated quickstart Jupyter notebook
+- Fixed import error causing `/timeSeriesSpark` queries to fail.
 ### Security
