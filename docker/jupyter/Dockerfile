@@ -29,7 +29,8 @@ ENV CHOWN_HOME_OPTS='-R'
 ENV REBUILD_CODE=true
 
 ARG APACHE_NEXUS=https://github.com/apache/incubator-sdap-nexus.git
-ARG APACHE_NEXUS_BRANCH=master
+ARG APACHE_NEXUS_COMMIT=bb037b6f14a3f103aa49394bdf92df061d6becd7
+# Pull specific commit that had nexuscli code before it was removed
 
 RUN mkdir -p /home/jovyan/Quickstart && \
     mkdir -p /home/jovyan/nexuscli && \
@@ -38,7 +39,7 @@ RUN mkdir -p /home/jovyan/Quickstart && \
     git remote add -f origin ${APACHE_NEXUS} && \
     git config core.sparseCheckout true && \
     echo "client" >> .git/info/sparse-checkout && \
-    git pull origin ${APACHE_NEXUS_BRANCH} && \
+    git pull origin ${APACHE_NEXUS_COMMIT} && \
     cd client && \
     python setup.py install
 
