@@ -27,7 +27,7 @@ Prerequisites
 Prepare
 ========
 
-Start downloading the Docker images and data files.
+Start downloading the Docker images and set up the Docker bridge network.
 
 .. _quickstart-step1:
 
@@ -79,8 +79,8 @@ The network we will be using for this quickstart will be called ``sdap-net``. Cr
 
 .. _quickstart-step3:
 
-Start Ingester Components
-==========================
+Start Ingester Components and Ingest Some Science Data
+========================================================
 
 Create Data Directory
 ------------------------
@@ -313,8 +313,8 @@ After running this command you should be able to access the NEXUS webservice by 
 
 .. _quickstart-step13:
 
-Launch Jupyter
-================
+Launch Jupyter And Run The Demo Notebook
+========================================
 
 At this point NEXUS is running and you can interact with the different API endpoints. However, there is a python client library called ``nexuscli`` which facilitates interacting with the webservice through the Python programming language. The easiest way to use this library is to start the `Jupyter notebook <http://jupyter.org/>`_ docker image from the SDAP repository. This image is based off of the ``jupyter/scipy-notebook`` docker image but comes pre-installed with the ``nexuscli`` module and an example notebook.
 
