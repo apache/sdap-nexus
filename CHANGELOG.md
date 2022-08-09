@@ -12,8 +12,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - SDAP-372: Updated `match_spark_doms` to interface with samos_cdms endpoint 
 - SDAP-393: Included `insitu` in ingress based on the value of `insituAPI.enabled` in `values.yaml`
 - SDAP-371: Renamed `/domssubset` endpoint to `/cdmssubset`
+- SDAP-390: Updated NetCDF reader tool for data matchup and added user functionality.
 - SDAP-396: Added saildrone insitu api to matchup
 ### Changed
+- SDAP-390: Changed `/doms` to `/cdms` and `doms_reader.py` to `cdms_reader.py`
 - domslist endpoint points to AWS insitu instead of doms insitu
 ### Deprecated
 ### Removed
@@ -32,7 +34,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Fixed issue where satellite to satellite matchups with the same dataset don't return the expected result
 - Fixed CSV and NetCDF matchup output bug
 - Fixed NetCDF output switching latitude and longitude
-- CDMS-159: Updated quickstart guide for standalone docker deployment of SDAP.
-- CDMS-159: Updated quickstart Jupyter notebook
+- SDAP-399: Updated quickstart guide for standalone docker deployment of SDAP.
+- SDAP-399: Updated quickstart Jupyter notebook
 - Fixed import error causing `/timeSeriesSpark` queries to fail.
 ### Security
