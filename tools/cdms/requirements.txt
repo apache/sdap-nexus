@@ -99,7 +99,7 @@ notebook==6.4.11
 notebook-shim==0.1.0
 ntp==1.2.1
 numexpr==2.7.1
-numpy==1.20.1
+numpy==1.22.0
 olefile==0.46
 OWSLib==0.21.0
 packaging==20.9
