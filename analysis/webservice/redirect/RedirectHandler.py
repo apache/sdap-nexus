@@ -1,4 +1,5 @@
-import tornado
+import tornado.web
+import tornado.gen
 import logging
 from webservice.webmodel.RequestParameters import RequestParameters
 
