@@ -95,7 +95,7 @@ nbformat==5.4.0
 nest-asyncio==1.5.5
 netCDF4==1.5.5.1
 nftables==0.1
-notebook==6.4.11
+notebook==6.4.12
 notebook-shim==0.1.0
 ntp==1.2.1
 numexpr==2.7.1
