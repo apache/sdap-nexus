@@ -1,5 +1,5 @@
 # CDMS_reader.py
-The functions in cdms_reader.py read a CDMS netCDF file into memory, assemble a list of matches from a primary and secondary data set, and optionally outputs the matches to a CSV file. Each matched pair contains one primary data record and one in secondary data record.
+The functions in cdms_reader.py read a CDMS netCDF file into memory, assemble a list of matches from a primary (satellite) and secondary (satellite or in situ) data set, and optionally outputs the matches to a CSV file. Each matched pair contains one primary data record and one in secondary data record.
 
 The CDMS netCDF files holds the two groups (`PrimaryData` and `SecondaryData`). The `matchIDs` netCDF variable contains pairs of IDs (matches) which reference a primary data record and a secondary data record in their respective groups. These records have a many-to-many relationship; one primary record may match to many in secondary records, and one secondary record may match to many primary records. The `assemble_matches` function assembles the individual data records into pairs based on their `dim` group dimension IDs as paired in the `matchIDs` variable.
 
