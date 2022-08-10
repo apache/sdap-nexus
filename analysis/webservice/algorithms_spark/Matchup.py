@@ -279,7 +279,9 @@ class Matchup(NexusCalcSparkHandler):
         threading.Thread(target=do_result_insert).start()
 
         # Get only the first "result_size_limit" results
-        matches = matches[0:result_size_limit]
+        # '0' means returns everything
+        if result_size_limit > 0:
+            matches = matches[0:result_size_limit]
 
         result = DomsQueryResults(results=matches, args=args,
                                   details=details, bounds=None,

@@ -78,11 +78,11 @@ paths:
           example: -45,15,-30,30
         - in: query
           name: platforms
-          description: Platforms to include for matchup consideration
+          description: Platforms to include for matchup consideration. Platform depends on which insitu dataset is selected. See `/get_cdms_schema` endpoint for a list of valid platform ids.
           required: true
           schema:
             type: string
-          example: 1,2,3,4,5,6,7,8,9
+          example: 30
         - in: query
           name: depthMin
           description: |
