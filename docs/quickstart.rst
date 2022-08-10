@@ -1,10 +1,10 @@
 .. _quickstart:
 
 *****************
-Quickstart Guide
+Quickstart Guide - Docker
 *****************
 
-This quickstart will take approximately 45 minutes to complete.
+This quickstart will take approximately xx minutes to complete.
 
 Introduction
 =============
