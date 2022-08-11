@@ -47,7 +47,7 @@ Pull the necessary Docker images from the `NEXUS JPL repository <https://hub.doc
   export SOLR_CLOUD_INIT_VERSION=1.0.2
   export ZK_VERSION=3.5.5
 
-  export JUPYTER_VERSION=1.0.0-rc1
+  export JUPYTER_VERSION=1.2
 
 .. code-block:: bash
 
@@ -60,7 +60,8 @@ Pull the necessary Docker images from the `NEXUS JPL repository <https://hub.doc
   docker pull nexusjpl/solr-cloud-init:${SOLR_CLOUD_INIT_VERSION}
   docker pull zookeeper:${ZK_VERSION}
 
-  docker pull nexusjpl/jupyter:${JUPYTER_VERSION}
+  # docker pull nexusjpl/jupyter:${JUPYTER_VERSION}
+  docker pull rileykkjpl/jupyter:${JUPYTER_VERSION}
 
 .. _quickstart-step2:
 
@@ -328,7 +329,8 @@ To launch the Jupyter notebook use the following command:
 
 .. code-block:: bash
 
-  docker run -it --rm --name jupyter --network sdap-net -p 8888:8888 nexusjpl/jupyter:${JUPYTER_VERSION} start-notebook.sh --NotebookApp.password='sha1:a0d7f85e5fc4:0c173bb35c7dc0445b13865a38d25263db592938'
+  docker run -it --rm --name jupyter --network sdap-net -p 8888:8888 rileykkjpl/jupyter:${JUPYTER_VERSION} start-notebook.sh --NotebookApp.password='sha1:a0d7f85e5fc4:0c173bb35c7dc0445b13865a38d25263db592938'
+  # docker run -it --rm --name jupyter --network sdap-net -p 8888:8888 nexusjpl/jupyter:${JUPYTER_VERSION} start-notebook.sh --NotebookApp.password='sha1:a0d7f85e5fc4:0c173bb35c7dc0445b13865a38d25263db592938'
 
 This command launches a Juypter container and exposes it on port 8888.
 
