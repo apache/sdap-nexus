@@ -286,6 +286,12 @@ Then go ahead and download 1 month worth of AVHRR netCDF files.
 
 You should now have 30 files downloaded to your data directory, one for each day in November 2015.
 
+When the files download, the ingesters will automatically begin processing the data (it may take a few moments for this to kick in). You can monitor the progress of the ingestion in several ways:
+
+* You can use the above mentioned script. Ingestion is completed when the script exits.
+* You can tail the ingester containers' logs with a command like ``docker logs -f <container-name>`` and wait for activity to cease.
+* You can monitor the message queue at ``http://localhost:15672/#/queues/%2F/nexus``. Use username ``user`` and password ``bitnami``. Ingestion is completed when the 'Ready', 'Unacked', and 'Total' message counts are all zero.
+
 .. _quickstart-step12:
 
 Start the Webapp
@@ -295,7 +301,7 @@ Now that the data is being (has been) ingested, we need to start the webapp that
 
 .. code-block:: bash
 
-  - docker run -d --name nexus-webapp --network sdap-net -p 8083:8083 nexusjpl/nexus-webapp:${WEBAPP_VERSION} python3 /incubator-sdap-nexus/analysis/webservice/webapp.py --solr_host="http://host.docker.internal:8983" --cassandra_host=host.docker.internal --cassandra_username=cassandra --cassandra_password=cassandra
+  docker run -d --name nexus-webapp --network sdap-net -p 8083:8083 nexusjpl/nexus-webapp:${WEBAPP_VERSION} python3 /incubator-sdap-nexus/analysis/webservice/webapp.py --solr_host="http://host.docker.internal:8983" --cassandra_host=host.docker.internal --cassandra_username=cassandra --cassandra_password=cassandra
 
 .. note:: If you see a message like ``docker: invalid reference format`` it likely means you need to re-export the ``WEBAPP_VERSION`` environment variable again. This can happen when you open a new terminal window or tab.
 
