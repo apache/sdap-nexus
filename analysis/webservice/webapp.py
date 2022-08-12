@@ -74,18 +74,27 @@ def main():
     define('cassandra_host', help='cassandra host')
     define('cassandra_username', help='cassandra username')
     define('cassandra_password', help='cassandra password')
-    define('collections_path', help='collection config path')
+    define('collections_path', default=None, help='collection config path')
 
     parse_command_line()
     algorithm_config = inject_args_in_config(options, algorithm_config)
 
-    remote_collection_matcher = RemoteCollectionMatcher(options.collections_path)
+    remote_collections = None
+    router_rules = []
+    if options.collections_path:
+        # build retirect app
+        remote_collection_matcher = RemoteCollectionMatcher(options.collections_path)
+        remote_collections = remote_collection_matcher.get_remote_collections()
+        remote_sdap_app = RedirectAppBuilder(remote_collection_matcher).build(
+            host=options.address,
+            debug=options.debug)
+        router_rules.append(Rule(remote_collection_matcher, remote_sdap_app))
 
     # build nexus app
     nexus_app_builder = NexusAppBuilder().set_modules(
         web_config.get("modules", "module_dirs").split(","),
         algorithm_config,
-        remote_collection_matcher.get_remote_collections()
+        remote_collections=remote_collections
     )
 
     if web_config.get("static", "static_enabled") == "true":
@@ -96,17 +105,9 @@ def main():
         log.info("Static resources disabled")
 
     local_sdap_app = nexus_app_builder.build(host=options.address, debug=options.debug)
+    router_rules.append(Rule(AnyMatches(), local_sdap_app))
 
-    # build redirect app
-    remote_sdap_app = RedirectAppBuilder(remote_collection_matcher).build(
-        host=options.address,
-        debug=options.debug)
-
-    router = RuleRouter([
-        Rule(remote_collection_matcher, remote_sdap_app),
-        Rule(AnyMatches(), local_sdap_app)
-        ]
-    )
+    router = RuleRouter(router_rules)
 
     log.info("Initializing on host address '%s'" % options.address)
     log.info("Initializing on port '%s'" % options.port)

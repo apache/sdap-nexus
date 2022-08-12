@@ -30,7 +30,7 @@ class NexusAppBuilder:
                 r'/apidocs/(.*)', tornado.web.StaticFileHandler,
                 {'path': str(apidocs_path), "default_filename": "index.html"}))
 
-    def set_modules(self, module_dir, algorithm_config, remote_collections, max_request_threads=4):
+    def set_modules(self, module_dir, algorithm_config, remote_collections=None, max_request_threads=4):
         for moduleDir in module_dir:
             self.log.info("Loading modules from %s" % moduleDir)
             importlib.import_module(moduleDir)
@@ -44,7 +44,7 @@ class NexusAppBuilder:
             max_request_threads,
             tile_service_factory,
             algorithm_config,
-            remote_collections
+            remote_collections=remote_collections
         )
 
         for clazzWrapper in NexusHandler.AVAILABLE_HANDLERS:
