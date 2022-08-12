@@ -30,7 +30,7 @@ ENV REBUILD_CODE=true
 
 ARG APACHE_NEXUS=https://github.com/apache/incubator-sdap-nexus.git
 ARG APACHE_NEXUS_COMMIT=be19c1d567301b09269e851cc5b5af55fea02c5d
-# Pull specific commit that had nexuscli code before it was removed
+# Pull specific commit that was used in the previous version of this image
 
 RUN mkdir -p /home/jovyan/Quickstart && \
     mkdir -p /home/jovyan/nexuscli && \
