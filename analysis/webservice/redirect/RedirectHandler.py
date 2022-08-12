@@ -1,8 +1,10 @@
-import tornado
+import tornado.web
+import tornado.gen
 import logging
 from webservice.webmodel.RequestParameters import RequestParameters
 
 logger = logging.getLogger(__name__)
+
 
 class RedirectHandler(tornado.web.RequestHandler):
 

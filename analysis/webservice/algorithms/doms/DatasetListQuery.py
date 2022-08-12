@@ -98,15 +98,22 @@ class DomsDatasetListQueryHandler(BaseDomsHandler.BaseDomsQueryCalcHandler):
         for satellite in satellitesList:
             satellite["metadata"] = self.getMetadataForSource(satellite["shortName"])
 
-        for insitu in config.ENDPOINTS:
-            depths, facets = self.getFacetsForInsituSource(insitu)
-            insituList.append({
-                "name": insitu["name"],
-                "endpoint": insitu["url"],
-                "metadata": self.getMetadataForSource(insitu["name"]),
-                "depths": depths,
-                "facets": facets
-            })
+        for insitu in config.INSITU_PROVIDER_MAP:
+            provider = insitu['name']
+            for project in insitu['projects']:
+                project_name = project['name']
+                insituList.append({
+                    'name': project_name,
+                    'endpoint': f'{config.INSITU_API_ENDPOINT}?provider={provider}&project={project_name}',
+                    'metadata': {
+                        'Projects': [
+                            {
+                                'ShortName': project_name,
+                                'LongName': project_name
+                            }
+                        ]
+                    }
+                })
 
         values = {
             "satellite": satellitesList,
