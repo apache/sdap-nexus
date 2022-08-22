@@ -50,8 +50,14 @@ setuptools.setup(
     #    'webservice.nexus_tornado.request.renderers'
     #],
     package_data={
-        'webservice': ['config/web.ini', 'config/algorithms.ini'],
-        'webservice.algorithms.doms': ['domsconfig.ini.default']
+        'webservice': [
+            'config/web.ini',
+            'config/algorithms.ini',
+            'apidocs/index.html',
+            'apidocs/openapi.yml',
+            'apidocs/dataset-populate.js'
+        ],
+        'webservice.algorithms.doms': ['domsconfig.ini.default'],
     },
     data_files=[
         ('static', ['static/index.html'])

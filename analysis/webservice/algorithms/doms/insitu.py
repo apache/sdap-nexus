@@ -20,7 +20,7 @@ def query_insitu_schema():
 
 
 def query_insitu(dataset, variable, start_time, end_time, bbox, platform, depth_min, depth_max,
-               items_per_page=1000, session=None):
+               items_per_page=20000, session=None):
     """
     Query insitu API, page through results, and aggregate
     """
@@ -63,7 +63,7 @@ def query_insitu(dataset, variable, start_time, end_time, bbox, platform, depth_
         else:
             response = requests.get(next_page_url, params=params)
 
-        logging.debug(f'Insitu request {response.url}')
+        logging.info(f'Insitu request {response.url}')
 
         response.raise_for_status()
         insitu_page_response = response.json()
