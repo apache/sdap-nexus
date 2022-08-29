@@ -94,7 +94,7 @@ class DomsResultsRetrievalHandler(BaseDomsHandler.BaseDomsQueryCalcHandler):
     }
     singleton = True
 
-    def __init__(self, tile_service_factory):
+    def __init__(self, tile_service_factory, **kwargs):
         BaseDomsHandler.BaseDomsQueryCalcHandler.__init__(self, tile_service_factory)
         self.log = logging.getLogger(__name__)
 
