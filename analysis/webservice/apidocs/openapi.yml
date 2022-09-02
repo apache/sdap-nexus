@@ -94,7 +94,7 @@ paths:
             | 30          | ship                                    | [Link](http://vocab.nerc.ac.uk/collection/L06/current/30/) |
             | 41          | moored surface buoy                     | [Link](http://vocab.nerc.ac.uk/collection/L06/current/41/) |
             | 42          | drifting surface float                  | [Link](http://vocab.nerc.ac.uk/collection/L06/current/42/) |
-            </details
+            </details>
 
           required: true
           schema:
