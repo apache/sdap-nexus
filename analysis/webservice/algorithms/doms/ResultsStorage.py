@@ -145,10 +145,10 @@ class ResultsStorage(AbstractResultsContainer):
         """
         self._session.execute(cql, (
             execution_id,
-            stats["numGriddedMatched"],
-            stats["numGriddedChecked"],
-            stats["numInSituMatched"],
-            stats["numInSituRecords"],
+            stats["numPrimaryMatched"],
+            None,
+            stats["numSecondaryMatched"],
+            None,
             stats["timeToComplete"]
         ))
 
