@@ -106,6 +106,9 @@ class DomsQueryResults(NexusResults):
     def toNetCDF(self):
         return DomsNetCDFFormatter.create(self.__executionId, self.results(), self.__args, self.__details)
 
+    def toCAML(self):
+        return DomsCAMLFormatter.create(self.__executionId, self.results(), self.__args, self.__details)
+
 
 class DomsCSVFormatter:
     @staticmethod
@@ -529,3 +532,8 @@ class DomsNetCDFValueWriter:
         var.axis = "Z"
         var.positive = "Down"
 
+
+class DomsCAMLFormatter:
+    @staticmethod
+    def create(executionId, results, params, details):
+        pass
