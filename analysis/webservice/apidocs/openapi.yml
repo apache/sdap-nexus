@@ -78,7 +78,11 @@ paths:
           example: -45,15,-30,30
         - in: query
           name: platforms
-          description: Platforms to include for matchup consideration. Platform depends on which insitu dataset is selected. See `/get_cdms_schema` endpoint for a list of valid platform ids.
+          description: |
+            Platforms to include for matchup consideration. Platform
+            depends on which insitu dataset is selected. See
+            [/get_cdms_schema](https://doms.jpl.nasa.gov/insitu/1.0/cdms_schema)
+            endpoint for a list of valid platform ids.
           required: true
           schema:
             type: string
@@ -124,8 +128,9 @@ paths:
           name: parameter
           description: |
             The parameter of interest used for the match up. This is
-            only used for insitu measurements. See `/cdmsschema` endpoint
-            for a list of valid options.
+            only used for insitu measurements. See
+            [/get_cdms_schema](https://doms.jpl.nasa.gov/insitu/1.0/cdms_schema)
+            endpoint for a list of valid options.
           required: false
           schema:
             type: string
