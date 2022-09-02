@@ -32,7 +32,8 @@ ENV  \
     SPARK_HOME=/opt/spark \
     PYSPARK_DRIVER_PYTHON=/opt/conda/bin/python3.8 \
     PYSPARK_PYTHON=/opt/conda/bin/python3.8 \
-    LD_LIBRARY_PATH=/usr/lib
+    LD_LIBRARY_PATH=/usr/lib \
+    REQUESTS_CA_BUNDLE=/etc/ssl/certs/ca-certificates.crt
 
 RUN apk add --update --no-cache \
     bzip2 \
