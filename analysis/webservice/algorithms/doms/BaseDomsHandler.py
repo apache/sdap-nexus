@@ -536,4 +536,9 @@ class DomsNetCDFValueWriter:
 class DomsCAMLFormatter:
     @staticmethod
     def create(executionId, results, params, details):
-        pass
+        query = {}
+        result = {}
+
+        return json.dumps(
+            {'query': query, 'result': result, 'test': params}
+        )
