@@ -17,6 +17,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - SDAP-398: Added script for regression tests.
 - Matchup validates insitu parameter using insitu API schema endpoint
 - Added domsresults endpoint to openapi spec
+- Added markdown table to matchup `platform` param in openapi spec
 ### Changed
 - SDAP-390: Changed `/doms` to `/cdms` and `doms_reader.py` to `cdms_reader.py`
 - domslist endpoint points to AWS insitu instead of doms insitu
@@ -40,6 +41,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Fixed CSV and NetCDF matchup output bug
 - Fixed NetCDF output switching latitude and longitude
 - Fixed import error causing `/timeSeriesSpark` queries to fail.
+- Fixed bug where domsresults no longer worked after successful matchup
+- Fixed certificate error in Dockerfile
 ### Security
 
 
