@@ -536,6 +536,18 @@ class DomsNetCDFValueWriter:
 class DomsCAMLFormatter:
     @staticmethod
     def create(executionId, results, params, details):
+        def keyname(name, number):
+            if number == 0:
+                return name
+            else:
+                return f"{name}_{number}"
+
+        def empty_if_none(string):
+            if string is not None:
+                return string
+            else:
+                return ""
+
         query = {}
         result = {}
 
@@ -554,6 +566,15 @@ class DomsCAMLFormatter:
             "time_start": params['startTime'].isoformat() + "+0000",
             "time_end": params['endTime'].isoformat() + "+0000"
         }
+
+        n_variable = 0
+        n_chart = 0
+
+        VAR = "variable"
+        CHART = "chart"
+
+        if len(results) > 0:
+            result[keyname(VAR, n_variable)] = {}
 
         return json.dumps(
             {'query': query, 'result': result, 'test_params': params},
