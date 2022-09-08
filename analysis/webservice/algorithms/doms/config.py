@@ -19,6 +19,7 @@ INSITU_API_SCHEMA_ENDPOINT = 'https://doms.jpl.nasa.gov/insitu/1.0/cdms_schema'
 INSITU_PROVIDER_MAP = [
     {
         'name': 'NCAR',
+        'endpoint': 'https://cdms.ucar.edu/insitu/1.0/query_data_doms_custom_pagination',
         'projects': [
             {
                 'name': 'ICOADS Release 3.0',
