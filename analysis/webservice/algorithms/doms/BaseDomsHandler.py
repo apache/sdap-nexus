@@ -539,6 +539,22 @@ class DomsCAMLFormatter:
         query = {}
         result = {}
 
+        query['apiRequest'] = ''
+        query['analysisName'] = ''
+        query['layerName'] = None
+        query['featureName'] = None
+
+        b = params['bbox'].split(',')
+
+        query['bounds'] = {
+            "lon_min": float(b[0]),
+            "lon_max": float(b[2]),
+            "lat_min": float(b[1]),
+            "lat_max": float(b[3]),
+            "time_start": params['startTime'].isoformat() + "+0000",
+            "time_end": params['endTime'].isoformat() + "+0000"
+        }
+
         return json.dumps(
             {'query': query, 'result': result, 'test_params': params},
             indent=4,
