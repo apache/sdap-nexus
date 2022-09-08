@@ -199,10 +199,17 @@ class Matchup(NexusCalcSparkHandler):
         start_seconds_from_epoch = int((start_time - EPOCH).total_seconds())
         end_seconds_from_epoch = int((end_time - EPOCH).total_seconds())
 
+        output_type = request.get_argument("output", default='JSON')
+
+        caml_params = {}
+
+        if output_type == 'CAML':
+            pass
+
         return bounding_polygon, primary_ds_name, secondary_ds_names, parameter_s, \
                start_time, start_seconds_from_epoch, end_time, end_seconds_from_epoch, \
                depth_min, depth_max, time_tolerance, radius_tolerance, \
-               platforms, match_once, result_size_limit
+               platforms, match_once, result_size_limit, output_type, caml_params
 
     def calc(self, request, **args):
         start = datetime.utcnow()
@@ -210,7 +217,7 @@ class Matchup(NexusCalcSparkHandler):
         bounding_polygon, primary_ds_name, secondary_ds_names, parameter_s, \
         start_time, start_seconds_from_epoch, end_time, end_seconds_from_epoch, \
         depth_min, depth_max, time_tolerance, radius_tolerance, \
-        platforms, match_once, result_size_limit = self.parse_arguments(request)
+        platforms, match_once, result_size_limit, output_type, caml_params = self.parse_arguments(request)
 
         with ResultsStorage(self.config) as resultsStorage:
 
@@ -250,6 +257,9 @@ class Matchup(NexusCalcSparkHandler):
             "platforms": platforms,
             "parameter": parameter_s
         }
+
+        if output_type == 'CAML':
+            args['caml_params'] = caml_params
 
         if depth_min is not None:
             args["depthMin"] = float(depth_min)
