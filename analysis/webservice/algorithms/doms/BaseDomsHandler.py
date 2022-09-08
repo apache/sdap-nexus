@@ -540,5 +540,7 @@ class DomsCAMLFormatter:
         result = {}
 
         return json.dumps(
-            {'query': query, 'result': result, 'test': params}
+            {'query': query, 'result': result, 'test_params': params},
+            indent=4,
+            cls=DomsEncoder
         )

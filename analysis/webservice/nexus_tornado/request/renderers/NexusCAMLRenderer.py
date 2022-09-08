@@ -3,7 +3,7 @@ import traceback
 import json
 
 
-class NexusJSONRenderer(object):
+class NexusCAMLRenderer(object):
     def __init__(self, nexus_request):
         self.request = nexus_request
 
