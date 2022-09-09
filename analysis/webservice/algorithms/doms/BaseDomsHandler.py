@@ -536,6 +536,8 @@ class DomsNetCDFValueWriter:
 class DomsCAMLFormatter:
     @staticmethod
     def create(executionId, results, params, details):
+        import copy
+
         def keyname(name, number):
             if number == 0:
                 return name
@@ -547,6 +549,13 @@ class DomsCAMLFormatter:
                 return string
             else:
                 return ""
+
+        def datetime_to_iso(dt):
+            return dt.isoformat() + "+0000"
+
+        def get_match_by_variable_name(matches, variable_name):
+            m = [m for m in matches if m['cf_variable_name'] == variable_name]
+            return m[0]
 
         query = {}
         result = {}
@@ -563,8 +572,8 @@ class DomsCAMLFormatter:
             "lon_max": float(b[2]),
             "lat_min": float(b[1]),
             "lat_max": float(b[3]),
-            "time_start": params['startTime'].isoformat() + "+0000",
-            "time_end": params['endTime'].isoformat() + "+0000"
+            "time_start": datetime_to_iso(params['startTime']),
+            "time_end": datetime_to_iso(params['endTime'])
         }
 
         n_variable = 0
@@ -574,7 +583,60 @@ class DomsCAMLFormatter:
         CHART = "chart"
 
         if len(results) > 0:
-            result[keyname(VAR, n_variable)] = {}
+            result[keyname(VAR, n_variable)] = {
+                "object": "layer",
+                "name": results[0]["primary"][0]["cf_variable_name"],
+                "units": empty_if_none(results[0]["primary"][0]["variable_unit"])
+            }
+
+            n_variable += 1
+
+            result[keyname(VAR, n_variable)] = {
+                "object": "feature",
+                "name": results[0]['matches'][0]["secondary"][0]["cf_variable_name"],
+                "units": empty_if_none(results[0]['matches'][0]["secondary"][0]["variable_unit"])
+            }
+
+            n_variable += 1
+
+            data = [[], []]
+
+            for r in results:
+                data[0].append([datetime_to_iso(r['time']), r['primary'][0]['variable_value']])
+                data[1].append([datetime_to_iso(r['matches'][0]['time']), r['matches'][0]['secondary'][0]['variable_value']])
+
+            result[keyname(CHART, n_chart)] = {
+                "object": ["layer", "feature"],
+                "type": "xy_line_point",
+                "title": "Time Series",
+                "xAxis_label": f"{result[keyname(VAR, 0)]['name']} ({result[keyname(VAR, 0)]['units']})",
+                "yAxis_label": f"{result[keyname(VAR, 1)]['name']} ({result[keyname(VAR, 1)]['units']})",
+                "xySeries_data": copy.deepcopy(data),
+                "xySeries_labels": [query["layerName"], query["featureName"]]
+            }
+
+            n_chart += 1
+            data.clear()
+
+            for r in results:
+                data.append(
+                    [
+                        r['primary'][0]['variable_value'],
+                        r['matches'][0]['secondary'][0]['variable_value']
+                    ]
+                )
+
+            result[keyname(CHART, n_chart)] = {
+                "object": ["layer", "feature"],
+                "type": "xy_scatter_point",
+                "title": "Scatter Plot",
+                "xAxis_label": 'Time',
+                "yAxis_label": f"{result[keyname(VAR, 1)]['name']} ({result[keyname(VAR, 1)]['units']})",
+                "xySeries_data": copy.deepcopy(data),
+            }
+
+            n_chart += 1
+            data.clear()
 
         return json.dumps(
             {'query': query, 'result': result, 'test_params': params},
