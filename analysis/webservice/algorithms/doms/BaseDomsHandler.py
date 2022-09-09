@@ -30,7 +30,7 @@ from pytz import timezone, UTC
 from . import config
 from . import geo
 from webservice.algorithms.NexusCalcHandler import NexusCalcHandler
-from webservice.webmodel import NexusResults
+from webservice.webmodel import NexusResults, NexusProcessingException
 
 EPOCH = timezone('UTC').localize(datetime(1970, 1, 1))
 ISO_8601 = '%Y-%m-%dT%H:%M:%S%z'
@@ -559,6 +559,7 @@ class DomsCAMLFormatter:
 
         query = {}
         result = {}
+        caml_params = params['caml_params']
 
         query['apiRequest'] = ''
         query['analysisName'] = ''
@@ -585,16 +586,16 @@ class DomsCAMLFormatter:
         if len(results) > 0:
             result[keyname(VAR, n_variable)] = {
                 "object": "layer",
-                "name": results[0]["primary"][0]["cf_variable_name"],
-                "units": empty_if_none(results[0]["primary"][0]["variable_unit"])
+                "name": caml_params['layer'],
+                "units": empty_if_none(get_match_by_variable_name(results[0]['primary'], caml_params['layer'])["variable_unit"])
             }
 
             n_variable += 1
 
             result[keyname(VAR, n_variable)] = {
                 "object": "feature",
-                "name": results[0]['matches'][0]["secondary"][0]["cf_variable_name"],
-                "units": empty_if_none(results[0]['matches'][0]["secondary"][0]["variable_unit"])
+                "name": caml_params['feature'],
+                "units": empty_if_none(get_match_by_variable_name(results[0]['matches'][0]['secondary'], caml_params['feature'])["variable_unit"])
             }
 
             n_variable += 1
@@ -602,8 +603,22 @@ class DomsCAMLFormatter:
             data = [[], []]
 
             for r in results:
-                data[0].append([datetime_to_iso(r['time']), r['primary'][0]['variable_value']])
-                data[1].append([datetime_to_iso(r['matches'][0]['time']), r['matches'][0]['secondary'][0]['variable_value']])
+                secondary = None
+                secondary_match = None
+
+                for s in r['matches']:
+                    try:
+                        secondary_match = get_match_by_variable_name(s['secondary'], caml_params['feature'])
+                        secondary = s
+                        break
+                    except:
+                        pass
+
+                if secondary is None:
+                    continue
+
+                data[0].append([datetime_to_iso(r['time']), get_match_by_variable_name(r['primary'], caml_params['layer'])['variable_value']])
+                data[1].append([datetime_to_iso(secondary['time']), secondary_match['variable_value']])
 
             result[keyname(CHART, n_chart)] = {
                 "object": ["layer", "feature"],
@@ -619,10 +634,22 @@ class DomsCAMLFormatter:
             data.clear()
 
             for r in results:
+                secondary_match = None
+
+                for s in r['matches']:
+                    try:
+                        secondary_match = get_match_by_variable_name(s['secondary'], caml_params['feature'])
+                        break
+                    except:
+                        pass
+
+                if secondary_match is None:
+                    continue
+
                 data.append(
                     [
-                        r['primary'][0]['variable_value'],
-                        r['matches'][0]['secondary'][0]['variable_value']
+                        get_match_by_variable_name(r['primary'], caml_params['layer'])['variable_value'],
+                        secondary_match['variable_value']
                     ]
                 )
 
