@@ -204,7 +204,19 @@ class Matchup(NexusCalcSparkHandler):
         caml_params = {}
 
         if output_type == 'CAML':
-            pass
+            layer = request.get_argument("camlLayer")
+            if layer is None:
+                raise NexusProcessingException(reason="Layer argument is required when outputting in CAML format", code=400)
+
+            feature = request.get_argument("camlFeature")
+            if feature is None:
+                raise NexusProcessingException(reason="Feature argument is required when outputting in CAML format", code=400)
+
+            raise_if_missing = request.get_boolean_arg("camlRaiseIfMissing")
+
+            caml_params['layer'] = layer
+            caml_params['feature'] = feature
+            caml_params['raise_if_missing'] = raise_if_missing
 
         return bounding_polygon, primary_ds_name, secondary_ds_names, parameter_s, \
                start_time, start_seconds_from_epoch, end_time, end_seconds_from_epoch, \
