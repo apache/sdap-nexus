@@ -624,7 +624,7 @@ class DomsCAMLFormatter:
                 "object": ["layer", "feature"],
                 "type": "xy_line_point",
                 "title": "Time Series",
-                "xAxis_label": f"{result[keyname(VAR, 0)]['name']} ({result[keyname(VAR, 0)]['units']})",
+                "xAxis_label": 'Time',
                 "yAxis_label": f"{result[keyname(VAR, 1)]['name']} ({result[keyname(VAR, 1)]['units']})",
                 "xySeries_data": copy.deepcopy(data),
                 "xySeries_labels": [query["layerName"], query["featureName"]]
@@ -657,13 +657,44 @@ class DomsCAMLFormatter:
                 "object": ["layer", "feature"],
                 "type": "xy_scatter_point",
                 "title": "Scatter Plot",
-                "xAxis_label": 'Time',
+                "xAxis_label": f"{result[keyname(VAR, 0)]['name']} ({result[keyname(VAR, 0)]['units']})",
                 "yAxis_label": f"{result[keyname(VAR, 1)]['name']} ({result[keyname(VAR, 1)]['units']})",
                 "xySeries_data": copy.deepcopy(data),
             }
 
             n_chart += 1
             data.clear()
+
+            for r in results:
+                secondary = None
+                secondary_match = None
+
+                for s in r['matches']:
+                    try:
+                        secondary_match = get_match_by_variable_name(s['secondary'], caml_params['feature'])
+                        secondary = s
+                        break
+                    except:
+                        pass
+
+                if secondary_match is None:
+                    continue
+
+                primary = get_match_by_variable_name(r['primary'], caml_params['layer'])
+
+                data.append([
+                    datetime_to_iso(secondary['time']),
+                    [secondary['lat'], secondary['lon']],
+                    primary['variable_value'] - secondary_match['variable_value']
+                ])
+
+            result['map'] = {
+                "object": ["feature"],
+                "type": "trajectory",
+                "title": "Along track colocation differences",
+                "colorbar_label": f"{result[keyname(VAR, 1)]['name']} ({result[keyname(VAR, 1)]['units']})",
+                "xySeries_data": copy.deepcopy(data),
+            }
 
         return json.dumps(
             {'query': query, 'result': result, 'test_params': params},
