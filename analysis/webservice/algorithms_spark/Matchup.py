@@ -214,9 +214,48 @@ class Matchup(NexusCalcSparkHandler):
 
             raise_if_missing = request.get_boolean_arg("camlRaiseIfMissing")
 
+            CHART_TYPES = [
+                'time_series',
+                'scatter',
+                'histogram_primary',
+                'histogram_secondary',
+                'trajectory'
+            ]
+
+            types_arg = request.get_argument("camlChartTypes")
+
+            if types_arg is None:
+                types = {
+                    'time_series': True,
+                    'scatter': True,
+                    'histogram_primary': True,
+                    'histogram_secondary': True,
+                    'trajectory': True
+                }
+            else:
+                types_arg = types_arg.split(',')
+
+                types = {
+                    'time_series': False,
+                    'scatter': False,
+                    'histogram_primary': False,
+                    'histogram_secondary': False,
+                    'trajectory': False
+                }
+
+                for t in types_arg:
+                    if t not in CHART_TYPES:
+                        raise NexusProcessingException(
+                            reason=f"Invalid chart type argument: {t}",
+                            code=500
+                        )
+
+                    types[t] = True
+
             caml_params['layer'] = layer
             caml_params['feature'] = feature
             caml_params['raise_if_missing'] = raise_if_missing
+            caml_params['charts'] = types
 
         return bounding_polygon, primary_ds_name, secondary_ds_names, parameter_s, \
                start_time, start_seconds_from_epoch, end_time, end_seconds_from_epoch, \
