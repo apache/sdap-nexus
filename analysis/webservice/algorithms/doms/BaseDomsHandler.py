@@ -557,6 +557,9 @@ class DomsCAMLFormatter:
             m = [m for m in matches if m['cf_variable_name'] == variable_name]
             return m[0]
 
+        def round_down_day(dt):
+            return datetime(*dt.timetuple()[:3])
+
         query = {}
         result = {}
         caml_params = params['caml_params']
@@ -665,12 +668,106 @@ class DomsCAMLFormatter:
             n_chart += 1
             data.clear()
 
-            result[keyname(CHART, n_chart)] = 'TBA - Need to figure out histogram format'
+            primary_histdata = {}
+            secondary_histdata = {}
+
+            for r in results:
+                secondary = None
+                secondary_match = None
+
+                for s in r['matches']:
+                    try:
+                        secondary_match = get_match_by_variable_name(s['secondary'], caml_params['feature'])
+                        secondary = s
+                        break
+                    except:
+                        pass
+
+                if secondary is None:
+                    continue
+
+                pts = datetime_to_iso(round_down_day(r['time']))
+                sts = datetime_to_iso(round_down_day(secondary['time']))
+
+                if pts not in primary_histdata:
+                    primary_histdata[pts] = {
+                        'data': [],
+                        'hist': None
+                    }
+
+                if sts not in secondary_histdata:
+                    secondary_histdata[sts] = {
+                        'data': [],
+                        'hist': None
+                    }
+
+                primary_histdata[pts]['data'].append(get_match_by_variable_name(r['primary'], caml_params['layer'])['variable_value'])
+                secondary_histdata[sts]['data'].append(secondary_match['variable_value'])
+
+            bins = [-5, 0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55]
+
+            for d in primary_histdata:
+                hist, _ = np.histogram(primary_histdata[d]['data'], bins=bins, density=False)
+                h = []
+
+                for i in range(len(hist)):
+                    h.append([bins[i], int(hist[i])])
+
+                primary_histdata[d]['hist'] = copy.deepcopy(h)
+
+            for d in secondary_histdata:
+                hist, _ = np.histogram(secondary_histdata[d]['data'], bins=bins, density=False)
+                h = []
+
+                for i in range(len(hist)):
+                    h.append([bins[i], int(hist[i])])
+
+                secondary_histdata[d]['hist'] = copy.deepcopy(h)
+
+            head = primary_histdata[next(iter(primary_histdata))]['hist']
+
+            data.append(head)
+
+            for d in primary_histdata:
+                d_hist = [d]
+
+                for bin in primary_histdata[d]['hist']:
+                    d_hist.append(bin)
+
+                data.append([d_hist])
+
+            result[keyname(CHART, n_chart)] = {
+                "object": ["layer"],
+                "type": "histogram",
+                "title": "Frequency Distribution over Time",
+                "xAxis_label": f"{result[keyname(VAR, 0)]['name']} ({result[keyname(VAR, 0)]['units']})",
+                "yAxis_label": "frequency (count)",
+                "xySeries_data": copy.deepcopy(data),
+            }
 
             n_chart += 1
             data.clear()
 
-            result[keyname(CHART, n_chart)] = 'TBA - Need to figure out histogram format'
+            data.append(head)
+
+            for d in secondary_histdata:
+                d_hist = [d]
+
+                for bin in secondary_histdata[d]['hist']:
+                    d_hist.append(bin)
+
+                data.append([d_hist])
+
+            result[keyname(CHART, n_chart)] = {
+                "object": ["feature"],
+                "type": "histogram",
+                "title": "Frequency Distribution over Time",
+                "xAxis_label": f"{result[keyname(VAR, 1)]['name']} ({result[keyname(VAR, 1)]['units']})",
+                "yAxis_label": "frequency (count)",
+                "xySeries_data": copy.deepcopy(data),
+            }
+
+            data.clear()
 
             for r in results:
                 secondary = None
