@@ -603,202 +603,210 @@ class DomsCAMLFormatter:
 
             n_variable += 1
 
-            data = [[], []]
+            data = []
 
-            for r in results:
-                secondary = None
-                secondary_match = None
+            if caml_params['charts']['time_series']:
+                data = [[], []]
 
-                for s in r['matches']:
-                    try:
-                        secondary_match = get_match_by_variable_name(s['secondary'], caml_params['feature'])
-                        secondary = s
-                        break
-                    except:
-                        pass
+                for r in results:
+                    secondary = None
+                    secondary_match = None
 
-                if secondary is None:
-                    continue
+                    for s in r['matches']:
+                        try:
+                            secondary_match = get_match_by_variable_name(s['secondary'], caml_params['feature'])
+                            secondary = s
+                            break
+                        except:
+                            pass
 
-                data[0].append([datetime_to_iso(r['time']), get_match_by_variable_name(r['primary'], caml_params['layer'])['variable_value']])
-                data[1].append([datetime_to_iso(secondary['time']), secondary_match['variable_value']])
+                    if secondary is None:
+                        continue
 
-            result[keyname(CHART, n_chart)] = {
-                "object": ["layer", "feature"],
-                "type": "xy_line_point",
-                "title": "Time Series",
-                "xAxis_label": 'Time',
-                "yAxis_label": f"{result[keyname(VAR, 1)]['name']} ({result[keyname(VAR, 1)]['units']})",
-                "xySeries_data": copy.deepcopy(data),
-                "xySeries_labels": [query["layerName"], query["featureName"]]
-            }
+                    data[0].append([datetime_to_iso(r['time']), get_match_by_variable_name(r['primary'], caml_params['layer'])['variable_value']])
+                    data[1].append([datetime_to_iso(secondary['time']), secondary_match['variable_value']])
 
-            n_chart += 1
-            data.clear()
+                result[keyname(CHART, n_chart)] = {
+                    "object": ["layer", "feature"],
+                    "type": "xy_line_point",
+                    "title": "Time Series",
+                    "xAxis_label": 'Time',
+                    "yAxis_label": f"{result[keyname(VAR, 1)]['name']} ({result[keyname(VAR, 1)]['units']})",
+                    "xySeries_data": copy.deepcopy(data),
+                    "xySeries_labels": [query["layerName"], query["featureName"]]
+                }
 
-            for r in results:
-                secondary_match = None
+                n_chart += 1
+                data.clear()
 
-                for s in r['matches']:
-                    try:
-                        secondary_match = get_match_by_variable_name(s['secondary'], caml_params['feature'])
-                        break
-                    except:
-                        pass
+            if caml_params['charts']['scatter']:
+                for r in results:
+                    secondary_match = None
 
-                if secondary_match is None:
-                    continue
+                    for s in r['matches']:
+                        try:
+                            secondary_match = get_match_by_variable_name(s['secondary'], caml_params['feature'])
+                            break
+                        except:
+                            pass
 
-                data.append(
-                    [
-                        get_match_by_variable_name(r['primary'], caml_params['layer'])['variable_value'],
-                        secondary_match['variable_value']
-                    ]
-                )
+                    if secondary_match is None:
+                        continue
 
-            result[keyname(CHART, n_chart)] = {
-                "object": ["layer", "feature"],
-                "type": "xy_scatter_point",
-                "title": "Scatter Plot",
-                "xAxis_label": f"{result[keyname(VAR, 0)]['name']} ({result[keyname(VAR, 0)]['units']})",
-                "yAxis_label": f"{result[keyname(VAR, 1)]['name']} ({result[keyname(VAR, 1)]['units']})",
-                "xySeries_data": copy.deepcopy(data),
-            }
+                    data.append(
+                        [
+                            get_match_by_variable_name(r['primary'], caml_params['layer'])['variable_value'],
+                            secondary_match['variable_value']
+                        ]
+                    )
 
-            n_chart += 1
-            data.clear()
+                result[keyname(CHART, n_chart)] = {
+                    "object": ["layer", "feature"],
+                    "type": "xy_scatter_point",
+                    "title": "Scatter Plot",
+                    "xAxis_label": f"{result[keyname(VAR, 0)]['name']} ({result[keyname(VAR, 0)]['units']})",
+                    "yAxis_label": f"{result[keyname(VAR, 1)]['name']} ({result[keyname(VAR, 1)]['units']})",
+                    "xySeries_data": copy.deepcopy(data),
+                }
 
-            primary_histdata = {}
-            secondary_histdata = {}
+                n_chart += 1
+                data.clear()
 
-            for r in results:
-                secondary = None
-                secondary_match = None
+            if caml_params['charts']['histogram_primary'] or caml_params['charts']['histogram_secondary']:
+                primary_histdata = {}
+                secondary_histdata = {}
 
-                for s in r['matches']:
-                    try:
-                        secondary_match = get_match_by_variable_name(s['secondary'], caml_params['feature'])
-                        secondary = s
-                        break
-                    except:
-                        pass
+                for r in results:
+                    secondary = None
+                    secondary_match = None
 
-                if secondary is None:
-                    continue
+                    for s in r['matches']:
+                        try:
+                            secondary_match = get_match_by_variable_name(s['secondary'], caml_params['feature'])
+                            secondary = s
+                            break
+                        except:
+                            pass
 
-                pts = datetime_to_iso(round_down_day(r['time']))
-                sts = datetime_to_iso(round_down_day(secondary['time']))
+                    if secondary is None:
+                        continue
 
-                if pts not in primary_histdata:
-                    primary_histdata[pts] = {
-                        'data': [],
-                        'hist': None
+                    pts = datetime_to_iso(round_down_day(r['time']))
+                    sts = datetime_to_iso(round_down_day(secondary['time']))
+
+                    if pts not in primary_histdata:
+                        primary_histdata[pts] = {
+                            'data': [],
+                            'hist': None
+                        }
+
+                    if sts not in secondary_histdata:
+                        secondary_histdata[sts] = {
+                            'data': [],
+                            'hist': None
+                        }
+
+                    primary_histdata[pts]['data'].append(get_match_by_variable_name(r['primary'], caml_params['layer'])['variable_value'])
+                    secondary_histdata[sts]['data'].append(secondary_match['variable_value'])
+
+                bins = [-5, 0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55]
+
+                for d in primary_histdata:
+                    hist, _ = np.histogram(primary_histdata[d]['data'], bins=bins, density=False)
+                    h = []
+
+                    for i in range(len(hist)):
+                        h.append([bins[i], int(hist[i])])
+
+                    primary_histdata[d]['hist'] = copy.deepcopy(h)
+
+                for d in secondary_histdata:
+                    hist, _ = np.histogram(secondary_histdata[d]['data'], bins=bins, density=False)
+                    h = []
+
+                    for i in range(len(hist)):
+                        h.append([bins[i], int(hist[i])])
+
+                    secondary_histdata[d]['hist'] = copy.deepcopy(h)
+
+                head = primary_histdata[next(iter(primary_histdata))]['hist']
+
+                if caml_params['charts']['histogram_primary']:
+                    data.append(head)
+
+                    for d in primary_histdata:
+                        d_hist = [d]
+
+                        for bin in primary_histdata[d]['hist']:
+                            d_hist.append(bin)
+
+                        data.append([d_hist])
+
+                    result[keyname(CHART, n_chart)] = {
+                        "object": ["layer"],
+                        "type": "histogram",
+                        "title": "Frequency Distribution over Time",
+                        "xAxis_label": f"{result[keyname(VAR, 0)]['name']} ({result[keyname(VAR, 0)]['units']})",
+                        "yAxis_label": "frequency (count)",
+                        "xySeries_data": copy.deepcopy(data),
                     }
 
-                if sts not in secondary_histdata:
-                    secondary_histdata[sts] = {
-                        'data': [],
-                        'hist': None
+                    n_chart += 1
+                    data.clear()
+
+                if caml_params['charts']['histogram_secondary']:
+                    data.append(head)
+
+                    for d in secondary_histdata:
+                        d_hist = [d]
+
+                        for bin in secondary_histdata[d]['hist']:
+                            d_hist.append(bin)
+
+                        data.append([d_hist])
+
+                    result[keyname(CHART, n_chart)] = {
+                        "object": ["feature"],
+                        "type": "histogram",
+                        "title": "Frequency Distribution over Time",
+                        "xAxis_label": f"{result[keyname(VAR, 1)]['name']} ({result[keyname(VAR, 1)]['units']})",
+                        "yAxis_label": "frequency (count)",
+                        "xySeries_data": copy.deepcopy(data),
                     }
 
-                primary_histdata[pts]['data'].append(get_match_by_variable_name(r['primary'], caml_params['layer'])['variable_value'])
-                secondary_histdata[sts]['data'].append(secondary_match['variable_value'])
+                    data.clear()
 
-            bins = [-5, 0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55]
+            if caml_params['charts']['trajectory']:
+                for r in results:
+                    secondary = None
+                    secondary_match = None
 
-            for d in primary_histdata:
-                hist, _ = np.histogram(primary_histdata[d]['data'], bins=bins, density=False)
-                h = []
+                    for s in r['matches']:
+                        try:
+                            secondary_match = get_match_by_variable_name(s['secondary'], caml_params['feature'])
+                            secondary = s
+                            break
+                        except:
+                            pass
 
-                for i in range(len(hist)):
-                    h.append([bins[i], int(hist[i])])
+                    if secondary_match is None:
+                        continue
 
-                primary_histdata[d]['hist'] = copy.deepcopy(h)
+                    primary = get_match_by_variable_name(r['primary'], caml_params['layer'])
 
-            for d in secondary_histdata:
-                hist, _ = np.histogram(secondary_histdata[d]['data'], bins=bins, density=False)
-                h = []
+                    data.append([
+                        datetime_to_iso(secondary['time']),
+                        [secondary['lat'], secondary['lon']],
+                        primary['variable_value'] - secondary_match['variable_value']
+                    ])
 
-                for i in range(len(hist)):
-                    h.append([bins[i], int(hist[i])])
-
-                secondary_histdata[d]['hist'] = copy.deepcopy(h)
-
-            head = primary_histdata[next(iter(primary_histdata))]['hist']
-
-            data.append(head)
-
-            for d in primary_histdata:
-                d_hist = [d]
-
-                for bin in primary_histdata[d]['hist']:
-                    d_hist.append(bin)
-
-                data.append([d_hist])
-
-            result[keyname(CHART, n_chart)] = {
-                "object": ["layer"],
-                "type": "histogram",
-                "title": "Frequency Distribution over Time",
-                "xAxis_label": f"{result[keyname(VAR, 0)]['name']} ({result[keyname(VAR, 0)]['units']})",
-                "yAxis_label": "frequency (count)",
-                "xySeries_data": copy.deepcopy(data),
-            }
-
-            n_chart += 1
-            data.clear()
-
-            data.append(head)
-
-            for d in secondary_histdata:
-                d_hist = [d]
-
-                for bin in secondary_histdata[d]['hist']:
-                    d_hist.append(bin)
-
-                data.append([d_hist])
-
-            result[keyname(CHART, n_chart)] = {
-                "object": ["feature"],
-                "type": "histogram",
-                "title": "Frequency Distribution over Time",
-                "xAxis_label": f"{result[keyname(VAR, 1)]['name']} ({result[keyname(VAR, 1)]['units']})",
-                "yAxis_label": "frequency (count)",
-                "xySeries_data": copy.deepcopy(data),
-            }
-
-            data.clear()
-
-            for r in results:
-                secondary = None
-                secondary_match = None
-
-                for s in r['matches']:
-                    try:
-                        secondary_match = get_match_by_variable_name(s['secondary'], caml_params['feature'])
-                        secondary = s
-                        break
-                    except:
-                        pass
-
-                if secondary_match is None:
-                    continue
-
-                primary = get_match_by_variable_name(r['primary'], caml_params['layer'])
-
-                data.append([
-                    datetime_to_iso(secondary['time']),
-                    [secondary['lat'], secondary['lon']],
-                    primary['variable_value'] - secondary_match['variable_value']
-                ])
-
-            result['map'] = {
-                "object": ["feature"],
-                "type": "trajectory",
-                "title": "Along track colocation differences",
-                "colorbar_label": f"{result[keyname(VAR, 1)]['name']} ({result[keyname(VAR, 1)]['units']})",
-                "xySeries_data": copy.deepcopy(data),
-            }
+                result['map'] = {
+                    "object": ["feature"],
+                    "type": "trajectory",
+                    "title": "Along track colocation differences",
+                    "colorbar_label": f"{result[keyname(VAR, 1)]['name']} ({result[keyname(VAR, 1)]['units']})",
+                    "xySeries_data": copy.deepcopy(data),
+                }
 
         return json.dumps(
             {'query': query, 'result': result, 'test_params': params},
