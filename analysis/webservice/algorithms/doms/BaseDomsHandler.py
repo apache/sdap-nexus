@@ -106,8 +106,8 @@ class DomsQueryResults(NexusResults):
     def toNetCDF(self):
         return DomsNetCDFFormatter.create(self.__executionId, self.results(), self.__args, self.__details)
 
-    def toCAML(self):
-        return DomsCAMLFormatter.create(self.__executionId, self.results(), self.__args, self.__details)
+    def toCAML(self, request):
+        return DomsCAMLFormatter.create(self.__executionId, self.results(), self.__args, self.__details, request)
 
 
 class DomsCSVFormatter:
@@ -535,7 +535,7 @@ class DomsNetCDFValueWriter:
 
 class DomsCAMLFormatter:
     @staticmethod
-    def create(executionId, results, params, details):
+    def create(executionId, results, params, details, request):
         import copy
 
         def keyname(name, number):
@@ -561,10 +561,10 @@ class DomsCAMLFormatter:
         result = {}
         caml_params = params['caml_params']
 
-        query['apiRequest'] = ''
-        query['analysisName'] = ''
-        query['layerName'] = None
-        query['featureName'] = None
+        query['apiRequest'] = f"{request.protocol}://{request.host}{request.uri}"
+        query['analysisName'] = 'colocation_trajectory'
+        query['layerName'] = params['primary']
+        query['featureName'] = params['matchup']
 
         b = params['bbox'].split(',')
 

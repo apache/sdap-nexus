@@ -10,7 +10,7 @@ class NexusCAMLRenderer(object):
     def render(self, tornado_handler, result):
         tornado_handler.set_header("Content-Type", "application/json")
         try:
-            result_str = result.toCAML()
+            result_str = result.toCAML(tornado_handler.request)
             tornado_handler.write(result_str)
             tornado_handler.finish()
         except AttributeError:
