@@ -665,6 +665,13 @@ class DomsCAMLFormatter:
             n_chart += 1
             data.clear()
 
+            result[keyname(CHART, n_chart)] = 'TBA - Need to figure out histogram format'
+
+            n_chart += 1
+            data.clear()
+
+            result[keyname(CHART, n_chart)] = 'TBA - Need to figure out histogram format'
+
             for r in results:
                 secondary = None
                 secondary_match = None
