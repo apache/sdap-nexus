@@ -796,7 +796,7 @@ class DomsCAMLFormatter:
 
                     data.append([
                         datetime_to_iso(secondary['time']),
-                        [secondary['lat'], secondary['lon']],
+                        [float(secondary['lat']), float(secondary['lon'])],
                         primary['variable_value'] - secondary_match['variable_value']
                     ])
 
