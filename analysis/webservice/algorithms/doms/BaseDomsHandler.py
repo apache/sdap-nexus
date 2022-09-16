@@ -626,6 +626,9 @@ class DomsCAMLFormatter:
                     data[0].append([datetime_to_iso(r['time']), get_match_by_variable_name(r['primary'], caml_params['primary'])['variable_value']])
                     data[1].append([datetime_to_iso(secondary['time']), secondary_match['variable_value']])
 
+                data[0].sort(key=lambda e: e[0])
+                data[1].sort(key=lambda e: e[0])
+
                 result[keyname(CHART, n_chart)] = {
                     "object": ["primary", "secondary"],
                     "type": "xy_line_point",
