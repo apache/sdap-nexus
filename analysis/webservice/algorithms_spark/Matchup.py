@@ -204,13 +204,13 @@ class Matchup(NexusCalcSparkHandler):
         caml_params = {}
 
         if output_type == 'CAML':
-            layer = request.get_argument("camlLayer")
-            if layer is None:
-                raise NexusProcessingException(reason="Layer argument is required when outputting in CAML format", code=400)
+            primary = request.get_argument("camlPrimary")
+            if primary is None:
+                raise NexusProcessingException(reason="Primary dataset argument is required when outputting in CAML format", code=400)
 
-            feature = request.get_argument("camlFeature")
-            if feature is None:
-                raise NexusProcessingException(reason="Feature argument is required when outputting in CAML format", code=400)
+            secondary = request.get_argument("camlSecondary")
+            if secondary is None:
+                raise NexusProcessingException(reason="Secondary dataset argument is required when outputting in CAML format", code=400)
 
             raise_if_missing = request.get_boolean_arg("camlRaiseIfMissing")
 
@@ -226,7 +226,7 @@ class Matchup(NexusCalcSparkHandler):
 
             if types_arg is None:
                 types = {
-                    'time_series': True,
+                    'time_series': False,
                     'scatter': True,
                     'histogram_primary': True,
                     'histogram_secondary': True,
@@ -252,8 +252,8 @@ class Matchup(NexusCalcSparkHandler):
 
                     types[t] = True
 
-            caml_params['layer'] = layer
-            caml_params['feature'] = feature
+            caml_params['primary'] = primary
+            caml_params['secondary'] = secondary
             caml_params['raise_if_missing'] = raise_if_missing
             caml_params['charts'] = types
 

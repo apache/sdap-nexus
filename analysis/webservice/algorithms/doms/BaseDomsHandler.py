@@ -566,8 +566,8 @@ class DomsCAMLFormatter:
 
         query['apiRequest'] = f"{request.protocol}://{request.host}{request.uri}"
         query['analysisName'] = 'colocation_trajectory'
-        query['layerName'] = params['primary']
-        query['featureName'] = params['matchup']
+        query['primaryName'] = params['primary']
+        query['secondaryName'] = params['matchup']
 
         b = params['bbox'].split(',')
 
@@ -588,17 +588,17 @@ class DomsCAMLFormatter:
 
         if len(results) > 0:
             result[keyname(VAR, n_variable)] = {
-                "object": "layer",
-                "name": caml_params['layer'],
-                "units": empty_if_none(get_match_by_variable_name(results[0]['primary'], caml_params['layer'])["variable_unit"])
+                "object": "primary",
+                "name": caml_params['primary'],
+                "units": empty_if_none(get_match_by_variable_name(results[0]['primary'], caml_params['primary'])["variable_unit"])
             }
 
             n_variable += 1
 
             result[keyname(VAR, n_variable)] = {
-                "object": "feature",
-                "name": caml_params['feature'],
-                "units": empty_if_none(get_match_by_variable_name(results[0]['matches'][0]['secondary'], caml_params['feature'])["variable_unit"])
+                "object": "secondary",
+                "name": caml_params['secondary'],
+                "units": empty_if_none(get_match_by_variable_name(results[0]['matches'][0]['secondary'], caml_params['secondary'])["variable_unit"])
             }
 
             n_variable += 1
@@ -614,7 +614,7 @@ class DomsCAMLFormatter:
 
                     for s in r['matches']:
                         try:
-                            secondary_match = get_match_by_variable_name(s['secondary'], caml_params['feature'])
+                            secondary_match = get_match_by_variable_name(s['secondary'], caml_params['secondary'])
                             secondary = s
                             break
                         except:
@@ -623,17 +623,17 @@ class DomsCAMLFormatter:
                     if secondary is None:
                         continue
 
-                    data[0].append([datetime_to_iso(r['time']), get_match_by_variable_name(r['primary'], caml_params['layer'])['variable_value']])
+                    data[0].append([datetime_to_iso(r['time']), get_match_by_variable_name(r['primary'], caml_params['primary'])['variable_value']])
                     data[1].append([datetime_to_iso(secondary['time']), secondary_match['variable_value']])
 
                 result[keyname(CHART, n_chart)] = {
-                    "object": ["layer", "feature"],
+                    "object": ["primary", "secondary"],
                     "type": "xy_line_point",
                     "title": "Time Series",
                     "xAxis_label": 'Time',
                     "yAxis_label": f"{result[keyname(VAR, 1)]['name']} ({result[keyname(VAR, 1)]['units']})",
                     "xySeries_data": copy.deepcopy(data),
-                    "xySeries_labels": [query["layerName"], query["featureName"]]
+                    "xySeries_labels": [query["primaryName"], query["secondaryName"]]
                 }
 
                 n_chart += 1
@@ -645,7 +645,7 @@ class DomsCAMLFormatter:
 
                     for s in r['matches']:
                         try:
-                            secondary_match = get_match_by_variable_name(s['secondary'], caml_params['feature'])
+                            secondary_match = get_match_by_variable_name(s['secondary'], caml_params['secondary'])
                             break
                         except:
                             pass
@@ -655,13 +655,13 @@ class DomsCAMLFormatter:
 
                     data.append(
                         [
-                            get_match_by_variable_name(r['primary'], caml_params['layer'])['variable_value'],
+                            get_match_by_variable_name(r['primary'], caml_params['primary'])['variable_value'],
                             secondary_match['variable_value']
                         ]
                     )
 
                 result[keyname(CHART, n_chart)] = {
-                    "object": ["layer", "feature"],
+                    "object": ["primary", "secondary"],
                     "type": "xy_scatter_point",
                     "title": "Scatter Plot",
                     "xAxis_label": f"{result[keyname(VAR, 0)]['name']} ({result[keyname(VAR, 0)]['units']})",
@@ -682,7 +682,7 @@ class DomsCAMLFormatter:
 
                     for s in r['matches']:
                         try:
-                            secondary_match = get_match_by_variable_name(s['secondary'], caml_params['feature'])
+                            secondary_match = get_match_by_variable_name(s['secondary'], caml_params['secondary'])
                             secondary = s
                             break
                         except:
@@ -706,7 +706,7 @@ class DomsCAMLFormatter:
                             'hist': None
                         }
 
-                    primary_histdata[pts]['data'].append(get_match_by_variable_name(r['primary'], caml_params['layer'])['variable_value'])
+                    primary_histdata[pts]['data'].append(get_match_by_variable_name(r['primary'], caml_params['primary'])['variable_value'])
                     secondary_histdata[sts]['data'].append(secondary_match['variable_value'])
 
                 bins = [-5, 0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55]
@@ -743,7 +743,7 @@ class DomsCAMLFormatter:
                         data.append([d_hist])
 
                     result[keyname(CHART, n_chart)] = {
-                        "object": ["layer"],
+                        "object": ["primary"],
                         "type": "histogram",
                         "title": "Frequency Distribution over Time",
                         "xAxis_label": f"{result[keyname(VAR, 0)]['name']} ({result[keyname(VAR, 0)]['units']})",
@@ -766,7 +766,7 @@ class DomsCAMLFormatter:
                         data.append([d_hist])
 
                     result[keyname(CHART, n_chart)] = {
-                        "object": ["feature"],
+                        "object": ["secondary"],
                         "type": "histogram",
                         "title": "Frequency Distribution over Time",
                         "xAxis_label": f"{result[keyname(VAR, 1)]['name']} ({result[keyname(VAR, 1)]['units']})",
@@ -783,7 +783,7 @@ class DomsCAMLFormatter:
 
                     for s in r['matches']:
                         try:
-                            secondary_match = get_match_by_variable_name(s['secondary'], caml_params['feature'])
+                            secondary_match = get_match_by_variable_name(s['secondary'], caml_params['secondary'])
                             secondary = s
                             break
                         except:
@@ -792,7 +792,7 @@ class DomsCAMLFormatter:
                     if secondary_match is None:
                         continue
 
-                    primary = get_match_by_variable_name(r['primary'], caml_params['layer'])
+                    primary = get_match_by_variable_name(r['primary'], caml_params['primary'])
 
                     data.append([
                         datetime_to_iso(secondary['time']),
@@ -801,7 +801,7 @@ class DomsCAMLFormatter:
                     ])
 
                 result['map'] = {
-                    "object": ["feature"],
+                    "object": ["secondary"],
                     "type": "trajectory",
                     "title": "Along track colocation differences",
                     "colorbar_label": f"{result[keyname(VAR, 1)]['name']} ({result[keyname(VAR, 1)]['units']})",
