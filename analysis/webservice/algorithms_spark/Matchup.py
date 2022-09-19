@@ -251,7 +251,7 @@ class Matchup(NexusCalcSparkHandler):
                     if t not in CHART_TYPES:
                         raise NexusProcessingException(
                             reason=f"Invalid chart type argument: {t}",
-                            code=500
+                            code=400
                         )
 
                     types[t] = True
