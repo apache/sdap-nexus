@@ -78,7 +78,24 @@ paths:
           example: -45,15,-30,30
         - in: query
           name: platforms
-          description: Platforms to include for matchup consideration. Platform depends on which insitu dataset is selected. See `/get_cdms_schema` endpoint for a list of valid platform ids.
+          description: |
+            Platforms to include for matchup consideration. Platform
+            depends on which insitu dataset is selected. Use platform ID
+            in the matchup query.
+
+            <details>
+              <summary>Expand to see a list of valid platforms IDs:</summary>
+            | Platform ID | Platform Name                           | Web Link                                                   |
+            | ----------- | --------------------------------------- | ---------------------------------------------------------- |
+            | 3B          | autonomous surface water vehicle        | [Link](http://vocab.nerc.ac.uk/collection/L06/current/3B/) |
+            | 0           | unknown                                 | [Link](http://vocab.nerc.ac.uk/collection/L06/current/0/)  |
+            | 16          | offshore structure                      | [Link](http://vocab.nerc.ac.uk/collection/L06/current/16/) |
+            | 17          | coastal structure                       | [Link](http://vocab.nerc.ac.uk/collection/L06/current/17/) |
+            | 30          | ship                                    | [Link](http://vocab.nerc.ac.uk/collection/L06/current/30/) |
+            | 41          | moored surface buoy                     | [Link](http://vocab.nerc.ac.uk/collection/L06/current/41/) |
+            | 42          | drifting surface float                  | [Link](http://vocab.nerc.ac.uk/collection/L06/current/42/) |
+            </details>
+
           required: true
           schema:
             type: string
@@ -124,8 +141,9 @@ paths:
           name: parameter
           description: |
             The parameter of interest used for the match up. This is
-            only used for insitu measurements. See `/cdmsschema` endpoint
-            for a list of valid options.
+            only used for insitu measurements. See
+            [/get_cdms_schema](https://doms.jpl.nasa.gov/insitu/1.0/cdms_schema)
+            endpoint for a list of valid options.
           required: false
           schema:
             type: string
