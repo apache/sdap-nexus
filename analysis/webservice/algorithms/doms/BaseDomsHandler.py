@@ -602,6 +602,8 @@ class DomsCAMLFormatter:
 
             n_variable += 1
 
+            results.sort(key=lambda e: e['time'])
+
             try:
                 result[keyname(VAR, n_variable)] = {
                     "object": "secondary",
@@ -629,20 +631,29 @@ class DomsCAMLFormatter:
 
                     for s in r['matches']:
                         try:
-                            secondary_match = get_match_by_variable_name(s['secondary'], caml_params['secondary'])
-                            secondary = s
-                            break
+                            if caml_params['format'] == 'Matchup':
+                                secondary_match = get_match_by_variable_name(s['secondary'], caml_params['secondary'])
+                                secondary = s
+                                break
+                            else:
+                                if caml_params['secondary'] in s:
+                                    secondary = s
+                                    secondary_match = {'variable_value': s[caml_params['secondary']]}
+                                    break
                         except:
                             pass
 
                     if secondary is None:
                         continue
 
-                    data[0].append([datetime_to_iso(r['time']), get_match_by_variable_name(r['primary'], caml_params['primary'])['variable_value']])
+                    if caml_params['format'] == 'Matchup':
+                        data[0].append([datetime_to_iso(r['time']), get_match_by_variable_name(r['primary'], caml_params['primary'])['variable_value']])
+                    else:
+                        data[0].append([datetime_to_iso(r['time']), r[caml_params['primary']]])
                     data[1].append([datetime_to_iso(secondary['time']), secondary_match['variable_value']])
 
-                data[0].sort(key=lambda e: e[0])
-                data[1].sort(key=lambda e: e[0])
+                data[0].sort(key=lambda e: (e[0], e[1]))
+                data[1].sort(key=lambda e: (e[0], e[1]))
 
                 result[keyname(CHART, n_chart)] = {
                     "object": ["primary", "secondary"],
@@ -663,8 +674,13 @@ class DomsCAMLFormatter:
 
                     for s in r['matches']:
                         try:
-                            secondary_match = get_match_by_variable_name(s['secondary'], caml_params['secondary'])
-                            break
+                            if caml_params['format'] == 'Matchup':
+                                secondary_match = get_match_by_variable_name(s['secondary'], caml_params['secondary'])
+                                break
+                            else:
+                                if caml_params['secondary'] in s:
+                                    secondary_match = {'variable_value': s[caml_params['secondary']]}
+                                    break
                         except:
                             pass
 
@@ -673,10 +689,13 @@ class DomsCAMLFormatter:
 
                     data.append(
                         [
-                            get_match_by_variable_name(r['primary'], caml_params['primary'])['variable_value'],
+                            get_match_by_variable_name(r['primary'], caml_params['primary'])['variable_value']
+                            if caml_params['format'] == 'Matchup' else r[caml_params['primary']],
                             secondary_match['variable_value']
                         ]
                     )
+
+                data.sort(key=lambda e: (e[0], e[1]))
 
                 result[keyname(CHART, n_chart)] = {
                     "object": ["primary", "secondary"],
@@ -700,9 +719,15 @@ class DomsCAMLFormatter:
 
                     for s in r['matches']:
                         try:
-                            secondary_match = get_match_by_variable_name(s['secondary'], caml_params['secondary'])
-                            secondary = s
-                            break
+                            if caml_params['format'] == 'Matchup':
+                                secondary_match = get_match_by_variable_name(s['secondary'], caml_params['secondary'])
+                                secondary = s
+                                break
+                            else:
+                                if caml_params['secondary'] in s:
+                                    secondary = s
+                                    secondary_match = {'variable_value': s[caml_params['secondary']]}
+                                    break
                         except:
                             pass
 
@@ -724,7 +749,10 @@ class DomsCAMLFormatter:
                             'hist': None
                         }
 
-                    primary_histdata[pts]['data'].append(get_match_by_variable_name(r['primary'], caml_params['primary'])['variable_value'])
+                    if caml_params['format'] == 'Matchup':
+                        primary_histdata[pts]['data'].append(get_match_by_variable_name(r['primary'], caml_params['primary'])['variable_value'])
+                    else:
+                        primary_histdata[pts]['data'].append(r[caml_params['primary']])
                     secondary_histdata[sts]['data'].append(secondary_match['variable_value'])
 
                 bins = [-5, 0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55]
@@ -801,22 +829,30 @@ class DomsCAMLFormatter:
 
                     for s in r['matches']:
                         try:
-                            secondary_match = get_match_by_variable_name(s['secondary'], caml_params['secondary'])
-                            secondary = s
-                            break
+                            if caml_params['format'] == 'Matchup':
+                                secondary_match = get_match_by_variable_name(s['secondary'], caml_params['secondary'])
+                                secondary = s
+                                break
+                            else:
+                                if caml_params['secondary'] in s:
+                                    secondary = s
+                                    secondary_match = {'variable_value': s[caml_params['secondary']]}
+                                    break
                         except:
                             pass
 
                     if secondary_match is None:
                         continue
 
-                    primary = get_match_by_variable_name(r['primary'], caml_params['primary'])
+                    primary = get_match_by_variable_name(r['primary'], caml_params['primary']) if caml_params['format'] == 'Matchup' else {'variable_value': r[caml_params['primary']]}
 
                     data.append([
                         datetime_to_iso(secondary['time']),
                         [float(secondary['lat']), float(secondary['lon'])],
                         primary['variable_value'] - secondary_match['variable_value']
                     ])
+
+                data.sort(key=lambda e: (e[0], e[1][0], e[1][1], e[2]))
 
                 result['map'] = {
                     "object": ["secondary"],
@@ -827,7 +863,7 @@ class DomsCAMLFormatter:
                 }
 
         return json.dumps(
-            {'executionId': executionId, 'query': query, 'result': result, 'test_params': params},
+            {'executionId': executionId, 'query': query, 'result': result, 'params': params},
             indent=4,
             cls=DomsEncoder
         )

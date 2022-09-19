@@ -259,6 +259,7 @@ class Matchup(NexusCalcSparkHandler):
             caml_params['primary'] = primary
             caml_params['secondary'] = secondary
             caml_params['charts'] = types
+            caml_params['format'] = 'Matchup'
 
         return bounding_polygon, primary_ds_name, secondary_ds_names, parameter_s, \
                start_time, start_seconds_from_epoch, end_time, end_seconds_from_epoch, \

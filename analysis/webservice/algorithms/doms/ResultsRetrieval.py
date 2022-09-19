@@ -103,6 +103,7 @@ class DomsResultsRetrievalHandler(BaseDomsHandler.BaseDomsQueryCalcHandler):
             caml_params['primary'] = primary
             caml_params['secondary'] = secondary
             caml_params['charts'] = types
+            caml_params['format'] = 'Results'
 
         try:
             execution_id = uuid.UUID(execution_id)
@@ -116,6 +117,7 @@ class DomsResultsRetrievalHandler(BaseDomsHandler.BaseDomsQueryCalcHandler):
 
         if output_type == 'CAML':
             params['caml_params'] = caml_params
+            params['matchup'] = params['matchup'][0]
 
         if output_type == 'CAML':
             raise NexusProcessingException(reason='CAML output for results retrieval is not yet implemented.', code=501)
