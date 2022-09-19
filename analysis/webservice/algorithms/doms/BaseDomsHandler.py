@@ -812,7 +812,7 @@ class DomsCAMLFormatter:
                 }
 
         return json.dumps(
-            {'query': query, 'result': result, 'test_params': params},
+            {'executionId': executionId, 'query': query, 'result': result, 'test_params': params},
             indent=4,
             cls=DomsEncoder
         )
