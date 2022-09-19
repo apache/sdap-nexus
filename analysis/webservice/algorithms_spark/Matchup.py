@@ -212,6 +212,12 @@ class Matchup(NexusCalcSparkHandler):
             if secondary is None:
                 raise NexusProcessingException(reason="Secondary dataset argument is required when outputting in CAML format", code=400)
 
+            if secondary not in insitu_params:
+                raise NexusProcessingException(
+                    reason=f"Parameter {secondary} not supported. Must be one of {insitu_params}", code=400)
+
+            parameter_s = secondary # Override parameter as it makes no sense for it to differ
+
             raise_if_missing = request.get_boolean_arg("camlRaiseIfMissing")
 
             CHART_TYPES = [
