@@ -218,8 +218,6 @@ class Matchup(NexusCalcSparkHandler):
 
             parameter_s = secondary # Override parameter as it makes no sense for it to differ
 
-            raise_if_missing = request.get_boolean_arg("camlRaiseIfMissing")
-
             CHART_TYPES = [
                 'time_series',
                 'scatter',
@@ -260,7 +258,6 @@ class Matchup(NexusCalcSparkHandler):
 
             caml_params['primary'] = primary
             caml_params['secondary'] = secondary
-            caml_params['raise_if_missing'] = raise_if_missing
             caml_params['charts'] = types
 
         return bounding_polygon, primary_ds_name, secondary_ds_names, parameter_s, \
