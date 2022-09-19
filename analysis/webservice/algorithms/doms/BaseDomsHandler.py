@@ -587,19 +587,34 @@ class DomsCAMLFormatter:
         CHART = "chart"
 
         if len(results) > 0:
-            result[keyname(VAR, n_variable)] = {
-                "object": "primary",
-                "name": caml_params['primary'],
-                "units": empty_if_none(get_match_by_variable_name(results[0]['primary'], caml_params['primary'])["variable_unit"])
-            }
+            try:
+                result[keyname(VAR, n_variable)] = {
+                    "object": "primary",
+                    "name": caml_params['primary'],
+                    "units": empty_if_none(get_match_by_variable_name(results[0]['primary'], caml_params['primary'])["variable_unit"])
+                }
+            except KeyError:
+                result[keyname(VAR, n_variable)] = {
+                    "object": "primary",
+                    "name": caml_params['primary'],
+                    "units": ""
+                }
 
             n_variable += 1
 
-            result[keyname(VAR, n_variable)] = {
-                "object": "secondary",
-                "name": caml_params['secondary'],
-                "units": empty_if_none(get_match_by_variable_name(results[0]['matches'][0]['secondary'], caml_params['secondary'])["variable_unit"])
-            }
+            try:
+                result[keyname(VAR, n_variable)] = {
+                    "object": "secondary",
+                    "name": caml_params['secondary'],
+                    "units": empty_if_none(get_match_by_variable_name(results[0]['matches'][0]['secondary'], caml_params['secondary'])["variable_unit"])
+                }
+            except KeyError:
+                result[keyname(VAR, n_variable)] = {
+                    "object": "secondary",
+                    "name": caml_params['secondary'],
+                    "units": ""
+                }
+
 
             n_variable += 1
 
