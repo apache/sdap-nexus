@@ -119,8 +119,5 @@ class DomsResultsRetrievalHandler(BaseDomsHandler.BaseDomsQueryCalcHandler):
             params['caml_params'] = caml_params
             params['matchup'] = params['matchup'][0]
 
-        if output_type == 'CAML':
-            raise NexusProcessingException(reason='CAML output for results retrieval is not yet implemented.', code=501)
-
         return BaseDomsHandler.DomsQueryResults(results=data, args=params, details=stats, bounds=None, count=None,
                                                 computeOptions=None, executionId=execution_id)
