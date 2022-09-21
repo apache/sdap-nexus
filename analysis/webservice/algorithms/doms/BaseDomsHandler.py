@@ -755,7 +755,10 @@ class DomsCAMLFormatter:
                         primary_histdata[pts]['data'].append(r[caml_params['primary']])
                     secondary_histdata[sts]['data'].append(secondary_match['variable_value'])
 
-                bins = [-5, 0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55]
+                if "histogram_bins" in caml_params:
+                    bins = caml_params['histogram_bins']
+                else:
+                    bins = [-5, 0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55]
 
                 for d in primary_histdata:
                     hist, _ = np.histogram(primary_histdata[d]['data'], bins=bins, density=False)

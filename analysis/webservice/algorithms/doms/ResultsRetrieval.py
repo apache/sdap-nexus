@@ -105,6 +105,29 @@ class DomsResultsRetrievalHandler(BaseDomsHandler.BaseDomsQueryCalcHandler):
             caml_params['charts'] = types
             caml_params['format'] = 'Results'
 
+            hist_bins = computeOptions.get_argument("camlHistBins")
+
+            if hist_bins and (types['histogram_primary'] or types['histogram_secondary']):
+                hist_bins = hist_bins.split(',')
+
+                bins = []
+
+                for b in hist_bins:
+                    try:
+                        v = int(b)
+                        if v in bins:
+                            raise NexusProcessingException(reason="duplicate bin in parameter", code=400)
+                        bins.append(v)
+                    except:
+                        raise NexusProcessingException("non numeric argument provided for bins", code=400)
+
+                if len(bins) == 0:
+                    raise NexusProcessingException(reason='No bins given in argument', code=400)
+
+                bins.sort()
+
+                caml_params['histogram_bins'] = bins
+
         try:
             execution_id = uuid.UUID(execution_id)
         except:

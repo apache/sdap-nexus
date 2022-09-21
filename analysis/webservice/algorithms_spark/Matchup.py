@@ -261,6 +261,29 @@ class Matchup(NexusCalcSparkHandler):
             caml_params['charts'] = types
             caml_params['format'] = 'Matchup'
 
+            hist_bins = request.get_argument("camlHistBins")
+
+            if hist_bins and (types['histogram_primary'] or types['histogram_secondary']):
+                hist_bins = hist_bins.split(',')
+
+                bins = []
+
+                for b in hist_bins:
+                    try:
+                        v = int(b)
+                        if v in bins:
+                            raise NexusProcessingException(reason="duplicate bin in parameter", code=400)
+                        bins.append(v)
+                    except:
+                        raise NexusProcessingException("non numeric argument provided for bins", code=400)
+
+                if len(bins) == 0:
+                    raise NexusProcessingException(reason='No bins given in argument', code=400)
+
+                bins.sort()
+
+                caml_params['histogram_bins'] = bins
+
         return bounding_polygon, primary_ds_name, secondary_ds_names, parameter_s, \
                start_time, start_seconds_from_epoch, end_time, end_seconds_from_epoch, \
                depth_min, depth_max, time_tolerance, radius_tolerance, \
