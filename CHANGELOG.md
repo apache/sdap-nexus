@@ -18,6 +18,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Matchup validates insitu parameter using insitu API schema endpoint
 - Added domsresults endpoint to openapi spec
 - Added markdown table to matchup `platform` param in openapi spec
+- SDAP-400: Added NCAR insitu api to matchup
 ### Changed
 - SDAP-390: Changed `/doms` to `/cdms` and `doms_reader.py` to `cdms_reader.py`
 - domslist endpoint points to AWS insitu instead of doms insitu
