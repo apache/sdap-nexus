@@ -93,6 +93,7 @@ def setup_mock_tile_service(tile):
     tile_service.get_min_time.return_value = 1627490285
     tile_service.get_max_time.return_value = 1627490285
     tile_service.mask_tiles_to_polygon.return_value = [tile]
+    tile_service.find_tiles_in_polygon.return_value = [tile]
     return tile_service_factory
 
 
@@ -100,15 +101,18 @@ def test_doms_point_is_pickleable():
     edge_point = {
         'id': 'argo-profiles-5903995(46, 0)',
         'time': '2012-10-15T14:24:04Z',
-        'point': '-33.467 29.728',
+        'longitude': -33.467,
+        'latitude': 29.728,
         'sea_water_temperature': 24.5629997253,
         'sea_water_temperature_depth': 2.9796258642,
         'wind_speed': None,
         'sea_water_salinity': None,
         'sea_water_salinity_depth': None,
-        'platform': 4,
         'device': 3,
-        'fileurl': 'ftp://podaac-ftp.jpl.nasa.gov/allData/argo-profiles-5903995.nc'
+        'fileurl': 'ftp://podaac-ftp.jpl.nasa.gov/allData/argo-profiles-5903995.nc',
+        'platform': {
+            'code': 4
+        }
     }
     point = DomsPoint.from_edge_point(edge_point)
     assert pickle.dumps(point) is not None
@@ -245,8 +249,8 @@ def test_calc(test_matchup_args):
         assert json_matchup_result['data'][1]['matches'][0]['secondary'][0]['variable_value'] == 30.0
         assert json_matchup_result['data'][1]['matches'][1]['secondary'][0]['variable_value'] == 40.0
 
-        assert json_matchup_result['details']['numInSituMatched'] == 4
-        assert json_matchup_result['details']['numGriddedMatched'] == 2
+        assert json_matchup_result['details']['numSecondaryMatched'] == 4
+        assert json_matchup_result['details']['numPrimaryMatched'] == 2
 
 
 def test_match_satellite_to_insitu(test_dir, test_tile, test_matchup_args):
@@ -302,13 +306,13 @@ def test_match_satellite_to_insitu(test_dir, test_tile, test_matchup_args):
     platforms = '1,2,3,4,5,6,7,8,9'
 
     with mock.patch(
-            'webservice.algorithms_spark.Matchup.edge_endpoints.getEndpointByName'
+            'webservice.algorithms_spark.Matchup.edge_endpoints.get_provider_name'
     ) as mock_edge_endpoints:
         # Test the satellite->insitu branch
         # By mocking the getEndpointsByName function we are forcing
         # Matchup to think this dummy matchup dataset is an insitu
         # dataset
-        mock_edge_endpoints.return_value = {'url': 'http://test-edge-url'}
+        mock_edge_endpoints.return_value = 'some-provider'
         matchup.query_edge = lambda *args, **kwargs: json.load(
             open(os.path.join(test_dir, 'edge_response.json')))
 
@@ -426,13 +430,13 @@ def test_multi_variable_matchup(test_dir, test_tile, test_matchup_args):
     test_matchup_args['tile_service_factory'] = setup_mock_tile_service(test_tile)
 
     with mock.patch(
-            'webservice.algorithms_spark.Matchup.edge_endpoints.getEndpointByName'
+            'webservice.algorithms_spark.Matchup.edge_endpoints.get_provider_name'
     ) as mock_edge_endpoints:
         # Test the satellite->insitu branch
         # By mocking the getEndpointsByName function we are forcing
         # Matchup to think this dummy matchup dataset is an insitu
         # dataset
-        mock_edge_endpoints.return_value = {'url': 'http://test-edge-url'}
+        mock_edge_endpoints.return_value = 'some-provider'
         matchup.query_edge = lambda *args, **kwargs: json.load(
             open(os.path.join(test_dir, 'edge_response.json')))
 
