@@ -22,7 +22,7 @@ Prerequisites
 * Internet Connection
 * bash or zsh
 * cURL
-* 8.5 GB of disk space
+* 10.5 GB of disk space
 
 Prepare
 ========
@@ -231,6 +231,7 @@ The collection configuration is a ``.yml`` file that tells the collection manage
 .. code-block:: bash
 
   export CONFIG_DIR=~/nexus-quickstart/ingester/config
+  mkdir -p ${CONFIG_DIR}
   cat << EOF >> ${CONFIG_DIR}/collectionConfig.yml
   collections:
     - id: AVHRR_OI_L4_GHRSST_NCEI
