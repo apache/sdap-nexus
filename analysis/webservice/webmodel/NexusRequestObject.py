@@ -23,9 +23,6 @@ class NexusRequestObject(StatsComputeOptions):
     def get_argument(self, name, default=None):
         return self.requestHandler.get_argument(name, default=default)
 
-    def get_arguments(self, name):
-        return self.requestHandler.get_arguments(name)
-
     def get_list_int_arg(self, name, default=None):
         arg = self.get_argument(name, default=default)
         return arg.split(',')

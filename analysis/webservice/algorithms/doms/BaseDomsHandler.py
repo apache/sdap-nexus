@@ -30,7 +30,7 @@ from pytz import timezone, UTC
 from . import config
 from . import geo
 from webservice.algorithms.NexusCalcHandler import NexusCalcHandler
-from webservice.webmodel import NexusResults, NexusProcessingException
+from webservice.webmodel import NexusResults
 
 EPOCH = timezone('UTC').localize(datetime(1970, 1, 1))
 ISO_8601 = '%Y-%m-%dT%H:%M:%S%z'
