@@ -171,7 +171,9 @@ Now we can start the image and run the initialization script.
   mkdir -p ${CASSANDRA_DATA}
   docker run --name cassandra --network sdap-net -p 9042:9042 -v ${CASSANDRA_DATA}/cassandra/:/var/lib/cassandra -v "${CASSANDRA_INIT}/initdb.cql:/scripts/initdb.cql" -d bitnami/cassandra:${CASSANDRA_VERSION}
 
-  # Wait a few moments for the database to start
+Wait a few moments for the database to start.
+
+.. code-block:: bash
 
   docker exec  cassandra bash -c "cqlsh -u cassandra -p cassandra -f /scripts/initdb.cql"
 
