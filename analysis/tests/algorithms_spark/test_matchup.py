@@ -27,7 +27,7 @@ from nexustiles.model.nexusmodel import Tile, TileVariable
 from pyspark.sql import SparkSession
 from shapely import wkt
 from shapely.geometry import box
-from webservice.algorithms_spark.Matchup import DomsPoint, Matchup, DataPoint
+from webservice.algorithms_spark.Matchup import DomsPoint, Matchup, DataPoint, spark_matchup_driver
 
 
 class MockSparkParam:
@@ -530,3 +530,62 @@ def test_multi_variable_satellite_to_satellite_matchup(test_dir, test_tile, test
         assert len(matchup_result[0][1].data) == 2
         assert len(matchup_result[1][0].data) == 2
         assert len(matchup_result[1][1].data) == 2
+
+
+def test_match_once_keep_duplicates():
+    """
+    Ensure duplicate points (in space and time) are maintained when
+    matchup is called with matchOnce=True. Multiple points with the
+    same space/time should be kept even if they have different
+    depth/devices
+    """
+    primary_doms_point = DomsPoint(longitude=1.0, latitude=1.0, time='2017-07-01T00:00:00Z', depth=None, data_id = 'primary')
+    secondary_doms_point_1 = DomsPoint(longitude=2.0, latitude=2.0, time='2017-07-02T00:00:00Z', depth=-2, data_id = 'secondary1')
+    secondary_doms_point_2 = DomsPoint(longitude=2.0, latitude=2.0, time='2017-07-02T00:00:00Z', depth=-3, data_id = 'secondary2')
+    secondary_doms_point_3 = DomsPoint(longitude=100.0, latitude=50.0, time='2017-07-05T00:00:00Z', depth=0, data_id = 'secondary3')
+
+    primary_doms_point.data = []
+    secondary_doms_point_1.data = []
+    secondary_doms_point_2.data = []
+    secondary_doms_point_3.data = []
+
+    patch_generators = [
+        (primary_doms_point, secondary_doms_point_3),
+        (primary_doms_point, secondary_doms_point_2),
+        (primary_doms_point, secondary_doms_point_1)
+    ]
+
+    spark = SparkSession.builder.appName('nexus-analysis').getOrCreate()
+    spark_context = spark.sparkContext
+
+    with mock.patch(
+        'webservice.algorithms_spark.Matchup.match_satellite_to_insitu',
+    ) as mock_match_satellite_to_insitu, mock.patch(
+        'webservice.algorithms_spark.Matchup.determine_parallelism'
+    ) as mock_determine_parallelism:
+        # Mock the actual call to generate a matchup. Hardcode response
+        # to test this scenario
+        mock_match_satellite_to_insitu.return_value = patch_generators
+        mock_determine_parallelism.return_value = 1
+
+        match_result = spark_matchup_driver(
+            tile_ids=['test'],
+            bounding_wkt='',
+            primary_ds_name='',
+            secondary_ds_names='',
+            parameter='',
+            depth_min=0,
+            depth_max=0,
+            time_tolerance=2000000,
+            radius_tolerance=0,
+            platforms='',
+            match_once=True,
+            tile_service_factory=lambda x: None,
+            sc=spark_context
+        )
+        assert len(match_result) == 1
+        secondary_points = match_result[list(match_result.keys())[0]]
+        assert len(secondary_points) == 2
+        for point in secondary_points:
+            assert point.data_id in [secondary_doms_point_1.data_id, secondary_doms_point_2.data_id]
+            assert point.data_id != secondary_doms_point_3.data_id
