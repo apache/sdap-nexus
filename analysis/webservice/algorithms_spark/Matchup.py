@@ -620,8 +620,6 @@ def spark_matchup_driver(tile_ids, bounding_wkt, primary_ds_name, secondary_ds_n
             ))
             return matches
 
-        rez = rdd_filtered.collect()
-
         rdd_filtered = rdd_filtered.map(
             lambda primary_matchup: tuple(
                 [primary_matchup[0], tuple([primary_matchup[1], dist(primary_matchup[0], primary_matchup[1])])]
