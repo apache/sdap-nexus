@@ -622,13 +622,6 @@ def spark_matchup_driver(tile_ids, bounding_wkt, primary_ds_name, secondary_ds_n
 
         rez = rdd_filtered.collect()
 
-        print(f'match_debugging: {type(rez)}')
-        print(f'match_debugging: {len(rez)}')
-        print(f'match_debugging: {type(rez[-1])}')
-        print(f'match_debugging: {len(rez[-1])}')
-        print(f'match_debugging: {type(rez[0][0])}')
-        print(f'match_debugging: {type(rez[0][1])}')
-
         rdd_filtered = rdd_filtered.map(
             lambda primary_matchup: tuple(
                 [primary_matchup[0], tuple([primary_matchup[1], dist(primary_matchup[0], primary_matchup[1])])]
