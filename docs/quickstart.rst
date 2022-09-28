@@ -296,6 +296,12 @@ When the files download, the ingesters will automatically begin processing the d
 * You can tail the ingester containers' logs with a command like ``docker logs -f <container-name>`` and wait for activity to cease.
 * You can monitor the message queue at ``http://localhost:15672/#/queues/%2F/nexus``. Use username ``user`` and password ``bitnami``. Ingestion is completed when the 'Ready', 'Unacked', and 'Total' message counts are all zero.
 
+.. note::
+
+  There is a possibility that one or more of the granule ingester containers will experience an error.
+
+  Should that happen, restart the container with ``docker restart <container-name>``.
+
 .. _quickstart-step12:
 
 Start the Webapp
