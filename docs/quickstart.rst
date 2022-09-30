@@ -170,12 +170,20 @@ With Solr and Cassandra started and initialized, we can now start the collection
 Start the Ingester
 ===================
 
+In this section, we will start the components for the ingester. These components are:
+
+* one or more granule ingesters which process data granules into NEXUS tiles;
+* the collection manager which watches for new granules and tells the ingesters about them and how they should be processed; and
+* RabbitMQ which handles communication between the collection manager and ingesters.
+
+We will also be downloading a number of NetCDF files containing science data for use in this demo.
+
 Create Data Directory
 ------------------------
 
 Let's start by creating the directory to hold the science data to ingest.
 
-Choose a location that is mountable by Docker (typically needs to be under the User's home directory) to download the data files to.
+Choose a location that is mountable by Docker (typically needs to be under the user's home directory) to download the data files to.
 
 .. code-block:: bash
 
@@ -202,8 +210,21 @@ The granule ingester(s) read new granules from the message queue and process the
 
 .. code-block:: bash
 
-  docker run --name granule-ingester-1 --network sdap-net -e RABBITMQ_HOST="host.docker.internal:5672" -e RABBITMQ_USERNAME="user" -e RABBITMQ_PASSWORD="bitnami" -d -e CASSANDRA_CONTACT_POINTS=host.docker.internal -e CASSANDRA_USERNAME=cassandra -e CASSANDRA_PASSWORD=cassandra -e SOLR_HOST_AND_PORT="http://host.docker.internal:8983" -v ${DATA_DIRECTORY}:/data/granules/ nexusjpl/granule-ingester:${GRANULE_INGESTER_VERSION}
-  docker run --name granule-ingester-2 --network sdap-net -e RABBITMQ_HOST="host.docker.internal:5672" -e RABBITMQ_USERNAME="user" -e RABBITMQ_PASSWORD="bitnami" -d -e CASSANDRA_CONTACT_POINTS=host.docker.internal -e CASSANDRA_USERNAME=cassandra -e CASSANDRA_PASSWORD=cassandra -e SOLR_HOST_AND_PORT="http://host.docker.internal:8983" -v ${DATA_DIRECTORY}:/data/granules/ nexusjpl/granule-ingester:${GRANULE_INGESTER_VERSION}
+  cat << EOF >> granule-ingester.env
+  RABBITMQ_HOST=host.docker.internal:5672
+  RABBITMQ_USERNAME=user
+  RABBITMQ_PASSWORD=bitnami
+  CASSANDRA_CONTACT_POINTS=host.docker.internal
+  CASSANDRA_USERNAME=cassandra
+  CASSANDRA_PASSWORD=cassandra
+  SOLR_HOST_AND_PORT=http://host.docker.internal:8983
+  EOF
+
+  docker run --name granule-ingester-1 --network sdap-net -d --env-file granule-ingester.env \
+         -v ${DATA_DIRECTORY}:/data/granules/ nexusjpl/granule-ingester:${GRANULE_INGESTER_VERSION}
+
+  docker run --name granule-ingester-2 --network sdap-net -d --env-file granule-ingester.env \
+         -v ${DATA_DIRECTORY}:/data/granules/ nexusjpl/granule-ingester:${GRANULE_INGESTER_VERSION}
 
 .. _quickstart-optional-step:
 
