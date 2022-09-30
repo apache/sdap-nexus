@@ -80,24 +80,10 @@ The network we will be using for this quickstart will be called ``sdap-net``. Cr
 
 .. _quickstart-step3:
 
-Start Ingester Components and Ingest Some Science Data
-========================================================
+Start Core Components
+======================
 
-Create Data Directory
-------------------------
-
-Let's start by creating the directory to hold the science data to ingest.
-
-Choose a location that is mountable by Docker (typically needs to be under the User's home directory) to download the data files to.
-
-.. code-block:: bash
-
-    export DATA_DIRECTORY=~/nexus-quickstart/data/avhrr-granules
-    mkdir -p ${DATA_DIRECTORY}
-
-Now we can start up the data storage components. We will be using Solr and Cassandra to store the tile metadata and data respectively.
-
-.. _quickstart-step4:
+NEXUS relies on Apache Solr and Apache Cassandra to store tile metadata and science data, so let's start those first.
 
 Start Zookeeper
 ---------------
@@ -114,7 +100,7 @@ We then need to ensure the ``/solr`` znode is present.
 
   docker exec zookeeper bash -c "bin/zkCli.sh create /solr"
 
-.. _quickstart-step5:
+.. _quickstart-step4:
 
 Start Solr
 -----------
@@ -139,7 +125,7 @@ This will start an instance of Solr. To initialize it, we need to run the ``solr
 
 When the init script finishes, kill the container by typing ``Ctrl + C``
 
-.. _quickstart-step6:
+.. _quickstart-step5:
 
 Starting Cassandra
 -------------------
@@ -178,6 +164,23 @@ Wait a few moments for the database to start.
   docker exec  cassandra bash -c "cqlsh -u cassandra -p cassandra -f /scripts/initdb.cql"
 
 With Solr and Cassandra started and initialized, we can now start the collection manager and granule ingester(s).
+
+.. _quickstart-step6:
+
+Start the Ingester
+===================
+
+Create Data Directory
+------------------------
+
+Let's start by creating the directory to hold the science data to ingest.
+
+Choose a location that is mountable by Docker (typically needs to be under the User's home directory) to download the data files to.
+
+.. code-block:: bash
+
+    export DATA_DIRECTORY=~/nexus-quickstart/data/avhrr-granules
+    mkdir -p ${DATA_DIRECTORY}
 
 .. _quickstart-step7:
 
@@ -392,5 +395,3 @@ The remaining containers can safely be stopped using Docker Desktop or by runnin
 .. code-block:: bash
 
   docker stop <container-name>
-
-
