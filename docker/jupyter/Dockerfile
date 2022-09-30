@@ -29,8 +29,7 @@ ENV CHOWN_HOME_OPTS='-R'
 ENV REBUILD_CODE=true
 
 ARG APACHE_NEXUS=https://github.com/apache/incubator-sdap-nexus.git
-ARG APACHE_NEXUS_COMMIT=be19c1d567301b09269e851cc5b5af55fea02c5d
-# Pull specific commit that was used in the previous version of this image
+ARG APACHE_NEXUS_BRANCH=master
 
 RUN mkdir -p /home/jovyan/Quickstart && \
     mkdir -p /home/jovyan/nexuscli && \
@@ -38,9 +37,9 @@ RUN mkdir -p /home/jovyan/Quickstart && \
     git init && \
     git remote add -f origin ${APACHE_NEXUS} && \
     git config core.sparseCheckout true && \
-    echo "client" >> .git/info/sparse-checkout && \
-    git pull origin ${APACHE_NEXUS_COMMIT} && \
-    cd client && \
+    echo "integrations/python-client" >> .git/info/sparse-checkout && \
+    git pull origin ${APACHE_NEXUS_BRANCH} && \
+    cd integrations/python-client && \
     python setup.py install
 
 COPY ["Time Series Example.ipynb", "/home/jovyan/Quickstart/Time Series Example.ipynb"]
