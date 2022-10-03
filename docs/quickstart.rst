@@ -300,7 +300,7 @@ When it starts, it will publish messages for the downloaded granules to RabbitMQ
 
 .. note::
 
-  There are known issues that can occur during the ingestion process, you can find more information on them :ref:`here<issues>`.
+  There are known issues that can occur during the ingestion process, you can find more information on them in the 'Known Issues' section at the end of this document.
 
 .. note::
 
