@@ -300,7 +300,7 @@ When it starts, it will publish messages for the downloaded granules to RabbitMQ
 
 .. note::
 
-  There are known issues that can occur during the ingestion process, you can find more information on them :ref:`here<Known Issues>`.
+  There are known issues that can occur during the ingestion process, you can find more information on them :ref:`here<issues>`.
 
 .. note::
 
@@ -390,6 +390,8 @@ The remaining containers can safely be stopped using Docker Desktop or by runnin
 .. code-block:: bash
 
   docker stop <container-name>
+
+.. _issues:
 
 Known Issues
 =============
