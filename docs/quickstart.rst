@@ -296,13 +296,11 @@ When it starts, it will publish messages for the downloaded granules to RabbitMQ
 
 * You can use the above mentioned script. Ingestion is completed when the script exits.
 * You can tail the ingester containers' logs with a command like ``docker logs -f <container-name>`` and wait for activity to cease.
-* You can monitor the message queue at ``http://localhost:15672/#/queues/%2F/nexus``. Use username ``user`` and password ``bitnami``. Ingestion is completed when the 'Ready', 'Unacked', and 'Total' message counts are all zero.
+* You can monitor the message queue at http://localhost:15672/#/queues/%2F/nexus. Use username ``user`` and password ``bitnami``. Ingestion is completed when the 'Ready', 'Unacked', and 'Total' message counts are all zero.
 
 .. note::
 
-  There is a possibility that one or more of the granule ingester containers will experience an error.
-
-  Should that happen, restart the container with ``docker restart <container-name>``.
+  There are known issues that can occur during the ingestion process, you can find more information on them :ref:`here<Known Issues>`.
 
 .. note::
 
@@ -393,4 +391,33 @@ The remaining containers can safely be stopped using Docker Desktop or by runnin
 
   docker stop <container-name>
 
+Known Issues
+=============
+
+This section contains a list of issues that may be encountered while running this guide, their causes and solutions.
+
+Granule Ingester Containers Crash
+---------------------------------
+
+While ingesting data, the granule ingester containers may crash. You can tell this has happened if:
+
+* The status of one or more of the ingester containers is not 'running'
+* The monitor script output shows a number of in progress tasks less than the number of ingesters and a nonzero number of waiting tasks
+* The browser interface shows a number of 'unacked' messages less than the number of ingesters and a nonzero number of 'ready' messages
+
+The cause of these crashes seems to be a loss of connection to the Solr container.
+
+There are two solutions to this issue:
+
+* Restart the container(s) with the command: ``docker restart <container-name>`` or through Docker Desktop
+* Try running only one ingester container.
+
+Collection Manager Messages Not Publishing
+-------------------------------------------
+
+RabbitMQ may not receive the messages published by the Collection Manager. When this happens, new granules added to monitored collections will not be processed by the ingester(s).
+
+The cause of this issue seems to be due to the RMQ container having limited resources, which causes message publication to block indefinitely.
+
+To solve this, first figure out which resource is causing issues by navigating to http://localhost:15672/#/ and sign in with username ``user`` and password ``bitnami``. View the 'Nodes' section. Insufficient resources will be shown in red. Allocate more of those resources in Docker and restart the Docker daemon.
 
