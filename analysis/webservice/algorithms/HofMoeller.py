@@ -55,7 +55,7 @@ class LongitudeHofMoellerCalculator(object):
         points_by_lon = itertools.groupby(data, key=lambda p: p.longitude)
 
         for lon, points_at_lon in points_by_lon:
-            values_at_lon = np.array([point.data_val for point in points_at_lon])
+            values_at_lon = np.array([point.data_vals for point in points_at_lon])
             stat['lons'].append({
                 'longitude': float(lon),
                 'cnt': len(values_at_lon),
@@ -81,7 +81,7 @@ class LatitudeHofMoellerCalculator(object):
         points_by_lat = itertools.groupby(data, key=lambda p: p.latitude)
 
         for lat, points_at_lat in points_by_lat:
-            values_at_lat = np.array([point.data_val for point in points_at_lat])
+            values_at_lat = np.array([point.data_vals for point in points_at_lat])
 
             stat['lats'].append({
                 'latitude': float(lat),
