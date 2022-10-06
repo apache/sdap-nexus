@@ -1,5 +1,4 @@
 import logging
-from pathlib import Path
 import importlib
 from functools import partial
 import pkg_resources
@@ -24,7 +23,7 @@ class NexusAppBuilder:
         self.handlers.append(
             (r'/apidocs', tornado.web.RedirectHandler, {"url": "/apidocs/"}))
 
-        apidocs_path = Path(__file__).parent.parent.joinpath('apidocs').resolve()
+        apidocs_path = pkg_resources.resource_filename('webservice.apidocs', '')
         self.handlers.append(
             (
                 r'/apidocs/(.*)', tornado.web.StaticFileHandler,

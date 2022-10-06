@@ -266,10 +266,8 @@ class MatchupDoms(NexusCalcSparkHandler):
         total_values = sum(len(v) for v in spark_result.values())
         details = {
             "timeToComplete": int((end - start).total_seconds()),
-            "numInSituRecords": 0,
-            "numInSituMatched": total_values,
-            "numGriddedChecked": 0,
-            "numGriddedMatched": total_keys
+            "numSecondaryMatched": total_values,
+            "numPrimaryMatched": total_keys
         }
 
         matches = MatchupDoms.convert_to_matches(spark_result)

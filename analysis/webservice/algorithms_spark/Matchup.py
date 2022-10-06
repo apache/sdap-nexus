@@ -15,7 +15,6 @@
 
 
 from typing import Optional
-import json
 import logging
 import threading
 from shapely.geometry import Polygon
@@ -30,9 +29,7 @@ import requests
 from pytz import timezone, UTC
 from scipy import spatial
 from shapely import wkt
-from shapely.geometry import Point
 from shapely.geometry import box
-from shapely.geos import WKTReadingError
 
 from webservice.NexusHandler import nexus_handler
 from webservice.algorithms_spark.NexusCalcSparkHandler import NexusCalcSparkHandler
@@ -46,6 +43,7 @@ from webservice.webmodel import NexusProcessingException
 
 EPOCH = timezone('UTC').localize(datetime(1970, 1, 1))
 ISO_8601 = '%Y-%m-%dT%H:%M:%S%z'
+insitu_schema = query_insitu_schema()
 
 
 def iso_time_to_epoch(str_time):
@@ -73,7 +71,7 @@ class Matchup(NexusCalcSparkHandler):
         "parameter": {
             "name": "Match-Up Parameter",
             "type": "string",
-            "description": "The parameter of interest used for the match up. One of 'sst', 'sss', 'wind'. Optional"
+            "description": "The parameter of interest used for the match up. Only used for satellite to insitu matchups. Optional"
         },
         "startTime": {
             "name": "Start Time",
@@ -157,9 +155,10 @@ class Matchup(NexusCalcSparkHandler):
             raise NexusProcessingException(reason="'secondary' argument is required", code=400)
 
         parameter_s = request.get_argument('parameter')
-        if parameter_s and parameter_s not in ['sst', 'sss', 'wind']:
+        insitu_params = get_insitu_params(insitu_schema)
+        if parameter_s and parameter_s not in insitu_params:
             raise NexusProcessingException(
-                reason="Parameter %s not supported. Must be one of 'sst', 'sss', 'wind'." % parameter_s, code=400)
+                reason=f"Parameter {parameter_s} not supported. Must be one of {insitu_params}", code=400)
 
         try:
             start_time = request.get_start_datetime()
@@ -262,10 +261,8 @@ class Matchup(NexusCalcSparkHandler):
         total_values = sum(len(v) for v in spark_result.values())
         details = {
             "timeToComplete": int((end - start).total_seconds()),
-            "numInSituRecords": 0,
-            "numInSituMatched": total_values,
-            "numGriddedChecked": 0,
-            "numGriddedMatched": total_keys
+            "numSecondaryMatched": total_values,
+            "numPrimaryMatched": total_keys
         }
 
         matches = Matchup.convert_to_matches(spark_result)
@@ -279,7 +276,9 @@ class Matchup(NexusCalcSparkHandler):
         threading.Thread(target=do_result_insert).start()
 
         # Get only the first "result_size_limit" results
-        matches = matches[0:result_size_limit]
+        # '0' means returns everything
+        if result_size_limit > 0:
+            matches = matches[0:result_size_limit]
 
         result = DomsQueryResults(results=matches, args=args,
                                   details=details, bounds=None,
@@ -430,13 +429,8 @@ class DomsPoint(object):
         point.device = DomsPoint._variables_to_device(tile.variables)
         return point
 
-    insitu_schema = None
-
     @staticmethod
     def from_edge_point(edge_point):
-        if DomsPoint.insitu_schema is None:
-            DomsPoint.insitu_schema = query_insitu_schema()
-
         point = DomsPoint()
         x, y = edge_point['longitude'], edge_point['latitude']
 
@@ -511,7 +505,7 @@ class DomsPoint(object):
             val = edge_point.get(name)
             if not val:
                 continue
-            unit = get_insitu_unit(name, DomsPoint.insitu_schema)
+            unit = get_insitu_unit(name, insitu_schema)
             data.append(DataPoint(
                 variable_name=name,
                 cf_variable_name=name,
@@ -647,9 +641,22 @@ def add_meters_to_lon_lat(lon, lat, meters):
     return longitude, latitude
 
 
+def get_insitu_params(insitu_schema):
+    """
+    Get all possible insitu params from the CDMS insitu schema
+    """
+    params = insitu_schema.get(
+        'definitions', {}).get('observation', {}).get('properties', {})
+
+    # Filter params so only variables with units are considered
+    params = list(map(
+        lambda param: param[0], filter(lambda param: 'units'in param[1], params.items())))
+    return params
+
+
 def get_insitu_unit(variable_name, insitu_schema):
     """
-    Query the insitu API and retrieve the units for the given variable.
+    Retrieve the units from the insitu api schema endpoint for the given variable.
     If no units are available for this variable, return "None"
     """
     properties = insitu_schema.get('definitions', {}).get('observation', {}).get('properties', {})
