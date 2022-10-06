@@ -240,6 +240,7 @@ To download the script:
 .. code-block:: bash
 
   curl -O https://raw.githubusercontent.com/RKuttruff/rmq-monitor/pub/monitor.py
+  # curl -O https://raw.githubusercontent.com/apache/incubator-sdap-nexus/master/tools/rmqmonitor/monitor.py
 
 And then run it in a separate shell
 
