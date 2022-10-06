@@ -57,6 +57,15 @@ INSITU_PROVIDER_MAP = [
                 'platforms': ['3B']
             }
         ]
+    },
+    {
+        'name': 'SPURS',
+        'projects': [
+            {
+                'name': 'SPURS',
+                'platforms': ['3B', '6A', '23', '31', '42', '46', '48']
+            }
+        ]
     }
 ]
 
