@@ -47,7 +47,7 @@ Pull the necessary Docker images from the `NEXUS JPL repository <https://hub.doc
   export SOLR_CLOUD_INIT_VERSION=1.0.2
   export ZK_VERSION=3.5.5
 
-  export JUPYTER_VERSION=1.2
+  export JUPYTER_VERSION=1.5
 
 .. code-block:: bash
 
