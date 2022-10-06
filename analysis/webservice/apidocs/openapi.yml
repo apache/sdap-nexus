@@ -88,12 +88,17 @@ paths:
             | Platform ID | Platform Name                           | Web Link                                                   |
             | ----------- | --------------------------------------- | ---------------------------------------------------------- |
             | 3B          | autonomous surface water vehicle        | [Link](http://vocab.nerc.ac.uk/collection/L06/current/3B/) |
+            | 6A          | glider                                  | [Link](http://vocab.nerc.ac.uk/collection/L06/current/6A/) |
             | 0           | unknown                                 | [Link](http://vocab.nerc.ac.uk/collection/L06/current/0/)  |
             | 16          | offshore structure                      | [Link](http://vocab.nerc.ac.uk/collection/L06/current/16/) |
             | 17          | coastal structure                       | [Link](http://vocab.nerc.ac.uk/collection/L06/current/17/) |
+            | 23          | towed unmanned submersible              | [Link](http://vocab.nerc.ac.uk/collection/L06/current/23/) |
             | 30          | ship                                    | [Link](http://vocab.nerc.ac.uk/collection/L06/current/30/) |
+            | 31          | research vessel                         | [Link](http://vocab.nerc.ac.uk/collection/L06/current/31/) |
             | 41          | moored surface buoy                     | [Link](http://vocab.nerc.ac.uk/collection/L06/current/41/) |
             | 42          | drifting surface float                  | [Link](http://vocab.nerc.ac.uk/collection/L06/current/42/) |
+            | 46          | drifting subsurface profiling float     | [Link](http://vocab.nerc.ac.uk/collection/L06/current/46/) |
+            | 48          | mooring                                 | [Link](http://vocab.nerc.ac.uk/collection/L06/current/48/) |
             </details>
 
           required: true
