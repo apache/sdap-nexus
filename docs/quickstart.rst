@@ -267,6 +267,12 @@ Then go ahead and download 1 month worth of AVHRR netCDF files.
     curl -O "${url}"
   done
 
+.. note::
+
+  The dataset is pending migration from PO.DAAC to the Earthdata Cloud in AWS. Following this migration, the above links may not work (though an updated download method will soon follow)
+
+  For reference: There are 30 granules for every day in November of 2015.
+
 You should now have 30 files downloaded to your data directory, one for each day in November 2015.
 
 .. _quickstart-step10:
