@@ -14,6 +14,7 @@ def query_insitu_schema():
     metadata
     """
     schema_endpoint = insitu_endpoints.getSchemaEndpoint()
+    logging.info("Querying schema")
     response = requests.get(schema_endpoint)
     response.raise_for_status()
     return response.json()
