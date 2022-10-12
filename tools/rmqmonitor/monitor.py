@@ -1,10 +1,19 @@
 
+import argparse
+import sys
+import time
+
 import requests
 from requests.auth import HTTPBasicAuth
-import time
-import sys
 
-auth = HTTPBasicAuth('user', 'bitnami')
+parser = argparse.ArgumentParser()
+
+parser.add_argument('--username', action='store', default='user', help='RabbitMQ username')
+parser.add_argument('--password', action='store', default='bitnami', help='RabbitMQ password')
+
+args = vars(parser.parse_args())
+
+auth = HTTPBasicAuth(args['username'], args['password'])
 
 waiting = True
 
@@ -12,9 +21,11 @@ req_number = 0
 
 print()
 
+
 def delete_last_line():
     sys.stdout.write('\x1b[1A')
     sys.stdout.write('\x1b[2K')
+
 
 while True:
     try:
