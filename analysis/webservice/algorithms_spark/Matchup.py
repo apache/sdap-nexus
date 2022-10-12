@@ -43,7 +43,21 @@ from webservice.webmodel import NexusProcessingException
 
 EPOCH = timezone('UTC').localize(datetime(1970, 1, 1))
 ISO_8601 = '%Y-%m-%dT%H:%M:%S%z'
-insitu_schema = query_insitu_schema()
+
+
+class Schema:
+    def __init__(self):
+        self.schema = None
+
+    def get(self):
+        if self.schema is None:
+            logging.info("No local schema; fetching")
+            self.schema = query_insitu_schema()
+
+        return self.schema
+
+
+insitu_schema = Schema()
 
 
 def iso_time_to_epoch(str_time):
@@ -155,7 +169,7 @@ class Matchup(NexusCalcSparkHandler):
             raise NexusProcessingException(reason="'secondary' argument is required", code=400)
 
         parameter_s = request.get_argument('parameter')
-        insitu_params = get_insitu_params(insitu_schema)
+        insitu_params = get_insitu_params(insitu_schema.get())
         if parameter_s and parameter_s not in insitu_params:
             raise NexusProcessingException(
                 reason=f"Parameter {parameter_s} not supported. Must be one of {insitu_params}", code=400)
@@ -504,7 +518,7 @@ class DomsPoint(object):
             val = edge_point.get(name)
             if not val:
                 continue
-            unit = get_insitu_unit(name, insitu_schema)
+            unit = get_insitu_unit(name, insitu_schema.get())
             data.append(DataPoint(
                 variable_name=name,
                 cf_variable_name=name,
