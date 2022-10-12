@@ -24,6 +24,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - SDAP-390: Changed `/doms` to `/cdms` and `doms_reader.py` to `cdms_reader.py`
 - domslist endpoint points to AWS insitu instead of doms insitu
 - Matchup returns numSecondary and numPrimary counts rather than insitu/gridded
+- SDAP-402: Changed matchup matchOnce logic to match multiple points if same time/space
 - Bumped ingress timeout in Helm chart to reflect AWS gateway timeout
 ### Deprecated
 ### Removed
