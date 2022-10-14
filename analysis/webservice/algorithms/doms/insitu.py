@@ -61,7 +61,10 @@ def query_insitu(dataset, variable, start_time, end_time, bbox, platform, depth_
     next_page_url = insitu_endpoints.getEndpoint(provider)
     while next_page_url is not None and next_page_url != 'NA':
         thetime = datetime.now()
-        logging.info(f"Starting insitu request: {next_page_url}?{urlencode(params)}")
+        if params == {}:
+            logging.info(f"Starting insitu request: {next_page_url}")
+        else:
+            logging.info(f"Starting insitu request: {next_page_url}?{urlencode(params)}")
 
         if session is not None:
             response = session.get(next_page_url, params=params)
