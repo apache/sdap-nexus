@@ -20,10 +20,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added markdown table to matchup `platform` param in openapi spec
 - SDAP-400: Added NCAR insitu api to matchup
 - SDAP-405: Added SPURS AWS insitu api to matchup and new platform values to OpenAPI matchup spec
+- RabbitMQ monitor script used in Docker quickstart guide
 ### Changed
 - SDAP-390: Changed `/doms` to `/cdms` and `doms_reader.py` to `cdms_reader.py`
 - domslist endpoint points to AWS insitu instead of doms insitu
 - Matchup returns numSecondary and numPrimary counts rather than insitu/gridded
+- SDAP-402: Changed matchup matchOnce logic to match multiple points if same time/space
 - Bumped ingress timeout in Helm chart to reflect AWS gateway timeout
 ### Deprecated
 ### Removed
@@ -47,6 +49,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Fixed bug where domsresults no longer worked after successful matchup
 - Fixed certificate error in Dockerfile
 - SDAP-403: Remote timeout fix and HofMoeller bug fix
+- Fixed matchup insitu query loading on import; loads when needed instead
 ### Security
 
 
