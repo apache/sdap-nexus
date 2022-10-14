@@ -42,12 +42,12 @@ Pull the necessary Docker images from the `NEXUS JPL repository <https://hub.doc
   export RMQ_VERSION=3.8.9-debian-10-r37
   export COLLECTION_MANAGER_VERSION=0.1.6a14
   export GRANULE_INGESTER_VERSION=0.1.6a30
-  export WEBAPP_VERSION=distributed.0.4.5a49
+  export WEBAPP_VERSION=distributed.0.4.5a54
   export SOLR_VERSION=8.11.1
   export SOLR_CLOUD_INIT_VERSION=1.0.2
   export ZK_VERSION=3.5.5
 
-  export JUPYTER_VERSION=nexusjpl/jupyter:1.0.0-rc2
+  export JUPYTER_VERSION=1.0.0-rc2
 
 .. code-block:: bash
 
