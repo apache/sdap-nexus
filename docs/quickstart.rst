@@ -22,7 +22,7 @@ Prerequisites
 * Internet Connection
 * bash or zsh
 * cURL
-* 10.5 GB of disk space
+* 8.5 GB of disk space
 
 Prepare
 ========
