@@ -39,6 +39,7 @@ def query_insitu(dataset, variable, start_time, end_time, bbox, platform, depth_
         pass
 
     provider = insitu_endpoints.get_provider_name(dataset)
+    project = insitu_endpoints.get_project_name(dataset)
 
     params = {
         'itemsPerPage': items_per_page,
@@ -48,7 +49,7 @@ def query_insitu(dataset, variable, start_time, end_time, bbox, platform, depth_
         'minDepth': depth_min,
         'maxDepth': depth_max,
         'provider': provider,
-        'project': dataset,
+        'project': project,
         'platform': platform,
     }
 
@@ -58,7 +59,7 @@ def query_insitu(dataset, variable, start_time, end_time, bbox, platform, depth_
     insitu_response = {}
 
     # Page through all insitu results
-    next_page_url = insitu_endpoints.getEndpoint(provider)
+    next_page_url = insitu_endpoints.getEndpoint(provider, dataset)
     while next_page_url is not None and next_page_url != 'NA':
         thetime = datetime.now()
         if params == {}:
