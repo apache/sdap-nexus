@@ -21,6 +21,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - SDAP-400: Added NCAR insitu api to matchup
 - SDAP-405: Added SPURS AWS insitu api to matchup and new platform values to OpenAPI matchup spec
 - RabbitMQ monitor script used in Docker quickstart guide
+- Added new option for NCAR so either NCAR or JPL Insitu API can be specified
 - SDAP-401: Added JSON output formatting for use with COVERAGE to `/match_spark`
 ### Changed
 - SDAP-390: Changed `/doms` to `/cdms` and `doms_reader.py` to `cdms_reader.py`
