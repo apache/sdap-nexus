@@ -28,6 +28,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Matchup returns numSecondary and numPrimary counts rather than insitu/gridded
 - SDAP-402: Changed matchup matchOnce logic to match multiple points if same time/space
 - Bumped ingress timeout in Helm chart to reflect AWS gateway timeout
+- SDAP-399: Updated quickstart guide for standalone docker deployment of SDAP.
+- SDAP-399: Updated quickstart Jupyter notebook
 ### Deprecated
 ### Removed
 - removed dropdown from matchup doms endpoint secondary param
