@@ -51,6 +51,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Fixed certificate error in Dockerfile
 - SDAP-403: Remote timeout fix and HofMoeller bug fix
 - Fixed matchup insitu query loading on import; loads when needed instead
+- SDAP-406: Fixed `/timeSeriesSpark`comparison stats bug
 ### Security
 
 
