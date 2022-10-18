@@ -317,13 +317,17 @@ class TimeSeriesSparkHandlerImpl(NexusCalcSparkHandler):
                 xy[item[1]["ds"]].append(item[1]["mean"])
 
         slope, intercept, r_value, p_value, std_err = stats.linregress(xy[0], xy[1])
-        comparisonStats = {
-            "slope": slope,
-            "intercept": intercept,
-            "r": r_value,
-            "p": p_value,
-            "err": std_err
-        }
+
+        if any(np.isnan([slope, intercept, r_value, p_value, std_err])):
+            comparisonStats = {}
+        else:
+            comparisonStats = {
+                "slope": slope,
+                "intercept": intercept,
+                "r": r_value,
+                "p": p_value,
+                "err": std_err
+            }
 
         return comparisonStats
 
