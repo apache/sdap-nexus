@@ -160,7 +160,7 @@ Wait a few moments for the database to start.
 
 .. code-block:: bash
 
-  docker exec  cassandra bash -c "cqlsh -u cassandra -p cassandra -f /scripts/initdb.cql"
+  docker exec cassandra bash -c "cqlsh -u cassandra -p cassandra -f /scripts/initdb.cql"
 
 With Solr and Cassandra started and initialized, we can now start the collection manager and granule ingester(s).
 
