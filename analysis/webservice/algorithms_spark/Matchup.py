@@ -237,6 +237,8 @@ class Matchup(NexusCalcSparkHandler):
                 'scatter',
                 'histogram_primary',
                 'histogram_secondary',
+                'histogram_primary_timeseries',
+                'histogram_secondary_timeseries',
                 'trajectory'
             ]
 
@@ -248,6 +250,8 @@ class Matchup(NexusCalcSparkHandler):
                     'scatter': True,
                     'histogram_primary': True,
                     'histogram_secondary': True,
+                    'histogram_primary_timeseries': True,
+                    'histogram_secondary_timeseries': True,
                     'trajectory': True
                 }
             else:
@@ -258,6 +262,8 @@ class Matchup(NexusCalcSparkHandler):
                     'scatter': False,
                     'histogram_primary': False,
                     'histogram_secondary': False,
+                    'histogram_primary_timeseries': False,
+                    'histogram_secondary_timeseries': False,
                     'trajectory': False
                 }
 
@@ -277,7 +283,8 @@ class Matchup(NexusCalcSparkHandler):
 
             hist_bins = request.get_argument("camlHistBins")
 
-            if hist_bins and (types['histogram_primary'] or types['histogram_secondary']):
+            if hist_bins and (types['histogram_primary'] or types['histogram_secondary'] or
+                              types['histogram_primary_timeseries'] or types['histogram_secondary_timeseries']):
                 hist_bins = hist_bins.split(',')
 
                 bins = []
