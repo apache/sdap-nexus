@@ -707,6 +707,7 @@ class DomsCAMLFormatter:
                     "xAxis_type": "number",
                     "yAxis_type": "number",
                     "xySeries_data": copy.deepcopy(data),
+                    "xySeries_labels": f"{variables[0]['name']} x {variables[1]['name']}"
                 })
 
                 data.clear()
@@ -736,8 +737,8 @@ class DomsCAMLFormatter:
                     if secondary is None:
                         continue
 
-                    pts = datetime_to_iso(round_down_day(r['time']))
-                    sts = datetime_to_iso(round_down_day(secondary['time']))
+                    pts = 'fixed'
+                    sts = 'fixed'
 
                     if pts not in primary_histdata:
                         primary_histdata[pts] = {
@@ -783,45 +784,39 @@ class DomsCAMLFormatter:
                 head = primary_histdata[next(iter(primary_histdata))]['hist']
 
                 if caml_params['charts']['histogram_primary']:
-                    data.append(head)
-
                     for d in primary_histdata:
-                        d_hist = [d]
-
                         for bin in primary_histdata[d]['hist']:
-                            d_hist.append(bin)
-
-                        data.append([d_hist])
+                            data.append(bin)
 
                     charts.append({
                         "object": ["primary"],
                         "type": "histogram",
-                        "title": "Frequency Distribution over Time",
+                        "title": "Frequency Distribution",
                         "xAxis_label": f"{variables[0]['name']} ({variables[0]['units']})",
                         "yAxis_label": "frequency (count)",
+                        "xAxis_type": "number",
+                        "yAxis_type": "number",
                         "xySeries_data": copy.deepcopy(data),
+                        "xySeries_labels": [query['primaryName']]
                     })
 
                     data.clear()
 
                 if caml_params['charts']['histogram_secondary']:
-                    data.append(head)
-
                     for d in secondary_histdata:
-                        d_hist = [d]
-
                         for bin in secondary_histdata[d]['hist']:
-                            d_hist.append(bin)
-
-                        data.append([d_hist])
+                            data.append(bin)
 
                     charts.append({
                         "object": ["secondary"],
                         "type": "histogram",
-                        "title": "Frequency Distribution over Time",
+                        "title": "Frequency Distribution",
                         "xAxis_label": f"{variables[1]['name']} ({variables[1]['units']})",
                         "yAxis_label": "frequency (count)",
+                        "xAxis_type": "number",
+                        "yAxis_type": "number",
                         "xySeries_data": copy.deepcopy(data),
+                        "xySeries_labels": [query['secondaryName']]
                     })
 
                     data.clear()
@@ -911,6 +906,8 @@ class DomsCAMLFormatter:
                         "title": "Frequency Distribution over Time",
                         "xAxis_label": f"{variables[0]['name']} ({variables[0]['units']})",
                         "yAxis_label": "frequency (count)",
+                        "xAxis_type": "number",
+                        "yAxis_type": "number",
                         "xySeries_data": copy.deepcopy(data),
                         "xySeries_labels": [query['primaryName']]
                     })
@@ -932,6 +929,8 @@ class DomsCAMLFormatter:
                         "title": "Frequency Distribution over Time",
                         "xAxis_label": f"{variables[1]['name']} ({variables[1]['units']})",
                         "yAxis_label": "frequency (count)",
+                        "xAxis_type": "number",
+                        "yAxis_type": "number",
                         "xySeries_data": copy.deepcopy(data),
                         "xySeries_labels": [query['secondaryName']]
                     })
