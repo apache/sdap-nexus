@@ -22,7 +22,19 @@ from webservice.webmodel import NexusProcessingException
 from webservice.algorithms.doms.insitu import query_insitu_schema
 
 
-insitu_schema = query_insitu_schema()
+class Schema:
+    def __init__(self):
+        self.schema = None
+
+    def get(self):
+        if self.schema is None:
+            self.schema = query_insitu_schema()
+
+        return self.schema
+
+
+insitu_schema = Schema()
+
 
 @nexus_handler
 class DomsResultsRetrievalHandler(BaseDomsHandler.BaseDomsQueryCalcHandler):
@@ -56,7 +68,7 @@ class DomsResultsRetrievalHandler(BaseDomsHandler.BaseDomsQueryCalcHandler):
                 raise NexusProcessingException(
                     reason="Secondary dataset argument is required when outputting in CAML format", code=400)
 
-            insitu_params = get_insitu_params(insitu_schema)
+            insitu_params = get_insitu_params(insitu_schema.get())
 
             if secondary not in insitu_params:
                 raise NexusProcessingException(
