@@ -538,12 +538,6 @@ class DomsCAMLFormatter:
     def create(executionId, results, params, details, request):
         import copy
 
-        def keyname(name, number):
-            if number == 0:
-                return name
-            else:
-                return f"{name}_{number}"
-
         def empty_if_none(string):
             if string is not None:
                 return string
@@ -580,45 +574,39 @@ class DomsCAMLFormatter:
             "time_end": datetime_to_iso(params['endTime'])
         }
 
-        n_variable = 0
-        n_chart = 0
-
-        VAR = "variable"
-        CHART = "chart"
+        variables = []
+        charts = []
 
         if len(results) > 0:
             try:
-                result[keyname(VAR, n_variable)] = {
+                variables.append({
                     "object": "primary",
                     "name": caml_params['primary'],
                     "units": empty_if_none(get_match_by_variable_name(results[0]['primary'], caml_params['primary'])["variable_unit"])
-                }
+                })
             except KeyError:
-                result[keyname(VAR, n_variable)] = {
+                variables.append({
                     "object": "primary",
                     "name": caml_params['primary'],
                     "units": ""
-                }
-
-            n_variable += 1
+                })
 
             results.sort(key=lambda e: e['time'])
 
             try:
-                result[keyname(VAR, n_variable)] = {
+                variables.append({
                     "object": "secondary",
                     "name": caml_params['secondary'],
                     "units": empty_if_none(get_match_by_variable_name(results[0]['matches'][0]['secondary'], caml_params['secondary'])["variable_unit"])
-                }
+                })
             except KeyError:
-                result[keyname(VAR, n_variable)] = {
+                variables.append({
                     "object": "secondary",
                     "name": caml_params['secondary'],
                     "units": ""
-                }
+                })
 
-
-            n_variable += 1
+            result['variable'] = variables
 
             data = []
 
@@ -655,17 +643,30 @@ class DomsCAMLFormatter:
                 data[0].sort(key=lambda e: (e[0], e[1]))
                 data[1].sort(key=lambda e: (e[0], e[1]))
 
-                result[keyname(CHART, n_chart)] = {
-                    "object": ["primary", "secondary"],
+                charts.append({
+                    "object": ["primary"],
                     "type": "xy_line_point",
                     "title": "Time Series",
                     "xAxis_label": 'Time',
-                    "yAxis_label": f"{result[keyname(VAR, 1)]['name']} ({result[keyname(VAR, 1)]['units']})",
-                    "xySeries_data": copy.deepcopy(data),
-                    "xySeries_labels": [query["primaryName"], query["secondaryName"]]
-                }
+                    "yAxis_label": f"{variables[0]['name']} ({variables[0]['units']})",
+                    "xAxis_type": "datetime",
+                    "yAxis_type": "number",
+                    "xySeries_data": copy.deepcopy(data[0]),
+                    "xySeries_labels": [query["primaryName"]]
+                })
 
-                n_chart += 1
+                charts.append({
+                    "object": ["secondary"],
+                    "type": "xy_line_point",
+                    "title": "Time Series",
+                    "xAxis_label": 'Time',
+                    "yAxis_label": f"{variables[1]['name']} ({variables[1]['units']})",
+                    "xAxis_type": "datetime",
+                    "yAxis_type": "number",
+                    "xySeries_data": copy.deepcopy(data[1]),
+                    "xySeries_labels": [query["secondaryName"]]
+                })
+
                 data.clear()
 
             if caml_params['charts']['scatter']:
@@ -697,16 +698,15 @@ class DomsCAMLFormatter:
 
                 data.sort(key=lambda e: (e[0], e[1]))
 
-                result[keyname(CHART, n_chart)] = {
+                charts.append({
                     "object": ["primary", "secondary"],
                     "type": "xy_scatter_point",
                     "title": "Scatter Plot",
-                    "xAxis_label": f"{result[keyname(VAR, 0)]['name']} ({result[keyname(VAR, 0)]['units']})",
-                    "yAxis_label": f"{result[keyname(VAR, 1)]['name']} ({result[keyname(VAR, 1)]['units']})",
+                    "xAxis_label": f"{variables[0]['name']} ({variables[0]['units']})",
+                    "yAxis_label": f"{variables[1]['name']} ({variables[1]['units']})",
                     "xySeries_data": copy.deepcopy(data),
-                }
+                })
 
-                n_chart += 1
                 data.clear()
 
             if caml_params['charts']['histogram_primary'] or caml_params['charts']['histogram_secondary']:
@@ -791,16 +791,15 @@ class DomsCAMLFormatter:
 
                         data.append([d_hist])
 
-                    result[keyname(CHART, n_chart)] = {
+                    charts.append({
                         "object": ["primary"],
                         "type": "histogram",
                         "title": "Frequency Distribution over Time",
-                        "xAxis_label": f"{result[keyname(VAR, 0)]['name']} ({result[keyname(VAR, 0)]['units']})",
+                        "xAxis_label": f"{variables[0]['name']} ({variables[0]['units']})",
                         "yAxis_label": "frequency (count)",
                         "xySeries_data": copy.deepcopy(data),
-                    }
+                    })
 
-                    n_chart += 1
                     data.clear()
 
                 if caml_params['charts']['histogram_secondary']:
@@ -814,14 +813,14 @@ class DomsCAMLFormatter:
 
                         data.append([d_hist])
 
-                    result[keyname(CHART, n_chart)] = {
+                    charts.append({
                         "object": ["secondary"],
                         "type": "histogram",
                         "title": "Frequency Distribution over Time",
-                        "xAxis_label": f"{result[keyname(VAR, 1)]['name']} ({result[keyname(VAR, 1)]['units']})",
+                        "xAxis_label": f"{variables[1]['name']} ({variables[1]['units']})",
                         "yAxis_label": "frequency (count)",
                         "xySeries_data": copy.deepcopy(data),
-                    }
+                    })
 
                     data.clear()
 
@@ -857,13 +856,15 @@ class DomsCAMLFormatter:
 
                 data.sort(key=lambda e: (e[0], e[1][0], e[1][1], e[2]))
 
-                result['map'] = {
+                charts.append({
                     "object": ["secondary"],
                     "type": "trajectory",
                     "title": "Along track colocation differences",
-                    "colorbar_label": f"{result[keyname(VAR, 1)]['name']} ({result[keyname(VAR, 1)]['units']})",
+                    "colorbar_label": f"{variables[1]['name']} ({variables[1]['units']})",
                     "xySeries_data": copy.deepcopy(data),
-                }
+                })
+
+                result['chart'] = charts
 
         return json.dumps(
             {'executionId': executionId, 'query': query, 'result': result, 'params': params},
