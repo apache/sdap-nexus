@@ -826,6 +826,118 @@ class DomsCAMLFormatter:
 
                     data.clear()
 
+            if caml_params['charts']['histogram_primary_timeseries'] or \
+                    caml_params['charts']['histogram_secondary_timeseries']:
+                primary_histdata = {}
+                secondary_histdata = {}
+
+                for r in results:
+                    secondary = None
+                    secondary_match = None
+
+                    for s in r['matches']:
+                        try:
+                            if caml_params['format'] == 'Matchup':
+                                secondary_match = get_match_by_variable_name(s['secondary'], caml_params['secondary'])
+                                secondary = s
+                                break
+                            else:
+                                if caml_params['secondary'] in s:
+                                    secondary = s
+                                    secondary_match = {'variable_value': s[caml_params['secondary']]}
+                                    break
+                        except:
+                            pass
+
+                    if secondary is None:
+                        continue
+
+                    pts = datetime_to_iso(round_down_day(r['time']))
+                    sts = datetime_to_iso(round_down_day(secondary['time']))
+
+                    if pts not in primary_histdata:
+                        primary_histdata[pts] = {
+                            'data': [],
+                            'hist': None
+                        }
+
+                    if sts not in secondary_histdata:
+                        secondary_histdata[sts] = {
+                            'data': [],
+                            'hist': None
+                        }
+
+                    if caml_params['format'] == 'Matchup':
+                        primary_histdata[pts]['data'].append(get_match_by_variable_name(r['primary'], caml_params['primary'])['variable_value'])
+                    else:
+                        primary_histdata[pts]['data'].append(r[caml_params['primary']])
+                    secondary_histdata[sts]['data'].append(secondary_match['variable_value'])
+
+                if "histogram_bins" in caml_params:
+                    bins = caml_params['histogram_bins']
+                else:
+                    bins = [-5, 0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55]
+
+                for d in primary_histdata:
+                    hist, _ = np.histogram(primary_histdata[d]['data'], bins=bins, density=False)
+                    h = []
+
+                    for i in range(len(hist)):
+                        h.append([bins[i], int(hist[i])])
+
+                    primary_histdata[d]['hist'] = copy.deepcopy(h)
+
+                for d in secondary_histdata:
+                    hist, _ = np.histogram(secondary_histdata[d]['data'], bins=bins, density=False)
+                    h = []
+
+                    for i in range(len(hist)):
+                        h.append([bins[i], int(hist[i])])
+
+                    secondary_histdata[d]['hist'] = copy.deepcopy(h)
+
+                if caml_params['charts']['histogram_primary_timeseries']:
+                    for d in primary_histdata:
+                        d_hist = [d]
+
+                        for bin in primary_histdata[d]['hist']:
+                            d_hist.append(bin)
+
+                        data.append([d_hist])
+
+                    charts.append({
+                        "object": ["primary"],
+                        "type": "histogram_timeseries",
+                        "title": "Frequency Distribution over Time",
+                        "xAxis_label": f"{variables[0]['name']} ({variables[0]['units']})",
+                        "yAxis_label": "frequency (count)",
+                        "xySeries_data": copy.deepcopy(data),
+                        "xySeries_labels": [query['primaryName']]
+                    })
+
+                    data.clear()
+
+                if caml_params['charts']['histogram_secondary_timeseries']:
+                    for d in secondary_histdata:
+                        d_hist = [d]
+
+                        for bin in secondary_histdata[d]['hist']:
+                            d_hist.append(bin)
+
+                        data.append([d_hist])
+
+                    charts.append({
+                        "object": ["secondary"],
+                        "type": "histogram_timeseries",
+                        "title": "Frequency Distribution over Time",
+                        "xAxis_label": f"{variables[1]['name']} ({variables[1]['units']})",
+                        "yAxis_label": "frequency (count)",
+                        "xySeries_data": copy.deepcopy(data),
+                        "xySeries_labels": [query['secondaryName']]
+                    })
+
+                    data.clear()
+
             if caml_params['charts']['trajectory']:
                 for r in results:
                     secondary = None
