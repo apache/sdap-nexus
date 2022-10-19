@@ -781,8 +781,6 @@ class DomsCAMLFormatter:
 
                     secondary_histdata[d]['hist'] = copy.deepcopy(h)
 
-                head = primary_histdata[next(iter(primary_histdata))]['hist']
-
                 if caml_params['charts']['histogram_primary']:
                     for d in primary_histdata:
                         for bin in primary_histdata[d]['hist']:
