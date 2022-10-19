@@ -702,8 +702,10 @@ class DomsCAMLFormatter:
                     "object": ["primary", "secondary"],
                     "type": "xy_scatter_point",
                     "title": "Scatter Plot",
-                    "xAxis_label": f"{variables[0]['name']} ({variables[0]['units']})",
-                    "yAxis_label": f"{variables[1]['name']} ({variables[1]['units']})",
+                    "xAxis_label": f"{query['primaryName']} ({variables[0]['units']})",
+                    "yAxis_label": f"{query['secondaryName']} ({variables[1]['units']})",
+                    "xAxis_type": "number",
+                    "yAxis_type": "number",
                     "xySeries_data": copy.deepcopy(data),
                 })
 
