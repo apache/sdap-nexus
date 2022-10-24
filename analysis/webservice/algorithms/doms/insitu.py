@@ -6,6 +6,7 @@ import requests
 from datetime import datetime
 from webservice.algorithms.doms import config as insitu_endpoints
 from urllib.parse import urlencode
+from webservice.webmodel import NexusProcessingException
 
 
 def query_insitu_schema():
@@ -16,7 +17,11 @@ def query_insitu_schema():
     """
     schema_endpoint = insitu_endpoints.getSchemaEndpoint()
     logging.info("Querying schema")
-    response = requests.get(schema_endpoint)
+    try:
+        response = requests.get(schema_endpoint)
+    except (requests.exceptions.ReadTimeout, requests.exceptions.ConnectTimeout):
+        raise NexusProcessingException(code=504, reason=f'Insitu schema request timed out')
+
     response.raise_for_status()
     return response.json()
 
@@ -67,10 +72,14 @@ def query_insitu(dataset, variable, start_time, end_time, bbox, platform, depth_
         else:
             logging.info(f"Starting insitu request: {next_page_url}?{urlencode(params)}")
 
-        if session is not None:
-            response = session.get(next_page_url, params=params)
-        else:
-            response = requests.get(next_page_url, params=params)
+
+        try:
+            if session is not None:
+                response = session.get(next_page_url, params=params, timeout=(15.05, 331))
+            else:
+                response = requests.get(next_page_url, params=params, timeout=(15.05, 331))
+        except (requests.exceptions.ReadTimeout, requests.exceptions.ConnectTimeout):
+            raise NexusProcessingException(code=504, reason=f'Insitu request timed out after {str(datetime.now() - thetime)} seconds')
 
         logging.info(f'Insitu request {response.url} finished. Code: {response.status_code} Time: {str(datetime.now() - thetime)}')
 
