@@ -18,7 +18,7 @@ def query_insitu_schema():
     schema_endpoint = insitu_endpoints.getSchemaEndpoint()
     logging.info("Querying schema")
     try:
-        response = requests.get(schema_endpoint)
+        response = requests.get(schema_endpoint, timeout=(15.05, 331))
     except (requests.exceptions.ReadTimeout, requests.exceptions.ConnectTimeout):
         raise NexusProcessingException(code=504, reason=f'Insitu schema request timed out')
 
