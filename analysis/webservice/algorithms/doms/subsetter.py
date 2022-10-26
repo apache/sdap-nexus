@@ -13,18 +13,18 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import io
 import logging
 import os
-import io
-import sys
 import zipfile
-from pytz import timezone
 from datetime import datetime
 
-from . import BaseDomsHandler
+from pytz import timezone
 from webservice.NexusHandler import nexus_handler
-from webservice.webmodel import NexusProcessingException, NexusResults
 from webservice.algorithms.doms.insitu import query_insitu
+from webservice.webmodel import NexusProcessingException, NexusResults
+
+from . import BaseDomsHandler
 
 ISO_8601 = '%Y-%m-%dT%H:%M:%S%z'
 EPOCH = timezone('UTC').localize(datetime(1970, 1, 1))
