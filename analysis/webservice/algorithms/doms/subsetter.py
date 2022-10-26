@@ -16,6 +16,7 @@
 import logging
 import os
 import io
+import sys
 import zipfile
 from pytz import timezone
 from datetime import datetime
@@ -180,16 +181,40 @@ class DomsResultsRetrievalHandler(BaseDomsHandler.BaseDomsQueryCalcHandler):
             min_lon = bounding_polygon.bounds[0]
             max_lon = bounding_polygon.bounds[2]
 
-        tiles = self._get_tile_service().get_tiles_bounded_by_box(
+        self.log.info("Fetching tile ids in bounds")
+
+        tile_service = self._get_tile_service()
+
+        tiles = tile_service.find_tiles_in_box(
             min_lat=min_lat, max_lat=max_lat, min_lon=min_lon,
             max_lon=max_lon, ds=primary_ds_name, start_time=start_time,
-            end_time=end_time
+            end_time=end_time, fetch_data=False
         )
+
+        self.log.info(f"Fetched {len(tiles)} tile ids")
+        self.log.info("Processing satellite tiles")
 
         # Satellite
         data = []
         data_dict = {}
-        for tile in tiles:
+        for i in range(len(tiles)-1, -1, -1):
+            tile = tiles.pop(i)
+
+            tid = tile.tile_id
+
+            self.log.debug(f'Processing tile {tid}')
+
+            tile = tile_service.fetch_data_for_tiles(tile)[0]
+
+            tile = tile_service.mask_tiles_to_bbox(min_lat, max_lat, min_lon, max_lon, [tile])
+            tile = tile_service.mask_tiles_to_time_range(start_time, end_time, tile)
+
+            if len(tile) == 0:
+                self.log.debug(f"Skipping empty tile {tid}")
+                continue
+
+            tile = tile[0]
+
             for nexus_point in tile.nexus_point_generator():
                 if tile.is_multi:
                     data_points = {
@@ -204,7 +229,13 @@ class DomsResultsRetrievalHandler(BaseDomsHandler.BaseDomsQueryCalcHandler):
                     'time': nexus_point.time,
                     'data': data_points
                 })
+
+            del tile
+
         data_dict[primary_ds_name] = data
+
+        self.log.info("Finished satellite subsetting")
+        self.log.info(f"Processed tiles to {len(data)} points")
 
         # In-situ
         non_data_fields = [
@@ -240,10 +271,14 @@ class DomsResultsRetrievalHandler(BaseDomsHandler.BaseDomsQueryCalcHandler):
                 })
             data_dict[insitu_dataset] = data
 
+        self.log.info('Finished Insitu Subsetting')
+
         if len(tiles) > 0:
             meta = [tile.get_summary() for tile in tiles]
         else:
             meta = None
+
+        self.log.info('Subsetting complete - creating result')
 
         result = SubsetResult(
             results=data_dict,
@@ -265,6 +300,8 @@ class SubsetResult(NexusResults):
         """
         dataset_results = self.results()
         csv_results = {}
+
+        logging.info('Converting result to CSV')
 
         for dataset_name, results in dataset_results.items():
             rows = []
@@ -291,6 +328,8 @@ class SubsetResult(NexusResults):
                 rows.append(','.join(map(str, cols)))
 
             csv_results[dataset_name] = '\r\n'.join(rows)
+
+        logging.info('Finished converting result to CSV')
         return csv_results
 
     def toZip(self):
@@ -300,11 +339,13 @@ class SubsetResult(NexusResults):
         """
         csv_results = self.toCsv()
 
+        logging.info('Writing zip output')
         buffer = io.BytesIO()
         with zipfile.ZipFile(buffer, 'a', zipfile.ZIP_DEFLATED) as zip_file:
             for dataset_name, csv_contents in csv_results.items():
                 zip_file.writestr(f'{dataset_name}.csv', csv_contents)
 
+        logging.info('Done writing zip output')
         buffer.seek(0)
         return buffer.read()
 
