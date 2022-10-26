@@ -36,9 +36,9 @@ def is_blank(my_string):
 
 @nexus_handler
 class DomsResultsRetrievalHandler(BaseDomsHandler.BaseDomsQueryCalcHandler):
-    name = "CDMS Subsetter"
-    path = "/cdmssubset"
-    description = "Subset CDMS sources given the search domain"
+    name = 'CDMS Subsetter'
+    path = '/cdmssubset'
+    description = 'Subset CDMS sources given the search domain'
 
     params = {
         "dataset": {
@@ -181,7 +181,7 @@ class DomsResultsRetrievalHandler(BaseDomsHandler.BaseDomsQueryCalcHandler):
             min_lon = bounding_polygon.bounds[0]
             max_lon = bounding_polygon.bounds[2]
 
-        self.log.info("Fetching tile ids in bounds")
+        self.log.info('Fetching tile ids in bounds')
 
         tile_service = self._get_tile_service()
 
@@ -191,8 +191,8 @@ class DomsResultsRetrievalHandler(BaseDomsHandler.BaseDomsQueryCalcHandler):
             end_time=end_time, fetch_data=False
         )
 
-        self.log.info(f"Fetched {len(tiles)} tile ids")
-        self.log.info("Processing satellite tiles")
+        self.log.info(f'Fetched {len(tiles)} tile ids')
+        self.log.info('Processing satellite tiles')
 
         # Satellite
         data = []
@@ -210,7 +210,7 @@ class DomsResultsRetrievalHandler(BaseDomsHandler.BaseDomsQueryCalcHandler):
             tile = tile_service.mask_tiles_to_time_range(start_time, end_time, tile)
 
             if len(tile) == 0:
-                self.log.debug(f"Skipping empty tile {tid}")
+                self.log.debug(f'Skipping empty tile {tid}')
                 continue
 
             tile = tile[0]
@@ -230,12 +230,12 @@ class DomsResultsRetrievalHandler(BaseDomsHandler.BaseDomsQueryCalcHandler):
                     'data': data_points
                 })
 
-            del tile
+            # del tile
 
         data_dict[primary_ds_name] = data
 
-        self.log.info("Finished satellite subsetting")
-        self.log.info(f"Processed tiles to {len(data)} points")
+        self.log.info('Finished satellite subsetting')
+        self.log.info(f'Processed tiles to {len(data)} points')
 
         # In-situ
         non_data_fields = [
@@ -285,7 +285,7 @@ class DomsResultsRetrievalHandler(BaseDomsHandler.BaseDomsQueryCalcHandler):
             meta=meta
         )
 
-        result.extendMeta(min_lat, max_lat, min_lon, max_lon, "", start_time, end_time)
+        result.extendMeta(min_lat, max_lat, min_lon, max_lon, '', start_time, end_time)
 
         return result
 
