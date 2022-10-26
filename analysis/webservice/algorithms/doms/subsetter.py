@@ -200,9 +200,7 @@ class DomsResultsRetrievalHandler(BaseDomsHandler.BaseDomsQueryCalcHandler):
         for i in range(len(tiles)-1, -1, -1):
             tile = tiles.pop(i)
 
-            tid = tile.tile_id
-
-            self.log.debug(f'Processing tile {tid}')
+            self.log.debug(f'Processing tile {tile.tile_id}')
 
             tile = tile_service.fetch_data_for_tiles(tile)[0]
 
@@ -210,7 +208,7 @@ class DomsResultsRetrievalHandler(BaseDomsHandler.BaseDomsQueryCalcHandler):
             tile = tile_service.mask_tiles_to_time_range(start_time, end_time, tile)
 
             if len(tile) == 0:
-                self.log.debug(f'Skipping empty tile {tid}')
+                self.log.debug(f'Skipping empty tile')
                 continue
 
             tile = tile[0]
@@ -229,8 +227,6 @@ class DomsResultsRetrievalHandler(BaseDomsHandler.BaseDomsQueryCalcHandler):
                     'time': nexus_point.time,
                     'data': data_points
                 })
-
-            # del tile
 
         data_dict[primary_ds_name] = data
 
