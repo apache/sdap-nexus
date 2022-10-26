@@ -41,56 +41,56 @@ class DomsResultsRetrievalHandler(BaseDomsHandler.BaseDomsQueryCalcHandler):
     description = 'Subset CDMS sources given the search domain'
 
     params = {
-        "dataset": {
-            "name": "NEXUS Dataset",
-            "type": "string",
-            "description": "The NEXUS dataset. Optional but at least one of 'dataset' or 'insitu' are required"
+        'dataset': {
+            'name': 'NEXUS Dataset',
+            'type': 'string',
+            'description': "The NEXUS dataset. Optional but at least one of 'dataset' or 'insitu' are required"
         },
-        "insitu": {
-            "name": "In Situ sources",
-            "type": "comma-delimited string",
-            "description": "The in situ source(s). Optional but at least one of 'dataset' or 'insitu' are required"
+        'insitu': {
+            'name': 'In Situ sources',
+            'type': 'comma-delimited string',
+            'description': "The in situ source(s). Optional but at least one of 'dataset' or 'insitu' are required"
         },
-        "parameter": {
-            "name": "Data Parameter",
-            "type": "string",
-            "description": "The insitu parameter of interest. Only required if insitu is present."
+        'parameter': {
+            'name': 'Data Parameter',
+            'type': 'string',
+            'description': 'The insitu parameter of interest. Only required if insitu is present.'
         },
-        "startTime": {
-            "name": "Start Time",
-            "type": "string",
-            "description": "Starting time in format YYYY-MM-DDTHH:mm:ssZ or seconds since EPOCH. Required"
+        'startTime': {
+            'name': 'Start Time',
+            'type': 'string',
+            'description': 'Starting time in format YYYY-MM-DDTHH:mm:ssZ or seconds since EPOCH. Required'
         },
-        "endTime": {
-            "name": "End Time",
-            "type": "string",
-            "description": "Ending time in format YYYY-MM-DDTHH:mm:ssZ or seconds since EPOCH. Required"
+        'endTime': {
+            'name': 'End Time',
+            'type': 'string',
+            'description': 'Ending time in format YYYY-MM-DDTHH:mm:ssZ or seconds since EPOCH. Required'
         },
-        "b": {
-            "name": "Bounding box",
-            "type": "comma-delimited float",
-            "description": "Minimum (Western) Longitude, Minimum (Southern) Latitude, "
-                           "Maximum (Eastern) Longitude, Maximum (Northern) Latitude. Required"
+        'b': {
+            'name': 'Bounding box',
+            'type': 'comma-delimited float',
+            'description': 'Minimum (Western) Longitude, Minimum (Southern) Latitude, '
+                           'Maximum (Eastern) Longitude, Maximum (Northern) Latitude. Required'
         },
-        "depthMin": {
-            "name": "Minimum Depth",
-            "type": "float",
-            "description": "Minimum depth of measurements. Must be less than depthMax. Default 0. Optional"
+        'depthMin': {
+            'name': 'Minimum Depth',
+            'type': 'float',
+            'description': 'Minimum depth of measurements. Must be less than depthMax. Default 0. Optional'
         },
-        "depthMax": {
-            "name": "Maximum Depth",
-            "type": "float",
-            "description": "Maximum depth of measurements. Must be greater than depthMin. Default 5. Optional"
+        'depthMax': {
+            'name': 'Maximum Depth',
+            'type': 'float',
+            'description': 'Maximum depth of measurements. Must be greater than depthMin. Default 5. Optional'
         },
-        "platforms": {
-            "name": "Platforms",
-            "type": "comma-delimited integer",
-            "description": "Platforms to include for subset consideration. Optional"
+        'platforms': {
+            'name': 'Platforms',
+            'type': 'comma-delimited integer',
+            'description': 'Platforms to include for subset consideration. Optional'
         },
-        "output": {
-            "name": "Output",
-            "type": "string",
-            "description": "Output type. Only 'ZIP' is currently supported. Required"
+        'output': {
+            'name': 'Output',
+            'type': 'string',
+            'description': "Output type. Only 'ZIP' is currently supported. Required"
         }
     }
     singleton = True
@@ -101,7 +101,7 @@ class DomsResultsRetrievalHandler(BaseDomsHandler.BaseDomsQueryCalcHandler):
 
     def parse_arguments(self, request):
         # Parse input arguments
-        self.log.debug("Parsing arguments")
+        self.log.debug('Parsing arguments')
 
         primary_ds_name = request.get_argument('dataset', None)
         matchup_ds_names = request.get_argument('insitu', None)
@@ -121,7 +121,7 @@ class DomsResultsRetrievalHandler(BaseDomsHandler.BaseDomsQueryCalcHandler):
         parameter_s = request.get_argument('parameter', None)
         if parameter_s is None and len(matchup_ds_names) > 0:
             raise NexusProcessingException(
-                reason="Parameter must be provided for insitu subset." % parameter_s, code=400)
+                reason='Parameter must be provided for insitu subset.' % parameter_s, code=400)
 
         try:
             start_time = request.get_start_datetime()
@@ -140,7 +140,7 @@ class DomsResultsRetrievalHandler(BaseDomsHandler.BaseDomsQueryCalcHandler):
 
         if start_time > end_time:
             raise NexusProcessingException(
-                reason="The starting time must be before the ending time. Received startTime: %s, endTime: %s" % (
+                reason='The starting time must be before the ending time. Received startTime: %s, endTime: %s' % (
                     request.get_start_datetime().strftime(ISO_8601), request.get_end_datetime().strftime(ISO_8601)),
                 code=400)
 
@@ -156,7 +156,7 @@ class DomsResultsRetrievalHandler(BaseDomsHandler.BaseDomsQueryCalcHandler):
 
         if depth_min is not None and depth_max is not None and depth_min >= depth_max:
             raise NexusProcessingException(
-                reason="Depth Min should be less than Depth Max", code=400)
+                reason='Depth Min should be less than Depth Max', code=400)
 
         platforms = request.get_argument('platforms', None)
         if platforms is not None:
@@ -165,7 +165,7 @@ class DomsResultsRetrievalHandler(BaseDomsHandler.BaseDomsQueryCalcHandler):
                 p_validation = [int(p) for p in p_validation]
                 del p_validation
             except:
-                raise NexusProcessingException(reason="platforms must be a comma-delimited list of integers", code=400)
+                raise NexusProcessingException(reason='platforms must be a comma-delimited list of integers', code=400)
 
         return primary_ds_name, matchup_ds_names, parameter_s, start_time, end_time, \
                bounding_polygon, depth_min, depth_max, platforms
