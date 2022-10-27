@@ -458,7 +458,7 @@ class DomsNetCDFValueWriter:
         timeVar[:] = self.time
 
         # Add depth variable, if present
-        if self.depth:
+        if self.depth and any(self.depth):
             depthVar = self.group.createVariable('depth', 'f4', ('dim',), fill_value=-32767.0)
             self.__enrichDepth(depthVar, self.__calcMin(self.depth), max(self.depth))
             depthVar[:] = self.depth

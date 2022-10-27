@@ -22,6 +22,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - SDAP-405: Added SPURS AWS insitu api to matchup and new platform values to OpenAPI matchup spec
 - RabbitMQ monitor script used in Docker quickstart guide
 - Added new option for NCAR so either NCAR or JPL Insitu API can be specified
+- SDAP-407: Added depth to `/domsresults` endpoint
 - SDAP-401: Added JSON output formatting for use with COVERAGE to `/match_spark`
 ### Changed
 - SDAP-390: Changed `/doms` to `/cdms` and `doms_reader.py` to `cdms_reader.py`
@@ -55,6 +56,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - SDAP-403: Remote timeout fix and HofMoeller bug fix
 - Fixed matchup insitu query loading on import; loads when needed instead
 - SDAP-406: Fixed `/timeSeriesSpark`comparison stats bug
+- Fixed excessive memory usage by `/cdmssubset`
 ### Security
 
 
