@@ -31,6 +31,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Bumped ingress timeout in Helm chart to reflect AWS gateway timeout
 - SDAP-399: Updated quickstart guide for standalone docker deployment of SDAP.
 - SDAP-399: Updated quickstart Jupyter notebook
+- fix: enable tile_search endpoint + fix: Object of type is not JSON serializable
 ### Deprecated
 ### Removed
 - removed dropdown from matchup doms endpoint secondary param
