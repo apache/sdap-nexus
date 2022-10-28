@@ -38,6 +38,15 @@ class TileVariable:
     variable_name: str = None
     standard_name: str = None
 
+    def __str__(self) -> str:
+        return str({
+            'variable_name': self.variable_name,
+            'standard_name': self.standard_name,
+        })
+
+    def __repr__(self) -> str:
+        return self.__str__()
+
 
 @dataclass
 class Tile(object):
