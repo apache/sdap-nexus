@@ -14,11 +14,12 @@
 # limitations under the License.
 
 
+from webservice.NexusHandler import nexus_handler
 from webservice.algorithms.NexusCalcHandler import NexusCalcHandler
 from webservice.webmodel import NexusResults
 
 
-# @nexus_handler
+@nexus_handler
 class ChunkSearchCalcHandlerImpl(NexusCalcHandler):
     name = "Data Tile Search"
     path = "/tiles"
