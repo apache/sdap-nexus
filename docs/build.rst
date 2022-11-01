@@ -111,3 +111,4 @@ Congratulations! You have successfully built the images required for running NEX
 
 If you used your own repository for the image tags, you can push them using ``docker push``.
 
+Check out the :ref:`quickstart guide<quickstart>` for more info on using the images to deploy NEXUS in Docker.
