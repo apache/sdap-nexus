@@ -9,7 +9,9 @@ In this guide, we will go over how to build the docker images for the various co
 Prepare
 ===========
 
-First, we must download and extract the source code for NEXUS and the ingester.
+First, we must ensure we have Docker installed and running. For this guide, we used Docker Desktop version 4.12.0. Download Docker Desktop `here. <https://www.docker.com/products/docker-desktop/>`_
+
+Now we must download and extract the source code for NEXUS and the ingester.
 
 .. code-block:: bash
 
