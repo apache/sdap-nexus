@@ -34,7 +34,7 @@ class DomsDatasetListQueryHandler(BaseDomsHandler.BaseDomsQueryCalcHandler):
     params = {}
     singleton = True
 
-    def __init__(self, tile_service_factory):
+    def __init__(self, tile_service_factory, **kwargs):
         BaseHandler.__init__(self, tile_service_factory=tile_service_factory)
 
     def getFacetsForInsituSource(self, source):

@@ -15,7 +15,6 @@
 
 
 from typing import Optional
-import json
 import logging
 import threading
 from shapely.geometry import Polygon
@@ -30,9 +29,7 @@ import requests
 from pytz import timezone, UTC
 from scipy import spatial
 from shapely import wkt
-from shapely.geometry import Point
 from shapely.geometry import box
-from shapely.geos import WKTReadingError
 
 from webservice.NexusHandler import nexus_handler
 from webservice.algorithms_spark.NexusCalcSparkHandler import NexusCalcSparkHandler
@@ -46,6 +43,21 @@ from webservice.webmodel import NexusProcessingException
 
 EPOCH = timezone('UTC').localize(datetime(1970, 1, 1))
 ISO_8601 = '%Y-%m-%dT%H:%M:%S%z'
+
+
+class Schema:
+    def __init__(self):
+        self.schema = None
+
+    def get(self):
+        if self.schema is None:
+            logging.info("No local schema; fetching")
+            self.schema = query_insitu_schema()
+
+        return self.schema
+
+
+insitu_schema = Schema()
 
 
 def iso_time_to_epoch(str_time):
@@ -73,7 +85,7 @@ class Matchup(NexusCalcSparkHandler):
         "parameter": {
             "name": "Match-Up Parameter",
             "type": "string",
-            "description": "The parameter of interest used for the match up. One of 'sst', 'sss', 'wind'. Optional"
+            "description": "The parameter of interest used for the match up. Only used for satellite to insitu matchups. Optional"
         },
         "startTime": {
             "name": "Start Time",
@@ -157,9 +169,10 @@ class Matchup(NexusCalcSparkHandler):
             raise NexusProcessingException(reason="'secondary' argument is required", code=400)
 
         parameter_s = request.get_argument('parameter')
-        if parameter_s and parameter_s not in ['sst', 'sss', 'wind']:
+        insitu_params = get_insitu_params(insitu_schema.get())
+        if parameter_s and parameter_s not in insitu_params:
             raise NexusProcessingException(
-                reason="Parameter %s not supported. Must be one of 'sst', 'sss', 'wind'." % parameter_s, code=400)
+                reason=f"Parameter {parameter_s} not supported. Must be one of {insitu_params}", code=400)
 
         try:
             start_time = request.get_start_datetime()
@@ -270,10 +283,8 @@ class Matchup(NexusCalcSparkHandler):
         total_values = sum(len(v) for v in spark_result.values())
         details = {
             "timeToComplete": int((end - start).total_seconds()),
-            "numInSituRecords": 0,
-            "numInSituMatched": total_values,
-            "numGriddedChecked": 0,
-            "numGriddedMatched": total_keys
+            "numSecondaryMatched": total_values,
+            "numPrimaryMatched": total_keys
         }
 
         matches = Matchup.convert_to_matches(spark_result)
@@ -287,7 +298,9 @@ class Matchup(NexusCalcSparkHandler):
         threading.Thread(target=do_result_insert).start()
 
         # Get only the first "result_size_limit" results
-        matches = matches[0:result_size_limit]
+        # '0' means returns everything
+        if result_size_limit > 0:
+            matches = matches[0:result_size_limit]
 
         result = DomsQueryResults(results=matches, args=args,
                                   details=details, bounds=None,
@@ -358,7 +371,6 @@ class DomsPoint(object):
         self.data = None
 
         self.source = None
-        self.depth = None
         self.platform = None
         self.device = None
         self.file_url = None
@@ -441,13 +453,8 @@ class DomsPoint(object):
         point.device = DomsPoint._variables_to_device(tile.variables)
         return point
 
-    insitu_schema = None
-
     @staticmethod
     def from_edge_point(edge_point):
-        if DomsPoint.insitu_schema is None:
-            DomsPoint.insitu_schema = query_insitu_schema()
-
         point = DomsPoint()
         x, y = edge_point['longitude'], edge_point['latitude']
 
@@ -522,7 +529,7 @@ class DomsPoint(object):
             val = edge_point.get(name)
             if not val:
                 continue
-            unit = get_insitu_unit(name, DomsPoint.insitu_schema)
+            unit = get_insitu_unit(name, insitu_schema.get())
             data.append(DataPoint(
                 variable_name=name,
                 cf_variable_name=name,
@@ -575,7 +582,7 @@ def spark_matchup_driver(tile_ids, bounding_wkt, primary_ds_name, secondary_ds_n
         parameter_b = sc.broadcast(parameter)
 
         # Parallelize list of tile ids
-        rdd = sc.parallelize(tile_ids, determine_parllelism(len(tile_ids)))
+        rdd = sc.parallelize(tile_ids, determine_parallelism(len(tile_ids)))
 
     # Map Partitions ( list(tile_id) )
     rdd_filtered = rdd.mapPartitions(
@@ -618,10 +625,34 @@ def spark_matchup_driver(tile_ids, bounding_wkt, primary_ds_name, secondary_ds_n
             matchup_time = iso_time_to_epoch(matchup.time)
             return abs(primary_time - matchup_time)
 
-        rdd_filtered = rdd_filtered \
-            .map(lambda primary_matchup: tuple([primary_matchup[0], tuple([primary_matchup[1], dist(primary_matchup[0], primary_matchup[1])])])) \
-            .reduceByKey(lambda match_1, match_2: match_1 if match_1[1] < match_2[1] else match_2) \
-            .mapValues(lambda x: [x[0]])
+        def filter_closest(matches):
+            """
+            Filter given matches. Find the closest match to the primary
+            point and only keep other matches that match the same
+            time/space as that point.
+
+            :param matches: List of match tuples. Each tuple has the following format:
+                1. The secondary match
+                2. Tuple of form (space_dist, time_dist)
+            """
+            closest_point = min(matches, key=lambda match: match[1])[0]
+            matches = list(filter(
+                lambda match: match.latitude == closest_point.latitude and
+                              match.longitude == closest_point.longitude and
+                              match.time == closest_point.time, map(
+                    lambda match: match[0], matches
+                )
+            ))
+            return matches
+
+        rdd_filtered = rdd_filtered.map(
+            lambda primary_matchup: tuple(
+                [primary_matchup[0], tuple([primary_matchup[1], dist(primary_matchup[0], primary_matchup[1])])]
+            )).combineByKey(
+                lambda value: [value],
+                lambda value_list, value: value_list + [value],
+                lambda value_list_a, value_list_b: value_list_a + value_list_b
+            ).mapValues(lambda matches: filter_closest(matches))
     else:
         rdd_filtered = rdd_filtered \
             .combineByKey(lambda value: [value],  # Create 1 element list
@@ -633,7 +664,7 @@ def spark_matchup_driver(tile_ids, bounding_wkt, primary_ds_name, secondary_ds_n
     return result_as_map
 
 
-def determine_parllelism(num_tiles):
+def determine_parallelism(num_tiles):
     """
     Try to stay at a maximum of 140 tiles per partition; But don't go over 128 partitions.
     Also, don't go below the default of 8
@@ -658,9 +689,22 @@ def add_meters_to_lon_lat(lon, lat, meters):
     return longitude, latitude
 
 
+def get_insitu_params(insitu_schema):
+    """
+    Get all possible insitu params from the CDMS insitu schema
+    """
+    params = insitu_schema.get(
+        'definitions', {}).get('observation', {}).get('properties', {})
+
+    # Filter params so only variables with units are considered
+    params = list(map(
+        lambda param: param[0], filter(lambda param: 'units'in param[1], params.items())))
+    return params
+
+
 def get_insitu_unit(variable_name, insitu_schema):
     """
-    Query the insitu API and retrieve the units for the given variable.
+    Retrieve the units from the insitu api schema endpoint for the given variable.
     If no units are available for this variable, return "None"
     """
     properties = insitu_schema.get('definitions', {}).get('observation', {}).get('properties', {})

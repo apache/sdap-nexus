@@ -14,13 +14,14 @@ def query_insitu_schema():
     metadata
     """
     schema_endpoint = insitu_endpoints.getSchemaEndpoint()
+    logging.info("Querying schema")
     response = requests.get(schema_endpoint)
     response.raise_for_status()
     return response.json()
 
 
 def query_insitu(dataset, variable, start_time, end_time, bbox, platform, depth_min, depth_max,
-               items_per_page=1000, session=None):
+               items_per_page=20000, session=None):
     """
     Query insitu API, page through results, and aggregate
     """
@@ -37,6 +38,7 @@ def query_insitu(dataset, variable, start_time, end_time, bbox, platform, depth_
         pass
 
     provider = insitu_endpoints.get_provider_name(dataset)
+    project = insitu_endpoints.get_project_name(dataset)
 
     params = {
         'itemsPerPage': items_per_page,
@@ -46,7 +48,7 @@ def query_insitu(dataset, variable, start_time, end_time, bbox, platform, depth_
         'minDepth': depth_min,
         'maxDepth': depth_max,
         'provider': provider,
-        'project': dataset,
+        'project': project,
         'platform': platform,
     }
 
@@ -56,14 +58,14 @@ def query_insitu(dataset, variable, start_time, end_time, bbox, platform, depth_
     insitu_response = {}
 
     # Page through all insitu results
-    next_page_url = insitu_endpoints.getEndpoint(provider)
+    next_page_url = insitu_endpoints.getEndpoint(provider, dataset)
     while next_page_url is not None and next_page_url != 'NA':
         if session is not None:
             response = session.get(next_page_url, params=params)
         else:
             response = requests.get(next_page_url, params=params)
 
-        logging.debug(f'Insitu request {response.url}')
+        logging.info(f'Insitu request {response.url}')
 
         response.raise_for_status()
         insitu_page_response = response.json()

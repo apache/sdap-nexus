@@ -164,6 +164,7 @@ class DomsInitializer:
               platform text,
               device text,
               measurement_values map<text, decimal>,
+              depth decimal,
               PRIMARY KEY (execution_id, is_primary, id)
             );
         """
