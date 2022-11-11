@@ -84,6 +84,8 @@ class NexusTileService(object):
         self._datastore = None
         self._metadatastore = None
 
+        self.current_ds = None
+
         self._config = configparser.RawConfigParser()
         self._config.read(NexusTileService._get_config_files('config/datastores.ini'))
 
@@ -137,7 +139,14 @@ class NexusTileService(object):
     def find_days_in_range_asc(self, min_lat, max_lat, min_lon, max_lon, dataset, start_time, end_time,
                                metrics_callback=None, **kwargs):
         start = datetime.now()
-        result = self._metadatastore.find_days_in_range_asc(min_lat, max_lat, min_lon, max_lon, dataset, start_time,
+        if self.supports_direct_bounds_to_tile():
+            if self.current_ds != dataset:
+                self._datastore.open_dataset(dataset)
+                self.current_ds = dataset
+
+            result = self._datastore.find_days_in_range_asc(start_time, end_time)
+        else:
+            result = self._metadatastore.find_days_in_range_asc(min_lat, max_lat, min_lon, max_lon, dataset, start_time,
                                                             end_time,
                                                             **kwargs)
         duration = (datetime.now() - start).total_seconds()
@@ -265,10 +274,36 @@ class NexusTileService(object):
 
     def get_tiles_bounded_by_box(self, min_lat, max_lat, min_lon, max_lon, ds=None, start_time=0, end_time=-1,
                                  **kwargs):
-        tiles = self.find_tiles_in_box(min_lat, max_lat, min_lon, max_lon, ds, start_time, end_time, **kwargs)
-        tiles = self.mask_tiles_to_bbox(min_lat, max_lat, min_lon, max_lon, tiles)
-        if 0 <= start_time <= end_time:
-            tiles = self.mask_tiles_to_time_range(start_time, end_time, tiles)
+        if self.supports_direct_bounds_to_tile():
+            if ds and ds != self.current_ds:
+                self._datastore.open_dataset(ds)
+                self.current_ds = ds
+
+            ISO = '%Y-%m-%dT%H:%M:%S%z'
+
+            start_time = datetime.utcfromtimestamp(start_time).strftime(ISO)
+            end_time = datetime.utcfromtimestamp(end_time).strftime(ISO)
+
+            if not 'split' in kwargs:
+                tiles = [t.as_model_tile() for t in self._datastore.fetch_nexus_tiles(
+                    self.bounds_to_direct_tile_id(min_lat, min_lon, max_lat, max_lon, start_time, end_time, ds)
+                 )]
+            else:
+                timestamps = kwargs['split']
+
+                tiles = []
+
+                for i in range(len(timestamps)):
+                    tiles.extend(
+                        [t.as_model_tile() for t in self._datastore.fetch_nexus_tiles(
+                            self.bounds_to_direct_tile_id(min_lat, min_lon, max_lat, max_lon, timestamps[i], timestamps[i], ds)
+                        )]
+                    )
+        else:
+            tiles = self.find_tiles_in_box(min_lat, max_lat, min_lon, max_lon, ds, start_time, end_time, **kwargs)
+            tiles = self.mask_tiles_to_bbox(min_lat, max_lat, min_lon, max_lon, tiles)
+            if 0 <= start_time <= end_time:
+                tiles = self.mask_tiles_to_time_range(start_time, end_time, tiles)
 
         return tiles
 

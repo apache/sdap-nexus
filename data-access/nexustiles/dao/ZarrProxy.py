@@ -21,6 +21,7 @@ import s3fs
 import xarray as xr
 from dask.diagnostics import ProgressBar
 from webservice.webmodel import NexusProcessingException
+from datetime import datetime
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
@@ -35,7 +36,7 @@ class NexusDataTile(object):
     __data = None
     tile_id = None
 
-    def __init__(self, data, _tile_id, var_name):   #change to data (dataset subset w/ temporal range), tid, coords
+    def __init__(self, data, _tile_id, var_name, coords, lazy=False):   #change to data (dataset subset w/ temporal range), tid, coords
         import re
 
         if self.__data is None:
@@ -48,6 +49,8 @@ class NexusDataTile(object):
             raise NexusProcessingException(reason="Bad tile id", code=500)
 
         self.__vars = var_name
+
+        self.__coords = coords
 
         self.__lat, self.__lon, self.__time, self.__vdata, self.__meta, self.__mv = self._get_data()
 
@@ -91,8 +94,8 @@ class NexusDataTile(object):
     def _get_data(self):
         isMultiVar = False
 
-        metadata = {'main': self.__data.attrs, 'lat': self.__data.lat.attrs,
-                    'lon': self.__data.lon.attrs, 'time': self.__data.time.attrs}
+        metadata = {'main': self.__data.attrs, 'lat': self.__data[self.__coords['latitude']].attrs,
+                    'lon': self.__data[self.__coords['longitude']].attrs, 'time': self.__data[self.__coords['time']].attrs}
 
         for var in self.__vars:
             metadata[var['name_s']] = self.__data[var['name_s']].attrs
@@ -103,18 +106,16 @@ class NexusDataTile(object):
             self.__vars = self.__vars[0]
 
         if tile_type == 'grid_tile': #for now, assume gridded
-            latitude_data = np.ma.masked_invalid(self.__data.lat)
-            longitude_data = np.ma.masked_invalid(self.__data.lon)
-
-            with ProgressBar():
-              grid_tile_data = np.ma.masked_invalid(self.__data[self.__vars['name_s']])
+            latitude_data = np.ma.masked_invalid(self.__data[self.__coords['latitude']])
+            longitude_data = np.ma.masked_invalid(self.__data[self.__coords['longitude']])
+            grid_tile_data = np.ma.masked_invalid(self.__data[self.__vars['name_s']])
         else:
             raise NotImplementedError("Only supports grid_tile")
 
         if len(grid_tile_data.shape) == 2:
             grid_tile_data = grid_tile_data[np.newaxis, :]
 
-        return latitude_data, longitude_data, self.__data.time.values, grid_tile_data, metadata, isMultiVar
+        return latitude_data, longitude_data, self.__data[self.__coords['time']].values, grid_tile_data, metadata, isMultiVar
 
 class ZarrProxy(object):
     mock_solr_for_testing = True
@@ -131,6 +132,12 @@ class ZarrProxy(object):
         self.__s3_profile = config.get("s3", "profile", fallback=None)
         self.__s3 = boto3.resource('s3')
         self.__nexus_tile = None
+
+        self.__coords = {
+            "latitude": "lat",
+            "longitude": "lon",
+            "time": "time"
+        }
 
         solr_config_txt = f"""
         [solr]
@@ -189,12 +196,12 @@ class ZarrProxy(object):
 
         ds_info = query_response['response']['docs'][0]
 
-        return ds_info['variables'], ds_info['public_b'], ds_info['s3_uri_s']
+        return ds_info['variables'], ds_info['public_b'], ds_info['s3_uri_s'], ds_info['coordinate_vars']
 
     def open_dataset(self, ds, test_fs = None):
-        variables, public, path = self._get_ds_info(ds)
+        variables, public, path, coords = self._get_ds_info(ds)
 
-        logger.info('Opening Zarr proxy')
+        logger.info(f'Opening Zarr proxy for {ds}')
 
         if public:
             store = path
@@ -210,10 +217,11 @@ class ZarrProxy(object):
 
         zarr_data = xr.decode_cf(zarr_data, mask_and_scale=True)
 
-        logger.info('Successfully opened Zarr proxy')
+        logger.info(f'Successfully opened Zarr proxy for {ds}')
 
         self.__zarr_data = zarr_data
         self.__variables = variables
+        self.__coords = coords
 
     #Interpreting tile id's as: MUR_<start_time>_<end_tim>_<lat_min>_<lat_max>_<lon_min>_<lon_max>
     def fetch_nexus_tiles(self, *tile_ids):
@@ -241,10 +249,29 @@ class ZarrProxy(object):
             lats = slice(parts['min_lat'], parts['max_lat'])
             lons = slice(parts['min_lon'], parts['max_lon'])
 
-            nexus_tile = NexusDataTile(self.__zarr_data.sel(time=times, lat=lats, lon=lons), parts['id'], self.__variables)
+            idx = {
+                self.__coords['latitude']: lats,
+                self.__coords['longitude']: lons,
+                self.__coords['time']: times,
+            }
+
+            nexus_tile = NexusDataTile(self.__zarr_data.sel(idx), parts['id'], self.__variables, self.__coords)
             res.append(nexus_tile)
 
         return res
+
+    def find_days_in_range_asc(self, min_time, max_time):
+        max_time = datetime.utcfromtimestamp(max_time).isoformat()
+        min_time = datetime.utcfromtimestamp(min_time).isoformat()
+
+        times = slice(min_time, max_time)
+        time_subset = self.__zarr_data.sel(time=times)['time'].data
+
+        time_subset = time_subset.astype(datetime)/1000000000
+
+        # return sorted([datetime.utcfromtimestamp(t).isoformat() for t in time_subset])
+        return sorted(time_subset.tolist())
+
 
     @staticmethod
     def parse_tile_id_to_bounds(tile_id):
@@ -274,6 +301,8 @@ class ZarrProxy(object):
             return json.load(open("/Users/rileykk/repo/incubator-sdap-nexus/data-access/tests/mock_oisss_meta.json"))
         elif ds == "id:JPL-L4-MRVA-CHLA-GLOB-v3.0":
             return json.load(open("/Users/rileykk/repo/incubator-sdap-nexus/data-access/tests/mock_chla_meta.json"))
+        elif ds == "id:SMAP_JPL_L3_SSS_CAP_8DAY-RUNNINGMEAN_V5":
+            return json.load(open("/Users/rileykk/repo/incubator-sdap-nexus/data-access/tests/mock_smap_meta.json"))
         else:
             raise ValueError("unsupported dataset")
 

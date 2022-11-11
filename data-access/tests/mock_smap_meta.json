@@ -1,0 +1,29 @@
+{
+  "responseHeader": {
+    "status": 0
+  },
+  "response": {
+    "numFound": 1,
+    "docs": [
+      {
+        "id": "SMAP_JPL_L3_SSS_CAP_8DAY-RUNNINGMEAN_V5",
+        "latest_update_l": 1637629358,
+        "_version_": 1718445323844583426,
+        "dataset_s": "SMAP_JPL_L3_SSS_CAP_8DAY-RUNNINGMEAN_V5",
+        "variables": [{
+            "name_s": "smap_sss",
+            "fill_d": -9999.0
+        }],
+        "coordinate_vars": {
+          "latitude": "latitude",
+          "longitude": "longitude",
+          "time": "time"
+        },
+        "s3_uri_s": "s3://cdms-dev-zarr/SMAP_JPL_L3_SSS_CAP_8DAY-RUNNINGMEAN_V5_7_120_240.zarr/",
+        "public_b": false,
+        "type_s": "gridded",
+        "chunk_shape": [7, 120, 240]
+      }
+    ]
+  }
+}

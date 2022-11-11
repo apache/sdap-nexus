@@ -27,7 +27,10 @@ import numpy as np
 import pytz
 import shapely.geometry
 import shapely.wkt
-from backports.functools_lru_cache import lru_cache
+try:
+    from functools import lru_cache
+except ImportError:
+    from backports.functools_lru_cache import lru_cache
 from nexustiles.nexustiles import NexusTileService
 from pytz import timezone
 from scipy import stats
