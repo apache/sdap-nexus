@@ -292,13 +292,18 @@ class NexusTileService(object):
                 timestamps = kwargs['split']
 
                 tiles = []
+                tile_ids = []
 
                 for i in range(len(timestamps)):
-                    tiles.extend(
-                        [t.as_model_tile() for t in self._datastore.fetch_nexus_tiles(
-                            self.bounds_to_direct_tile_id(min_lat, min_lon, max_lat, max_lon, timestamps[i], timestamps[i], ds)
-                        )]
-                    )
+                    tile_ids.append(self.bounds_to_direct_tile_id(min_lat, min_lon, max_lat, max_lon, timestamps[i], timestamps[i], ds))
+
+                    #tiles.extend(
+                    #    [t.as_model_tile() for t in self._datastore.fetch_nexus_tiles(
+                    #        self.bounds_to_direct_tile_id(min_lat, min_lon, max_lat, max_lon, timestamps[i], timestamps[i], ds)
+                    #    )]
+                    #)
+
+                tiles.extend([t.as_model_tile() for t in self._datastore.fetch_nexus_tiles(*tile_ids)])
         else:
             tiles = self.find_tiles_in_box(min_lat, max_lat, min_lon, max_lon, ds, start_time, end_time, **kwargs)
             tiles = self.mask_tiles_to_bbox(min_lat, max_lat, min_lon, max_lon, tiles)
