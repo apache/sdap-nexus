@@ -26,11 +26,12 @@ from datetime import datetime
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
-h = logging.StreamHandler()
-h.setLevel(logging.DEBUG)
-h.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
+# h = logging.StreamHandler()
+# h.setLevel(logging.DEBUG)
+# h.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
+#
+# logger.addHandler(h)
 
-logger.addHandler(h)
 
 class NexusDataTile(object):
     __data = None
@@ -229,6 +230,8 @@ class ZarrProxy(object):
 
         if not isinstance(tile_ids[0], str):
             tile_ids = [str(tile.tile_id) for tile in tile_ids]
+
+        logger.debug(f'Starting fetch for {len(tile_ids)} tiles')
 
         res = []
 
