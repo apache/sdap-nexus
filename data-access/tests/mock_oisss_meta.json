@@ -14,6 +14,11 @@
             "name_s": "sss",
             "fill_d": -999.0
         }],
+        "coordinate_vars": {
+          "latitude": "lat",
+          "longitude": "lon",
+          "time": "time"
+        },
         "s3_uri_s": "s3://cdms-dev-zarr/OISSS_L4_multimission_7day_v1/",
         "public_b": false,
         "type_s": "gridded",

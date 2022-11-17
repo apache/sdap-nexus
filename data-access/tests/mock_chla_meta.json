@@ -23,6 +23,11 @@
             "name_s": "mask",
             "fill_d": -128
         }],
+        "coordinate_vars": {
+          "latitude": "lat",
+          "longitude": "lon",
+          "time": "time"
+        },
         "s3_uri_s": "s3://cdms-dev-zarr/JPL-L4-MRVA-CHLA-GLOB-v3.0/",
         "public_b": false,
         "type_s": "gridded",

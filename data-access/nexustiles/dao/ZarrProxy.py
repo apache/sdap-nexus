@@ -197,6 +197,8 @@ class ZarrProxy(object):
 
         ds_info = query_response['response']['docs'][0]
 
+        logger.debug(f'S3 URI: {ds_info["s3_uri_s"]}')
+
         return ds_info['variables'], ds_info['public_b'], ds_info['s3_uri_s'], ds_info['coordinate_vars']
 
     def open_dataset(self, ds, test_fs = None):
