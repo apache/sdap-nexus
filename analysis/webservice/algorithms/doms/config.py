@@ -22,6 +22,17 @@ INSITU_PROVIDER_MAP = [
         'endpoint': 'https://cdms.ucar.edu/insitu/1.0/query_data_doms_custom_pagination',
         'projects': [
             {
+                'short_name': 'ICOADS_NCAR',
+                'name': 'ICOADS Release 3.0',
+                'platforms': ['0', '16', '17', '30', '41', '42']
+            }
+        ]
+    },
+    {
+        'name': 'NCAR',
+        'projects': [
+            {
+                'short_name': 'ICOADS_JPL',
                 'name': 'ICOADS Release 3.0',
                 'platforms': ['0', '16', '17', '30', '41', '42']
             }
@@ -55,6 +66,15 @@ INSITU_PROVIDER_MAP = [
             {
                 'name': 'shark-2018',
                 'platforms': ['3B']
+            }
+        ]
+    },
+    {
+        'name': 'SPURS',
+        'projects': [
+            {
+                'name': 'SPURS',
+                'platforms': ['3B', '6A', '23', '31', '42', '46', '48']
             }
         ]
     }
@@ -150,12 +170,19 @@ except KeyError:
     pass
 
 
-def getEndpoint(provider_name=None):
-    if provider_name is None:
+def getEndpoint(provider_name=None, project_name=None):
+    if provider_name is None or project_name is None:
         return INSITU_API_ENDPOINT
 
-    provider = next((provider for provider in INSITU_PROVIDER_MAP
-                     if provider['name'] == provider_name), None)
+    provider = next((
+        provider for provider in INSITU_PROVIDER_MAP
+        for project in provider['projects']
+        if provider['name'] == provider_name
+        and (
+            project['name'] == project_name
+            or project.get('short_name') == project_name
+        )
+    ), None)
 
     if 'endpoint' in provider:
         return provider['endpoint']
@@ -185,8 +212,12 @@ def validate_insitu_params(provider_name, project_name, platform_name):
     if provider is None:
         return False
 
-    project = next((project for project in provider['projects']
-                    if project_name == project['name']), None)
+    project = next((
+        project for project in provider['projects']
+        if project_name == project['name']
+           or project_name == project.get('short_name')
+    ), None)
+
 
     if project is None:
         return False
@@ -195,8 +226,11 @@ def validate_insitu_params(provider_name, project_name, platform_name):
 
 
 def get_provider_name(project_name):
-    provider = next((provider for provider in INSITU_PROVIDER_MAP
-                     if project_name in map(lambda project: project['name'], provider['projects'])), None)
+    provider = next((
+        provider for provider in INSITU_PROVIDER_MAP
+        if project_name in map(lambda project: project['name'], provider['projects'])
+        or project_name in map(lambda project: project.get('short_name'), provider['projects'])
+    ), None)
 
     if provider is not None:
         return provider['name']
@@ -208,3 +242,19 @@ def get_provider_name(project_name):
     if provider is not None:
         return provider['name']
 
+
+def get_project_name(project_name):
+    """
+    Get project name, given either project name or short name.
+    """
+    project = next((
+        project for provider in INSITU_PROVIDER_MAP
+        for project in provider['projects']
+        if project.get('short_name') == project_name or project['name'] == project_name
+    ), None)
+
+    if project is not None:
+        return project['name']
+
+    # If not found, return input project name. DOMS insitu node will need this
+    return project_name

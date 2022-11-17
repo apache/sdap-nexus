@@ -37,9 +37,9 @@ RUN mkdir -p /home/jovyan/Quickstart && \
     git init && \
     git remote add -f origin ${APACHE_NEXUS} && \
     git config core.sparseCheckout true && \
-    echo "client" >> .git/info/sparse-checkout && \
+    echo "integrations/python-client" >> .git/info/sparse-checkout && \
     git pull origin ${APACHE_NEXUS_BRANCH} && \
-    cd client && \
+    cd integrations/python-client && \
     python setup.py install
 
 COPY ["Time Series Example.ipynb", "/home/jovyan/Quickstart/Time Series Example.ipynb"]

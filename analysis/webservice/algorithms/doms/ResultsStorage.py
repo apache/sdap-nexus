@@ -156,9 +156,9 @@ class ResultsStorage(AbstractResultsContainer):
 
         cql = """
            INSERT INTO doms_data
-                (id, execution_id, value_id, primary_value_id, x, y, source_dataset, measurement_time, platform, device, measurement_values, is_primary)
+                (id, execution_id, value_id, primary_value_id, x, y, source_dataset, measurement_time, platform, device, measurement_values, is_primary, depth)
            VALUES
-                (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """
         insertStatement = self._session.prepare(cql)
         batch = BatchStatement()
@@ -189,9 +189,9 @@ class ResultsStorage(AbstractResultsContainer):
             result["platform"] if "platform" in result else None,
             result["device"] if "device" in result else None,
             dataMap,
-            1 if primaryId is None else 0
-        )
-                  )
+            1 if primaryId is None else 0,
+            result["depth"]
+        ))
 
         n = 0
         if "matches" in result:
@@ -283,7 +283,8 @@ class ResultsRetrieval(AbstractResultsContainer):
                 "source": row.source_dataset,
                 "device": row.device,
                 "platform": row.platform,
-                "time": row.measurement_time.replace(tzinfo=UTC)
+                "time": row.measurement_time.replace(tzinfo=UTC),
+                "depth": row.depth
             }
         for key in row.measurement_values:
             value = float(row.measurement_values[key])
