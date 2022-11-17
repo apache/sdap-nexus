@@ -17,7 +17,8 @@
 import setuptools
 from subprocess import check_call, CalledProcessError
 
-__version__ = '1.6'
+with open('../VERSION.txt', 'r') as f:
+    __version__ = f.read()
 
 
 try:
