@@ -81,6 +81,7 @@ ARG APACHE_NEXUSPROTO_BRANCH=master
 COPY docker/nexus-webapp/install_nexusproto.sh ./install_nexusproto.sh
 RUN /tmp/install_nexusproto.sh $APACHE_NEXUSPROTO $APACHE_NEXUSPROTO_BRANCH
 
+COPY VERSION.txt /incubator-sdap-nexus/VERSION.txt
 COPY data-access /incubator-sdap-nexus/data-access
 COPY analysis /incubator-sdap-nexus/analysis
 COPY tools /incubator-sdap-nexus/tools
