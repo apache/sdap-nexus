@@ -58,6 +58,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Fixed matchup insitu query loading on import; loads when needed instead
 - SDAP-406: Fixed `/timeSeriesSpark`comparison stats bug
 - Fixed excessive memory usage by `/cdmssubset`
+- SDAP-412: Explicit definition of `__eq__` in matchup `DomsPoint` class. This prevents the duplicate primary points from appearing in the final results by merging them in the `combineByKey` step.
 ### Security
 
 

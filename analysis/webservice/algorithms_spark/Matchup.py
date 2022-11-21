@@ -370,6 +370,24 @@ class DomsPoint(object):
     def __repr__(self):
         return str(self.__dict__)
 
+    def __eq__(self, other):
+        if not isinstance(other, DomsPoint):
+            return False
+
+        return self.time == other.time and \
+            self.longitude == other.longitude and \
+            self.latitude == other.latitude and \
+            self.depth == other.depth and \
+            self.data_id == other.data_id and \
+            self.data == other.data and \
+            self.source == other.source and \
+            self.platform == other.platform and \
+            self.device == other.device and \
+            self.file_url == other.file_url
+
+    def __hash__(self):
+        return hash(repr(self))
+
     @staticmethod
     def _variables_to_device(variables):
         """
