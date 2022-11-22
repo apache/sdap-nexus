@@ -40,8 +40,8 @@ Pull the necessary Docker images from the `NEXUS JPL repository <https://hub.doc
 
   export CASSANDRA_VERSION=3.11.6-debian-10-r138
   export RMQ_VERSION=3.8.9-debian-10-r37
-  export COLLECTION_MANAGER_VERSION=0.1.6a14
-  export GRANULE_INGESTER_VERSION=0.1.6a30
+  export COLLECTION_MANAGER_VERSION=1.0.0
+  export GRANULE_INGESTER_VERSION=1.0.0
   export WEBAPP_VERSION=distributed.0.4.5a54
   export SOLR_VERSION=8.11.1
   export SOLR_CLOUD_INIT_VERSION=1.0.2
@@ -53,8 +53,8 @@ Pull the necessary Docker images from the `NEXUS JPL repository <https://hub.doc
 
   docker pull bitnami/cassandra:${CASSANDRA_VERSION}
   docker pull bitnami/rabbitmq:${RMQ_VERSION}
-  docker pull nexusjpl/collection-manager:${COLLECTION_MANAGER_VERSION}
-  docker pull nexusjpl/granule-ingester:${GRANULE_INGESTER_VERSION}
+  docker pull apache/sdap-collection-manager:${COLLECTION_MANAGER_VERSION}
+  docker pull apache/sdap-granule-ingester:${GRANULE_INGESTER_VERSION}
   docker pull nexusjpl/nexus-webapp:${WEBAPP_VERSION}
   docker pull nexusjpl/solr:${SOLR_VERSION}
   docker pull nexusjpl/solr-cloud-init:${SOLR_CLOUD_INIT_VERSION}
@@ -220,10 +220,10 @@ The granule ingester(s) read new granules from the message queue and process the
   EOF
 
   docker run --name granule-ingester-1 --network sdap-net -d --env-file granule-ingester.env \
-         -v ${DATA_DIRECTORY}:/data/granules/ nexusjpl/granule-ingester:${GRANULE_INGESTER_VERSION}
+         -v ${DATA_DIRECTORY}:/data/granules/ apache/sdap-granule-ingester:${GRANULE_INGESTER_VERSION}
 
   docker run --name granule-ingester-2 --network sdap-net -d --env-file granule-ingester.env \
-         -v ${DATA_DIRECTORY}:/data/granules/ nexusjpl/granule-ingester:${GRANULE_INGESTER_VERSION}
+         -v ${DATA_DIRECTORY}:/data/granules/ apache/sdap-granule-ingester:${GRANULE_INGESTER_VERSION}
 
 .. _quickstart-optional-step:
 
@@ -317,7 +317,7 @@ Now we can start the collection manager.
 
 .. code-block:: bash
 
-  docker run --name collection-manager --network sdap-net -v ${DATA_DIRECTORY}:/data/granules/ -v ${CONFIG_DIR}:/home/ingester/config/ -e COLLECTIONS_PATH="/home/ingester/config/collectionConfig.yml" -e HISTORY_URL="http://host.docker.internal:8983/" -e RABBITMQ_HOST="host.docker.internal:5672" -e RABBITMQ_USERNAME="user" -e RABBITMQ_PASSWORD="bitnami" -d nexusjpl/collection-manager:${COLLECTION_MANAGER_VERSION}
+  docker run --name collection-manager --network sdap-net -v ${DATA_DIRECTORY}:/data/granules/ -v ${CONFIG_DIR}:/home/ingester/config/ -e COLLECTIONS_PATH="/home/ingester/config/collectionConfig.yml" -e HISTORY_URL="http://host.docker.internal:8983/" -e RABBITMQ_HOST="host.docker.internal:5672" -e RABBITMQ_USERNAME="user" -e RABBITMQ_PASSWORD="bitnami" -d apache/sdap-collection-manager:${COLLECTION_MANAGER_VERSION}
 
 .. _quickstart-step12:
 
