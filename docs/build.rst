@@ -25,9 +25,20 @@ We should also set a variable for a consistent tag across all images.
 
 .. code-block:: bash
 
-  export VERSION=1.0-build-demo
+  export VERSION=1.0.0
 
---TBD: Dl & extract nexus & ingester tarballs--
+To build the necessary images, we will need to first download the latest releases for SDAP NEXUS and SDAP Ingester ((URL)). We will not need to download the SDAP Nexusproto release directly.
+
+Now we must extract the releases to their respective directories.
+
+.. note::
+
+  In the following code block, make sure the versions in the filenames correspond with the versions that were downloaded.
+
+.. code-block:: bash
+
+  tar xvf apache-sdap-ingester-1.0.0-src.tar.gz -C ${INGESTER_DIR}
+  tar xvf apache-sdap-nexus-1.0.0-src.tar.gz -C ${NEXUS_DIR}
 
 Build Ingester Components
 =========================
