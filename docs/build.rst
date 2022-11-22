@@ -21,11 +21,12 @@ Now we must download and extract the source code for NEXUS and the ingester.
   mkdir -p ${NEXUS_DIR}
   mkdir -p ${INGESTER_DIR}
 
-We should also set a variable for a consistent tag across all images.
+We should also set variables for a consistent tag across all images. These should be consistent with the release versions we plan to build.
 
 .. code-block:: bash
 
-  export VERSION=1.0.0
+  export NEXUS_VERSION=1.0.0
+  export INGESTER_VERSION=1.0.0
 
 To build the necessary images, we will need to first download the latest releases for SDAP NEXUS and SDAP Ingester ((URL)). We will not need to download the SDAP Nexusproto release directly.
 
@@ -37,8 +38,8 @@ Now we must extract the releases to their respective directories.
 
 .. code-block:: bash
 
-  tar xvf apache-sdap-ingester-1.0.0-src.tar.gz -C ${INGESTER_DIR}
-  tar xvf apache-sdap-nexus-1.0.0-src.tar.gz -C ${NEXUS_DIR}
+  tar xvf apache-sdap-ingester-${INGESTER_VERSION}-src.tar.gz -C ${INGESTER_DIR}
+  tar xvf apache-sdap-nexus-${NEXUS_VERSION}-src.tar.gz -C ${NEXUS_DIR}
 
 Build Ingester Components
 =========================
@@ -58,7 +59,7 @@ From the ingester root directory, run:
 
 .. code-block:: bash
 
-  docker build . -f collection_manager/docker/Dockerfile -t sdap/collection-manager:${VERSION}
+  docker build . -f collection_manager/docker/Dockerfile -t sdap/collection-manager:${INGESTER_VERSION}
 
 Build the Granule Ingester
 -------
@@ -67,7 +68,7 @@ From the ingester root directory, run:
 
 .. code-block:: bash
 
-  docker build . -f granule_ingester/docker/Dockerfile -t sdap/granule-ingester:${VERSION}
+  docker build . -f granule_ingester/docker/Dockerfile -t sdap/granule-ingester:${INGESTER_VERSION}
 
 Build the Solr & Webapp Components
 ======
@@ -91,7 +92,7 @@ Now to build the image:
 
 .. code-block:: bash
 
-  docker build . -t sdap/solr:${VERSION}
+  docker build . -t sdap/solr:${NEXUS_VERSION}
 
 Build the Solr Initialization Image
 -------
@@ -100,7 +101,7 @@ Now to build the image:
 
 .. code-block:: bash
 
-  docker build . -t sdap/solr-cloud-init:${VERSION} -f cloud-init/Dockerfile
+  docker build . -t sdap/solr-cloud-init:${NEXUS_VERSION} -f cloud-init/Dockerfile
 
 Build the Webapp Image
 ---------
@@ -115,7 +116,7 @@ Now we can build the webapp with:
 
 .. code-block:: bash
 
-  docker build . -f docker/nexus-webapp/Dockerfile -t sdap/nexus-webapp:${VERSION}
+  docker build . -f docker/nexus-webapp/Dockerfile -t sdap/nexus-webapp:${NEXUS_VERSION}
 
 Verify Successful Build
 ====
