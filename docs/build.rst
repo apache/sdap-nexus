@@ -1,10 +1,10 @@
 .. _build:
 
 *****************
-How to Build the NEXUS Docker Images
+How to Build the SDAP Docker Images
 *****************
 
-In this guide, we will go over how to build the docker images for the various components of NEXUS.
+In this guide, we will go over how to build the docker images for the various components of SDAP.
 
 Prepare
 ===========
