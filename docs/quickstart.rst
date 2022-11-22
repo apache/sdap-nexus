@@ -42,7 +42,7 @@ Pull the necessary Docker images from the `NEXUS JPL repository <https://hub.doc
   export RMQ_VERSION=3.8.9-debian-10-r37
   export COLLECTION_MANAGER_VERSION=1.0.0
   export GRANULE_INGESTER_VERSION=1.0.0
-  export WEBAPP_VERSION=distributed.0.4.5a54
+  export WEBAPP_VERSION=1.0.0
   export SOLR_VERSION=8.11.1
   export SOLR_CLOUD_INIT_VERSION=1.0.2
   export ZK_VERSION=3.5.5
@@ -55,7 +55,7 @@ Pull the necessary Docker images from the `NEXUS JPL repository <https://hub.doc
   docker pull bitnami/rabbitmq:${RMQ_VERSION}
   docker pull apache/sdap-collection-manager:${COLLECTION_MANAGER_VERSION}
   docker pull apache/sdap-granule-ingester:${GRANULE_INGESTER_VERSION}
-  docker pull nexusjpl/nexus-webapp:${WEBAPP_VERSION}
+  docker pull apache/sdap-nexus-webapp:${WEBAPP_VERSION}
   docker pull nexusjpl/solr:${SOLR_VERSION}
   docker pull nexusjpl/solr-cloud-init:${SOLR_CLOUD_INIT_VERSION}
   docker pull zookeeper:${ZK_VERSION}
@@ -349,7 +349,7 @@ Now that the data is being (has been) ingested, we need to start the webapp that
 
 .. code-block:: bash
 
-  docker run -d --name nexus-webapp --network sdap-net -p 8083:8083 nexusjpl/nexus-webapp:${WEBAPP_VERSION} python3 /incubator-sdap-nexus/analysis/webservice/webapp.py --solr_host="http://host.docker.internal:8983" --cassandra_host=host.docker.internal --cassandra_username=cassandra --cassandra_password=cassandra
+  docker run -d --name nexus-webapp --network sdap-net -p 8083:8083 apache/sdap-nexus-webapp:${WEBAPP_VERSION} python3 /incubator-sdap-nexus/analysis/webservice/webapp.py --solr_host="http://host.docker.internal:8983" --cassandra_host=host.docker.internal --cassandra_username=cassandra --cassandra_password=cassandra
 
 .. note:: If you see a message like ``docker: invalid reference format`` it likely means you need to re-export the ``WEBAPP_VERSION`` environment variable again. This can happen when you open a new terminal window or tab.
 
