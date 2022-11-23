@@ -367,6 +367,8 @@ class DomsPoint(object):
         self.device = None
         self.file_url = None
 
+        self.__hash = None
+
     def __repr__(self):
         return str(self.__dict__)
 
@@ -386,7 +388,13 @@ class DomsPoint(object):
             self.file_url == other.file_url
 
     def __hash__(self):
-        return hash(repr(self))
+        self._compute_hash()
+        return self.__hash
+
+    def _compute_hash(self):
+        if self.__hash is None:
+            # self.__hash = hash(repr(self))
+            self.__hash = hash(self.data_id)
 
     @staticmethod
     def _variables_to_device(variables):
@@ -458,6 +466,7 @@ class DomsPoint(object):
 
         point.platform = 9
         point.device = DomsPoint._variables_to_device(tile.variables)
+        point._compute_hash()
         return point
 
     @staticmethod
