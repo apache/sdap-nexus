@@ -15,8 +15,8 @@ Now we must download and extract the source code for NEXUS and the ingester.
 
 .. code-block:: bash
 
-  export NEXUS_DIR=~/nexus-build/nexus
-  export INGESTER_DIR=~/nexus-build/ingester
+  export NEXUS_DIR=~/sdap-build/nexus
+  export INGESTER_DIR=~/sdap-build/ingester
 
   mkdir -p ${NEXUS_DIR}
   mkdir -p ${INGESTER_DIR}
