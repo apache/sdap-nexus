@@ -43,8 +43,8 @@ Pull the necessary Docker images from the `NEXUS JPL repository <https://hub.doc
   export COLLECTION_MANAGER_VERSION=1.0.0
   export GRANULE_INGESTER_VERSION=1.0.0
   export WEBAPP_VERSION=1.0.0
-  export SOLR_VERSION=8.11.1
-  export SOLR_CLOUD_INIT_VERSION=1.0.2
+  export SOLR_VERSION=1.0.0
+  export SOLR_CLOUD_INIT_VERSION=1.0.0
   export ZK_VERSION=3.5.5
 
   export JUPYTER_VERSION=1.0.0-rc2
@@ -56,8 +56,8 @@ Pull the necessary Docker images from the `NEXUS JPL repository <https://hub.doc
   docker pull apache/sdap-collection-manager:${COLLECTION_MANAGER_VERSION}
   docker pull apache/sdap-granule-ingester:${GRANULE_INGESTER_VERSION}
   docker pull apache/sdap-nexus-webapp:${WEBAPP_VERSION}
-  docker pull nexusjpl/solr:${SOLR_VERSION}
-  docker pull nexusjpl/solr-cloud-init:${SOLR_CLOUD_INIT_VERSION}
+  docker pull apache/sdap-solr-cloud:${SOLR_VERSION}
+  docker pull apache/sdap-solr-cloud-init:${SOLR_CLOUD_INIT_VERSION}
   docker pull zookeeper:${ZK_VERSION}
 
   docker pull nexusjpl/jupyter:${JUPYTER_VERSION}
@@ -114,13 +114,13 @@ To start Solr using a volume mount and expose the admin webapp on port 8983:
 
   export SOLR_DATA=~/nexus-quickstart/solr
   mkdir -p ${SOLR_DATA}
-  docker run --name solr --network sdap-net -v ${SOLR_DATA}/:/opt/solr/server/solr/nexustiles/data -p 8983:8983 -e ZK_HOST="host.docker.internal:2181/solr" -d nexusjpl/solr:${SOLR_VERSION}
+  docker run --name solr --network sdap-net -v ${SOLR_DATA}/:/opt/solr/server/solr/nexustiles/data -p 8983:8983 -e ZK_HOST="host.docker.internal:2181/solr" -d apache/sdap-solr-cloud:${SOLR_VERSION}
 
 This will start an instance of Solr. To initialize it, we need to run the ``solr-cloud-init`` image.
 
 .. code-block:: bash
 
-  docker run -it --rm --name solr-init --network sdap-net -e SDAP_ZK_SOLR="host.docker.internal:2181/solr" -e SDAP_SOLR_URL="http://host.docker.internal:8983/solr/" -e CREATE_COLLECTION_PARAMS="name=nexustiles&numShards=1&waitForFinalState=true" nexusjpl/solr-cloud-init:${SOLR_CLOUD_INIT_VERSION}
+  docker run -it --rm --name solr-init --network sdap-net -e SDAP_ZK_SOLR="host.docker.internal:2181/solr" -e SDAP_SOLR_URL="http://host.docker.internal:8983/solr/" -e CREATE_COLLECTION_PARAMS="name=nexustiles&numShards=1&waitForFinalState=true" apache/sdap-solr-cloud-init:${SOLR_CLOUD_INIT_VERSION}
 
 When the init script finishes, kill the container by typing ``Ctrl + C``
 
