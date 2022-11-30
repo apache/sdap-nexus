@@ -59,7 +59,7 @@ From the ingester root directory, run:
 
 .. code-block:: bash
 
-  docker build . -f collection_manager/docker/Dockerfile -t sdap-local/collection-manager:${INGESTER_VERSION}
+  docker build . -f collection_manager/docker/Dockerfile -t sdap-local/sdap-collection-manager:${INGESTER_VERSION}
 
 Build the Granule Ingester
 -------
@@ -68,7 +68,7 @@ From the ingester root directory, run:
 
 .. code-block:: bash
 
-  docker build . -f granule_ingester/docker/Dockerfile -t sdap-local/granule-ingester:${INGESTER_VERSION}
+  docker build . -f granule_ingester/docker/Dockerfile -t sdap-local/sdap-granule-ingester:${INGESTER_VERSION}
 
 Build the Solr & Webapp Components
 ======
@@ -92,7 +92,7 @@ Now to build the image:
 
 .. code-block:: bash
 
-  docker build . -t sdap-local/solr-cloud:${NEXUS_VERSION}
+  docker build . -t sdap-local/sdap-solr-cloud:${NEXUS_VERSION}
 
 Build the Solr Initialization Image
 -------
@@ -101,7 +101,7 @@ Now to build the image:
 
 .. code-block:: bash
 
-  docker build . -t sdap-local/solr-cloud-init:${NEXUS_VERSION} -f cloud-init/Dockerfile
+  docker build . -t sdap-local/sdap-solr-cloud-init:${NEXUS_VERSION} -f cloud-init/Dockerfile
 
 Build the Webapp Image
 ---------
@@ -116,7 +116,7 @@ Now we can build the webapp with:
 
 .. code-block:: bash
 
-  docker build . -f docker/nexus-webapp/Dockerfile -t sdap-local/nexus-webapp:${NEXUS_VERSION}
+  docker build . -f docker/nexus-webapp/Dockerfile -t sdap-local/sdap-nexus-webapp:${NEXUS_VERSION}
 
 Verify Successful Build
 ====
