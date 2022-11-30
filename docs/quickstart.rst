@@ -34,7 +34,7 @@ Start downloading the Docker images and set up the Docker bridge network.
 Pull Docker Images
 -------------------
 
-Pull the necessary Docker images from the `NEXUS JPL repository <https://hub.docker.com/u/nexusjpl>`_ on Docker Hub. Please check the repository for the latest version tag.
+Pull the necessary Docker images from the `Apache SDAP repository <https://hub.docker.com/search?q=apache%2Fsdap>`_ on Docker Hub. Please check the repository for the latest version tag.
 
 .. code-block:: bash
 
