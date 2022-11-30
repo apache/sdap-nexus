@@ -75,7 +75,8 @@ def delete_by_query(args):
         se = SearchOptions()
         se.commonparams.q(args.query) \
             .fl(SOLR_UNIQUE_KEY) \
-            .fl('id')
+            .fl('id') \
+            .rows(50000)
 
         for fq in args.filterquery if args.filterquery is not None else []:
             se.commonparams.fq(fq)
@@ -89,11 +90,11 @@ def delete_by_query(args):
     else:
         raise RuntimeError("either query or jsonparams is required")
 
-    if check_query(query):
+    if args.force or check_query(query):
         logging.info("Collecting tiles ....")
         solr_docs = do_solr_query(query)
 
-        if confirm_delete(len(solr_docs)):
+        if args.force or confirm_delete(len(solr_docs)):
             deleted_ids = do_delete(solr_docs, query)
             logging.info("Deleted tile IDs %s" % json.dumps([str(doc_id) for doc_id in deleted_ids], indent=2))
         else:
@@ -160,16 +161,15 @@ def do_solr_query(query):
             break
         else:
             next_cursor_mark = solr_response.result.nextCursorMark
-
-        doc_ids.extend([uuid.UUID(doc['id']) for doc in solr_response.result.response.docs])
+        ids = [uuid.UUID(doc['id']) for doc in solr_response.result.response.docs]
+        delete_from_cassandra(ids)
+        doc_ids.extend(ids)
 
     return doc_ids
 
 
 def do_delete(doc_ids, query):
-    logging.info("Executing Cassandra delete...")
-    delete_from_cassandra(doc_ids)
-    logging.info("Executing Solr delete...")
+    logging.info("Executing delete...")
     delete_from_solr(query)
     return doc_ids
 
@@ -259,6 +259,11 @@ def parse_args():
                         required=False,
                         choices=['1', '2', '3', '4', '5'],
                         default='3')
+
+    parser.add_argument('-f', '--force',
+                        help='The version of the Cassandra protocol the driver should use.',
+                        required=False,
+                        action='store_true')
 
     return parser.parse_args()
 
