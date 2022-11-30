@@ -4,7 +4,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [1.0.0] - 2022-11-22
 ### Added
 - SDAP-388: Enable SDAP to proxy/redirect to alternate SDAP
 - SDAP-372: Updated matchup algorithm to point to AWS insitu API endpoint
