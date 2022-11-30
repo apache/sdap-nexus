@@ -33,6 +33,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - SDAP-399: Updated quickstart guide for standalone docker deployment of SDAP.
 - SDAP-399: Updated quickstart Jupyter notebook
 - SDAP-411: Used global versioning for SDAP NEXUS artifacts
+- SDAP-416: Using mamba to install nexus-analysis dependencies. (Also using conda as a fallback option if mamba install fails)
 - Prepared documentation for v1.0.0 release.
 ### Deprecated
 ### Removed
