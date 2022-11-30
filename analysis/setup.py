@@ -22,9 +22,13 @@ with open('../VERSION.txt', 'r') as f:
 
 
 try:
-    check_call(['conda', 'install', '-y', '-c', 'conda-forge', '--file', 'conda-requirements.txt'])
+    check_call(['mamba', 'install', '-y', '-c', 'conda-forge', '--file', 'conda-requirements.txt'])
 except (CalledProcessError, IOError) as e:
-    raise EnvironmentError("Error installing conda packages", e)
+    print('Failed install with mamba; falling back to conda')
+    try:
+        check_call(['conda', 'install', '-y', '-c', 'conda-forge', '--file', 'conda-requirements.txt'])
+    except (CalledProcessError, IOError) as e:
+        raise EnvironmentError("Error installing conda packages", e)
 
 
 setuptools.setup(
