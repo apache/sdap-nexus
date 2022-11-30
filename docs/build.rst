@@ -92,7 +92,7 @@ Now to build the image:
 
 .. code-block:: bash
 
-  docker build . -t sdap/solr:${NEXUS_VERSION}
+  docker build . -t sdap/solr-cloud:${NEXUS_VERSION}
 
 Build the Solr Initialization Image
 -------
