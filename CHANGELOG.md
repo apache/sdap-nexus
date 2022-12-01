@@ -60,6 +60,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Fixed matchup insitu query loading on import; loads when needed instead
 - SDAP-406: Fixed `/timeSeriesSpark`comparison stats bug
 - Fixed excessive memory usage by `/cdmssubset`
+- Made `platforms` param optional in `/cdmssubset`, and removed int requirement
+- Updated OpenAPI specification for `/cdmssubset` to accurately reflect `platforms` and `parameter` field options.
 ### Security
 
 
