@@ -25,6 +25,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - SDAP-407: Added depth to `/domsresults` endpoint
 - Added documentation for building SDAP docker images
   - Prepared documentation for v1.0.0 release.
+- Added missing ASF headers to all .py files in this repository.
 ### Changed
 - SDAP-390: Changed `/doms` to `/cdms` and `doms_reader.py` to `cdms_reader.py`
 - domslist endpoint points to AWS insitu instead of doms insitu
