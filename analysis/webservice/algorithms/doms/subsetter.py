@@ -119,9 +119,6 @@ class DomsResultsRetrievalHandler(BaseDomsHandler.BaseDomsQueryCalcHandler):
             matchup_ds_names = []
 
         parameter_s = request.get_argument('parameter', None)
-        if parameter_s is None and len(matchup_ds_names) > 0:
-            raise NexusProcessingException(
-                reason='Parameter must be provided for insitu subset.' % parameter_s, code=400)
 
         try:
             start_time = request.get_start_datetime()
@@ -159,13 +156,6 @@ class DomsResultsRetrievalHandler(BaseDomsHandler.BaseDomsQueryCalcHandler):
                 reason='Depth Min should be less than Depth Max', code=400)
 
         platforms = request.get_argument('platforms', None)
-        if platforms is not None:
-            try:
-                p_validation = platforms.split(',')
-                p_validation = [int(p) for p in p_validation]
-                del p_validation
-            except:
-                raise NexusProcessingException(reason='platforms must be a comma-delimited list of integers', code=400)
 
         return primary_ds_name, matchup_ds_names, parameter_s, start_time, end_time, \
                bounding_polygon, depth_min, depth_max, platforms
@@ -318,7 +308,7 @@ class SubsetResult(NexusResults):
                 cols.append(datetime.utcfromtimestamp(result['time']).strftime('%Y-%m-%dT%H:%M:%SZ'))
 
                 for var in data_variables:
-                    cols.append(result['data'][var])
+                    cols.append(result['data'].get(var))
                 if i == 0:
                     rows.append(','.join(headers))
                 rows.append(','.join(map(str, cols)))
