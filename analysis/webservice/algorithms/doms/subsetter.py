@@ -252,6 +252,7 @@ class DomsResultsRetrievalHandler(BaseDomsHandler.BaseDomsQueryCalcHandler):
                 data.append({
                     'latitude': result['latitude'],
                     'longitude': result['longitude'],
+                    'id': result['meta'],
                     'time': (datetime.strptime(result['time'], '%Y-%m-%dT%H:%M:%SZ') - datetime.fromtimestamp(0)).total_seconds(),
                     'data': data_points
                 })
@@ -295,7 +296,8 @@ class SubsetResult(NexusResults):
             headers = [
                 'longitude',
                 'latitude',
-                'time'
+                'time',
+                'id'
             ]
             data_variables = list(set([keys for result in results for keys in result['data'].keys()]))
             data_variables.sort()
@@ -306,6 +308,7 @@ class SubsetResult(NexusResults):
                 cols.append(result['longitude'])
                 cols.append(result['latitude'])
                 cols.append(datetime.utcfromtimestamp(result['time']).strftime('%Y-%m-%dT%H:%M:%SZ'))
+                cols.append(result['id'])
 
                 for var in data_variables:
                     cols.append(result['data'].get(var))
