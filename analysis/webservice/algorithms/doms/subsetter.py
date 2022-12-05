@@ -296,11 +296,14 @@ class SubsetResult(NexusResults):
             headers = [
                 'longitude',
                 'latitude',
-                'time',
-                'id'
+                'time'
             ]
             data_variables = list(set([keys for result in results for keys in result['data'].keys()]))
             data_variables.sort()
+
+            if 'id' in list(set([keys for result in results for keys in result.keys()])):
+                headers.append('id')
+
             headers.extend(data_variables)
             for i, result in enumerate(results):
                 cols = []
@@ -308,7 +311,7 @@ class SubsetResult(NexusResults):
                 cols.append(result['longitude'])
                 cols.append(result['latitude'])
                 cols.append(datetime.utcfromtimestamp(result['time']).strftime('%Y-%m-%dT%H:%M:%SZ'))
-                cols.append(result['id'])
+                cols.append(result.get('id'))
 
                 for var in data_variables:
                     cols.append(result['data'].get(var))
