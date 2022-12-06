@@ -84,7 +84,14 @@ def compare_page(args, start) -> Tuple[List, List, List, int]:
     statement = cassandra_session.prepare("SELECT tile_id FROM %s where tile_id=?" % cassandra_table)
 
     logger.debug('Starting Cassandra query')
-    results = cassandra.concurrent.execute_concurrent_with_args(cassandra_session, statement, [(uuid.UUID(str(id)),) for id in ids])
+    results = cassandra.concurrent.execute_concurrent_with_args(
+        cassandra_session,
+        statement,
+        [(uuid.UUID(str(id)),) for id in ids],
+        concurrency=1000,
+        raise_on_first_error=False,
+        results_generator=True
+    )
 
     failed = []
     present = []
@@ -106,6 +113,13 @@ def compare_page(args, start) -> Tuple[List, List, List, int]:
             ids.remove(id)
         except:
             extra.append(id)
+
+    logger.debug('Page stats: \n' + json.dumps({
+        'missing': len(ids),
+        'extra': len(extra),
+        'failed': len(failed),
+        'total_checked': len(docs)
+    }, indent=4))
 
     return ids, extra, failed, len(docs)
 
