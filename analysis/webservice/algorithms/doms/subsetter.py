@@ -311,7 +311,9 @@ class SubsetResult(NexusResults):
                 cols.append(result['longitude'])
                 cols.append(result['latitude'])
                 cols.append(datetime.utcfromtimestamp(result['time']).strftime('%Y-%m-%dT%H:%M:%SZ'))
-                cols.append(result.get('id'))
+
+                if 'id' in headers:
+                    cols.append(result.get('id'))
 
                 for var in data_variables:
                     cols.append(result['data'].get(var))
