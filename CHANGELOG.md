@@ -25,6 +25,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - SDAP-407: Added depth to `/domsresults` endpoint
 - Added documentation for building SDAP docker images
   - Prepared documentation for v1.0.0 release.
+- CDMS-122: Added new `ZarrProxy` to access Zarr-formatted data stored in AWS S3
+  - Currently only supports single variable & gridded data and the `/matchup_spark` endpoint
+  - Included unit tests
 ### Changed
 - SDAP-390: Changed `/doms` to `/cdms` and `doms_reader.py` to `cdms_reader.py`
 - domslist endpoint points to AWS insitu instead of doms insitu

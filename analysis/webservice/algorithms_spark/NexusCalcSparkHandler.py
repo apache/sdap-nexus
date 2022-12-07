@@ -250,10 +250,15 @@ class NexusCalcSparkHandler(NexusCalcHandler):
             # t1 = time.time()
             # print 'NEXUS call start at time %f' % t1
             # sys.stdout.flush()
-            nexus_tiles = list(tile_service.fetch_data_for_tiles(*tiles))
-            nexus_tiles = list(tile_service.mask_tiles_to_bbox(min_lat, max_lat,
-                                                               min_lon, max_lon,
-                                                               nexus_tiles))
+            if not tile_service.supports_direct_bounds_to_tile():
+                nexus_tiles = list(tile_service.fetch_data_for_tiles(*tiles))
+                nexus_tiles = list(tile_service.mask_tiles_to_bbox(min_lat, max_lat,
+                                                                   min_lon, max_lon,
+                                                                   nexus_tiles))
+            else:
+                nexus_tiles = list(tile_service.get_nexus_data_for_bounds(min_lat, min_lon,
+                                                                          max_lat, max_lon,
+                                                                          start_time, end_time))
             # t2 = time.time()
             # print 'NEXUS call end at time %f' % t2
             # print 'Seconds in NEXUS call: ', t2-t1

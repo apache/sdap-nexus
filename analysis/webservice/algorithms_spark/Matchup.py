@@ -226,18 +226,26 @@ class Matchup(NexusCalcSparkHandler):
         depth_min, depth_max, time_tolerance, radius_tolerance, \
         platforms, match_once, result_size_limit = self.parse_arguments(request)
 
+        if self._get_tile_service().supports_direct_bounds_to_tile():
+            self._get_tile_service().get_datastore().open_dataset(primary_ds_name)
+
         with ResultsStorage(self.config) as resultsStorage:
 
             execution_id = str(resultsStorage.insertExecution(None, start, None, None))
 
         self.log.debug("Querying for tiles in search domain")
         # Get tile ids in box
-        tile_ids = [tile.tile_id for tile in
-                    self._get_tile_service().find_tiles_in_polygon(bounding_polygon, primary_ds_name,
-                                                             start_seconds_from_epoch, end_seconds_from_epoch,
-                                                             fetch_data=False, fl='id',
-                                                             sort=['tile_min_time_dt asc', 'tile_min_lon asc',
-                                                                   'tile_min_lat asc'], rows=5000)]
+        if not self._get_tile_service().supports_direct_bounds_to_tile():
+            tile_ids = [tile.tile_id for tile in
+                        self._get_tile_service().find_tiles_in_polygon(bounding_polygon, primary_ds_name,
+                                                                 start_seconds_from_epoch, end_seconds_from_epoch,
+                                                                 fetch_data=False, fl='id',
+                                                                 sort=['tile_min_time_dt asc', 'tile_min_lon asc',
+                                                                       'tile_min_lat asc'], rows=5000)]
+        else:
+            bb = bounding_polygon.bounds
+
+            tile_ids = [self._get_tile_service().bounds_to_direct_tile_id(bb[1], bb[0], bb[3], bb[2], start_time, end_time)]
 
         self.log.info('Found %s tile_ids', len(tile_ids))
         # Call spark_matchup
@@ -426,7 +434,10 @@ class DomsPoint(object):
         point.longitude = nexus_point.longitude.item()
         point.latitude = nexus_point.latitude.item()
 
-        point.time = datetime.utcfromtimestamp(nexus_point.time).strftime('%Y-%m-%dT%H:%M:%SZ')
+        if not isinstance(nexus_point.time, np.datetime64):
+            point.time = datetime.utcfromtimestamp(nexus_point.time).strftime('%Y-%m-%dT%H:%M:%SZ')
+        else:
+            point.time = np.datetime_as_string(np.array([nexus_point.time]), unit='s', timezone='UTC')[0]
 
         try:
             point.depth = nexus_point.depth
@@ -737,9 +748,21 @@ def match_satellite_to_insitu(tile_ids, primary_b, secondary_b, parameter_b, tt_
     tile_service = tile_service_factory()
 
     # Determine the spatial temporal extents of this partition of tiles
-    tiles_bbox = tile_service.get_bounding_box(tile_ids)
-    tiles_min_time = tile_service.get_min_time(tile_ids)
-    tiles_max_time = tile_service.get_max_time(tile_ids)
+    if not tile_service.supports_direct_bounds_to_tile():
+        tiles_bbox = tile_service.get_bounding_box(tile_ids)
+        tiles_min_time = tile_service.get_min_time(tile_ids)
+        tiles_max_time = tile_service.get_max_time(tile_ids)
+    else:
+        from dateutil import parser
+        from nexustiles.dao.ZarrProxy import ZarrProxy
+
+        parts = ZarrProxy.parse_tile_id_to_bounds(tile_ids[0])
+
+        tile_service.get_datastore().open_dataset(primary_b.value)
+
+        tiles_bbox = box(parts['min_lon'], parts['min_lat'], parts['max_lon'], parts['max_lat'])
+        tiles_min_time = int((parser.parse(parts['start_time']) - EPOCH).total_seconds())
+        tiles_max_time = int((parser.parse(parts['end_time']) - EPOCH).total_seconds())
 
     # Increase spatial extents by the radius tolerance
     matchup_min_lon, matchup_min_lat = add_meters_to_lon_lat(tiles_bbox.bounds[0], tiles_bbox.bounds[1],
@@ -801,15 +824,24 @@ def match_satellite_to_insitu(tile_ids, primary_b, secondary_b, parameter_b, tt_
         polygon = Polygon(
             [(west, south), (east, south), (east, north), (west, north), (west, south)])
 
-        matchup_tiles = tile_service.find_tiles_in_polygon(
-            bounding_polygon=polygon,
-            ds=secondary_b.value,
-            start_time=matchup_min_time,
-            end_time=matchup_max_time,
-            fetch_data=True,
-            sort=['tile_min_time_dt asc', 'tile_min_lon asc', 'tile_min_lat asc'],
-            rows=5000
-        )
+        if not tile_service.supports_direct_bounds_to_tile():
+            matchup_tiles = tile_service.find_tiles_in_polygon(
+                bounding_polygon=polygon,
+                ds=secondary_b.value,
+                start_time=matchup_min_time,
+                end_time=matchup_max_time,
+                fetch_data=True,
+                sort=['tile_min_time_dt asc', 'tile_min_lon asc', 'tile_min_lat asc'],
+                rows=5000
+            )
+        else:
+            matchup_tiles = tile_service.get_nexus_data_for_bounds(matchup_min_lat, matchup_min_lon,
+                                                                   matchup_max_lat, matchup_max_lon,
+                                                                   matchup_min_time, matchup_max_time)
+
+            tile_ids = [tile_service.bounds_to_direct_tile_id(matchup_min_lat, matchup_min_lon,
+                                                                   matchup_max_lat, matchup_max_lon,
+                                                                   matchup_min_time, matchup_max_time)]
 
         # Convert Tile IDS to tiles and convert to UTM lat/lon projection.
         matchup_points = []
@@ -848,12 +880,16 @@ def match_tile_to_point_generator(tile_service, tile_id, m_tree, edge_results, s
                                   search_parameter, radius_tolerance, aeqd_proj):
     from nexustiles.model.nexusmodel import NexusPoint
     from webservice.algorithms_spark.Matchup import DomsPoint  # Must import DomsPoint or Spark complains
+    from nexustiles.dao import ZarrProxy
 
     # Load tile
     try:
         the_time = datetime.now()
-        tile = tile_service.mask_tiles_to_polygon(wkt.loads(search_domain_bounding_wkt),
-                                                  tile_service.find_tile_by_id(tile_id))[0]
+        if not tile_service.supports_direct_bounds_to_tile():
+            tile = tile_service.mask_tiles_to_polygon(wkt.loads(search_domain_bounding_wkt),
+                                                      tile_service.find_tile_by_id(tile_id))[0]
+        else:
+            tile = tile_service.fetch_direct_by_id(tile_id)[0].as_model_tile()
         print("%s Time to load tile %s" % (str(datetime.now() - the_time), tile_id))
     except IndexError:
         # This should only happen if all measurements in a tile become masked after applying the bounding polygon
@@ -863,6 +899,7 @@ def match_tile_to_point_generator(tile_service, tile_id, m_tree, edge_results, s
     # Convert valid tile lat,lon tuples to UTM tuples
     the_time = datetime.now()
     # Get list of indices of valid values
+
     valid_indices = tile.get_indices()
     primary_points = np.array(
         [aeqd_proj(tile.longitudes[aslice[2]], tile.latitudes[aslice[1]]) for
@@ -896,3 +933,205 @@ def match_tile_to_point_generator(tile_service, tile_id, m_tree, edge_results, s
             for m_point_index in point_matches:
                 m_doms_point = DomsPoint.from_edge_point(edge_results[m_point_index])
                 yield p_doms_point, m_doms_point
+
+
+def mock_query_edge(dataset, variable, startTime, endTime, bbox, platform, depth_min, depth_max, itemsPerPage=1000,
+               startIndex=0, stats=True, session=None):
+    mock_response = True
+
+    if mock_response:
+        return{
+"total": 2,
+	"results": [
+		{
+			"depth": -99999.0,
+			"latitude": 29.87,
+			"longitude": -79.74,
+			"meta": "https://rda.ucar.edu/php/icoadsuid.php?uid=ORQ2YD",
+			"platform": {
+				"type": "7",
+				"code": "42",
+				"id": "13871"
+			},
+			"time": "2018-05-21T18:49:48Z",
+			"provider": "NCAR",
+			"project": "ICOADS Release 3.0",
+			"platform_code": "42",
+			"air_pressure": None,
+			"air_pressure_quality": None,
+			"air_temperature": None,
+			"air_temperature_quality": None,
+			"dew_point_temperature": None,
+			"dew_point_temperature_quality": None,
+			"downwelling_longwave_flux_in_air": None,
+			"downwelling_longwave_flux_in_air_quality": None,
+			"downwelling_longwave_radiance_in_air": None,
+			"downwelling_longwave_radiance_in_air_quality": None,
+			"downwelling_shortwave_flux_in_air": None,
+			"downwelling_shortwave_flux_in_air_quality": None,
+			"mass_concentration_of_chlorophyll_in_sea_water": None,
+			"mass_concentration_of_chlorophyll_in_sea_water_quality": None,
+			"rainfall_rate": None,
+			"rainfall_rate_quality": None,
+			"relative_humidity": None,
+			"relative_humidity_quality": None,
+			"sea_surface_salinity": None,
+			"sea_surface_salinity_quality": None,
+			"sea_surface_skin_temperature": None,
+			"sea_surface_skin_temperature_quality": None,
+			"sea_surface_subskin_temperature": None,
+			"sea_surface_subskin_temperature_quality": None,
+			"sea_surface_temperature": None,
+			"sea_surface_temperature_quality": None,
+			"sea_water_density": None,
+			"sea_water_density_quality": None,
+			"sea_water_electrical_conductivity": None,
+			"sea_water_electrical_conductivity_quality": None,
+			"sea_water_practical_salinity": None,
+			"sea_water_practical_salinity_quality": None,
+			"sea_water_salinity": None,
+			"sea_water_salinity_quality": None,
+			"sea_water_temperature": 26.1,
+			"sea_water_temperature_quality": 1,
+			"surface_downwelling_photosynthetic_photon_flux_in_air": None,
+			"surface_downwelling_photosynthetic_photon_flux_in_air_quality": None,
+			"wet_bulb_temperature": None,
+			"wet_bulb_temperature_quality": None,
+			"wind_speed": None,
+			"wind_speed_quality": None,
+			"wind_from_direction": None,
+			"wind_from_direction_quality": None,
+			"wind_to_direction": None,
+			"wind_to_direction_quality": None,
+			"eastward_wind": None,
+			"northward_wind": None,
+			"wind_component_quality": None,
+			"device": None,
+			"job_id": "84c9ca0c-207d-4e78-aa1d-4eeaec87d2a5"
+		},
+		{
+			"depth": 0.0,
+			"latitude": 29.87,
+			"longitude": -79.74,
+			"meta": "https://rda.ucar.edu/php/icoadsuid.php?uid=ORQ2YD",
+			"platform": {
+				"type": "7",
+				"code": "42",
+				"id": "13871"
+			},
+			"time": "2018-05-21T18:49:48Z",
+			"provider": "NCAR",
+			"project": "ICOADS Release 3.0",
+			"platform_code": "42",
+			"air_pressure": 1020.2,
+			"air_pressure_quality": 1,
+			"air_temperature": None,
+			"air_temperature_quality": None,
+			"dew_point_temperature": None,
+			"dew_point_temperature_quality": None,
+			"downwelling_longwave_flux_in_air": None,
+			"downwelling_longwave_flux_in_air_quality": None,
+			"downwelling_longwave_radiance_in_air": None,
+			"downwelling_longwave_radiance_in_air_quality": None,
+			"downwelling_shortwave_flux_in_air": None,
+			"downwelling_shortwave_flux_in_air_quality": None,
+			"mass_concentration_of_chlorophyll_in_sea_water": None,
+			"mass_concentration_of_chlorophyll_in_sea_water_quality": None,
+			"rainfall_rate": None,
+			"rainfall_rate_quality": None,
+			"relative_humidity": None,
+			"relative_humidity_quality": None,
+			"sea_surface_salinity": None,
+			"sea_surface_salinity_quality": None,
+			"sea_surface_skin_temperature": None,
+			"sea_surface_skin_temperature_quality": None,
+			"sea_surface_subskin_temperature": None,
+			"sea_surface_subskin_temperature_quality": None,
+			"sea_surface_temperature": None,
+			"sea_surface_temperature_quality": None,
+			"sea_water_density": None,
+			"sea_water_density_quality": None,
+			"sea_water_electrical_conductivity": None,
+			"sea_water_electrical_conductivity_quality": None,
+			"sea_water_practical_salinity": None,
+			"sea_water_practical_salinity_quality": None,
+			"sea_water_salinity": None,
+			"sea_water_salinity_quality": None,
+			"sea_water_temperature": None,
+			"sea_water_temperature_quality": None,
+			"surface_downwelling_photosynthetic_photon_flux_in_air": None,
+			"surface_downwelling_photosynthetic_photon_flux_in_air_quality": None,
+			"wet_bulb_temperature": None,
+			"wet_bulb_temperature_quality": None,
+			"wind_speed": None,
+			"wind_speed_quality": None,
+			"wind_from_direction": None,
+			"wind_from_direction_quality": None,
+			"wind_to_direction": None,
+			"wind_to_direction_quality": None,
+			"eastward_wind": None,
+			"northward_wind": None,
+			"wind_component_quality": None,
+			"device": None,
+			"job_id": "84c9ca0c-207d-4e78-aa1d-4eeaec87d2a5"
+		}
+	],
+	"last": "keep browsing next till there is nothing left",
+	"first": "http://doms.jpl.nasa.gov/insitu/1.0/query_data_doms_custom_pagination?itemsPerPage=1000&startTime=2018-05-10T21:00:00Z&endTime=2018-05-29T21:00:00Z&bbox=-100.0,20.0,-79.0,29.884000009000008&minDepth=-20.0&maxDepth=10.0&provider=NCAR&project=ICOADS Release 3.0&platform=42",
+	"prev": "http://doms.jpl.nasa.gov/insitu/1.0/query_data_doms_custom_pagination?itemsPerPage=1000&startTime=2018-05-10T21:00:00Z&endTime=2018-05-29T21:00:00Z&bbox=-100.0,20.0,-79.0,29.884000009000008&minDepth=-20.0&maxDepth=10.0&provider=NCAR&project=ICOADS Release 3.0&platform=42&markerTime=2018-05-21T18:49:48Z",
+	"next": "http://doms.jpl.nasa.gov/insitu/1.0/query_data_doms_custom_pagination?itemsPerPage=1000&startTime=2018-05-10T21:00:00Z&endTime=2018-05-29T21:00:00Z&bbox=-100.0,20.0,-79.0,29.884000009000008&minDepth=-20.0&maxDepth=10.0&provider=NCAR&project=ICOADS Release 3.0&platform=42&markerTime=2018-05-21T18:49:48Z&markerPlatform=3e7554e05503a345ffb806810d4b04fc0ff7e9c631d865ccbfbbce24c2e7817f"
+        }
+
+    try:
+        startTime = datetime.utcfromtimestamp(startTime).strftime('%Y-%m-%dT%H:%M:%SZ')
+    except TypeError:
+        # Assume we were passed a properly formatted string
+        pass
+
+    try:
+        endTime = datetime.utcfromtimestamp(endTime).strftime('%Y-%m-%dT%H:%M:%SZ')
+    except TypeError:
+        # Assume we were passed a properly formatted string
+        pass
+
+    provider = edge_endpoints.get_provider_name(dataset)
+
+    params = {
+        "itemsPerPage": itemsPerPage,
+        "startTime": startTime,
+        "endTime": endTime,
+        "bbox": bbox,
+        "minDepth": depth_min,
+        "maxDepth": depth_max,
+        "provider": provider,
+        "project": dataset,
+        "platform": platform,
+    }
+
+    if variable is not None:
+        params["variable"] = variable
+
+    edge_response = {}
+
+    # Get all edge results
+    next_page_url = edge_endpoints.getEndpoint()
+    while next_page_url is not None and next_page_url != 'NA':
+        logging.info(f'Edge request {next_page_url}')
+        if session is not None:
+            edge_page_request = session.get(next_page_url, params=params)
+        else:
+            edge_page_request = requests.get(next_page_url, params=params)
+
+        edge_page_request.raise_for_status()
+
+        edge_page_response = json.loads(edge_page_request.text)
+
+        if not edge_response:
+            edge_response = edge_page_response
+        else:
+            edge_response['results'].extend(edge_page_response['results'])
+
+        next_page_url = edge_page_response.get('next', None)
+        params = {}  # Remove params, they are already included in above URL
+
+    return edge_response

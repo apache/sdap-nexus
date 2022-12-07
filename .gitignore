@@ -6,3 +6,6 @@
 analysis/webservice/algorithms/doms/domsconfig.ini
 data-access/nexustiles/config/datastores.ini
 venv/
+
+data-access/tests/data/zarr_test_data/*
+
