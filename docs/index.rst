@@ -11,8 +11,8 @@ Welcome to incubator-sdap-nexus's documentation!
 
    intro
    quickstart
-   ningester
+   build
    dockerimages
 
 
-Check out the :ref:`quickstart`.
+Check out the :ref:`quickstart guide<quickstart>`.
