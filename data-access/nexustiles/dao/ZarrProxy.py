@@ -13,30 +13,31 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import boto3
-
-import xarray as xr
-import s3fs
-import numpy as np
-
-from dask.diagnostics import ProgressBar
-
 import logging
+
+import boto3
+import numpy as np
+import s3fs
+import xarray as xr
+from dask.diagnostics import ProgressBar
+from webservice.webmodel import NexusProcessingException
+from datetime import datetime
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
-h = logging.StreamHandler()
-h.setLevel(logging.DEBUG)
-h.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
+# h = logging.StreamHandler()
+# h.setLevel(logging.DEBUG)
+# h.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
+#
+# logger.addHandler(h)
 
-logger.addHandler(h)
 
 class NexusDataTile(object):
     __data = None
     tile_id = None
 
-    def __init__(self, data, _tile_id):   #change to data (dataset subset w/ temporal range), tid, coords
+    def __init__(self, data, _tile_id, var_name, coords, lazy=False):   #change to data (dataset subset w/ temporal range), tid, coords
         import re
 
         if self.__data is None:
@@ -45,8 +46,12 @@ class NexusDataTile(object):
         if self.tile_id is None:
             self.tile_id = _tile_id
 
-        if not re.search("^MUR_[0-9-T :.+]*_[0-9-T :.+]*_[0-9.-]*_[0-9.-]*_[0-9.-]*_[0-9.-]*", self.tile_id):
-            raise ValueError("Bad tile id")
+        if not re.search("^.*_[0-9-T :.+]*_[0-9-T :.+]*_[0-9.-]*_[0-9.-]*_[0-9.-]*_[0-9.-]*$", self.tile_id):
+            raise NexusProcessingException(reason="Bad tile id", code=500)
+
+        self.__vars = var_name
+
+        self.__coords = coords
 
         self.__lat, self.__lon, self.__time, self.__vdata, self.__meta, self.__mv = self._get_data()
 
@@ -69,13 +74,9 @@ class NexusDataTile(object):
         tile.meta_data = self.__meta
         tile.tile_id = self.tile_id
 
-        tile.dataset = self.__meta['main']['id']
-        tile.dataset_id = self.__meta['main']['uuid']
-
-        try:
-            tile.granule = self.__data['main']['granules']
-        except:
-            pass
+        tile.dataset = self.__meta['main']['id'] if 'id' in self.__meta['main'] else None
+        tile.dataset_id = self.__meta['main']['uuid'] if 'uuid' in self.__meta['main'] else None
+        tile.granule = self.__meta['main']['granules'] if 'granules' in self.__meta['main'] else None
 
         variables = []
 
@@ -94,27 +95,37 @@ class NexusDataTile(object):
     def _get_data(self):
         isMultiVar = False
 
-        metadata = {'main': self.__data.attrs, 'analysed_sst': self.__data.analysed_sst.attrs,
-                    'lat': self.__data.lat.attrs, 'lon': self.__data.lon.attrs, 'time': self.__data.time.attrs}
+        metadata = {'main': self.__data.attrs, 'lat': self.__data[self.__coords['latitude']].attrs,
+                    'lon': self.__data[self.__coords['longitude']].attrs, 'time': self.__data[self.__coords['time']].attrs}
+
+        for var in self.__vars:
+            metadata[var['name_s']] = self.__data[var['name_s']].attrs
 
         tile_type = 'grid_tile'
 
-        if tile_type == 'grid_tile': #for now, assume gridded
-            latitude_data = np.ma.masked_invalid(self.__data.lat)
-            longitude_data = np.ma.masked_invalid(self.__data.lon)
+        if not isMultiVar:
+            self.__vars = self.__vars[0]
 
-            with ProgressBar():
-              grid_tile_data = np.ma.masked_invalid(self.__data.analysed_sst)  # POC for MUR data
+        if tile_type == 'grid_tile': #for now, assume gridded
+            latitude_data = np.ma.masked_invalid(self.__data[self.__coords['latitude']])
+            longitude_data = np.ma.masked_invalid(self.__data[self.__coords['longitude']])
+            grid_tile_data = np.ma.masked_invalid(self.__data[self.__vars['name_s']])
         else:
             raise NotImplementedError("Only supports grid_tile")
 
         if len(grid_tile_data.shape) == 2:
             grid_tile_data = grid_tile_data[np.newaxis, :]
 
-        return latitude_data, longitude_data, self.__data.time.values, grid_tile_data, metadata, isMultiVar
+        return latitude_data, longitude_data, self.__data[self.__coords['time']].values, grid_tile_data, metadata, isMultiVar
 
 class ZarrProxy(object):
-    def __init__(self, config, test_fs = None):
+    mock_solr_for_testing = True
+
+    def __init__(self, config, test_fs = None, open_direct=False, **kwargs):
+        from .SolrProxy import SolrProxy
+
+        import io, configparser
+
         self.config = config
         self.__s3_bucket_name = config.get("s3", "bucket")
         self.__s3_region = config.get("s3", "region")
@@ -123,22 +134,97 @@ class ZarrProxy(object):
         self.__s3 = boto3.resource('s3')
         self.__nexus_tile = None
 
-        logger.info('Opening Zarr proxy')
+        self.__coords = {
+            "latitude": "lat",
+            "longitude": "lon",
+            "time": "time"
+        }
 
-        if self.__s3_public:
-            store = f"https://{self.__s3_bucket_name}.s3.{self.__s3_region}.amazonaws.com/{self.config.get('s3', 'key')}"
+        solr_config_txt = f"""
+        [solr]
+        host={config.get("solr", "host", fallback='http://localhost:8983')}
+        core=nexusdatasets
+        """
+
+        buf = io.StringIO(solr_config_txt)
+        solr_config = configparser.ConfigParser()
+        solr_config.read_file(buf)
+
+        if not ZarrProxy.mock_solr_for_testing:
+            self._metadata_store = SolrProxy(solr_config)
         else:
-            s3path = f"s3://{self.__s3_bucket_name}/{self.config.get('s3', 'key')}/"
-            s3 = s3fs.S3FileSystem(self.__s3_public, profile=self.__s3_profile) if test_fs is None else test_fs
+            import mock
+
+            mock_solr = mock.MagicMock()
+            mock_solr.do_query_raw = ZarrProxy.mock_query
+
+            self._metadata_store = mock_solr
+
+
+        if open_direct:
+            logger.info('Opening Zarr proxy')
+
+            if self.__s3_public:
+                store = f"https://{self.__s3_bucket_name}.s3.{self.__s3_region}.amazonaws.com/{self.config.get('s3', 'key')}"
+            else:
+                s3path = f"s3://{self.__s3_bucket_name}/{self.config.get('s3', 'key')}/"
+                s3 = s3fs.S3FileSystem(self.__s3_public, profile=self.__s3_profile) if test_fs is None else test_fs
+                store = s3fs.S3Map(root=s3path, s3=s3, check=False)
+
+            zarr_data = xr.open_zarr(store=store, consolidated=True, mask_and_scale=False)
+            zarr_data.analysed_sst.attrs['_FillValue'] = -32768
+            zarr_data = xr.decode_cf(zarr_data, mask_and_scale=True)
+
+            self.__variables = [{"name_s": "analysed_sst", "fill_d": -32768}]
+
+            logger.info('Successfully opened Zarr proxy')
+
+            self.__zarr_data = zarr_data
+
+    def _get_ds_info(self, ds):
+        store = self._metadata_store
+
+        query_response = store.do_query_raw((f'id:{ds}'))
+
+        if not query_response['responseHeader']['status'] == 0:
+            raise NexusProcessingException(reason="bad solr response")
+
+        if not query_response['response']['numFound'] == 1:
+            raise  NexusProcessingException(
+                reason=f"wrong number of datasets returned from solr: {query_response['response']['numFound']}",
+                code=400 if query_response['response']['numFound'] == 0 else 500
+            )
+
+        ds_info = query_response['response']['docs'][0]
+
+        logger.debug(f'S3 URI: {ds_info["s3_uri_s"]}')
+
+        return ds_info['variables'], ds_info['public_b'], ds_info['s3_uri_s'], ds_info['coordinate_vars']
+
+    def open_dataset(self, ds, test_fs = None):
+        variables, public, path, coords = self._get_ds_info(ds)
+
+        logger.info(f'Opening Zarr proxy for {ds}')
+
+        if public:
+            store = path
+        else:
+            s3path = path
+            s3 = s3fs.S3FileSystem(public, profile=self.__s3_profile) if test_fs is None else test_fs
             store = s3fs.S3Map(root=s3path, s3=s3, check=False)
 
         zarr_data = xr.open_zarr(store=store, consolidated=True, mask_and_scale=False)
-        zarr_data.analysed_sst.attrs['_FillValue'] = -32768
+
+        for variable in variables:
+            zarr_data[variable['name_s']].attrs['_FillValue'] = variable['fill_d']
+
         zarr_data = xr.decode_cf(zarr_data, mask_and_scale=True)
 
-        logger.info('Successfully opened Zarr proxy')
+        logger.info(f'Successfully opened Zarr proxy for {ds}')
 
         self.__zarr_data = zarr_data
+        self.__variables = variables
+        self.__coords = coords
 
     #Interpreting tile id's as: MUR_<start_time>_<end_tim>_<lat_min>_<lat_max>_<lon_min>_<lon_max>
     def fetch_nexus_tiles(self, *tile_ids):
@@ -147,20 +233,12 @@ class ZarrProxy(object):
         if not isinstance(tile_ids[0], str):
             tile_ids = [str(tile.tile_id) for tile in tile_ids]
 
+        logger.debug(f'Starting fetch for {len(tile_ids)} tiles')
+
         res = []
 
         for tid in tile_ids:
-            c = re.split("_", tid)
-
-            parts = {
-                'id': tid,
-                'start_time': c[1],
-                'end_time': c[2],
-                'min_lat': float(c[3]),
-                'max_lat': float(c[4]),
-                'min_lon': float(c[5]),
-                'max_lon': float(c[6])
-            }
+            parts = ZarrProxy.parse_tile_id_to_bounds(tid)
 
             tz_regex = "\\+00:00$"
 
@@ -176,10 +254,29 @@ class ZarrProxy(object):
             lats = slice(parts['min_lat'], parts['max_lat'])
             lons = slice(parts['min_lon'], parts['max_lon'])
 
-            nexus_tile = NexusDataTile(self.__zarr_data.sel(time=times, lat=lats, lon=lons), parts['id'])
+            idx = {
+                self.__coords['latitude']: lats,
+                self.__coords['longitude']: lons,
+                self.__coords['time']: times,
+            }
+
+            nexus_tile = NexusDataTile(self.__zarr_data.sel(idx), parts['id'], self.__variables, self.__coords)
             res.append(nexus_tile)
 
         return res
+
+    def find_days_in_range_asc(self, min_time, max_time):
+        max_time = datetime.utcfromtimestamp(max_time).isoformat()
+        min_time = datetime.utcfromtimestamp(min_time).isoformat()
+
+        times = slice(min_time, max_time)
+        time_subset = self.__zarr_data.sel(time=times)['time'].data
+
+        time_subset = time_subset.astype(datetime)/1000000000
+
+        # return sorted([datetime.utcfromtimestamp(t).isoformat() for t in time_subset])
+        return sorted(time_subset.tolist())
+
 
     @staticmethod
     def parse_tile_id_to_bounds(tile_id):
@@ -189,12 +286,28 @@ class ZarrProxy(object):
 
         parts = {
             'id': tile_id,
-            'start_time': c[1],
-            'end_time': c[2],
-            'min_lat': float(c[3]),
-            'max_lat': float(c[4]),
-            'min_lon': float(c[5]),
-            'max_lon': float(c[6])
+            'start_time': c[-6],
+            'end_time': c[-5],
+            'min_lat': float(c[-4]),
+            'max_lat': float(c[-3]),
+            'min_lon': float(c[-2]),
+            'max_lon': float(c[-1])
         }
 
         return parts
+
+    @staticmethod
+    def mock_query(ds):
+        import json
+
+        if ds == "id:MUR25-JPL-L4-GLOB-v04.2":
+            return json.load(open("/Users/rileykk/repo/incubator-sdap-nexus/data-access/tests/mock_mur_meta.json"))
+        elif ds == "id:OISSS_L4_multimission_7day_v1":
+            return json.load(open("/Users/rileykk/repo/incubator-sdap-nexus/data-access/tests/mock_oisss_meta.json"))
+        elif ds == "id:JPL-L4-MRVA-CHLA-GLOB-v3.0":
+            return json.load(open("/Users/rileykk/repo/incubator-sdap-nexus/data-access/tests/mock_chla_meta.json"))
+        elif ds == "id:SMAP_JPL_L3_SSS_CAP_8DAY-RUNNINGMEAN_V5":
+            return json.load(open("/Users/rileykk/repo/incubator-sdap-nexus/data-access/tests/mock_smap_meta.json"))
+        else:
+            raise ValueError("unsupported dataset")
+

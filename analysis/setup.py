@@ -17,13 +17,18 @@
 import setuptools
 from subprocess import check_call, CalledProcessError
 
-__version__ = '1.6'
+with open('../VERSION.txt', 'r') as f:
+    __version__ = f.read()
 
 
 try:
-    check_call(['conda', 'install', '-y', '-c', 'conda-forge', '--file', 'conda-requirements.txt'])
+    check_call(['mamba', 'install', '-y', '-c', 'conda-forge', '--file', 'conda-requirements.txt'])
 except (CalledProcessError, IOError) as e:
-    raise EnvironmentError("Error installing conda packages", e)
+    print('Failed install with mamba; falling back to conda')
+    try:
+        check_call(['conda', 'install', '-y', '-c', 'conda-forge', '--file', 'conda-requirements.txt'])
+    except (CalledProcessError, IOError) as e:
+        raise EnvironmentError("Error installing conda packages", e)
 
 
 setuptools.setup(
@@ -50,8 +55,14 @@ setuptools.setup(
     #    'webservice.nexus_tornado.request.renderers'
     #],
     package_data={
-        'webservice': ['config/web.ini', 'config/algorithms.ini'],
-        'webservice.algorithms.doms': ['domsconfig.ini.default']
+        'webservice': [
+            'config/web.ini',
+            'config/algorithms.ini',
+            'apidocs/index.html',
+            'apidocs/openapi.yml',
+            'apidocs/dataset-populate.js'
+        ],
+        'webservice.algorithms.doms': ['domsconfig.ini.default'],
     },
     data_files=[
         ('static', ['static/index.html'])

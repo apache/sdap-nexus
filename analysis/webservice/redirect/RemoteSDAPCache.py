@@ -31,9 +31,9 @@ class RemoteSDAPCache:
                     outdated_at=datetime.now()+timedelta(seconds=max_age)
                 )
             else:
-                raise CollectionNotFound("url %s was not reachable, responded with status %s", list_url, r.status_code)
-        except requests.exceptions.ConnectTimeout as e:
-            raise CollectionNotFound("url %s was not reachable in %i s",  list_url, timeout)
+                raise CollectionNotFound(f"url {list_url} was not reachable, responded with status {r.status_code}")
+        except (requests.exceptions.ConnectTimeout, requests.exceptions.ReadTimeout) as e:
+            raise CollectionNotFound(f"url {list_url} was not reachable in {timeout} s")
 
     def get(self, url, short_name):
         stripped_url = url.strip('/')
@@ -44,5 +44,4 @@ class RemoteSDAPCache:
             if 'shortName' in collection and collection['shortName'] == short_name:
                 return collection
 
-        raise CollectionNotFound("collection %s has not been found in url %s", short_name, stripped_url)
-
+        raise CollectionNotFound(f"collection {short_name} has not been found in url {stripped_url}")

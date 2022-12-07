@@ -84,11 +84,20 @@ class NexusTileService(object):
         self._datastore = None
         self._metadatastore = None
 
+        self.current_ds = None
+
         self._config = configparser.RawConfigParser()
         self._config.read(NexusTileService._get_config_files('config/datastores.ini'))
 
         if config:
             self.override_config(config)
+
+        if not skipMetadatastore:
+            metadatastore = self._config.get("metadatastore", "store", fallback='solr')
+            if metadatastore == "solr":
+                self._metadatastore = SolrProxy.SolrProxy(self._config)
+            elif metadatastore == "elasticsearch":
+                self._metadatastore = ElasticsearchProxy.ElasticsearchProxy(self._config)
 
         if not skipDatastore:
             datastore = self._config.get("datastore", "store")
@@ -99,16 +108,12 @@ class NexusTileService(object):
             elif datastore == "dynamo":
                 self._datastore = DynamoProxy.DynamoProxy(self._config)
             elif datastore == "zarrS3":
-                self._datastore = ZarrProxy.ZarrProxy(self._config)
+                if not skipMetadatastore and metadatastore == "solr":
+                    self._datastore = ZarrProxy.ZarrProxy(self._config, metadata_store=self._metadatastore)
+                else:
+                    self._datastore = ZarrProxy.ZarrProxy(self._config)
             else:
                 raise ValueError("Error reading datastore from config file")
-
-        if not skipMetadatastore:
-            metadatastore = self._config.get("metadatastore", "store", fallback='solr')
-            if metadatastore == "solr":
-                self._metadatastore = SolrProxy.SolrProxy(self._config)
-            elif metadatastore == "elasticsearch":
-                self._metadatastore = ElasticsearchProxy.ElasticsearchProxy(self._config)
 
     def override_config(self, config):
         for section in config.sections():
@@ -134,7 +139,14 @@ class NexusTileService(object):
     def find_days_in_range_asc(self, min_lat, max_lat, min_lon, max_lon, dataset, start_time, end_time,
                                metrics_callback=None, **kwargs):
         start = datetime.now()
-        result = self._metadatastore.find_days_in_range_asc(min_lat, max_lat, min_lon, max_lon, dataset, start_time,
+        if self.supports_direct_bounds_to_tile():
+            if self.current_ds != dataset:
+                self._datastore.open_dataset(dataset)
+                self.current_ds = dataset
+
+            result = self._datastore.find_days_in_range_asc(start_time, end_time)
+        else:
+            result = self._metadatastore.find_days_in_range_asc(min_lat, max_lat, min_lon, max_lon, dataset, start_time,
                                                             end_time,
                                                             **kwargs)
         duration = (datetime.now() - start).total_seconds()
@@ -262,10 +274,41 @@ class NexusTileService(object):
 
     def get_tiles_bounded_by_box(self, min_lat, max_lat, min_lon, max_lon, ds=None, start_time=0, end_time=-1,
                                  **kwargs):
-        tiles = self.find_tiles_in_box(min_lat, max_lat, min_lon, max_lon, ds, start_time, end_time, **kwargs)
-        tiles = self.mask_tiles_to_bbox(min_lat, max_lat, min_lon, max_lon, tiles)
-        if 0 <= start_time <= end_time:
-            tiles = self.mask_tiles_to_time_range(start_time, end_time, tiles)
+        if self.supports_direct_bounds_to_tile():
+            if ds and ds != self.current_ds:
+                self._datastore.open_dataset(ds)
+                self.current_ds = ds
+
+            ISO = '%Y-%m-%dT%H:%M:%S%z'
+
+            start_time = datetime.utcfromtimestamp(start_time).strftime(ISO)
+            end_time = datetime.utcfromtimestamp(end_time).strftime(ISO)
+
+            if not 'split' in kwargs:
+                tiles = [t.as_model_tile() for t in self._datastore.fetch_nexus_tiles(
+                    self.bounds_to_direct_tile_id(min_lat, min_lon, max_lat, max_lon, start_time, end_time, ds)
+                 )]
+            else:
+                timestamps = kwargs['split']
+
+                tiles = []
+                tile_ids = []
+
+                for i in range(len(timestamps)):
+                    tile_ids.append(self.bounds_to_direct_tile_id(min_lat, min_lon, max_lat, max_lon, timestamps[i], timestamps[i], ds))
+
+                    #tiles.extend(
+                    #    [t.as_model_tile() for t in self._datastore.fetch_nexus_tiles(
+                    #        self.bounds_to_direct_tile_id(min_lat, min_lon, max_lat, max_lon, timestamps[i], timestamps[i], ds)
+                    #    )]
+                    #)
+
+                tiles.extend([t.as_model_tile() for t in self._datastore.fetch_nexus_tiles(*tile_ids)])
+        else:
+            tiles = self.find_tiles_in_box(min_lat, max_lat, min_lon, max_lon, ds, start_time, end_time, **kwargs)
+            tiles = self.mask_tiles_to_bbox(min_lat, max_lat, min_lon, max_lon, tiles)
+            if 0 <= start_time <= end_time:
+                tiles = self.mask_tiles_to_time_range(start_time, end_time, tiles)
 
         return tiles
 
@@ -478,13 +521,13 @@ class NexusTileService(object):
 
         return tiles
 
-    def bounds_to_direct_tile_id(self, min_lat, min_lon, max_lat, max_lon, start_time, end_time, dataset='MUR'):
+    def bounds_to_direct_tile_id(self, min_lat, min_lon, max_lat, max_lon, start_time, end_time, dataset='TILE'):
         return f"{dataset}_{start_time}_{end_time}_{min_lat}_{max_lat}_{min_lon}_{max_lon}"
 
     def fetch_direct_by_id(self, tid):
         return self._datastore.fetch_nexus_tiles(*[tid])
 
-    def get_nexus_data_for_bounds(self, min_lat, min_lon, max_lat, max_lon, start_time, end_time, dataset='MUR'):
+    def get_nexus_data_for_bounds(self, min_lat, min_lon, max_lat, max_lon, start_time, end_time, dataset='TILE'):
         """
         Directly fetch tile data that fits to the given bounds without having to query the metadata store first.
         Only works if the data store supports this (ie, ZarrProxy).
@@ -646,6 +689,9 @@ class NexusTileService(object):
             return True
         else:
             return False
+
+    def get_datastore(self):
+        return self._datastore
 
     @staticmethod
     def _get_config_files(filename):

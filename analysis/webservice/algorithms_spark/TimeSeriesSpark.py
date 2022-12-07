@@ -317,13 +317,17 @@ class TimeSeriesSparkHandlerImpl(NexusCalcSparkHandler):
                 xy[item[1]["ds"]].append(item[1]["mean"])
 
         slope, intercept, r_value, p_value, std_err = stats.linregress(xy[0], xy[1])
-        comparisonStats = {
-            "slope": slope,
-            "intercept": intercept,
-            "r": r_value,
-            "p": p_value,
-            "err": std_err
-        }
+
+        if any(np.isnan([slope, intercept, r_value, p_value, std_err])):
+            comparisonStats = {}
+        else:
+            comparisonStats = {
+                "slope": slope,
+                "intercept": intercept,
+                "r": r_value,
+                "p": p_value,
+                "err": std_err
+            }
 
         return comparisonStats
 
@@ -484,17 +488,30 @@ def calc_average_on_day(tile_service_factory, metrics_callback, normalize_dates,
                                             timestamps[0],
                                             timestamps[-1],
                                             rows=5000,
-                                            metrics_callback=metrics_callback)
+                                            metrics_callback=metrics_callback,
+                                            split=[
+                                                datetime.utcfromtimestamp(ts).strftime(ISO_8601) for ts in timestamps
+                                            ])
     
     calculation_start = datetime.now()
 
     tile_dict = {}
     for timeinseconds in timestamps:
-        tile_dict[timeinseconds] = []
+        tile_dict[float(timeinseconds)] = []
 
     for i in range(len(ds1_nexus_tiles)):
         tile = ds1_nexus_tiles[i]
-        tile_dict[tile.times[0]].append(i)
+
+        ts = tile.times[0]
+
+        if not (isinstance(ts, int) or isinstance(ts, np.int64)):
+            logger.info(f"Non iteger type of timestamp: {type(ts)}")
+            ts = np.datetime64(ts, 's').astype(int)
+            tile.times = [ts]
+
+        tile_dict[ts].append(i)
+
+    logger.info(f'filled: {tile_dict}')
 
     stats_arr = []
     for timeinseconds in timestamps:

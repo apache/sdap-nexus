@@ -1,0 +1,29 @@
+{
+  "responseHeader": {
+    "status": 0
+  },
+  "response": {
+    "numFound": 1,
+    "docs": [
+      {
+        "id": "MUR25-JPL-L4-GLOB-v04.2",
+        "latest_update_l": 1637629358,
+        "_version_": 1718445323844583426,
+        "dataset_s": "MUR25-JPL-L4-GLOB-v04.2",
+        "variables": [{
+            "name_s": "analysed_sst",
+            "fill_d": -32768
+        }],
+        "coordinate_vars": {
+          "latitude": "lat",
+          "longitude": "lon",
+          "time": "time"
+        },
+        "s3_uri_s": "s3://cdms-dev-zarr/MUR25-JPL-L4-GLOB-v04.2/",
+        "public_b": false,
+        "type_s": "gridded",
+        "chunk_shape": [30, 120, 240]
+      }
+    ]
+  }
+}

@@ -71,7 +71,7 @@ class HofMoellerCalculator(object):
             points_by_coord = itertools.groupby(data, key=lambda p: p.longitude)
 
         for coord, points_at_coord in points_by_coord:
-            values_at_coord = np.array([[p.data_val,
+            values_at_coord = np.array([[p.data_vals,
                                          np.cos(np.radians(p.latitude))]
                                         for p in points_at_coord])
             vals = np.nan_to_num(values_at_coord[:, 0])

@@ -1,23 +1,38 @@
 {
-  "totalResults": 3,
+  "total": 3,
   "results": [
     {
       "point": "Point(5.0 15.0)",
+      "longitude": 5.0,
+      "latitude": 15.0,
       "time": 1595954285,
       "sea_water_temperature": 10.0,
-      "id": 1234
+      "id": 1234,
+      "platform": {
+          "code": "30"
+      }
     },
     {
       "point": "Point(10.0 10.0)",
+      "longitude": 10.0,
+      "latitude": 10.0,
       "time": 1595954286,
       "sea_water_temperature": 20.0,
-      "id": 1235
+      "id": 1235,
+      "platform": {
+          "code": "30"
+      }
     },
     {
       "point": "Point(18.0 3.0)",
+      "longitude": 18.0,
+      "latitude": 3.0,
       "time": 1595954287,
       "sea_water_temperature": 30.0,
-      "id": 1236
+      "id": 1236,
+      "platform": {
+          "code": "30"
+      }
     }
   ]
 }

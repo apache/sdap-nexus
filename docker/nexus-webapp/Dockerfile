@@ -32,7 +32,8 @@ ENV  \
     SPARK_HOME=/opt/spark \
     PYSPARK_DRIVER_PYTHON=/opt/conda/bin/python3.8 \
     PYSPARK_PYTHON=/opt/conda/bin/python3.8 \
-    LD_LIBRARY_PATH=/usr/lib
+    LD_LIBRARY_PATH=/usr/lib \
+    REQUESTS_CA_BUNDLE=/etc/ssl/certs/ca-certificates.crt
 
 RUN apk add --update --no-cache \
     bzip2 \
@@ -64,6 +65,9 @@ COPY docker/nexus-webapp/install_conda.sh ./install_conda.sh
 RUN /tmp/install_conda.sh 
 
 RUN conda install python=3.8
+
+RUN conda install mamba -y -c conda-forge
+
 RUN cd /usr/lib && ln -s libcom_err.so.2 libcom_err.so.3 && \ 
     cd /opt/conda/lib && \
     ln -s libnetcdf.so.11 libnetcdf.so.7 && \
@@ -80,6 +84,7 @@ ARG APACHE_NEXUSPROTO_BRANCH=master
 COPY docker/nexus-webapp/install_nexusproto.sh ./install_nexusproto.sh
 RUN /tmp/install_nexusproto.sh $APACHE_NEXUSPROTO $APACHE_NEXUSPROTO_BRANCH
 
+COPY VERSION.txt /incubator-sdap-nexus/VERSION.txt
 COPY data-access /incubator-sdap-nexus/data-access
 COPY analysis /incubator-sdap-nexus/analysis
 COPY tools /incubator-sdap-nexus/tools

@@ -78,11 +78,33 @@ paths:
           example: -45,15,-30,30
         - in: query
           name: platforms
-          description: Platforms to include for matchup consideration
+          description: |
+            Platforms to include for matchup consideration. Platform
+            depends on which insitu dataset is selected. Use platform ID
+            in the matchup query.
+
+            <details>
+              <summary>Expand to see a list of valid platforms IDs:</summary>
+            | Platform ID | Platform Name                           | Web Link                                                   |
+            | ----------- | --------------------------------------- | ---------------------------------------------------------- |
+            | 3B          | autonomous surface water vehicle        | [Link](http://vocab.nerc.ac.uk/collection/L06/current/3B/) |
+            | 6A          | glider                                  | [Link](http://vocab.nerc.ac.uk/collection/L06/current/6A/) |
+            | 0           | unknown                                 | [Link](http://vocab.nerc.ac.uk/collection/L06/current/0/)  |
+            | 16          | offshore structure                      | [Link](http://vocab.nerc.ac.uk/collection/L06/current/16/) |
+            | 17          | coastal structure                       | [Link](http://vocab.nerc.ac.uk/collection/L06/current/17/) |
+            | 23          | towed unmanned submersible              | [Link](http://vocab.nerc.ac.uk/collection/L06/current/23/) |
+            | 30          | ship                                    | [Link](http://vocab.nerc.ac.uk/collection/L06/current/30/) |
+            | 31          | research vessel                         | [Link](http://vocab.nerc.ac.uk/collection/L06/current/31/) |
+            | 41          | moored surface buoy                     | [Link](http://vocab.nerc.ac.uk/collection/L06/current/41/) |
+            | 42          | drifting surface float                  | [Link](http://vocab.nerc.ac.uk/collection/L06/current/42/) |
+            | 46          | drifting subsurface profiling float     | [Link](http://vocab.nerc.ac.uk/collection/L06/current/46/) |
+            | 48          | mooring                                 | [Link](http://vocab.nerc.ac.uk/collection/L06/current/48/) |
+            </details>
+
           required: true
           schema:
             type: string
-          example: 1,2,3,4,5,6,7,8,9
+          example: 30
         - in: query
           name: depthMin
           description: |
@@ -123,11 +145,14 @@ paths:
         - in: query
           name: parameter
           description: |
-            The parameter of interest used for the match up.
+            The parameter of interest used for the match up. This is
+            only used for insitu measurements. See
+            [/get_cdms_schema](https://doms.jpl.nasa.gov/insitu/1.0/cdms_schema)
+            endpoint for a list of valid options.
           required: false
           schema:
             type: string
-            default: sst
+            default: sea_surface_temperature
           example: sst
         - in: query
           name: matchOnce
@@ -675,6 +700,55 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/DomsValues'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /domsresults:
+    get:
+      summary: |
+        Convert matchup result
+      operationId: domsresults
+      tags:
+        - Matchup
+      parameters:
+        - in: query
+          name: id
+          description: |
+            The ID of the matchup execution. This comes from the
+            `executionId` field in matchup output.
+          required: true
+          schema:
+            type: string
+          example: dfc907ce-b8b4-453a-b0b6-d295572ba15e
+        - in: query
+          name: output
+          description: |
+            Format for output results.
+          required: true
+          schema:
+            type: string
+            enum: ['CSV', 'NETCDF']
+          example: CSV
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            text/csv:
+              schema:
+                type: string
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
         '400':
           description: Bad request
           content:
