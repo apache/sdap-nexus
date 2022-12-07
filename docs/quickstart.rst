@@ -31,33 +31,53 @@ Start downloading the Docker images and set up the Docker bridge network.
 
 .. _quickstart-step1:
 
-Pull Docker Images
+Set Tag Variables
 -------------------
 
-Pull the necessary Docker images from the `NEXUS JPL repository <https://hub.docker.com/u/nexusjpl>`_ on Docker Hub. Please check the repository for the latest version tag.
+Pull the necessary Docker images from the `Apache SDAP repository <https://hub.docker.com/search?q=apache%2Fsdap>`_ on Docker Hub. Please check the repository for the latest version tag.
 
 .. code-block:: bash
 
   export CASSANDRA_VERSION=3.11.6-debian-10-r138
   export RMQ_VERSION=3.8.9-debian-10-r37
-  export COLLECTION_MANAGER_VERSION=0.1.6a14
-  export GRANULE_INGESTER_VERSION=0.1.6a30
-  export WEBAPP_VERSION=distributed.0.4.5a54
-  export SOLR_VERSION=8.11.1
-  export SOLR_CLOUD_INIT_VERSION=1.0.2
+  export COLLECTION_MANAGER_VERSION=1.0.0
+  export GRANULE_INGESTER_VERSION=1.0.0
+  export WEBAPP_VERSION=1.0.0
+  export SOLR_VERSION=1.0.0
+  export SOLR_CLOUD_INIT_VERSION=1.0.0
   export ZK_VERSION=3.5.5
 
   export JUPYTER_VERSION=1.0.0-rc2
 
+For Local Builds
+----------------
+
 .. code-block:: bash
+
+  export REPO=sdap-local
 
   docker pull bitnami/cassandra:${CASSANDRA_VERSION}
   docker pull bitnami/rabbitmq:${RMQ_VERSION}
-  docker pull nexusjpl/collection-manager:${COLLECTION_MANAGER_VERSION}
-  docker pull nexusjpl/granule-ingester:${GRANULE_INGESTER_VERSION}
-  docker pull nexusjpl/nexus-webapp:${WEBAPP_VERSION}
-  docker pull nexusjpl/solr:${SOLR_VERSION}
-  docker pull nexusjpl/solr-cloud-init:${SOLR_CLOUD_INIT_VERSION}
+  docker pull zookeeper:${ZK_VERSION}
+
+  docker pull nexusjpl/jupyter:${JUPYTER_VERSION}
+
+Continue to the section: "Create a new Docker Bridge Network"
+
+For Release Builds: Pull Docker Images
+-------------------
+
+.. code-block:: bash
+
+  export REPO=apache
+
+  docker pull bitnami/cassandra:${CASSANDRA_VERSION}
+  docker pull bitnami/rabbitmq:${RMQ_VERSION}
+  docker pull apache/sdap-collection-manager:${COLLECTION_MANAGER_VERSION}
+  docker pull apache/sdap-granule-ingester:${GRANULE_INGESTER_VERSION}
+  docker pull apache/sdap-nexus-webapp:${WEBAPP_VERSION}
+  docker pull apache/sdap-solr-cloud:${SOLR_VERSION}
+  docker pull apache/sdap-solr-cloud-init:${SOLR_CLOUD_INIT_VERSION}
   docker pull zookeeper:${ZK_VERSION}
 
   docker pull nexusjpl/jupyter:${JUPYTER_VERSION}
@@ -114,13 +134,13 @@ To start Solr using a volume mount and expose the admin webapp on port 8983:
 
   export SOLR_DATA=~/nexus-quickstart/solr
   mkdir -p ${SOLR_DATA}
-  docker run --name solr --network sdap-net -v ${SOLR_DATA}/:/opt/solr/server/solr/nexustiles/data -p 8983:8983 -e ZK_HOST="host.docker.internal:2181/solr" -d nexusjpl/solr:${SOLR_VERSION}
+  docker run --name solr --network sdap-net -v ${SOLR_DATA}/:/opt/solr/server/solr/nexustiles/data -p 8983:8983 -e ZK_HOST="host.docker.internal:2181/solr" -d ${REPO}/sdap-solr-cloud:${SOLR_VERSION}
 
 This will start an instance of Solr. To initialize it, we need to run the ``solr-cloud-init`` image.
 
 .. code-block:: bash
 
-  docker run -it --rm --name solr-init --network sdap-net -e SDAP_ZK_SOLR="host.docker.internal:2181/solr" -e SDAP_SOLR_URL="http://host.docker.internal:8983/solr/" -e CREATE_COLLECTION_PARAMS="name=nexustiles&numShards=1&waitForFinalState=true" nexusjpl/solr-cloud-init:${SOLR_CLOUD_INIT_VERSION}
+  docker run -it --rm --name solr-init --network sdap-net -e SDAP_ZK_SOLR="host.docker.internal:2181/solr" -e SDAP_SOLR_URL="http://host.docker.internal:8983/solr/" -e CREATE_COLLECTION_PARAMS="name=nexustiles&numShards=1&waitForFinalState=true" ${REPO}/sdap-solr-cloud-init:${SOLR_CLOUD_INIT_VERSION}
 
 When the init script finishes, kill the container by typing ``Ctrl + C``
 
@@ -220,10 +240,10 @@ The granule ingester(s) read new granules from the message queue and process the
   EOF
 
   docker run --name granule-ingester-1 --network sdap-net -d --env-file granule-ingester.env \
-         -v ${DATA_DIRECTORY}:/data/granules/ nexusjpl/granule-ingester:${GRANULE_INGESTER_VERSION}
+         -v ${DATA_DIRECTORY}:/data/granules/ ${REPO}/sdap-granule-ingester:${GRANULE_INGESTER_VERSION}
 
   docker run --name granule-ingester-2 --network sdap-net -d --env-file granule-ingester.env \
-         -v ${DATA_DIRECTORY}:/data/granules/ nexusjpl/granule-ingester:${GRANULE_INGESTER_VERSION}
+         -v ${DATA_DIRECTORY}:/data/granules/ ${REPO}/sdap-granule-ingester:${GRANULE_INGESTER_VERSION}
 
 .. _quickstart-optional-step:
 
@@ -317,7 +337,7 @@ Now we can start the collection manager.
 
 .. code-block:: bash
 
-  docker run --name collection-manager --network sdap-net -v ${DATA_DIRECTORY}:/data/granules/ -v ${CONFIG_DIR}:/home/ingester/config/ -e COLLECTIONS_PATH="/home/ingester/config/collectionConfig.yml" -e HISTORY_URL="http://host.docker.internal:8983/" -e RABBITMQ_HOST="host.docker.internal:5672" -e RABBITMQ_USERNAME="user" -e RABBITMQ_PASSWORD="bitnami" -d nexusjpl/collection-manager:${COLLECTION_MANAGER_VERSION}
+  docker run --name collection-manager --network sdap-net -v ${DATA_DIRECTORY}:/data/granules/ -v ${CONFIG_DIR}:/home/ingester/config/ -e COLLECTIONS_PATH="/home/ingester/config/collectionConfig.yml" -e HISTORY_URL="http://host.docker.internal:8983/" -e RABBITMQ_HOST="host.docker.internal:5672" -e RABBITMQ_USERNAME="user" -e RABBITMQ_PASSWORD="bitnami" -d ${REPO}/sdap-collection-manager:${COLLECTION_MANAGER_VERSION}
 
 .. _quickstart-step12:
 
@@ -349,7 +369,7 @@ Now that the data is being (has been) ingested, we need to start the webapp that
 
 .. code-block:: bash
 
-  docker run -d --name nexus-webapp --network sdap-net -p 8083:8083 nexusjpl/nexus-webapp:${WEBAPP_VERSION} python3 /incubator-sdap-nexus/analysis/webservice/webapp.py --solr_host="http://host.docker.internal:8983" --cassandra_host=host.docker.internal --cassandra_username=cassandra --cassandra_password=cassandra
+  docker run -d --name nexus-webapp --network sdap-net -p 8083:8083 ${REPO}/sdap-nexus-webapp:${WEBAPP_VERSION} python3 /incubator-sdap-nexus/analysis/webservice/webapp.py --solr_host="http://host.docker.internal:8983" --cassandra_host=host.docker.internal --cassandra_username=cassandra --cassandra_password=cassandra
 
 .. note:: If you see a message like ``docker: invalid reference format`` it likely means you need to re-export the ``WEBAPP_VERSION`` environment variable again. This can happen when you open a new terminal window or tab.
 
