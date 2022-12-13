@@ -4,6 +4,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+### Added
+- Added tool to verify tile data matches between Solr & Cassandra
+### Changed
+### Deprecated
+### Removed
+### Fixed
+### Security
+
 ## [1.0.0] - 2022-11-22
 ### Added
 - SDAP-388: Enable SDAP to proxy/redirect to alternate SDAP
@@ -25,7 +34,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - SDAP-407: Added depth to `/domsresults` endpoint
 - Added documentation for building SDAP docker images
   - Prepared documentation for v1.0.0 release.
-- Added tool to verify tile data matches between Solr & Cassandra
 ### Changed
 - SDAP-390: Changed `/doms` to `/cdms` and `doms_reader.py` to `cdms_reader.py`
 - domslist endpoint points to AWS insitu instead of doms insitu
