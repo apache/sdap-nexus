@@ -1,6 +1,7 @@
 import argparse
 import json
 import logging
+from time import sleep
 import uuid
 from typing import List, Tuple
 
@@ -22,6 +23,17 @@ cassandra_table = None
 logger = None
 
 PROCEED_THRESHOLD = 300000
+
+
+class Encoder(json.JSONEncoder):
+    def __init__(self, **args):
+        json.JSONEncoder.__init__(self, **args)
+
+    def default(self, o):
+        if isinstance(o, uuid.UUID):
+            return str(o)
+        else:
+            return json.JSONEncoder.default(self, o)
 
 
 def init(args):
@@ -72,47 +84,64 @@ def init(args):
 def compare_page(args, start) -> Tuple[List, List, List, int]:
     se = SearchOptions()
 
-    logger.debug(f'Running solr query from {start} to {start + args.rows}')
+    logger.debug(f'Running solr query from {start:,} to {start + args.rows:,}')
 
-    se.commonparams.fl(SOLR_UNIQUE_KEY).q('*:*').start(start).rows(args.rows)
+    se.commonparams.fl(SOLR_UNIQUE_KEY).q(args.q).start(start).rows(args.rows)
 
     query = solr_collection.search(se)
     docs = query.result.response.docs
 
-    ids = [uuid.UUID(row[SOLR_UNIQUE_KEY]) for row in docs]
+    ids = [str(uuid.UUID(row[SOLR_UNIQUE_KEY])) for row in docs]
 
     statement = cassandra_session.prepare("SELECT tile_id FROM %s where tile_id=?" % cassandra_table)
 
-    logger.debug('Starting Cassandra query')
-    results = cassandra.concurrent.execute_concurrent_with_args(
-        cassandra_session,
-        statement,
-        [(uuid.UUID(str(id)),) for id in ids],
-        concurrency=1000,
-        raise_on_first_error=False,
-        results_generator=True
-    )
+    retries = 3
 
-    failed = []
-    present = []
     extra = []
 
-    logger.debug('Processing Cassandra results')
-    for (success, result) in results:
-        if not success:
-            failed.append(result)
+    is_retry = False
+
+    while retries > 0:
+        if is_retry:
+            logger.debug('Retrying query with failed IDs')
+
+        logger.debug(f'Starting Cassandra query for {len(ids):,} tiles')
+        results = cassandra.concurrent.execute_concurrent_with_args(
+            cassandra_session,
+            statement,
+            [(uuid.UUID(str(id)),) for id in ids],
+            concurrency=10000,
+            raise_on_first_error=False,
+            results_generator=True
+        )
+
+        failed = []
+        present = []
+
+        logger.debug('Processing Cassandra results')
+        for (success, result) in results:
+            if not success:
+                failed.append(str(result))
+            else:
+                rows = result.all()
+
+                present.extend([str(row[0]) for row in rows])
+
+        logger.debug(f'Finished processing Cassandra results: found {len(present):,} tiles')
+
+        for id in present:
+            try:
+                ids.remove(id)
+            except:
+                extra.append(id)
+
+        if len(failed) > 0:
+            logger.warning(f'{len(failed)} queries failed, maybe retrying')
+            retries -= 1
+            is_retry = True
+            sleep(5)
         else:
-            rows = result.all()
-
-            present.extend([row[0] for row in rows])
-
-    logger.debug('Finished processing Cassandra results')
-
-    for id in present:
-        try:
-            ids.remove(id)
-        except:
-            extra.append(id)
+            break
 
     logger.debug('Page stats: \n' + json.dumps({
         'missing': len(ids),
@@ -131,11 +160,11 @@ def do_comparison(args):
 
     se = SearchOptions()
 
-    se.commonparams.rows(0).q('*:*')
+    se.commonparams.rows(0).q(args.q)
 
     num_tiles = solr_collection.search(se).result.response.numFound
 
-    logger.info(f'Found {num_tiles} tiles in Solr')
+    logger.info(f'Found {num_tiles:,} tiles in Solr')
 
     limit = num_tiles
 
@@ -171,13 +200,22 @@ def do_comparison(args):
         failed.extend(failed_queries)
 
     if len(missing_cassandra) > 0:
-        logger.info(f'Found {len(missing_cassandra)} tile IDs missing from Cassandra:\n' + json.dumps(missing_cassandra, indent=4))
+        logger.info(f'Found {len(missing_cassandra):,} tile IDs missing from Cassandra:\n' +
+                    json.dumps(missing_cassandra, indent=4, cls=Encoder))
+    else:
+        logger.info('No tiles found missing from Cassandra')
 
     if len(missing_solr) > 0:
-        logger.info(f'Found {len(missing_solr)} tile IDs missing from Solr:\n' + json.dumps(missing_solr, indent=4))
+        logger.info(f'Found {len(missing_solr):,} tile IDs missing from Solr:\n' +
+                    json.dumps(missing_solr, indent=4, cls=Encoder))
+    else:
+        logger.info('No tiles found missing from Solr')
 
     if len(failed) > 0:
-        logger.info(f'There were {len(failed)} Cassandra queries that failed:\n' + json.dumps(failed, indent=4))
+        logger.info(f'There were {len(failed):,} Cassandra queries that failed:\n' +
+                    json.dumps(failed, indent=4, cls=Encoder))
+    else:
+        logger.info('No Cassandra queries have failed')
 
 
 def parse_args():
@@ -251,6 +289,13 @@ def parse_args():
                         default=None,
                         type=int)
 
+    parser.add_argument('-q',
+                        help='Solr query string',
+                        required=False,
+                        dest='q',
+                        default='*:*',
+                        metavar='QUERY')
+
     parser.add_argument('-v', '--verbose', dest='verbose', action='store_true', help='Enable verbose output')
 
     return parser.parse_args()
@@ -263,4 +308,13 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
+    try:
+        main()
+    except Exception as e:
+        logging.error('Something went wrong!')
+        logging.exception(e)
+
+    if logger:
+        logger.info('Exiting')
+    else:
+        logging.info('Exiting')
