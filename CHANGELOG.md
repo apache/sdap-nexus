@@ -4,6 +4,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+### Added
+### Changed
+### Deprecated
+### Removed
+### Fixed
+- Fixed null value for count in domslist response
+### Security
+
 ## [1.0.0] - 2022-11-22
 ### Added
 - SDAP-388: Enable SDAP to proxy/redirect to alternate SDAP
@@ -60,7 +69,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Fixed matchup insitu query loading on import; loads when needed instead
 - SDAP-406: Fixed `/timeSeriesSpark`comparison stats bug
 - Fixed excessive memory usage by `/cdmssubset`
-- Fixed null value for count in domslist response
 ### Security
 
 
