@@ -1,1 +1,2 @@
 solrcloudpy==4.0.1
+tenacity==8.0.1

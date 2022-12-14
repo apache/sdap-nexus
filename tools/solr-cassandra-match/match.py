@@ -1,16 +1,17 @@
 import argparse
 import json
 import logging
-from time import sleep
 import uuid
+from time import sleep
 from typing import List, Tuple
 
 import cassandra.concurrent
 from cassandra.auth import PlainTextAuthProvider
-from cassandra.cluster import Cluster
+from cassandra.cluster import Cluster, ExecutionProfile, EXEC_PROFILE_DEFAULT
 from cassandra.policies import RoundRobinPolicy, TokenAwarePolicy
 from six.moves import input
 from solrcloudpy import SolrConnection, SearchOptions
+from tenacity import retry, stop_after_attempt, wait_exponential
 
 solr_connection = None
 solr_collection = None
@@ -20,7 +21,7 @@ cassandra_cluster = None
 cassandra_session = None
 cassandra_table = None
 
-logger = None
+logger = logging
 
 PROCEED_THRESHOLD = 300000
 
@@ -37,32 +38,6 @@ class Encoder(json.JSONEncoder):
 
 
 def init(args):
-    global solr_connection
-    solr_connection = SolrConnection(args.solr)
-    global solr_collection
-    solr_collection = solr_connection[args.collection]
-    global SOLR_UNIQUE_KEY
-    SOLR_UNIQUE_KEY = args.solrIdField
-
-    dc_policy = RoundRobinPolicy()
-    token_policy = TokenAwarePolicy(dc_policy)
-
-    if args.cassandraUsername and args.cassandraPassword:
-        auth_provider = PlainTextAuthProvider(username=args.cassandraUsername, password=args.cassandraPassword)
-    else:
-        auth_provider = None
-
-    global cassandra_cluster
-    cassandra_cluster = Cluster(contact_points=args.cassandra, port=args.cassandraPort,
-                                protocol_version=int(args.cassandraProtocolVersion),
-                                load_balancing_policy=token_policy,
-                                auth_provider=auth_provider)
-    global cassandra_session
-    cassandra_session = cassandra_cluster.connect(keyspace=args.cassandraKeyspace)
-
-    global cassandra_table
-    cassandra_table = args.cassandraTable
-
     global logger
     logging.basicConfig(
         level=logging.DEBUG if args.verbose else logging.INFO,
@@ -80,15 +55,58 @@ def init(args):
 
     logging.getLogger('cassandra').setLevel(logging.CRITICAL)
 
+    global solr_connection
+    solr_connection = SolrConnection(args.solr, timeout=60)
+    global solr_collection
+    solr_collection = solr_connection[args.collection]
+    global SOLR_UNIQUE_KEY
+    SOLR_UNIQUE_KEY = args.solrIdField
+
+    dc_policy = RoundRobinPolicy()
+    token_policy = TokenAwarePolicy(dc_policy)
+
+    if args.cassandraUsername and args.cassandraPassword:
+        auth_provider = PlainTextAuthProvider(username=args.cassandraUsername, password=args.cassandraPassword)
+    else:
+        auth_provider = None
+
+    global cassandra_cluster
+    cassandra_cluster = Cluster(contact_points=args.cassandra, port=args.cassandraPort,
+                                protocol_version=int(args.cassandraProtocolVersion),
+                                #load_balancing_policy=token_policy,
+                                execution_profiles={
+                                    EXEC_PROFILE_DEFAULT: ExecutionProfile(load_balancing_policy=token_policy)
+                                },
+                                auth_provider=auth_provider)
+    global cassandra_session
+    cassandra_session = cassandra_cluster.connect(keyspace=args.cassandraKeyspace)
+
+    global cassandra_table
+    cassandra_table = args.cassandraTable
+
+
+@retry(stop=stop_after_attempt(5), wait=wait_exponential(multiplier=1, min=10, max=60))
+def try_solr(collection, se):
+    try:
+        logger.debug('Starting Solr query')
+        response = collection.search(se)
+        logger.debug('Finished Solr query')
+        return response
+    except Exception as e:
+        logger.error("Solr query failed")
+        logger.exception(e)
+        solr_connection.timeout *= 2
+        raise
+
 
 def compare_page(args, start) -> Tuple[List, List, List, int]:
     se = SearchOptions()
 
-    logger.debug(f'Running solr query from {start:,} to {start + args.rows:,}')
+    logger.info(f'Running solr query from {start:,} to {start + args.rows:,}')
 
     se.commonparams.fl(SOLR_UNIQUE_KEY).q(args.q).start(start).rows(args.rows)
 
-    query = solr_collection.search(se)
+    query = try_solr(solr_collection, se)
     docs = query.result.response.docs
 
     ids = [str(uuid.UUID(row[SOLR_UNIQUE_KEY])) for row in docs]
@@ -98,12 +116,13 @@ def compare_page(args, start) -> Tuple[List, List, List, int]:
     retries = 3
 
     extra = []
+    failed = []
 
     is_retry = False
 
     while retries > 0:
         if is_retry:
-            logger.debug('Retrying query with failed IDs')
+            logger.info('Retrying query with failed IDs')
 
         logger.debug(f'Starting Cassandra query for {len(ids):,} tiles')
         results = cassandra.concurrent.execute_concurrent_with_args(
@@ -127,7 +146,7 @@ def compare_page(args, start) -> Tuple[List, List, List, int]:
 
                 present.extend([str(row[0]) for row in rows])
 
-        logger.debug(f'Finished processing Cassandra results: found {len(present):,} tiles')
+        logger.info(f'Finished processing Cassandra results: found {len(present):,} tiles')
 
         for id in present:
             try:
@@ -162,7 +181,9 @@ def do_comparison(args):
 
     se.commonparams.rows(0).q(args.q)
 
-    num_tiles = solr_collection.search(se).result.response.numFound
+    logger.info('Querying Solr to see how many tiles we need to check...')
+
+    num_tiles = try_solr(solr_collection, se).result.response.numFound
 
     logger.info(f'Found {num_tiles:,} tiles in Solr')
 
