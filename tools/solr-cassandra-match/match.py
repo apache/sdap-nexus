@@ -75,7 +75,6 @@ def init(args):
     global cassandra_cluster
     cassandra_cluster = Cluster(contact_points=args.cassandra, port=args.cassandraPort,
                                 protocol_version=int(args.cassandraProtocolVersion),
-                                #load_balancing_policy=token_policy,
                                 execution_profiles={
                                     EXEC_PROFILE_DEFAULT: ExecutionProfile(load_balancing_policy=token_policy)
                                 },
@@ -257,6 +256,9 @@ def do_comparison(args):
         missing_solr.extend(extra)
         failed.extend(failed_queries)
 
+        if start >= limit:
+            break
+
     if len(missing_cassandra) > 0:
         logger.info(f'Found {len(missing_cassandra):,} tile IDs missing from Cassandra:\n' +
                     json.dumps(missing_cassandra, indent=4, cls=Encoder))
@@ -341,7 +343,9 @@ def parse_args():
                         type=int)
 
     parser.add_argument('--limit',
-                        help='Maximum number of IDs to check. Default is all tiles',
+                        help='Maximum number of IDs to check. Default is all tiles. Enforcement is currently loose; '
+                             'will not run Solr queries past the limit but will check the full query. Eg. If limit is '
+                             '750,000 and solr-rows is 200,000, the first 800,000 tiles will be checked',
                         required=False,
                         dest='limit',
                         default=None,
