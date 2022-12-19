@@ -323,10 +323,12 @@ def parse_args():
 
     parser.add_argument('--cassandraUsername',
                         help='The username used to connect to Cassandra.',
+                        default='cassandra',
                         required=False)
 
     parser.add_argument('--cassandraPassword',
                         help='The password used to connect to Cassandra.',
+                        default='cassandra',
                         required=False)
 
     parser.add_argument('-pv', '--cassandraProtocolVersion',
