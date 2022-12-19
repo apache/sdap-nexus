@@ -2,6 +2,7 @@ import argparse
 import json
 import logging
 import uuid
+from datetime import datetime
 from time import sleep
 from typing import List, Tuple
 
@@ -12,6 +13,7 @@ from cassandra.policies import RoundRobinPolicy, TokenAwarePolicy
 from six.moves import input
 from solrcloudpy import SolrConnection, SearchOptions
 from tenacity import retry, stop_after_attempt, wait_exponential
+from tqdm import tqdm
 
 solr_connection = None
 solr_collection = None
@@ -87,27 +89,50 @@ def init(args):
 
 @retry(stop=stop_after_attempt(5), wait=wait_exponential(multiplier=1, min=10, max=60))
 def try_solr(collection, se):
+    t_s = datetime.now()
+
     try:
         logger.debug('Starting Solr query')
+
         response = collection.search(se)
-        logger.debug('Finished Solr query')
+
+        t_e = datetime.now()
+        elapsed = t_e - t_s
+        logger.debug(f'Finished Solr query in {elapsed}')
+
         return response
     except Exception as e:
-        logger.error("Solr query failed")
+        t_e = datetime.now()
+        elapsed = t_e - t_s
+
+        logger.error(f"Solr query failed after {elapsed}")
         logger.exception(e)
+
         solr_connection.timeout *= 2
+
         raise
 
 
-def compare_page(args, start) -> Tuple[List, List, List, int]:
+def compare_page(args, start, mark) -> Tuple[List, List, List, int, str]:
     se = SearchOptions()
 
     logger.info(f'Running solr query from {start:,} to {start + args.rows:,}')
 
-    se.commonparams.fl(SOLR_UNIQUE_KEY).q(args.q).start(start).rows(args.rows)
+    se.commonparams.fl(SOLR_UNIQUE_KEY).q(args.q).rows(args.rows).sort(f'{SOLR_UNIQUE_KEY} asc')
+
+    se.commonparams.remove_param('cursorMark')
+    se.commonparams.add_params(cursorMark=mark)
 
     query = try_solr(solr_collection, se)
     docs = query.result.response.docs
+
+    try:
+        next_mark = query.result.nextCursorMark
+    except AttributeError:
+        return [], [], [], 0, ''
+
+    if next_mark == mark:
+        return [], [], [], 0, next_mark
 
     ids = [str(uuid.UUID(row[SOLR_UNIQUE_KEY])) for row in docs]
 
@@ -119,9 +144,12 @@ def compare_page(args, start) -> Tuple[List, List, List, int]:
     failed = []
 
     is_retry = False
+    wait = 5
 
     while retries > 0:
         if is_retry:
+            sleep(wait)
+            wait += 10
             logger.info('Retrying query with failed IDs')
 
         logger.debug(f'Starting Cassandra query for {len(ids):,} tiles')
@@ -138,7 +166,8 @@ def compare_page(args, start) -> Tuple[List, List, List, int]:
         present = []
 
         logger.debug('Processing Cassandra results')
-        for (success, result) in results:
+
+        for (success, result) in tqdm(results, total=len(ids), desc='Cassandra queries', unit='tile'):
             if not success:
                 failed.append(str(result))
             else:
@@ -146,19 +175,20 @@ def compare_page(args, start) -> Tuple[List, List, List, int]:
 
                 present.extend([str(row[0]) for row in rows])
 
-        logger.info(f'Finished processing Cassandra results: found {len(present):,} tiles')
+                found = [str(row[0]) for row in rows]
 
-        for id in present:
-            try:
-                ids.remove(id)
-            except:
-                extra.append(id)
+                for id in found:
+                    try:
+                        ids.remove(id)
+                    except:
+                        extra.append(id)
+
+        logger.info(f'Finished processing Cassandra results: found {len(present):,} tiles')
 
         if len(failed) > 0:
             logger.warning(f'{len(failed)} queries failed, maybe retrying')
             retries -= 1
             is_retry = True
-            sleep(5)
         else:
             break
 
@@ -169,7 +199,7 @@ def compare_page(args, start) -> Tuple[List, List, List, int]:
         'total_checked': len(docs)
     }, indent=4))
 
-    return ids, extra, failed, len(docs)
+    return ids, extra, failed, len(docs), next_mark
 
 
 def do_comparison(args):
@@ -212,9 +242,16 @@ def do_comparison(args):
 
     start = 0
 
-    while start < limit:
-        absent, extra, failed_queries, checked = compare_page(args, start)
+    mark = '*'
+
+    while True:
+        absent, extra, failed_queries, checked, next_mark = compare_page(args, start, mark)
         start += checked
+
+        if next_mark == mark:
+            break
+        else:
+            mark = next_mark
 
         missing_cassandra.extend(absent)
         missing_solr.extend(extra)
@@ -329,6 +366,8 @@ def main():
 
 
 if __name__ == '__main__':
+    start = datetime.now()
+
     try:
         main()
     except Exception as e:
@@ -336,6 +375,6 @@ if __name__ == '__main__':
         logging.exception(e)
 
     if logger:
-        logger.info('Exiting')
+        logger.info(f'Exiting. Run time = {datetime.now() - start}')
     else:
-        logging.info('Exiting')
+        logging.info(f'Exiting. Run time = {datetime.now() - start}')
