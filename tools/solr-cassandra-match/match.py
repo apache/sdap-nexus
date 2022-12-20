@@ -1,10 +1,12 @@
 import argparse
+import concurrent.futures
 import json
 import logging
 import uuid
 from datetime import datetime
+from functools import partial
 from time import sleep
-from typing import List, Tuple
+from typing import List, Tuple, Union
 
 import cassandra.concurrent
 from cassandra.auth import PlainTextAuthProvider
@@ -26,6 +28,7 @@ cassandra_table = None
 logger = logging
 
 PROCEED_THRESHOLD = 300000
+MAX_SOLR_FQ = 150
 
 
 class Encoder(json.JSONEncoder):
@@ -43,7 +46,7 @@ def init(args):
     global logger
     logging.basicConfig(
         level=logging.DEBUG if args.verbose else logging.INFO,
-        format="%(asctime)s [%(levelname)s] [%(name)s::%(lineno)d] %(message)s"
+        format="%(asctime)s [%(threadName)s] [%(levelname)s] [%(name)s::%(lineno)d] %(message)s"
     )
 
     logger = logging.getLogger(__name__)
@@ -51,11 +54,12 @@ def init(args):
     logger.setLevel(logging.DEBUG if args.verbose else logging.INFO)
     logging.getLogger().handlers[0].setFormatter(
         logging.Formatter(
-            fmt="%(asctime)s [%(levelname)s] [%(name)s::%(lineno)d] %(message)s",
+            fmt="%(asctime)s [%(threadName)s] [%(levelname)s] [%(name)s::%(lineno)d] %(message)s",
             datefmt="%Y-%m-%dT%H:%M:%S"
         ))
 
     logging.getLogger('cassandra').setLevel(logging.CRITICAL)
+    logging.getLogger('solrcloudpy').setLevel(logging.CRITICAL)
 
     global solr_connection
     solr_connection = SolrConnection(args.solr, timeout=60)
@@ -86,26 +90,37 @@ def init(args):
     cassandra_table = args.cassandraTable
 
 
+def write_json(obj: Union[list, dict], file: str):
+    logger.info(f'Writing to file {file}')
+
+    json.dump(obj, open(file, 'w'), indent=4, cls=Encoder)
+
+    logger.info('done')
+
+
 @retry(stop=stop_after_attempt(5), wait=wait_exponential(multiplier=1, min=10, max=60))
-def try_solr(collection, se):
+def try_solr(collection, se, inhibit_log=False):
     t_s = datetime.now()
 
     try:
-        logger.debug('Starting Solr query')
+        if not inhibit_log:
+            logger.debug('Starting Solr query')
 
         response = collection.search(se)
 
         t_e = datetime.now()
         elapsed = t_e - t_s
-        logger.debug(f'Finished Solr query in {elapsed}')
+        if not inhibit_log:
+            logger.debug(f'Finished Solr query in {elapsed}')
 
         return response
     except Exception as e:
         t_e = datetime.now()
         elapsed = t_e - t_s
 
-        logger.error(f"Solr query failed after {elapsed}")
-        logger.exception(e)
+        if not inhibit_log:
+            logger.error(f"Solr query failed after {elapsed}")
+            logger.exception(e)
 
         solr_connection.timeout *= 2
 
@@ -135,7 +150,7 @@ def compare_page(args, start, mark) -> Tuple[List, List, List, int, str]:
 
     ids = [str(uuid.UUID(row[SOLR_UNIQUE_KEY])) for row in docs]
 
-    statement = cassandra_session.prepare("SELECT tile_id FROM %s where tile_id=?" % cassandra_table)
+    statement = cassandra_session.prepare("SELECT tile_id FROM %s WHERE tile_id=?" % cassandra_table)
 
     retries = 3
 
@@ -260,22 +275,112 @@ def do_comparison(args):
             break
 
     if len(missing_cassandra) > 0:
-        logger.info(f'Found {len(missing_cassandra):,} tile IDs missing from Cassandra:\n' +
-                    json.dumps(missing_cassandra, indent=4, cls=Encoder))
+        logger.info(f'Found {len(missing_cassandra):,} tile IDs missing from Cassandra:')
+        write_json(missing_cassandra, 'missing_cassandra.json')
     else:
         logger.info('No tiles found missing from Cassandra')
 
     if len(missing_solr) > 0:
-        logger.info(f'Found {len(missing_solr):,} tile IDs missing from Solr:\n' +
-                    json.dumps(missing_solr, indent=4, cls=Encoder))
+        logger.info(f'Found {len(missing_solr):,} tile IDs missing from Solr:')
+        write_json(missing_solr, 'extra_cassandra.json')
     else:
         logger.info('No tiles found missing from Solr')
 
     if len(failed) > 0:
-        logger.info(f'There were {len(failed):,} Cassandra queries that failed:\n' +
-                    json.dumps(failed, indent=4, cls=Encoder))
+        logger.info(f'There were {len(failed):,} Cassandra queries that failed:')
+        write_json(failed, 'failed_cassandra.json')
     else:
         logger.info('No Cassandra queries have failed')
+
+
+def cassandra_to_solr(args):
+    missing = []
+
+    se = SearchOptions()
+
+    se.commonparams.rows(0).q('*:*')
+
+    logger.info('Querying Solr to estimate the number of tiles in Cassandra...')
+
+    num_tiles = try_solr(solr_collection, se).result.response.numFound
+
+    logger.info(f'Found {num_tiles:,} tiles in Solr')
+
+    if num_tiles >= PROCEED_THRESHOLD:
+        do_continue = input(f"There are a large number of estimated tiles ({num_tiles:,}). "
+                            f"Do you wish to proceed? [y]/n: ")
+
+        while do_continue not in ['y', 'n', '']:
+            do_continue = input(f"There are a large number of estimated tiles ({num_tiles:,}). "
+                                f"Do you wish to proceed? [y]/n: ")
+
+        if do_continue == 'n':
+            return
+
+    statement = cassandra_session.prepare("SELECT tile_id FROM %s" % cassandra_table)
+
+    results = cassandra_session.execute(statement, timeout=60)
+
+    cassandra_tiles = []
+    cassandra_tile_count = 0
+
+    rows = args.rows
+
+    pool = concurrent.futures.ThreadPoolExecutor(max_workers=16, thread_name_prefix='solr-query-worker')
+
+    for result in tqdm(results, total=num_tiles, desc='Cassandra query', unit=' rows'):
+        cassandra_tiles.append(str(result.tile_id))
+        cassandra_tile_count += 1
+
+        while len(cassandra_tiles) >= rows:
+            to_check = cassandra_tiles[:rows]
+            cassandra_tiles = cassandra_tiles[rows:]
+
+            missing.extend(check_solr(args, to_check, pool))
+
+    if len(cassandra_tiles) > 0:
+        missing.extend(check_solr(args, cassandra_tiles, pool))
+
+    pool.shutdown()
+
+    logger.info(f'Finished checking {cassandra_tile_count} tiles')
+
+    if len(missing) > 0:
+        logger.info(f'Found {len(missing):,} tile IDs missing from Solr:')
+        write_json(missing, 'missing_solr.json')
+    else:
+        logger.info('No tiles found missing from Solr')
+
+
+def check_solr(args, ids: List[str], pool: concurrent.futures.ThreadPoolExecutor) -> List[str]:
+    ids.sort()
+
+    id_set = set(ids)
+
+    func = partial(aio_solr_query, args)
+
+    solr_tiles = []
+    batches = [ids[i:i + MAX_SOLR_FQ] for i in range(0, len(ids), MAX_SOLR_FQ)]
+
+    pool_result = pool.map(func, batches)
+
+    for result in tqdm(pool_result, total=len(batches), desc='   Solr queries', unit=' queries', leave=False):
+        solr_tiles.extend(result)
+
+    solr_set = set(solr_tiles)
+
+    diff = id_set.difference(solr_set)
+
+    return list(diff)
+
+
+def aio_solr_query(args, ids: List[str]) -> List[str]:
+    se = SearchOptions()
+    se.commonparams.q('*:*').fq("{!terms f=id}%s" % ','.join(ids)).fl(SOLR_UNIQUE_KEY).rows(len(ids))
+    solr_query = try_solr(solr_collection, se, inhibit_log=True)
+    solr_tiles = [r[SOLR_UNIQUE_KEY] for r in solr_query.result.response.docs]
+
+    return solr_tiles
 
 
 def parse_args():
@@ -292,6 +397,12 @@ def parse_args():
                         required=False,
                         default='nexustiles',
                         metavar='nexustiles')
+
+    parser.add_argument('--check-cassandra',
+                        help='Check the tiles in Cassandra are present in Solr.',
+                        required=False,
+                        dest='check_cassandra',
+                        action='store_true')
 
     parser.add_argument('--solrIdField',
                         help='The name of the unique ID field for this collection.',
@@ -368,7 +479,12 @@ def parse_args():
 def main():
     args = parse_args()
     init(args)
-    do_comparison(args)
+    if not args.check_cassandra:
+        logger.info('Verifying the tiles in Solr are present in Cassandra...')
+        do_comparison(args)
+    else:
+        logger.info('Verifying the tiles in Cassandra are present in Solr...')
+        cassandra_to_solr(args)
 
 
 if __name__ == '__main__':
