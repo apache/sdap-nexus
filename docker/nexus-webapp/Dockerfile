@@ -103,6 +103,10 @@ RUN pip3 install -r requirements.txt
 RUN pip3 install cython
 RUN rm requirements.txt
 
+WORKDIR /incubator-sdap-nexus/tools/solr-cassandra-match
+RUN pip3 install -r requirements.txt
+RUN rm requirements.txt
+
 WORKDIR /incubator-sdap-nexus
 
 # Upgrade kubernetes client jar from the default version
