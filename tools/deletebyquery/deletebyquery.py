@@ -41,6 +41,8 @@ logging.getLogger().setLevel(logging.INFO)
 logging.getLogger().handlers[0].setFormatter(
     logging.Formatter(fmt="%(asctime)s %(levelname)s:%(name)s:  %(message)s", datefmt="%Y-%m-%dT%H:%M:%S"))
 
+logging.getLogger('cassandra').setLevel(logging.CRITICAL)
+
 
 def init(args):
     global solr_connection
