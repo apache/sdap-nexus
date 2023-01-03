@@ -34,7 +34,7 @@
 # -- Project information -----------------------------------------------------
 
 project = 'incubator-sdap-nexus'
-copyright = '2018, Apache SDAP'
+copyright = '2017-2023, Apache SDAP'
 author = 'Apache SDAP'
 
 # The short X.Y version
