@@ -45,11 +45,11 @@ Create a temporary directory to extract to.
 
 .. code-block:: bash
 
-  tar xvf apache-sdap-ingester-${INGESTER_VERSION}-src-incubating.tar.gz -C ${TMP_DIR}
-  tar xvf apache-sdap-nexus-${NEXUS_VERSION}-src-incubating.tar.gz -C ${TMP_DIR}
+  tar xvf apache-sdap-ingester-${INGESTER_VERSION}-incubating-src.tar.gz -C ${TMP_DIR}
+  tar xvf apache-sdap-nexus-${NEXUS_VERSION}-incubating-src.tar.gz -C ${TMP_DIR}
 
-  mv ${TMP_DIR}/Apache-SDAP/apache-sdap-ingester-${INGESTER_VERSION}/* ${INGESTER_DIR}
-  mv ${TMP_DIR}/Apache-SDAP/apache-sdap-nexus-${NEXUS_VERSION}/* ${NEXUS_DIR}
+  mv ${TMP_DIR}/Apache-SDAP/apache-sdap-ingester-${INGESTER_VERSION}-incubating-src/* ${INGESTER_DIR}
+  mv ${TMP_DIR}/Apache-SDAP/apache-sdap-nexus-${NEXUS_VERSION}-incubating-src/* ${NEXUS_DIR}
 
 Build Ingester Components
 =========================
