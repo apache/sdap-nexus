@@ -1,0 +1,14 @@
+Apache SDAP release 1.0.0
+
+This is a source distribution of Apache SDAP - NEXUS.
+
+Changes since the previous release are described in the
+CHANGELOG.md file.
+
+The LICENSE and NOTICE files contain license information.
+
+You can find instructions how to build the release at
+https://incubator-sdap-nexus.readthedocs.io/en/latest/build.html
+
+Further information about Apache SDAP is available at its web site,
+https://sdap.incubator.apache.org.
