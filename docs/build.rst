@@ -32,14 +32,24 @@ To build the necessary images, we will need to first download the latest release
 
 Now we must extract the releases to their respective directories.
 
+Create a temporary directory to extract to.
+
+.. code-block:: bash
+
+  export TMP_DIR=/tmp/SDAP-extract
+  mkdir -p ${TMP_DIR}
+
 .. note::
 
   In the following code block, make sure the versions in the filenames correspond with the versions that were downloaded.
 
 .. code-block:: bash
 
-  tar xvf apache-sdap-ingester-${INGESTER_VERSION}-src.tar.gz -C ${INGESTER_DIR}
-  tar xvf apache-sdap-nexus-${NEXUS_VERSION}-src.tar.gz -C ${NEXUS_DIR}
+  tar xvf apache-sdap-ingester-${INGESTER_VERSION}-incubating-src.tar.gz -C ${TMP_DIR}
+  tar xvf apache-sdap-nexus-${NEXUS_VERSION}-incubating-src.tar.gz -C ${TMP_DIR}
+
+  mv ${TMP_DIR}/Apache-SDAP/apache-sdap-ingester-${INGESTER_VERSION}-incubating-src/* ${INGESTER_DIR}
+  mv ${TMP_DIR}/Apache-SDAP/apache-sdap-nexus-${NEXUS_VERSION}-incubating-src/* ${NEXUS_DIR}
 
 Build Ingester Components
 =========================
