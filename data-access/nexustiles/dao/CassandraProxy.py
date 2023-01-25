@@ -107,8 +107,8 @@ class NexusTileData(Model):
             time_data = np.ma.masked_invalid(from_shaped_array(swath_tile.time)).reshape(-1)
 
             # Simplify the tile if the time dimension is the same value repeated
-            if np.all(time_data == np.min(time_data)):
-                time_data = np.array([np.min(time_data)])
+            # if np.all(time_data == np.min(time_data)):
+            #     time_data = np.array([np.min(time_data)])
 
             swath_tile_data = np.ma.masked_invalid(from_shaped_array(swath_tile.variable_data))
 
@@ -158,8 +158,8 @@ class NexusTileData(Model):
             time_data = np.ma.masked_invalid(from_shaped_array(swath_tile.time)).reshape(-1)
 
             # Simplify the tile if the time dimension is the same value repeated
-            if np.all(time_data == np.min(time_data)):
-                time_data = np.array([np.min(time_data)])
+            # if np.all(time_data == np.min(time_data)):
+            #     time_data = np.array([np.min(time_data)])
 
             swath_tile_data = np.ma.masked_invalid(from_shaped_array(swath_tile.variable_data))
 
