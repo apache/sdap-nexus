@@ -107,8 +107,8 @@ class NexusTileData(Model):
             time_data = np.ma.masked_invalid(from_shaped_array(swath_tile.time)).reshape(-1)
 
             # Simplify the tile if the time dimension is the same value repeated
-            # if np.all(time_data == np.min(time_data)):
-            #     time_data = np.array([np.min(time_data)])
+            if np.all(time_data == np.min(time_data)):
+                time_data = np.array([np.min(time_data)])
 
             swath_tile_data = np.ma.masked_invalid(from_shaped_array(swath_tile.variable_data))
 
@@ -158,8 +158,8 @@ class NexusTileData(Model):
             time_data = np.ma.masked_invalid(from_shaped_array(swath_tile.time)).reshape(-1)
 
             # Simplify the tile if the time dimension is the same value repeated
-            # if np.all(time_data == np.min(time_data)):
-            #     time_data = np.array([np.min(time_data)])
+            if np.all(time_data == np.min(time_data)):
+                time_data = np.array([np.min(time_data)])
 
             swath_tile_data = np.ma.masked_invalid(from_shaped_array(swath_tile.variable_data))
 
@@ -227,14 +227,31 @@ class NexusTileData(Model):
         """
 
         if desired_shape[0] == 1:
-            reshaped_array = np.ma.masked_all((desired_shape[1], desired_shape[2]))
-            row, col = np.indices(data_array.shape)
+            if not is_multi_var:
+                reshaped_array = np.ma.masked_all((desired_shape[1], desired_shape[2]))
+                row, col = np.indices(data_array.shape)
 
-            reshaped_array[np.diag_indices(desired_shape[1], len(reshaped_array.shape))] = data_array[
-                row.flat, col.flat]
-            reshaped_array.mask[np.diag_indices(desired_shape[1], len(reshaped_array.shape))] = data_array.mask[
-                row.flat, col.flat]
-            reshaped_array = reshaped_array[np.newaxis, :]
+                reshaped_array[np.diag_indices(desired_shape[1], len(reshaped_array.shape))] = data_array[
+                    row.flat, col.flat]
+                reshaped_array.mask[np.diag_indices(desired_shape[1], len(reshaped_array.shape))] = data_array.mask[
+                    row.flat, col.flat]
+                reshaped_array = reshaped_array[np.newaxis, :]
+            else:
+                reshaped_data_array = np.moveaxis(data_array, -1, 0)
+                reshaped_array = []
+
+                for variable_data_array in reshaped_data_array:
+                    variable_reshaped_array = np.ma.masked_all((desired_shape[1], desired_shape[2]))
+                    row, col = np.indices(variable_data_array.shape)
+
+                    variable_reshaped_array[np.diag_indices(desired_shape[1], len(variable_reshaped_array.shape))] = \
+                    variable_data_array[
+                        row.flat, col.flat]
+                    variable_reshaped_array.mask[
+                        np.diag_indices(desired_shape[1], len(variable_reshaped_array.shape))] = \
+                    variable_data_array.mask[
+                        row.flat, col.flat]
+                    reshaped_array.append(variable_reshaped_array[np.newaxis, :])
         elif is_multi_var == True:
             # Break the array up by variable. Translate shape from
             # len(times) x len(latitudes) x len(longitudes) x num_vars,
