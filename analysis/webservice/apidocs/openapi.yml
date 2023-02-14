@@ -433,12 +433,10 @@ paths:
         - in: query
           name: parameter
           description: |
-            The parameter of interest. One of 'sst', 'sss', 'wind'
-          required: true
+            The parameter of interest.
           schema:
             type: string
-            enum: ['sst', 'sss', 'wind']
-          example: sss
+          example: sea_surface_salinity
         - in: query
           name: depthMin
           description: |
@@ -463,8 +461,7 @@ paths:
           required: false
           schema:
             type: string
-            default: 1,2,3,4,5,6,7,8,9
-          example: 1,2,3,4,5,6,7,8,9
+          example: 3B,23
         - in: query
           name: output
           description: |
