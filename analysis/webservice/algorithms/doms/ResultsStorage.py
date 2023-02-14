@@ -181,8 +181,7 @@ class ResultsStorage(AbstractResultsContainer):
         dataMap = self.__buildDataMap(data_dict)
         result_id = uuid.uuid4()
 
-        try:
-            batch.add(insertStatement, (
+        insert_params = (
                 result_id,
                 execution_id,
                 result["id"],
@@ -196,26 +195,13 @@ class ResultsStorage(AbstractResultsContainer):
                 dataMap,
                 1 if primaryId is None else 0,
                 result["depth"]
-            ))
+            )
+
+        try:
+            batch.add(insertStatement, insert_params)
         except:
-            self._log.error(f'INSERTING RESULT FAILED')
-            self._log.error('data_dict')
-            self._log.error(json.dumps(data_dict, cls=DomsEncoder, indent=4))
-            self._log.error('')
-            self._log.error('INSERT params')
-            self._log.error(f'{result_id}')
-            self._log.error(f'{execution_id}')
-            self._log.error(f'{result["id"]}')
-            self._log.error(f'{primaryId}')
-            self._log.error(f'{result["lon"]}')
-            self._log.error(f'{result["lat"]}')
-            self._log.error(f'{result["source"]}')
-            self._log.error(f'{result["time"]}')
-            self._log.error(f'{result["platform"] if "platform" in result else None}')
-            self._log.error(f'{result["device"] if "device" in result else None}')
-            self._log.error(f'{dataMap}')
-            self._log.error(f'{1 if primaryId is None else 0}')
-            self._log.error(f'{result["depth"]}')
+            self._log.error(f'Result batch INSERT preparation failed')
+            self._log.error('INSERT params %s', str(insert_params))
             raise
 
         n = 0
