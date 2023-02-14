@@ -11,6 +11,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Deprecated
 ### Removed
 ### Fixed
+- Made `platforms` param optional in `/cdmssubset`, and removed int requirement
+- Updated OpenAPI specification for `/cdmssubset` to accurately reflect `platforms` and `parameter` field options.
 ### Security
 
 ## [1.0.0] - 2022-12-05
