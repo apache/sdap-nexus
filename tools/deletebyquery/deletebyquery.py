@@ -41,6 +41,8 @@ logging.getLogger().setLevel(logging.INFO)
 logging.getLogger().handlers[0].setFormatter(
     logging.Formatter(fmt="%(asctime)s %(levelname)s:%(name)s:  %(message)s", datefmt="%Y-%m-%dT%H:%M:%S"))
 
+logging.getLogger('cassandra').setLevel(logging.CRITICAL)
+
 
 def init(args):
     global solr_connection
@@ -88,6 +90,8 @@ def delete_by_query(args):
         query = se
     else:
         raise RuntimeError("either query or jsonparams is required")
+
+    query.commonparams.rows(args.rows)
 
     if check_query(query):
         logging.info("Collecting tiles ....")
@@ -259,6 +263,13 @@ def parse_args():
                         required=False,
                         choices=['1', '2', '3', '4', '5'],
                         default='3')
+
+    parser.add_argument('--solr-rows',
+                        help='Number of rows to fetch with each Solr query to build the list of tiles to delete',
+                        required=False,
+                        dest='rows',
+                        default=1000,
+                        type=int)
 
     return parser.parse_args()
 

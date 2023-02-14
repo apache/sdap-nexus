@@ -6,10 +6,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 ### Added
+- Deletebyquery: Parameter to set the number of rows to fetch from Solr. Speeds up time to gather tiles to delete; especially when there is a lot of them.
 ### Changed
 ### Deprecated
 ### Removed
 ### Fixed
+- Made `platforms` param optional in `/cdmssubset`, and removed int requirement
+- Updated OpenAPI specification for `/cdmssubset` to accurately reflect `platforms` and `parameter` field options.
 - SDAP-438: Replace variable value NaN with None to fix error in result storage
 ### Security
 
