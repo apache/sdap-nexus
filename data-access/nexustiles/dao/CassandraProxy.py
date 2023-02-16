@@ -31,6 +31,7 @@ INIT_LOCK = Lock(ctx=None)
 
 logger = logging.getLogger(__name__)
 
+
 class NexusTileData(Model):
     __table_name__ = 'sea_surface_temp'
     tile_id = columns.UUID(primary_key=True)
@@ -53,7 +54,7 @@ class NexusTileData(Model):
 
         return from_shaped_array(the_tile_data.variable_data)
 
-    def get_lat_lon_time_data_meta(self):
+    def get_lat_lon_time_data_meta(self, projection='grid'):
         """
         Retrieve data from data store and metadata from metadata store
         for this tile. For gridded tiles, the tile shape of the data

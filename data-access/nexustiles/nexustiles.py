@@ -56,7 +56,7 @@ def tile_data(default_fetch=True):
             if ('fetch_data' in kwargs and kwargs['fetch_data']) or ('fetch_data' not in kwargs and default_fetch):
                 if len(tiles) > 0:
                     cassandra_start = datetime.now()
-                    args[0].fetch_data_for_tiles(*tiles)
+                    args[0].fetch_data_for_tiles(*tiles, desired_projection=args[0].desired_projection)
                     cassandra_duration += (datetime.now() - cassandra_start).total_seconds()
 
             if 'metrics_callback' in kwargs and kwargs['metrics_callback'] is not None:
@@ -79,12 +79,14 @@ class NexusTileServiceException(Exception):
 
 
 class NexusTileService(object):
-    def __init__(self, skipDatastore=False, skipMetadatastore=False, config=None):
+    def __init__(self, skipDatastore=False, skipMetadatastore=False, config=None, desired_projection='grid'):
         self._datastore = None
         self._metadatastore = None
 
         self._config = configparser.RawConfigParser()
         self._config.read(NexusTileService._get_config_files('config/datastores.ini'))
+
+        self.desired_projection = desired_projection
 
         if config:
             self.override_config(config)
@@ -450,7 +452,7 @@ class NexusTileService(object):
         """
         return self._metadatastore.get_tile_count(ds, bounding_polygon, start_time, end_time, metadata, **kwargs)
 
-    def fetch_data_for_tiles(self, *tiles):
+    def fetch_data_for_tiles(self, *tiles, **kwargs):
 
         nexus_tile_ids = set([tile.tile_id for tile in tiles])
         matched_tile_data = self._datastore.fetch_nexus_tiles(*nexus_tile_ids)
@@ -461,8 +463,12 @@ class NexusTileService(object):
         if len(missing_data) > 0:
             raise Exception("Missing data for tile_id(s) %s." % missing_data)
 
+        desired_projection = kwargs['desired_projection'] if 'desired_projection' in kwargs else 'grid'
+
         for a_tile in tiles:
-            lats, lons, times, data, meta, is_multi_var = tile_data_by_id[a_tile.tile_id].get_lat_lon_time_data_meta()
+            lats, lons, times, data, meta, is_multi_var = tile_data_by_id[a_tile.tile_id].get_lat_lon_time_data_meta(
+                projection=desired_projection
+            )
 
             a_tile.latitudes = lats
             a_tile.longitudes = lons
