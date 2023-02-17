@@ -123,7 +123,6 @@ class NexusTileData(Model):
             for meta_data_obj in swath_tile.meta_data:
                 name = meta_data_obj.name
                 actual_meta_array = np.ma.masked_invalid(from_shaped_array(meta_data_obj.meta_data))
-                # reshaped_meta_array = self._to_standard_index(actual_meta_array, tile_data.shape)
                 meta_data[name] = actual_meta_array
 
             return latitude_data, longitude_data, time_data, tile_data, meta_data, is_multi_var
@@ -179,7 +178,6 @@ class NexusTileData(Model):
             for meta_data_obj in swath_tile.meta_data:
                 name = meta_data_obj.name
                 actual_meta_array = np.ma.masked_invalid(from_shaped_array(meta_data_obj.meta_data))
-                # reshaped_meta_array = self._to_standard_index(actual_meta_array, tile_data.shape)
                 meta_data[name] = actual_meta_array
 
             return latitude_data, longitude_data, time_data, tile_data, meta_data, is_multi_var
@@ -216,60 +214,6 @@ class NexusTileData(Model):
             return reflected_lat_array, reflected_lon_array, np.array([grid_multi_variable_tile.time]), grid_tile_data, meta_data, is_multi_var
         else:
             raise NotImplementedError("Only supports grid_tile, swath_tile, swath_multi_variable_tile, and time_series_tile")
-
-    @staticmethod
-    def _to_standard_index(data_array, desired_shape, is_multi_var=False):
-        """
-        Transform swath data to a standard format where data runs along
-        diagonal of ND matrix and the non-diagonal data points are
-        masked
-
-        :param data_array: The data array to be transformed
-        :param desired_shape: The desired shape of the resulting array
-        :param is_multi_var: True if this is a multi-variable tile
-        :type data_array: np.array
-        :type desired_shape: tuple
-        :type is_multi_var: bool
-        :return: Reshaped array
-        :rtype: np.array
-        """
-
-        if desired_shape[0] == 1:
-            reshaped_array = np.ma.masked_all((desired_shape[1], desired_shape[2]))
-            row, col = np.indices(data_array.shape)
-
-            reshaped_array[np.diag_indices(desired_shape[1], len(reshaped_array.shape))] = data_array[
-                row.flat, col.flat]
-            reshaped_array.mask[np.diag_indices(desired_shape[1], len(reshaped_array.shape))] = data_array.mask[
-                row.flat, col.flat]
-            reshaped_array = reshaped_array[np.newaxis, :]
-        elif is_multi_var == True:
-            # Break the array up by variable. Translate shape from
-            # len(times) x len(latitudes) x len(longitudes) x num_vars,
-            # to
-            # num_vars x len(times) x len(latitudes) x len(longitudes)
-            reshaped_data_array = np.moveaxis(data_array, -1, 0)
-            reshaped_array = []
-
-            for variable_data_array in reshaped_data_array:
-                variable_reshaped_array = np.ma.masked_all(desired_shape)
-                row, col = np.indices(variable_data_array.shape)
-
-                variable_reshaped_array[np.diag_indices(desired_shape[1], len(variable_reshaped_array.shape))] = variable_data_array[
-                    row.flat, col.flat]
-                variable_reshaped_array.mask[np.diag_indices(desired_shape[1], len(variable_reshaped_array.shape))] = variable_data_array.mask[
-                    row.flat, col.flat]
-                reshaped_array.append(variable_reshaped_array)
-        else:
-            reshaped_array = np.ma.masked_all(desired_shape)
-            row, col = np.indices(data_array.shape)
-
-            reshaped_array[np.diag_indices(desired_shape[1], len(reshaped_array.shape))] = data_array[
-                row.flat, col.flat]
-            reshaped_array.mask[np.diag_indices(desired_shape[1], len(reshaped_array.shape))] = data_array.mask[
-                row.flat, col.flat]
-
-        return reshaped_array
 
 
 class CassandraSwathProxy(object):
