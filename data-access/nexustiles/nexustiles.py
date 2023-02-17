@@ -371,9 +371,14 @@ class NexusTileService(object):
             tile.longitudes = ma.masked_outside(tile.longitudes, min_lon, max_lon)
 
             # Or together the masks of the individual arrays to create the new mask
-            data_mask = ma.getmaskarray(tile.times)[:, np.newaxis, np.newaxis] \
-                        | ma.getmaskarray(tile.latitudes)[np.newaxis, :, np.newaxis] \
-                        | ma.getmaskarray(tile.longitudes)[np.newaxis, np.newaxis, :]
+            if self.desired_projection == 'grid':
+                data_mask = ma.getmaskarray(tile.times)[:, np.newaxis, np.newaxis] \
+                            | ma.getmaskarray(tile.latitudes)[np.newaxis, :, np.newaxis] \
+                            | ma.getmaskarray(tile.longitudes)[np.newaxis, np.newaxis, :]
+            else:
+                data_mask = ma.getmaskarray(tile.times)[:, np.newaxis, np.newaxis] \
+                            | ma.getmaskarray(tile.latitudes)[np.newaxis, :, :] \
+                            | ma.getmaskarray(tile.longitudes)[np.newaxis, :, :]
 
             # If this is multi-var, need to mask each variable separately.
             if tile.is_multi:
