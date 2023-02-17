@@ -91,6 +91,7 @@ class Tile(object):
     data: np.array = None
     is_multi: bool = None
     meta_data: dict = None
+    projection: str = 'grid'
 
     def __str__(self):
         return str(self.get_summary())

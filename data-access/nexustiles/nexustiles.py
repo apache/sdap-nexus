@@ -17,6 +17,7 @@ import configparser
 import logging
 import sys
 import json
+import traceback
 from datetime import datetime
 from functools import wraps, reduce
 
@@ -27,6 +28,7 @@ from pytz import timezone, UTC
 from shapely.geometry import MultiPolygon, box
 
 from .dao import CassandraProxy
+from .dao import CassandraSwathProxy
 from .dao import DynamoProxy
 from .dao import S3Proxy
 from .dao import SolrProxy
@@ -40,7 +42,7 @@ logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     datefmt="%Y-%m-%dT%H:%M:%S", stream=sys.stdout)
-logger = logging.getLogger("testing")
+logger = logging.getLogger(__name__)
 
 
 def tile_data(default_fetch=True):
@@ -94,7 +96,10 @@ class NexusTileService(object):
         if not skipDatastore:
             datastore = self._config.get("datastore", "store")
             if datastore == "cassandra":
-                self._datastore = CassandraProxy.CassandraProxy(self._config)
+                if desired_projection == "grid":
+                    self._datastore = CassandraProxy.CassandraProxy(self._config)
+                else:
+                    self._datastore = CassandraSwathProxy.CassandraSwathProxy(self._config)
             elif datastore == "s3":
                 self._datastore = S3Proxy.S3Proxy(self._config)
             elif datastore == "dynamo":
@@ -108,6 +113,11 @@ class NexusTileService(object):
                 self._metadatastore = SolrProxy.SolrProxy(self._config)
             elif metadatastore == "elasticsearch":
                 self._metadatastore = ElasticsearchProxy.ElasticsearchProxy(self._config)
+
+        logger.info(f'Created new NexusTileService with data store {type(self._datastore)} and metadata '
+                    f'store {type(self._metadatastore)}')
+        # logger.info('Traceback for debugging...')
+        # logger.info(''.join(traceback.format_stack()))
 
     def override_config(self, config):
         for section in config.sections():
@@ -476,6 +486,7 @@ class NexusTileService(object):
             a_tile.data = data
             a_tile.meta_data = meta
             a_tile.is_multi = is_multi_var
+            a_tile.projection = desired_projection
 
             del (tile_data_by_id[a_tile.tile_id])
 
