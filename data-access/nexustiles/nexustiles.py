@@ -14,10 +14,9 @@
 # limitations under the License.
 
 import configparser
+import json
 import logging
 import sys
-import json
-import traceback
 from datetime import datetime
 from functools import wraps, reduce
 
@@ -30,10 +29,9 @@ from shapely.geometry import MultiPolygon, box
 from .dao import CassandraProxy
 from .dao import CassandraSwathProxy
 from .dao import DynamoProxy
+from .dao import ElasticsearchProxy
 from .dao import S3Proxy
 from .dao import SolrProxy
-from .dao import ElasticsearchProxy
-
 from .model.nexusmodel import Tile, BBox, TileStats, TileVariable
 
 EPOCH = timezone('UTC').localize(datetime(1970, 1, 1))
