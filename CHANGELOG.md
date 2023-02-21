@@ -8,6 +8,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - Deletebyquery: Parameter to set the number of rows to fetch from Solr. Speeds up time to gather tiles to delete; especially when there is a lot of them.
 ### Changed
+- SDAP-440: Rolled out L2 change to the following algorithms:
+  - SDAP-441: `/match_spark`
 ### Deprecated
 ### Removed
 ### Fixed
