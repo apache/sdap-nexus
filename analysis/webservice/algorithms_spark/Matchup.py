@@ -876,7 +876,6 @@ def match_tile_to_point_generator(tile_service, tile_id, m_tree, edge_results, s
     # Get list of indices of valid values
     valid_indices = tile.get_indices()
     time_slice, geo_slice = determine_slicing(len(valid_indices[0]))
-    print('valid indices ', valid_indices)
     primary_points = np.array(
         [aeqd_proj(tile.longitudes[tuple(aslice)[geo_slice]], tile.latitudes[tuple(aslice)[geo_slice]]) for
          aslice in valid_indices])
@@ -904,8 +903,6 @@ def match_tile_to_point_generator(tile_service, tile_id, m_tree, edge_results, s
                 index=valid_indices[i],
                 data_vals=data_vals
             )
-
-            # print('time point ', tile.times[valid_indices[i][time_slice]], flush=True)
 
             p_doms_point = DomsPoint.from_nexus_point(p_nexus_point, tile=tile)
             for m_point_index in point_matches:
