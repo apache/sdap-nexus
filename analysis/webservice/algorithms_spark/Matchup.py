@@ -662,6 +662,13 @@ def determine_parallelism(num_tiles):
     return num_partitions
 
 
+def determine_slicing(idx_len):
+    time_slice = slice(0, 1) if idx_len == 3 else slice(None)
+    geo_slice = slice(-2, None) if idx_len == 3 else slice(None)
+
+    return time_slice, geo_slice
+
+
 def add_meters_to_lon_lat(lon, lat, meters):
     """
     Uses a simple approximation of
@@ -704,6 +711,8 @@ def get_insitu_unit(variable_name, insitu_schema):
 
 def tile_to_edge_points(tile):
     indices = tile.get_indices()
+    time_slice, geo_slice = determine_slicing(len(indices[0]))
+
     edge_points = []
 
     for idx in indices:
@@ -713,9 +722,9 @@ def tile_to_edge_points(tile):
             data = [tile.data[tuple(idx)]]
 
         edge_point = {
-            'latitude': tile.latitudes[tuple(idx)],
-            'longitude': tile.longitudes[tuple(idx)],
-            'time': datetime.utcfromtimestamp(tile.times[tuple(idx)]).strftime('%Y-%m-%dT%H:%M:%SZ'),
+            'latitude': tile.latitudes[tuple(idx)[geo_slice]],
+            'longitude': tile.longitudes[tuple(idx)[geo_slice]],
+            'time': datetime.utcfromtimestamp(tile.times[tuple(idx)[time_slice]]).strftime('%Y-%m-%dT%H:%M:%SZ'),
             'source': tile.dataset,
             'platform': 'orbiting satellite',
             'device': None,
@@ -815,9 +824,10 @@ def match_satellite_to_insitu(tile_ids, primary_b, secondary_b, parameter_b, tt_
         matchup_points = []
         for tile in matchup_tiles:
             valid_indices = tile.get_indices()
+            _, geo_slice = determine_slicing(len(valid_indices[0]))
             primary_points = np.array([aeqd_proj(
-                tile.longitudes[tuple(aslice)],
-                tile.latitudes[tuple(aslice)]
+                tile.longitudes[tuple(aslice)[geo_slice]],
+                tile.latitudes[tuple(aslice)[geo_slice]]
             ) for aslice in valid_indices])
             matchup_points.extend(primary_points)
 
@@ -865,9 +875,10 @@ def match_tile_to_point_generator(tile_service, tile_id, m_tree, edge_results, s
     the_time = datetime.now()
     # Get list of indices of valid values
     valid_indices = tile.get_indices()
+    time_slice, geo_slice = determine_slicing(len(valid_indices[0]))
     print('valid indices ', valid_indices)
     primary_points = np.array(
-        [aeqd_proj(tile.longitudes[tuple(aslice[-2:])], tile.latitudes[tuple(aslice[-2:])]) for
+        [aeqd_proj(tile.longitudes[tuple(aslice)[geo_slice]], tile.latitudes[tuple(aslice)[geo_slice]]) for
          aslice in valid_indices])
 
     print("%s Time to convert primary points for tile %s" % (str(datetime.now() - the_time), tile_id))
@@ -886,13 +897,15 @@ def match_tile_to_point_generator(tile_service, tile_id, m_tree, edge_results, s
             else:
                 data_vals = tile.data[tuple(valid_indices[i])]
             p_nexus_point = NexusPoint(
-                latitude=tile.latitudes[tuple(valid_indices[i])[-2:]],
-                longitude=tile.longitudes[tuple(valid_indices[i])[-2:]],
+                latitude=tile.latitudes[tuple(valid_indices[i])[geo_slice]],
+                longitude=tile.longitudes[tuple(valid_indices[i])[geo_slice]],
                 depth=None,
-                time=tile.times[valid_indices[i][0]],
+                time=tile.times[tuple(valid_indices[i])[time_slice]],
                 index=valid_indices[i],
                 data_vals=data_vals
             )
+
+            # print('time point ', tile.times[valid_indices[i][time_slice]], flush=True)
 
             p_doms_point = DomsPoint.from_nexus_point(p_nexus_point, tile=tile)
             for m_point_index in point_matches:
