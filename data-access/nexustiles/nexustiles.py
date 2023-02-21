@@ -374,9 +374,14 @@ class NexusTileService(object):
                             | ma.getmaskarray(tile.latitudes)[np.newaxis, :, np.newaxis] \
                             | ma.getmaskarray(tile.longitudes)[np.newaxis, np.newaxis, :]
             else:
-                data_mask = ma.getmaskarray(tile.times)[:, np.newaxis, np.newaxis] \
-                            | ma.getmaskarray(tile.latitudes)[np.newaxis, :, :] \
-                            | ma.getmaskarray(tile.longitudes)[np.newaxis, :, :]
+                if len(tile.times.shape) == 1:
+                    data_mask = ma.getmaskarray(tile.times)[:, np.newaxis, np.newaxis] \
+                                | ma.getmaskarray(tile.latitudes)[np.newaxis, :, :] \
+                                | ma.getmaskarray(tile.longitudes)[np.newaxis, :, :]
+                else:
+                    data_mask = ma.getmaskarray(tile.times) \
+                                | ma.getmaskarray(tile.latitudes) \
+                                | ma.getmaskarray(tile.longitudes)
 
             # If this is multi-var, need to mask each variable separately.
             if tile.is_multi:
