@@ -147,7 +147,7 @@ class Matchup(NexusCalcSparkHandler):
     singleton = True
 
     def __init__(self, algorithm_config=None, sc=None, tile_service_factory=None, config=None):
-        NexusCalcSparkHandler.__init__(self, algorithm_config=algorithm_config, sc=sc, tile_service_factory=tile_service_factory)
+        NexusCalcSparkHandler.__init__(self, algorithm_config=algorithm_config, sc=sc, tile_service_factory=tile_service_factory, desired_projection='swath')
         self.log = logging.getLogger(__name__)
         self.tile_service_factory = tile_service_factory
         self.config = config
@@ -713,9 +713,9 @@ def tile_to_edge_points(tile):
             data = [tile.data[tuple(idx)]]
 
         edge_point = {
-            'latitude': tile.latitudes[idx[1]],
-            'longitude': tile.longitudes[idx[2]],
-            'time': datetime.utcfromtimestamp(tile.times[idx[0]]).strftime('%Y-%m-%dT%H:%M:%SZ'),
+            'latitude': tile.latitudes[tuple(idx)],
+            'longitude': tile.longitudes[tuple(idx)],
+            'time': datetime.utcfromtimestamp(tile.times[tuple(idx)]).strftime('%Y-%m-%dT%H:%M:%SZ'),
             'source': tile.dataset,
             'platform': 'orbiting satellite',
             'device': None,
@@ -734,7 +734,7 @@ def match_satellite_to_insitu(tile_ids, primary_b, secondary_b, parameter_b, tt_
     if len(tile_ids) == 0:
         return []
 
-    tile_service = tile_service_factory()
+    tile_service = tile_service_factory(desired_projection='swath')
 
     # Determine the spatial temporal extents of this partition of tiles
     tiles_bbox = tile_service.get_bounding_box(tile_ids)
@@ -816,8 +816,8 @@ def match_satellite_to_insitu(tile_ids, primary_b, secondary_b, parameter_b, tt_
         for tile in matchup_tiles:
             valid_indices = tile.get_indices()
             primary_points = np.array([aeqd_proj(
-                tile.longitudes[aslice[2]],
-                tile.latitudes[aslice[1]]
+                tile.longitudes[tuple(aslice)],
+                tile.latitudes[tuple(aslice)]
             ) for aslice in valid_indices])
             matchup_points.extend(primary_points)
 
@@ -855,8 +855,9 @@ def match_tile_to_point_generator(tile_service, tile_id, m_tree, edge_results, s
         tile = tile_service.mask_tiles_to_polygon(wkt.loads(search_domain_bounding_wkt),
                                                   tile_service.find_tile_by_id(tile_id))[0]
         print("%s Time to load tile %s" % (str(datetime.now() - the_time), tile_id))
-    except IndexError:
+    except IndexError as e:
         # This should only happen if all measurements in a tile become masked after applying the bounding polygon
+        logging.exception(e)
         print('Tile is empty after masking spatially. Skipping this tile.')
         return
 
@@ -864,8 +865,9 @@ def match_tile_to_point_generator(tile_service, tile_id, m_tree, edge_results, s
     the_time = datetime.now()
     # Get list of indices of valid values
     valid_indices = tile.get_indices()
+    print('valid indices ', valid_indices)
     primary_points = np.array(
-        [aeqd_proj(tile.longitudes[aslice[2]], tile.latitudes[aslice[1]]) for
+        [aeqd_proj(tile.longitudes[tuple(aslice[-2:])], tile.latitudes[tuple(aslice[-2:])]) for
          aslice in valid_indices])
 
     print("%s Time to convert primary points for tile %s" % (str(datetime.now() - the_time), tile_id))
@@ -884,8 +886,8 @@ def match_tile_to_point_generator(tile_service, tile_id, m_tree, edge_results, s
             else:
                 data_vals = tile.data[tuple(valid_indices[i])]
             p_nexus_point = NexusPoint(
-                latitude=tile.latitudes[valid_indices[i][1]],
-                longitude=tile.longitudes[valid_indices[i][2]],
+                latitude=tile.latitudes[tuple(valid_indices[i])[-2:]],
+                longitude=tile.longitudes[tuple(valid_indices[i])[-2:]],
                 depth=None,
                 time=tile.times[valid_indices[i][0]],
                 index=valid_indices[i],
