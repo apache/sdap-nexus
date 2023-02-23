@@ -662,11 +662,14 @@ def determine_parallelism(num_tiles):
     return num_partitions
 
 
-def determine_slicing(idx_len):
-    time_slice = slice(0, 1) if idx_len == 3 else slice(None)
-    geo_slice = slice(-2, None) if idx_len == 3 else slice(None)
-
-    return time_slice, geo_slice
+def determine_slicing(indices):
+    try:
+        idx_len = len(indices[0])
+        time_slice = slice(0, 1) if idx_len == 3 else slice(None)
+        geo_slice = slice(-2, None) if idx_len == 3 else slice(None)
+        return time_slice, geo_slice
+    except IndexError:
+        return slice(None), slice(None)
 
 
 def add_meters_to_lon_lat(lon, lat, meters):
@@ -711,7 +714,7 @@ def get_insitu_unit(variable_name, insitu_schema):
 
 def tile_to_edge_points(tile):
     indices = tile.get_indices()
-    time_slice, geo_slice = determine_slicing(len(indices[0]))
+    time_slice, geo_slice = determine_slicing(indices)
 
     edge_points = []
 
@@ -824,7 +827,7 @@ def match_satellite_to_insitu(tile_ids, primary_b, secondary_b, parameter_b, tt_
         matchup_points = []
         for tile in matchup_tiles:
             valid_indices = tile.get_indices()
-            _, geo_slice = determine_slicing(len(valid_indices[0]))
+            _, geo_slice = determine_slicing(valid_indices)
             primary_points = np.array([aeqd_proj(
                 tile.longitudes[tuple(aslice)[geo_slice]],
                 tile.latitudes[tuple(aslice)[geo_slice]]
@@ -875,7 +878,7 @@ def match_tile_to_point_generator(tile_service, tile_id, m_tree, edge_results, s
     the_time = datetime.now()
     # Get list of indices of valid values
     valid_indices = tile.get_indices()
-    time_slice, geo_slice = determine_slicing(len(valid_indices[0]))
+    time_slice, geo_slice = determine_slicing(valid_indices)
     primary_points = np.array(
         [aeqd_proj(tile.longitudes[tuple(aslice)[geo_slice]], tile.latitudes[tuple(aslice)[geo_slice]]) for
          aslice in valid_indices])
