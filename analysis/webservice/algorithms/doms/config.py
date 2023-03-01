@@ -66,6 +66,10 @@ INSITU_PROVIDER_MAP = [
             {
                 'name': 'shark-2018',
                 'platforms': ['3B']
+            },
+            {
+                'name': 'baja_2018',
+                'platforms': ['3B']
             }
         ]
     },
