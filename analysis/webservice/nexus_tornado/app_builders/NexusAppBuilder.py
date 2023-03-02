@@ -31,7 +31,10 @@ class NexusAppBuilder:
 
         class VersionHandler(tornado.web.RequestHandler):
             def get(self):
-                self.write(pkg_resources.get_distribution("nexusanalysis").version)
+                analysis_version = pkg_resources.get_distribution("nexusanalysis").version
+                data_access_version = pkg_resources.get_distribution("nexus-data-access").version
+
+                self.write(f'Analysis version: {analysis_version}; Data Access version: {data_access_version}')
 
         self.handlers.append((r"/version", VersionHandler))
 
@@ -62,13 +65,25 @@ class NexusAppBuilder:
         )
 
         for clazzWrapper in NexusHandler.AVAILABLE_HANDLERS:
-            self.handlers.append(
-                (
-                    clazzWrapper.path,
-                    NexusRequestHandler,
-                    handler_args_builder.get_args(clazzWrapper)
+            path = clazzWrapper.path
+
+            if isinstance(path, list):
+                for p in path:
+                    self.handlers.append(
+                        (
+                            p,
+                            NexusRequestHandler,
+                            handler_args_builder.get_args(clazzWrapper)
+                        )
+                    )
+            else:
+                self.handlers.append(
+                    (
+                        clazzWrapper.path,
+                        NexusRequestHandler,
+                        handler_args_builder.get_args(clazzWrapper)
+                    )
                 )
-            )
 
         return self
 
