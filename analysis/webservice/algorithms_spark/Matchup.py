@@ -367,34 +367,14 @@ class DomsPoint(object):
         self.device = None
         self.file_url = None
 
-        self.__hash = None
-
     def __repr__(self):
         return str(self.__dict__)
 
     def __eq__(self, other):
-        if not isinstance(other, DomsPoint):
-            return False
-
-        return self.time == other.time and \
-            self.longitude == other.longitude and \
-            self.latitude == other.latitude and \
-            self.depth == other.depth and \
-            self.data_id == other.data_id and \
-            self.data == other.data and \
-            self.source == other.source and \
-            self.platform == other.platform and \
-            self.device == other.device and \
-            self.file_url == other.file_url
+        return isinstance(other, DomsPoint) and other.data_id == self.data_id
 
     def __hash__(self):
-        self._compute_hash()
-        return self.__hash
-
-    def _compute_hash(self):
-        if self.__hash is None:
-            # self.__hash = hash(repr(self))
-            self.__hash = hash(self.data_id)
+        return hash(self.data_id) if self.data_id else id(self)
 
     @staticmethod
     def _variables_to_device(variables):
@@ -466,7 +446,6 @@ class DomsPoint(object):
 
         point.platform = 9
         point.device = DomsPoint._variables_to_device(tile.variables)
-        point._compute_hash()
         return point
 
     @staticmethod
