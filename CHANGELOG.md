@@ -14,7 +14,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Made `platforms` param optional in `/cdmssubset`, and removed int requirement
 - Updated OpenAPI specification for `/cdmssubset` to accurately reflect `platforms` and `parameter` field options.
 - SDAP-436: Added special case for handling Cassandra SwathMulti tiles with uniform time arrays
-- SDAP-412: Explicit definition of `__eq__` in matchup `DomsPoint` class. This prevents the duplicate primary points from appearing in the final results by merging them in the `combineByKey` step.
+- SDAP-412: Explicit definition of `__eq__` and `__hash__` in matchup `DomsPoint` class. This ensures all primary-secondary pairs with the same primary point are merged in the `combineByKey` step.
 ### Security
 
 ## [1.0.0] - 2022-12-05
