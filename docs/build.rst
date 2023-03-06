@@ -128,12 +128,6 @@ Now we can build the webapp with:
 
   docker build . -f docker/nexus-webapp/Dockerfile -t sdap-local/sdap-nexus-webapp:${NEXUS_VERSION}
 
-.. note::
-
-  The build may fail with a message like ``ModuleNotFoundError: No module named 'tqdm'``, this is an issue `we're aware of <https://issues.apache.org/jira/projects/SDAP/issues/SDAP-434>`_.
-  The issue can be fixed by editing the file ``${NEXUS_DIR}/docker/nexus-webapp/Dockerfile``.
-  Change the line ``RUN conda install python=3.8`` (line 67) to ``RUN conda install python=3.8 tqdm`` and the build should succeed (maybe also include the flag ``--no-cache`` in the ``docker build`` command when retrying the build).
-
 Verify Successful Build
 ====
 
