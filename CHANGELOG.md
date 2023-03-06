@@ -6,14 +6,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 ### Added
+- Deletebyquery: Parameter to set the number of rows to fetch from Solr. Speeds up time to gather tiles to delete; especially when there is a lot of them.
 ### Changed
 ### Deprecated
 ### Removed
 ### Fixed
-- SDAP-434: Temporary fix for conda install step in docker image build breaking conda
+- Made `platforms` param optional in `/cdmssubset`, and removed int requirement
+- Updated OpenAPI specification for `/cdmssubset` to accurately reflect `platforms` and `parameter` field options.
+- SDAP-436: Added special case for handling Cassandra SwathMulti tiles with uniform time arrays
+- SDAP-434: Fix for webapp Docker image build failure
 ### Security
 
-## [1.0.0] - 2022-11-22
+## [1.0.0] - 2022-12-05
 ### Added
 - SDAP-388: Enable SDAP to proxy/redirect to alternate SDAP
 - SDAP-372: Updated matchup algorithm to point to AWS insitu API endpoint
@@ -34,6 +38,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - SDAP-407: Added depth to `/domsresults` endpoint
 - Added documentation for building SDAP docker images
   - Prepared documentation for v1.0.0 release.
+- Added missing ASF headers to all .py files in this repository.
+- Added ASF `README` for release.
 ### Changed
 - SDAP-390: Changed `/doms` to `/cdms` and `doms_reader.py` to `cdms_reader.py`
 - domslist endpoint points to AWS insitu instead of doms insitu
