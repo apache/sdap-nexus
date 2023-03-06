@@ -64,9 +64,8 @@ RUN apk --no-cache add wget zlib && \
 COPY docker/nexus-webapp/install_conda.sh ./install_conda.sh
 RUN /tmp/install_conda.sh 
 
-RUN conda install -c conda-forge python=3.8.15 tqdm
-
-RUN conda install mamba -y -c conda-forge
+RUN conda install -c conda-forge python=3.8.15=h257c98d_0_cpython tqdm=4.64.1=py38h06a4308_0
+RUN conda install -c conda-forge mamba
 
 RUN cd /usr/lib && ln -s libcom_err.so.2 libcom_err.so.3 && \ 
     cd /opt/conda/lib && \
