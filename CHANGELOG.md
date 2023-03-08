@@ -14,6 +14,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Made `platforms` param optional in `/cdmssubset`, and removed int requirement
 - Updated OpenAPI specification for `/cdmssubset` to accurately reflect `platforms` and `parameter` field options.
 - SDAP-436: Added special case for handling Cassandra SwathMulti tiles with uniform time arrays
+- SDAP-444: Fixed `resultSizeLimit` param in `/match_spark` truncating the results that are stored for the results endpoint.
 ### Security
 
 ## [1.0.0] - 2022-12-05
