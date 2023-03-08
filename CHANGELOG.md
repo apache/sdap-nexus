@@ -10,7 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `NexusHandler`s can support multiple paths. Useful if we want to rename a path without breaking any existing reliance on the old name.
 ### Changed
 - Replacing DOMS terminology with CDMS terminology:
-  - Renaming endpoints (adding aliases):
+  - Renaming endpoints:
     - `/domsresults` -> `/cdmsresults`
     - `/domslist` -> `/cdmslist`
   - Removed `/domsvalues` from Swagger UI

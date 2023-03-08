@@ -29,7 +29,7 @@ from webservice.webmodel import cached
 @nexus_handler
 class DomsDatasetListQueryHandler(BaseDomsHandler.BaseDomsQueryCalcHandler):
     name = "DOMS Dataset Listing"
-    path = ["/domslist", "/cdmslist"]
+    path = "/cdmslist"
     description = ""
     params = {}
     singleton = True
