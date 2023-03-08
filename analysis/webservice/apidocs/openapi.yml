@@ -91,51 +91,7 @@ paths:
           schema:
             type: string
           example: -45,15,-30,30
-        - in: query
-          name: platforms
-          description: |
-            Platforms to include for matchup consideration. Platform
-            depends on which insitu dataset is selected. Use platform ID
-            in the matchup query.
-
-            <details>
-              <summary>Expand to see a list of valid platforms IDs:</summary>
-            | Platform ID | Platform Name                           | Web Link                                                   |
-            | ----------- | --------------------------------------- | ---------------------------------------------------------- |
-            | 3B          | autonomous surface water vehicle        | [Link](http://vocab.nerc.ac.uk/collection/L06/current/3B/) |
-            | 6A          | glider                                  | [Link](http://vocab.nerc.ac.uk/collection/L06/current/6A/) |
-            | 0           | unknown                                 | [Link](http://vocab.nerc.ac.uk/collection/L06/current/0/)  |
-            | 16          | offshore structure                      | [Link](http://vocab.nerc.ac.uk/collection/L06/current/16/) |
-            | 17          | coastal structure                       | [Link](http://vocab.nerc.ac.uk/collection/L06/current/17/) |
-            | 23          | towed unmanned submersible              | [Link](http://vocab.nerc.ac.uk/collection/L06/current/23/) |
-            | 30          | ship                                    | [Link](http://vocab.nerc.ac.uk/collection/L06/current/30/) |
-            | 31          | research vessel                         | [Link](http://vocab.nerc.ac.uk/collection/L06/current/31/) |
-            | 41          | moored surface buoy                     | [Link](http://vocab.nerc.ac.uk/collection/L06/current/41/) |
-            | 42          | drifting surface float                  | [Link](http://vocab.nerc.ac.uk/collection/L06/current/42/) |
-            | 46          | drifting subsurface profiling float     | [Link](http://vocab.nerc.ac.uk/collection/L06/current/46/) |
-            | 48          | mooring                                 | [Link](http://vocab.nerc.ac.uk/collection/L06/current/48/) |
-            </details>
-
-          required: true
-          schema:
-            type: array
-            items:
-              type: string
-              enum:
-                - 0
-                - 3B
-                - 6A
-                - 16
-                - 17
-                - 23
-                - 30
-                - 31
-                - 41
-                - 42
-                - 46
-                - 48
-          example: 30
-          explode: false
+        - $ref: '#/components/parameters/Platforms'
         - in: query
           name: depthMin
           description: |
@@ -470,14 +426,7 @@ paths:
           schema:
             type: integer
           example: 5
-        - in: query
-          name: platforms
-          description: |
-            Platforms to include for subset consideration.
-          required: false
-          schema:
-            type: string
-          example: 3B,23
+        - $ref: '#/components/parameters/Platforms'
         - in: query
           name: output
           description: |
@@ -701,6 +650,53 @@ externalDocs:
   description: Documentation
   url: https://incubator-sdap-nexus.readthedocs.io/en/latest/index.html
 components:
+  parameters:
+    Platforms:
+      in: query
+      name: platforms
+      description: |
+        Platforms to include for matchup consideration. Platform
+        depends on which insitu dataset is selected. Use platform ID
+        in the matchup query.
+        
+        <details>
+          <summary>Expand to see a list of valid platforms IDs:</summary>
+        | Platform ID | Platform Name                           | Web Link                                                   |
+        | ----------- | --------------------------------------- | ---------------------------------------------------------- |
+        | 3B          | autonomous surface water vehicle        | [Link](http://vocab.nerc.ac.uk/collection/L06/current/3B/) |
+        | 6A          | glider                                  | [Link](http://vocab.nerc.ac.uk/collection/L06/current/6A/) |
+        | 0           | unknown                                 | [Link](http://vocab.nerc.ac.uk/collection/L06/current/0/)  |
+        | 16          | offshore structure                      | [Link](http://vocab.nerc.ac.uk/collection/L06/current/16/) |
+        | 17          | coastal structure                       | [Link](http://vocab.nerc.ac.uk/collection/L06/current/17/) |
+        | 23          | towed unmanned submersible              | [Link](http://vocab.nerc.ac.uk/collection/L06/current/23/) |
+        | 30          | ship                                    | [Link](http://vocab.nerc.ac.uk/collection/L06/current/30/) |
+        | 31          | research vessel                         | [Link](http://vocab.nerc.ac.uk/collection/L06/current/31/) |
+        | 41          | moored surface buoy                     | [Link](http://vocab.nerc.ac.uk/collection/L06/current/41/) |
+        | 42          | drifting surface float                  | [Link](http://vocab.nerc.ac.uk/collection/L06/current/42/) |
+        | 46          | drifting subsurface profiling float     | [Link](http://vocab.nerc.ac.uk/collection/L06/current/46/) |
+        | 48          | mooring                                 | [Link](http://vocab.nerc.ac.uk/collection/L06/current/48/) |
+        </details>
+
+      required: true
+      schema:
+        type: array
+        items:
+          type: string
+          enum:
+            - 0
+            - 3B
+            - 6A
+            - 16
+            - 17
+            - 23
+            - 30
+            - 31
+            - 41
+            - 42
+            - 46
+            - 48
+      example: 30
+      explode: false
   schemas:
     DomsQueryResult:
       type: object
