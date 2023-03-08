@@ -7,17 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 ### Added
 - Deletebyquery: Parameter to set the number of rows to fetch from Solr. Speeds up time to gather tiles to delete; especially when there is a lot of them.
-- `NexusHandler`s can support multiple paths. Useful if we want to rename a path without breaking any existing reliance on the old name.
+- SDAP-443: `NexusHandler`s can support multiple paths. Useful if we want to rename a path without breaking any existing reliance on the old name.
 ### Changed
-- Replacing DOMS terminology with CDMS terminology:
-  - Renaming endpoints:
-    - `/domsresults` -> `/cdmsresults`
-    - `/domslist` -> `/cdmslist`
-  - Removed `/domsvalues` from Swagger UI
-- Swagger UI updates:
-  - `platforms` parameter in `/match_spark` is now a multi-select list.
-  - Added note to `/stats` endpoint to note it is limited to satellite datasets
-- Updated `/version` to report analysis and data access component versions
+- SDAP-443:
+  - Replacing DOMS terminology with CDMS terminology:
+    - Renaming endpoints:
+      - `/domsresults` -> `/cdmsresults`
+      - `/domslist` -> `/cdmslist`
+    - Removed `/domsvalues` from Swagger UI
+  - Swagger UI updates:
+    - `platforms` parameter in `/match_spark` is now a multi-select list.
+    - Added note to `/stats` endpoint to note it is limited to satellite datasets
+  - Updated `/version` to report analysis and data access component versions
 ### Deprecated
 ### Removed
 ### Fixed
