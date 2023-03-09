@@ -18,7 +18,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Swagger UI updates:
     - `platforms` parameter in `/match_spark` is now a multi-select list.
     - Added note to `/stats` endpoint to note it is limited to satellite datasets
-  - Updated `/version` to report analysis and data access component versions
 ### Deprecated
 ### Removed
 ### Fixed
