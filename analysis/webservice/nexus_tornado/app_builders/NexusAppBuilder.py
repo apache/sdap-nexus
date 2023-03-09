@@ -62,25 +62,13 @@ class NexusAppBuilder:
         )
 
         for clazzWrapper in NexusHandler.AVAILABLE_HANDLERS:
-            path = clazzWrapper.path
-
-            if isinstance(path, list):
-                for p in path:
-                    self.handlers.append(
-                        (
-                            p,
-                            NexusRequestHandler,
-                            handler_args_builder.get_args(clazzWrapper)
-                        )
-                    )
-            else:
-                self.handlers.append(
-                    (
-                        clazzWrapper.path,
-                        NexusRequestHandler,
-                        handler_args_builder.get_args(clazzWrapper)
-                    )
+            self.handlers.append(
+                (
+                    clazzWrapper.path,
+                    NexusRequestHandler,
+                    handler_args_builder.get_args(clazzWrapper)
                 )
+            )
 
         return self
 
