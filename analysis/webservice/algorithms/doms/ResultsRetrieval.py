@@ -39,7 +39,7 @@ insitu_schema = Schema()
 @nexus_handler
 class DomsResultsRetrievalHandler(BaseDomsHandler.BaseDomsQueryCalcHandler):
     name = "DOMS Resultset Retrieval"
-    path = "/domsresults"
+    path = "/cdmsresults"
     description = ""
     params = {}
     singleton = True
