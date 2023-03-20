@@ -15,7 +15,7 @@
 
 
 function DatasetPopulatePlugin(system) {
-  const DS_PATH = '/domslist'
+  const DS_PATH = '/cdmslist'
   const ACTION_UPDATE_DATASETS = 'UPDATE_DATASETS'
   const ACTION_UPDATE_ERROR = 'UPDATE_ERROR'
 
