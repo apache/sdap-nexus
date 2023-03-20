@@ -367,11 +367,13 @@ class DomsPoint(object):
         self.device = None
         self.file_url = None
 
+        self.__id = id(self)
+
     def __repr__(self):
         return str(self.__dict__)
 
     def __eq__(self, other):
-        return isinstance(other, DomsPoint) and other.data_id == self.data_id
+        return isinstance(other, DomsPoint) and other.__id == self.__id
 
     def __hash__(self):
         return hash(self.data_id) if self.data_id else id(self)
