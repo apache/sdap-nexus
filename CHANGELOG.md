@@ -25,6 +25,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - SDAP-436: Added special case for handling Cassandra SwathMulti tiles with uniform time arrays
 - SDAP-449: Fixed `/cdmsresults` NetCDF output displaying and downloading as .txt. 
 - SDAP-449: Fixed 404 error when populating datasets; script was still using `/domslist`
+- SDAP-415: Fixed bug where mask was incorrectly combined across all variables for multi-variable satellite to satellite matchup
 ### Security
 
 ## [1.0.0] - 2022-12-05
