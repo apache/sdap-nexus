@@ -500,7 +500,7 @@ paths:
     get:
       summary: |
         Convert matchup result
-      operationId: domsresults
+      operationId: cdmsresults
       tags:
         - Matchup
       parameters:
@@ -529,7 +529,7 @@ paths:
             text/csv:
               schema:
                 type: string
-            application/octet-stream:
+            application/x-netcdf:
               schema:
                 type: string
                 format: binary
