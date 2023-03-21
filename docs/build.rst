@@ -51,6 +51,15 @@ Create a temporary directory to extract to.
   mv ${TMP_DIR}/Apache-SDAP/apache-sdap-ingester-${INGESTER_VERSION}-incubating-src/* ${INGESTER_DIR}
   mv ${TMP_DIR}/Apache-SDAP/apache-sdap-nexus-${NEXUS_VERSION}-incubating-src/* ${NEXUS_DIR}
 
+Set Default Docker Platform
+---
+
+To ensure consistency when building/running on different hardware architectures, we should set this variable to ensure docker uses ``linux/amd64``.
+
+.. code-block:: bash
+
+  export DOCKER_DEFAULT_PLATFORM=linux/amd64
+
 Build Ingester Components
 =========================
 

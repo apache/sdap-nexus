@@ -31,6 +31,15 @@ Start downloading the Docker images and set up the Docker bridge network.
 
 .. _quickstart-step1:
 
+Set Default Docker Platform
+---
+
+To ensure consistency when building/running on different hardware architectures, we should set this variable to ensure docker uses ``linux/amd64``.
+
+.. code-block:: bash
+
+  export DOCKER_DEFAULT_PLATFORM=linux/amd64
+
 Set Tag Variables
 -------------------
 
