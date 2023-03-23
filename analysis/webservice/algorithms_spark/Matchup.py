@@ -169,10 +169,11 @@ class Matchup(NexusCalcSparkHandler):
             raise NexusProcessingException(reason="'secondary' argument is required", code=400)
 
         parameter_s = request.get_argument('parameter')
-        insitu_params = get_insitu_params(insitu_schema.get())
-        if parameter_s and parameter_s not in insitu_params:
-            raise NexusProcessingException(
-                reason=f"Parameter {parameter_s} not supported. Must be one of {insitu_params}", code=400)
+        if parameter_s:
+            insitu_params = get_insitu_params(insitu_schema.get())
+            if parameter_s not in insitu_params:
+                raise NexusProcessingException(
+                    reason=f"Parameter {parameter_s} not supported. Must be one of {insitu_params}", code=400)
 
         try:
             start_time = request.get_start_datetime()
@@ -367,8 +368,16 @@ class DomsPoint(object):
         self.device = None
         self.file_url = None
 
+        self.__id = id(self)
+
     def __repr__(self):
         return str(self.__dict__)
+
+    def __eq__(self, other):
+        return isinstance(other, DomsPoint) and other.__id == self.__id
+
+    def __hash__(self):
+        return hash(self.data_id) if self.data_id else id(self)
 
     @staticmethod
     def _variables_to_device(variables):
@@ -801,31 +810,37 @@ def match_satellite_to_insitu(tile_ids, primary_b, secondary_b, parameter_b, tt_
         polygon = Polygon(
             [(west, south), (east, south), (east, north), (west, north), (west, south)])
 
+        # Find tile IDS from spatial/temporal bounds of partition
         matchup_tiles = tile_service.find_tiles_in_polygon(
             bounding_polygon=polygon,
             ds=secondary_b.value,
             start_time=matchup_min_time,
             end_time=matchup_max_time,
-            fetch_data=True,
+            fl='id',
+            fetch_data=False,
             sort=['tile_min_time_dt asc', 'tile_min_lon asc', 'tile_min_lat asc'],
             rows=5000
         )
 
         # Convert Tile IDS to tiles and convert to UTM lat/lon projection.
         matchup_points = []
+        edge_results = []
         for tile in matchup_tiles:
+            # Retrieve tile data and convert to lat/lon projection
+            tiles = tile_service.find_tile_by_id(tile.tile_id, fetch_data=True)
+            tile = tiles[0]
+
             valid_indices = tile.get_indices()
+
             primary_points = np.array([aeqd_proj(
                 tile.longitudes[aslice[2]],
                 tile.latitudes[aslice[1]]
             ) for aslice in valid_indices])
             matchup_points.extend(primary_points)
+            edge_results.extend(tile_to_edge_points(tile))
 
-        # Convert tiles to 'edge points' which match the format of in-situ edge points.
-        edge_results = []
-        for matchup_tile in matchup_tiles:
-            edge_results.extend(tile_to_edge_points(matchup_tile))
-
+        if len(matchup_points) <= 0:
+            return []
         matchup_points = np.array(matchup_points)
 
     print("%s Time to convert match points for partition %s to %s" % (
