@@ -28,6 +28,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - SDAP-449: Fixed 404 error when populating datasets; script was still using `/domslist`
 - SDAP-415: Fixed bug where mask was incorrectly combined across all variables for multi-variable satellite to satellite matchup
 - SDAP-434: Fix for webapp Docker image build failure
+- SDAP-412: Explicit definition of `__eq__` and `__hash__` in matchup `DomsPoint` class. This ensures all primary-secondary pairs with the same primary point are merged in the `combineByKey` step.
 ### Security
 
 ## [1.0.0] - 2022-12-05
