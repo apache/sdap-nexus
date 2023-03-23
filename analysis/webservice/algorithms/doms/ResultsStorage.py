@@ -13,20 +13,21 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-
-
 import configparser
+import json
 import logging
+import math
 import uuid
-import numpy as np
 from datetime import datetime
 
+import numpy as np
 import pkg_resources
+from cassandra.auth import PlainTextAuthProvider
 from cassandra.cluster import Cluster
 from cassandra.policies import TokenAwarePolicy, DCAwareRoundRobinPolicy
 from cassandra.query import BatchStatement
-from cassandra.auth import PlainTextAuthProvider
 from pytz import UTC
+from webservice.algorithms.doms.BaseDomsHandler import DomsEncoder
 
 
 class AbstractResultsContainer:
@@ -98,6 +99,7 @@ class ResultsStorage(AbstractResultsContainer):
         AbstractResultsContainer.__init__(self, config)
 
     def insertResults(self, results, params, stats, startTime, completeTime, userEmail, execution_id=None):
+        self._log.info('Beginning results write')
         if isinstance(execution_id, str):
             execution_id = uuid.UUID(execution_id)
 
@@ -105,6 +107,7 @@ class ResultsStorage(AbstractResultsContainer):
         self.__insertParams(execution_id, params)
         self.__insertStats(execution_id, stats)
         self.__insertResults(execution_id, results)
+        self._log.info('Results write finished')
         return execution_id
 
     def insertExecution(self, execution_id, startTime, completeTime, userEmail):
@@ -177,21 +180,29 @@ class ResultsStorage(AbstractResultsContainer):
 
         dataMap = self.__buildDataMap(data_dict)
         result_id = uuid.uuid4()
-        batch.add(insertStatement, (
-            result_id,
-            execution_id,
-            result["id"],
-            primaryId,
-            result["lon"],
-            result["lat"],
-            result["source"],
-            result["time"],
-            result["platform"] if "platform" in result else None,
-            result["device"] if "device" in result else None,
-            dataMap,
-            1 if primaryId is None else 0,
-            result["depth"]
-        ))
+
+        insert_params = (
+                result_id,
+                execution_id,
+                result["id"],
+                primaryId,
+                result["lon"],
+                result["lat"],
+                result["source"],
+                result["time"],
+                result["platform"] if "platform" in result else None,
+                result["device"] if "device" in result else None,
+                dataMap,
+                1 if primaryId is None else 0,
+                result["depth"]
+            )
+
+        try:
+            batch.add(insertStatement, insert_params)
+        except:
+            self._log.error(f'Result batch INSERT preparation failed')
+            self._log.error('INSERT params %s', str(insert_params))
+            raise
 
         n = 0
         if "matches" in result:
@@ -221,6 +232,10 @@ class ResultsStorage(AbstractResultsContainer):
             value = data_dict['variable_value']
             if isinstance(value, np.generic):
                 value = value.item()
+
+            if math.isnan(value):
+                value = None
+
             dataMap[name] = value
         return dataMap
 
