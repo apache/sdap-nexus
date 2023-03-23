@@ -64,11 +64,9 @@ RUN apk --no-cache add wget zlib && \
 COPY docker/nexus-webapp/install_conda.sh ./install_conda.sh
 RUN /tmp/install_conda.sh 
 
-RUN conda install python=3.8
+RUN conda install -c conda-forge python=3.8.15=h257c98d_0_cpython tqdm=4.64.1=py38h06a4308_0  mamba && conda clean -afy
 
-RUN conda install mamba -y -c conda-forge
-
-RUN cd /usr/lib && ln -s libcom_err.so.2 libcom_err.so.3 && \ 
+RUN cd /usr/lib && ln -s libcom_err.so.2 libcom_err.so.3 && \
     cd /opt/conda/lib && \
     ln -s libnetcdf.so.11 libnetcdf.so.7 && \
     ln -s libkea.so.1.4.6 libkea.so.1.4.5 && \
@@ -90,10 +88,10 @@ COPY analysis /incubator-sdap-nexus/analysis
 COPY tools /incubator-sdap-nexus/tools
 
 WORKDIR /incubator-sdap-nexus/data-access
-RUN python3 setup.py install
+RUN python3 setup.py install clean
 
 WORKDIR /incubator-sdap-nexus/analysis
-RUN python3 setup.py install
+RUN python3 setup.py install clean && mamba clean -afy
 
 
 WORKDIR /incubator-sdap-nexus/tools/deletebyquery
