@@ -462,19 +462,31 @@ class DomsNetCDFValueWriter:
             depthVar[:] = self.depth
 
         for variable_name, data in self.data_map.items():
-            print(variable_name)
-            print(json.dumps(data, indent=4))
+            map = {}
+            units = {}
 
-            # # Create a variable for each data point
-            # data_variable = self.group.createVariable(variable_name, 'f4', ('dim',), fill_value=-32767.0)
-            # # Find min/max for data variables. It is possible for 'None' to
-            # # be in this list, so filter those out when doing the calculation.
-            # min_data = min(val for val in data if val is not None)
-            # max_data = max(val for val in data if val is not None)
-            # self.__enrichVariable(data_variable, min_data, max_data, has_depth=self.depth)
-            # data_variable[:] = data
-            # data_variable.long_name = variable_name
-            # data_variable.standard_name = variable_name
+            for match in data:
+                for variable in match:
+                    key = (variable['variable_name'], variable['cf_variable_name'])
+
+                    if key not in map:
+                        map[key] = [variable['variable_value']]
+                        unit = variable['variable_unit']
+                        units[key] = str(unit) if unit is not None else 'UNKNOWN'
+                    else:
+                        map[key].append(variable['variable_value'])
+
+            for variable in map:
+                # Create a variable for each data point
+                data_variable = self.group.createVariable(variable[1], 'f4', ('dim',), fill_value=-32767.0)
+                # Find min/max for data variables. It is possible for 'None' to
+                # be in this list, so filter those out when doing the calculation.
+                min_data = min(val for val in map[variable] if val is not None)
+                max_data = max(val for val in map[variable] if val is not None)
+                self.__enrichVariable(data_variable, min_data, max_data, has_depth=None, unit=units[variable])
+                data_variable[:] = map[variable]
+                data_variable.long_name = variable[0]
+                data_variable.standard_name = variable[1]
 
     #
     # Lists may include 'None" values, to calc min these must be filtered out
@@ -484,13 +496,13 @@ class DomsNetCDFValueWriter:
         return min(x for x in var if x is not None)
 
     @staticmethod
-    def __enrichVariable(var, var_min, var_max, has_depth):
+    def __enrichVariable(var, var_min, var_max, has_depth, unit='UNKNOWN'):
         coordinates = ['lat', 'lon', 'depth', 'time']
 
         if not has_depth:
             coordinates = ['lat', 'lon', 'time']
 
-        var.units = 'UNKNOWN'  # TODO populate this field once this metadata is in place
+        var.units = unit
         var.valid_min = var_min
         var.valid_max = var_max
         var.coordinates = ' '.join(coordinates)
