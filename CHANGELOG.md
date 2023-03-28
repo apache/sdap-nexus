@@ -18,6 +18,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     - `platforms` parameter in `/match_spark` is now a multi-select list.
     - Added note to `/stats` endpoint to note it is limited to satellite datasets
 - SDAP-450: Updated helm chart to reflect k8s 1.22 changes. Bumped RMQ dependency version & updated Bitnami dependency chart URLs. Ingress template is already up to date.
+- SDAP-453: Updated results storage and retrieval to support output JSON from `/cdmsresults` that matches output from `/match_spark`.
+  - **NOTE:** Deploying these changes to an existing SDAP deployment will require modifying the Cassandra database with stored results. There is a script to do so at `/tools/update-doms-data-schema/update.py`
+- Made the `output` parameter case-insensitive
 ### Deprecated
 ### Removed
 ### Fixed
