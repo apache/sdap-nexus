@@ -241,8 +241,8 @@ class DomsCSVFormatter:
 
             {"Global Attribute": "CDMS_time_to_complete", "Value": details["timeToComplete"]},
             {"Global Attribute": "CDMS_time_to_complete_units", "Value": "seconds"},
-            {"Global Attribute": "CDMS_num_secondary_matched", "Value": details["numInSituMatched"]},
-            {"Global Attribute": "CDMS_num_primary_matched", "Value": details["numGriddedMatched"]},
+            {"Global Attribute": "CDMS_num_secondary_matched", "Value": details["numSecondaryMatched"]},
+            {"Global Attribute": "CDMS_num_primary_matched", "Value": details["numPrimaryMatched"]},
 
             {"Global Attribute": "date_modified", "Value": datetime.utcnow().replace(tzinfo=UTC).strftime(ISO_8601)},
             {"Global Attribute": "date_created", "Value": datetime.utcnow().replace(tzinfo=UTC).strftime(ISO_8601)},
@@ -272,8 +272,8 @@ class DomsNetCDFFormatter:
         dataset.time_coverage_end = params["endTime"].strftime(ISO_8601)
         dataset.time_coverage_resolution = "point"
         dataset.CDMS_secondary = params["matchup"]
-        dataset.CDMS_num_matchup_matched = details["numInSituMatched"]
-        dataset.CDMS_num_primary_matched = details["numGriddedMatched"]
+        dataset.CDMS_num_matchup_matched = details["numSecondaryMatched"]
+        dataset.CDMS_num_primary_matched = details["numPrimaryMatched"]
 
         bbox = geo.BoundingBox(asString=params["bbox"])
         dataset.geospatial_lat_max = bbox.north
@@ -413,7 +413,8 @@ class DomsNetCDFValueWriter:
         non_data_fields = [
             'id', 'lon', 'lat',
             'source', 'device',
-            'platform', 'time', 'matches'
+            'platform', 'time', 'matches',
+            'point', 'fileurl'
         ]
         self.lat.append(result_item.get('lat', None))
         self.lon.append(result_item.get('lon', None))
@@ -461,16 +462,19 @@ class DomsNetCDFValueWriter:
             depthVar[:] = self.depth
 
         for variable_name, data in self.data_map.items():
-            # Create a variable for each data point
-            data_variable = self.group.createVariable(variable_name, 'f4', ('dim',), fill_value=-32767.0)
-            # Find min/max for data variables. It is possible for 'None' to
-            # be in this list, so filter those out when doing the calculation.
-            min_data = min(val for val in data if val is not None)
-            max_data = max(val for val in data if val is not None)
-            self.__enrichVariable(data_variable, min_data, max_data, has_depth=self.depth)
-            data_variable[:] = data
-            data_variable.long_name = variable_name
-            data_variable.standard_name = variable_name
+            print(variable_name)
+            print(json.dumps(data, indent=4))
+
+            # # Create a variable for each data point
+            # data_variable = self.group.createVariable(variable_name, 'f4', ('dim',), fill_value=-32767.0)
+            # # Find min/max for data variables. It is possible for 'None' to
+            # # be in this list, so filter those out when doing the calculation.
+            # min_data = min(val for val in data if val is not None)
+            # max_data = max(val for val in data if val is not None)
+            # self.__enrichVariable(data_variable, min_data, max_data, has_depth=self.depth)
+            # data_variable[:] = data
+            # data_variable.long_name = variable_name
+            # data_variable.standard_name = variable_name
 
     #
     # Lists may include 'None" values, to calc min these must be filtered out
