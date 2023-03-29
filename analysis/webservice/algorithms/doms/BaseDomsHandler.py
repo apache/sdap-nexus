@@ -126,14 +126,31 @@ class DomsCSVFormatter:
         return csv_out
 
     @staticmethod
+    def __get_variable_name(variable):
+        def is_empty(s):
+            return s is None or s == ''
+
+        name = variable['cf_variable_name']
+
+        return name if not is_empty(name) else variable['variable_name']
+
+    @staticmethod
     def __packValues(csv_mem_file, results):
         primary_headers = list(dict.fromkeys(
-            key for result in results for key in result if key != 'matches'
+            key for result in results for key in result if key not in ['matches', 'primary']
         ))
 
+        primary_headers.extend(list(dict.fromkeys(
+            DomsCSVFormatter.__get_variable_name(variable) for result in results for variable in result['primary']
+        )))
+
         secondary_headers = list(dict.fromkeys(
-            key for result in results for match in result['matches'] for key in match
+            key for result in results for match in result['matches'] for key in match if key != 'secondary'
         ))
+
+        secondary_headers.extend(list(dict.fromkeys(
+            DomsCSVFormatter.__get_variable_name(variable) for result in results for match in result['matches'] for variable in match['secondary']
+        )))
 
         writer = csv.writer(csv_mem_file)
         writer.writerow(list(itertools.chain(primary_headers, secondary_headers)))
@@ -145,13 +162,24 @@ class DomsCSVFormatter:
                 for key, value in primaryValue.items():
                     if key == 'matches':
                         continue
-                    index = primary_headers.index(key)
-                    primary_row[index] = value
+
+                    if key != 'primary':
+                        index = primary_headers.index(key)
+                        primary_row[index] = value
+                    else:
+                        for variable in value:
+                            index = primary_headers.index(DomsCSVFormatter.__get_variable_name(variable))
+                            primary_row[index] = variable['variable_value']
                 # Secondary
                 secondary_row = [None for _ in range(len(secondary_headers))]
                 for key, value in matchup.items():
-                    index = secondary_headers.index(key)
-                    secondary_row[index] = value
+                    if key != 'secondary':
+                        index = secondary_headers.index(key)
+                        secondary_row[index] = value
+                    else:
+                        for variable in value:
+                            index = secondary_headers.index(DomsCSVFormatter.__get_variable_name(variable))
+                            secondary_row[index] = variable['variable_value']
                 writer.writerow(list(itertools.chain(primary_row, secondary_row)))
 
     @staticmethod
