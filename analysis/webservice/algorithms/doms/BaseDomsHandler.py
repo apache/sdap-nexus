@@ -490,29 +490,32 @@ class DomsNetCDFValueWriter:
             depthVar[:] = self.depth
 
         for variable_name, data in self.data_map.items():
-            map = {}
             units = {}
 
-            for match in data:
+            variables = dict.fromkeys(
+                ((variable['variable_name'], variable['cf_variable_name']) for match in data for variable in match),
+                None
+            )
+
+            for variable in variables:
+                variables[variable] = np.repeat(np.nan, len(data))
+
+            for i, match in enumerate(data):
                 for variable in match:
                     key = (variable['variable_name'], variable['cf_variable_name'])
+                    unit = variable['variable_unit']
+                    units[key] = str(unit) if unit is not None else 'UNKNOWN'
+                    variables[key][i] = variable['variable_value']
 
-                    if key not in map:
-                        map[key] = [variable['variable_value']]
-                        unit = variable['variable_unit']
-                        units[key] = str(unit) if unit is not None else 'UNKNOWN'
-                    else:
-                        map[key].append(variable['variable_value'])
-
-            for variable in map:
+            for variable in variables:
                 # Create a variable for each data point
                 data_variable = self.group.createVariable(variable[1], 'f4', ('dim',), fill_value=-32767.0)
                 # Find min/max for data variables. It is possible for 'None' to
                 # be in this list, so filter those out when doing the calculation.
-                min_data = min(val for val in map[variable] if val is not None)
-                max_data = max(val for val in map[variable] if val is not None)
+                min_data = np.nanmin(variables[variable])
+                max_data = np.nanmax(variables[variable])
                 self.__enrichVariable(data_variable, min_data, max_data, has_depth=None, unit=units[variable])
-                data_variable[:] = map[variable]
+                data_variable[:] = np.ma.masked_invalid(variables[variable])
                 data_variable.long_name = variable[0]
                 data_variable.standard_name = variable[1]
 
