@@ -7,6 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 ### Added
 - Deletebyquery: Parameter to set the number of rows to fetch from Solr. Speeds up time to gather tiles to delete; especially when there is a lot of them.
+- SDAP-454: Added new query parameter `prioritizeDistance` to matchup algorithm
 ### Changed
 - SDAP-443:
   - Replacing DOMS terminology with CDMS terminology:
