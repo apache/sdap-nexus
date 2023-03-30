@@ -188,8 +188,8 @@ def translate_values(values_dict):
 
     for key in values_dict:
         values.append({
-            "variable_name": key,
-            "cf_variable_name": "",
+            "variable_name": "",
+            "cf_variable_name": key,
             "variable_value": values_dict[key],
             "variable_unit": None
         })
