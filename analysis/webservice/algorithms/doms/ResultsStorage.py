@@ -43,6 +43,11 @@ class AbstractResultsContainer:
         self._log = logging.getLogger(__name__)
         self._log.info("Creating DOMS Results Storage Instance")
 
+        try:
+            raise Exception('log')
+        except Exception as e:
+            self._log.exception(e)
+
         self._session = None
         self._config = configparser.RawConfigParser()
         self._config.read(AbstractResultsContainer._get_config_files('domsconfig.ini'))
@@ -314,10 +319,13 @@ class ResultsRetrieval(AbstractResultsContainer):
                 "point": f"Point({float(row.x):.3f} {float(row.y):.3f})",
                 "time": row.measurement_time.replace(tzinfo=UTC),
                 "depth": float(row.depth) if row.depth is not None else None,
-                "fileurl": row.file_url,
+                "fileurl": row.file_url if hasattr(row, 'file_url') else None,
                 "id": row.value_id,
                 "source": row.source_dataset,
             }
+
+        # If doms_data uses the old schema, default to original behavior
+
         try:
             entry['primary' if row.is_primary else 'secondary'] = json.loads(row.measurement_values_json)
         except AttributeError:
