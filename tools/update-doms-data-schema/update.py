@@ -1,15 +1,13 @@
+import argparse
+import configparser
+import decimal
+import json
 import logging
 
 from cassandra.auth import PlainTextAuthProvider
-from cassandra.cluster import Cluster
-from cassandra.cluster import NoHostAvailable
+from cassandra.cluster import Cluster, NoHostAvailable, ExecutionProfile, EXEC_PROFILE_DEFAULT
 from cassandra.policies import (DCAwareRoundRobinPolicy, TokenAwarePolicy,
                                 WhiteListRoundRobinPolicy)
-
-
-import configparser
-import json
-import decimal
 
 try:
     logging.getLogger('webservice.NexusHandler').setLevel(logging.CRITICAL)
@@ -37,10 +35,35 @@ def main():
     domsconfig = configparser.ConfigParser()
     domsconfig.read(DomsInitializer._get_config_files('domsconfig.ini'))
 
-    cassHost = domsconfig.get("cassandra", "host")
-    cassPort = domsconfig.get("cassandra", "port")
-    cassUsername = "cassandra"  # domsconfig.get("cassandra", "username")
-    cassPassword = "cassandra"  # domsconfig.get("cassandra", "password")
+    parser = argparse.ArgumentParser()
+
+    parser.add_argument('-u', '--cassandra-username',
+                        dest='username', help='The username used to connect to Cassandra.',
+                        required=True, metavar='USERNAME')
+
+    parser.add_argument('-p', '--cassandra-password',
+                        dest='password', help='The password used to connect to Cassandra.',
+                        required=True, metavar='PASSWORD')
+
+    parser.add_argument('--cassandra', help='The hostname(s) or IP(s) of the Cassandra server(s).',
+                        required=False,
+                        default=domsconfig.get("cassandra", "host"),
+                        dest='hosts',
+                        nargs='+',
+                        metavar=('localhost', '127.0.0.101'))
+
+    parser.add_argument('--cassandraPort',
+                        help='The port used to connect to Cassandra.',
+                        dest='port',
+                        required=False,
+                        default=domsconfig.get("cassandra", "port"))
+
+    args = parser.parse_args()
+
+    cassHost = args.hosts
+    cassPort = args.port
+    cassUsername = args.username
+    cassPassword = args.password
     cassKeyspace = domsconfig.get("cassandra", "keyspace")
     cassDatacenter = domsconfig.get("cassandra", "local_datacenter")
     cassVersion = int(domsconfig.get("cassandra", "protocol_version"))
@@ -69,7 +92,9 @@ def main():
     try:
         with Cluster([host for host in cassHost.split(',')],
                      port=int(cassPort),
-                     load_balancing_policy=token_policy,
+                     execution_profiles={
+                         EXEC_PROFILE_DEFAULT: ExecutionProfile(load_balancing_policy=token_policy)
+                     },
                      protocol_version=cassVersion,
                      auth_provider=auth_provider) as cluster:
             session = cluster.connect(cassKeyspace)
