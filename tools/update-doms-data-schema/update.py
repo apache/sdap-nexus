@@ -80,7 +80,23 @@ def main():
             """
 
             log.info('Creating measurement_values_json column')
-            session.execute(cql)
+
+            try:
+                session.execute(cql)
+            except:
+                log.warning('measurement_values_json column creation failed; perhaps it already exists')
+
+            cql = """
+            alter table doms_data
+                 add file_url text;
+            """
+
+            log.info('Creating file_url column')
+
+            try:
+                session.execute(cql)
+            except:
+                log.warning('file_url column creation failed; perhaps it already exists')
 
             for i in range(5):
                 if not move_data(session):
@@ -99,14 +115,6 @@ def main():
 
             log.info('Dropping old measurement_values column')
             session.execute(cql)
-
-            # cql = """
-            # alter table doms_data
-            #     rename measurement_values_json to measurement_values;
-            # """
-            #
-            # log.info('Moving new measurement_values column')
-            # session.execute(cql)
     except NoHostAvailable as e:
         log.error("Unable to connect to Cassandra, Nexus will not be able to access local data ", e)
     except Exception as e:
@@ -122,7 +130,12 @@ def move_data(session):
 
     log.info('Fetching execution measurements')
 
-    rows = session.execute(cql)
+    try:
+        rows = session.execute(cql)
+    except:
+        log.warning('SELECT query failed; the measurement_values column may no longer exist')
+        exit(0)
+
     update_params = []
 
     for row in rows:
