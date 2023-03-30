@@ -43,11 +43,6 @@ class AbstractResultsContainer:
         self._log = logging.getLogger(__name__)
         self._log.info("Creating DOMS Results Storage Instance")
 
-        try:
-            raise Exception('log')
-        except Exception as e:
-            self._log.exception(e)
-
         self._session = None
         self._config = configparser.RawConfigParser()
         self._config.read(AbstractResultsContainer._get_config_files('domsconfig.ini'))
