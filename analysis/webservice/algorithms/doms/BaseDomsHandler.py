@@ -405,13 +405,15 @@ class DomsNetCDFFormatter:
 
             # Add each match only if it is not already in the array of in situ points
             for match in result["matches"]:
-                if match["id"] not in ids:
-                    ids[match["id"]] = insituIndex
+                key = (match['id'], f'{match["depth"]:.4}')
+
+                if key not in ids:
+                    ids[key] = insituIndex
                     insituIndex += 1
                     insituWriter.addData(match)
 
                 # Append an index pait of (satellite, in situ) to the array of matches
-                matches.append((r, ids[match["id"]]))
+                matches.append((r, ids[key]))
 
         # Add data/write to the netCDF file
         satelliteWriter.writeGroup()
@@ -509,15 +511,19 @@ class DomsNetCDFValueWriter:
 
             for variable in variables:
                 # Create a variable for each data point
-                data_variable = self.group.createVariable(variable[1], 'f4', ('dim',), fill_value=-32767.0)
+                name = variable[0]
+                cf_name = variable[1]
+
+                data_variable = self.group.createVariable(
+                    cf_name if cf_name is not None and cf_name != '' else name, 'f4', ('dim',), fill_value=-32767.0)
                 # Find min/max for data variables. It is possible for 'None' to
                 # be in this list, so filter those out when doing the calculation.
                 min_data = np.nanmin(variables[variable])
                 max_data = np.nanmax(variables[variable])
                 self.__enrichVariable(data_variable, min_data, max_data, has_depth=None, unit=units[variable])
                 data_variable[:] = np.ma.masked_invalid(variables[variable])
-                data_variable.long_name = variable[0]
-                data_variable.standard_name = variable[1]
+                data_variable.long_name = name
+                data_variable.standard_name = cf_name
 
     #
     # Lists may include 'None" values, to calc min these must be filtered out
