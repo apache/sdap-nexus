@@ -589,3 +589,71 @@ def test_match_once_keep_duplicates():
         for point in secondary_points:
             assert point.data_id in [secondary_doms_point_1.data_id, secondary_doms_point_2.data_id]
             assert point.data_id != secondary_doms_point_3.data_id
+
+
+def test_prioritize_distance():
+    """
+    Ensure that distance is prioritized over time when prioritizeDistance=True, and
+    that time is prioritized over distance when prioritizeDistance=False.
+    """
+    primary_doms_point = DomsPoint(longitude=1.0, latitude=1.0, time='2017-07-01T00:00:00Z',
+                                   depth=None, data_id='primary')
+    # Close in space, far in time
+    secondary_doms_point_1 = DomsPoint(longitude=2.0, latitude=2.0, time='2017-07-08T00:00:00Z',
+                                       depth=-1, data_id='secondary1')
+    # Far in space, close in time
+    secondary_doms_point_2 = DomsPoint(longitude=90.0, latitude=90.0, time='2017-07-01T00:00:01Z',
+                                       depth=-1, data_id='secondary2')
+
+    primary_doms_point.data = []
+    secondary_doms_point_1.data = []
+    secondary_doms_point_2.data = []
+
+    patch_generators = [
+        (primary_doms_point, secondary_doms_point_1),
+        (primary_doms_point, secondary_doms_point_2),
+    ]
+
+    spark = SparkSession.builder.appName('nexus-analysis').getOrCreate()
+    spark_context = spark.sparkContext
+
+    with mock.patch(
+            'webservice.algorithms_spark.Matchup.match_satellite_to_insitu',
+    ) as mock_match_satellite_to_insitu, mock.patch(
+        'webservice.algorithms_spark.Matchup.determine_parallelism'
+    ) as mock_determine_parallelism:
+        # Mock the actual call to generate a matchup. Hardcode response
+        # to test this scenario
+        mock_match_satellite_to_insitu.return_value = patch_generators
+        mock_determine_parallelism.return_value = 1
+
+        match_params = {
+            'tile_ids': ['test'],
+            'bounding_wkt': '',
+            'primary_ds_name': '',
+            'secondary_ds_names': '',
+            'parameter': '',
+            'depth_min': 0,
+            'depth_max': 0,
+            'time_tolerance': 2000000,
+            'radius_tolerance': 0,
+            'platforms': '',
+            'match_once': True,
+            'tile_service_factory': lambda x: None,
+            'prioritize_distance': True,
+            'sc': spark_context
+        }
+
+        match_result = spark_matchup_driver(**match_params)
+        assert len(match_result) == 1
+        secondary_points = match_result[list(match_result.keys())[0]]
+        assert len(secondary_points) == 1
+        assert secondary_points[0].data_id == secondary_doms_point_1.data_id
+
+        match_params['prioritize_distance'] = False
+
+        match_result = spark_matchup_driver(**match_params)
+        assert len(match_result) == 1
+        secondary_points = match_result[list(match_result.keys())[0]]
+        assert len(secondary_points) == 1
+        assert secondary_points[0].data_id == secondary_doms_point_2.data_id
