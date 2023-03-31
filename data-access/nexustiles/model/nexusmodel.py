@@ -128,17 +128,13 @@ class Tile(object):
 
     def nexus_point_generator(self, include_nan=False):
         indices = self.get_indices(include_nan)
-
-        # print(indices)
-
         idx_len = len(indices[0])
-
-        # print(self.latitudes)
-        # print(self.times)
-        # print(self.data)
 
         time_slice = slice(0, 1) if idx_len == 3 else slice(None)
         geo_slice = slice(-1, None) if idx_len == 3 else slice(None)
+
+        if len(indices) == 0 or (isinstance(indices, np.ndarray) and indices.size == 0):
+            return
 
         if include_nan:
             for index in indices:
