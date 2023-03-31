@@ -304,9 +304,11 @@ class Matchup(NexusCalcSparkHandler):
         # Get only the first "result_size_limit" results
         # '0' means returns everything
         if result_size_limit > 0:
-            matches = matches[0:result_size_limit]
+            return_matches = matches[0:result_size_limit]
+        else:
+            return_matches = matches
 
-        result = DomsQueryResults(results=matches, args=args,
+        result = DomsQueryResults(results=return_matches, args=args,
                                   details=details, bounds=None,
                                   count=len(matches), computeOptions=None,
                                   executionId=execution_id)
