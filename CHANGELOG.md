@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - Deletebyquery: Parameter to set the number of rows to fetch from Solr. Speeds up time to gather tiles to delete; especially when there is a lot of them.
 - Added Saildrone's `baja_2018` insitu dataset.
+- SDAP-454: Added new query parameter `prioritizeDistance` to matchup algorithm
 ### Changed
 - SDAP-443:
   - Replacing DOMS terminology with CDMS terminology:
@@ -31,6 +32,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - SDAP-434: Fix for webapp Docker image build failure
 - SDAP-412: Explicit definition of `__eq__` and `__hash__` in matchup `DomsPoint` class. This ensures all primary-secondary pairs with the same primary point are merged in the `combineByKey` step.
 - SDAP-438: Replace variable value NaN with None to fix error in result storage
+- SDAP-444: Fixed `resultSizeLimit` param in `/match_spark` truncating the results that are stored for the results endpoint.
 ### Security
 
 ## [1.0.0] - 2022-12-05
