@@ -694,7 +694,7 @@ def determine_slicing(indices):
     try:
         idx_len = len(indices[0])
         time_slice = slice(0, 1) if idx_len == 3 else slice(None)
-        geo_slice = slice(-2, None) if idx_len == 3 else slice(None)
+        geo_slice = slice(-1, None) if idx_len == 3 else slice(None)
         return time_slice, geo_slice
     except IndexError:
         return slice(None), slice(None)
