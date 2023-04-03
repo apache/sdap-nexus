@@ -131,7 +131,13 @@ class Tile(object):
         idx_len = len(indices[0])
 
         time_slice = slice(0, 1) if idx_len == 3 else slice(None)
-        geo_slice = slice(-1, None) if idx_len == 3 else slice(None)
+
+        if len(self.latitudes.shape) == 1:
+            lat_slice = slice(1,2)
+            lon_slice = slice(2,3)
+        else:
+            lat_slice = slice(None)
+            lon_slice = slice(None)
 
         if len(indices) == 0 or (isinstance(indices, np.ndarray) and indices.size == 0):
             return
@@ -139,8 +145,8 @@ class Tile(object):
         if include_nan:
             for index in indices:
                 time = self.times[index[time_slice]]
-                lat = self.latitudes[index[geo_slice]]
-                lon = self.longitudes[index[geo_slice]]
+                lat = self.latitudes[index[lat_slice]]
+                lon = self.longitudes[index[lon_slice]]
                 if self.is_multi:
                     data_vals = [data[index] for data in self.data]
                 else:
@@ -150,9 +156,17 @@ class Tile(object):
         else:
             for index in indices:
                 index = tuple(index)
+
+                # print('index', index)
+                # print('slice', lat_slice, lon_slice, time_slice)
+                # print('tile_lats', self.latitudes)
+                # print('tile_lons', self.longitudes)
+
                 time = self.times[index[time_slice]]
-                lat = self.latitudes[index[geo_slice]]
-                lon = self.longitudes[index[geo_slice]]
+                lat = self.latitudes[index[lat_slice]]
+                lon = self.longitudes[index[lon_slice]]
+                # print('indexed_lats', lat)
+                # print('indexed_lons', lon)
                 if self.is_multi:
                     data_vals = [data[index] for data in self.data]
                 else:
