@@ -42,9 +42,16 @@ class DomsResultsRetrievalHandler(BaseDomsHandler.BaseDomsQueryCalcHandler):
             raise NexusProcessingException(reason="'id' argument must be a valid uuid", code=400)
 
         simple_results = computeOptions.get_boolean_arg("simpleResults", default=False)
+        size_limit = computeOptions.get_int_arg('resultSizeLimit', default=0)
+
+        if size_limit < 0:
+            raise NexusProcessingException(reason=f'resultSizeLimit must be 0 or greater ({size_limit})', code=400)
 
         with ResultsStorage.ResultsRetrieval(self.config) as storage:
             params, stats, data = storage.retrieveResults(execution_id, trim_data=simple_results)
+
+        if size_limit > 0:
+            data = data[0:size_limit]
 
         return BaseDomsHandler.DomsQueryResults(results=data, args=params, details=stats, bounds=None, count=None,
                                                 computeOptions=None, executionId=execution_id)

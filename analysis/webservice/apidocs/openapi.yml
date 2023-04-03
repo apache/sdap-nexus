@@ -158,10 +158,8 @@ paths:
           name: resultSizeLimit
           description: |
             Optional integer value that limits the number of results
-            returned from the matchup. If the number of primary matches
-            is greater than this limit, the service will respond with
-            (HTTP 202 Accepted) and an empty response body. A value of
-            0 means return all results.
+            returned from the matchup. A value of 0 means return all 
+            results.
           required: false
           schema:
             type: integer
@@ -526,6 +524,17 @@ paths:
           schema:
             type: string
           example: dfc907ce-b8b4-453a-b0b6-d295572ba15e
+        - in: query
+          name: resultSizeLimit
+          description: |
+            Optional integer value that limits the number of results
+            returned from the matchup. A value of 0 means return all 
+            results.
+          required: false
+          schema:
+            type: integer
+            default: 0
+          example: 500
         - in: query
           name: output
           description: |
