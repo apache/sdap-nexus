@@ -533,7 +533,7 @@ paths:
           required: true
           schema:
             type: string
-            enum: ['CSV', 'NETCDF']
+            enum: ['CSV', 'NETCDF', 'JSON']
           example: CSV
       responses:
         '200':
