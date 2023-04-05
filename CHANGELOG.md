@@ -4,6 +4,37 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+### Added
+- Deletebyquery: Parameter to set the number of rows to fetch from Solr. Speeds up time to gather tiles to delete; especially when there is a lot of them.
+- Added Saildrone's `baja_2018` insitu dataset.
+- SDAP-454: Added new query parameter `prioritizeDistance` to matchup algorithm
+### Changed
+- SDAP-443:
+  - Replacing DOMS terminology with CDMS terminology:
+    - Renaming endpoints:
+      - `/domsresults` -> `/cdmsresults`
+      - `/domslist` -> `/cdmslist`
+    - Removed `/domsvalues` from Swagger UI
+  - Swagger UI updates:
+    - `platforms` parameter in `/match_spark` is now a multi-select list.
+    - Added note to `/stats` endpoint to note it is limited to satellite datasets
+- SDAP-450: Updated helm chart to reflect k8s 1.22 changes. Bumped RMQ dependency version & updated Bitnami dependency chart URLs. Ingress template is already up to date.
+### Deprecated
+### Removed
+### Fixed
+- Made `platforms` param optional in `/cdmssubset`, and removed int requirement
+- Updated OpenAPI specification for `/cdmssubset` to accurately reflect `platforms` and `parameter` field options.
+- SDAP-436: Added special case for handling Cassandra SwathMulti tiles with uniform time arrays
+- SDAP-449: Fixed `/cdmsresults` NetCDF output displaying and downloading as .txt. 
+- SDAP-449: Fixed 404 error when populating datasets; script was still using `/domslist`
+- SDAP-415: Fixed bug where mask was incorrectly combined across all variables for multi-variable satellite to satellite matchup
+- SDAP-434: Fix for webapp Docker image build failure
+- SDAP-412: Explicit definition of `__eq__` and `__hash__` in matchup `DomsPoint` class. This ensures all primary-secondary pairs with the same primary point are merged in the `combineByKey` step.
+- SDAP-438: Replace variable value NaN with None to fix error in result storage
+- SDAP-444: Fixed `resultSizeLimit` param in `/match_spark` truncating the results that are stored for the results endpoint.
+### Security
+
 ## [1.0.0] - 2022-12-05
 ### Added
 - SDAP-388: Enable SDAP to proxy/redirect to alternate SDAP

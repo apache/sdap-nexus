@@ -17,7 +17,7 @@ from collections import namedtuple
 
 import numpy as np
 from dataclasses import dataclass
-
+from functools import reduce
 
 NexusPoint = namedtuple('NexusPoint', 'latitude longitude depth time index data_vals')
 BBox = namedtuple('BBox', 'min_lat max_lat min_lon max_lon')
@@ -156,12 +156,8 @@ class Tile(object):
         if include_nan:
             return list(np.ndindex(self.data.shape))
         if self.is_multi:
-            # For each variable, combine masks. This is a logical or
-            # operation, because we want to ensure we don't lose any
-            # data.
-            combined_data_mask = np.logical_or(*self.data)
-            # Return the indices where the data is valid
-            return np.argwhere(combined_data_mask)
+            combined_data_inv_mask = reduce(np.logical_and, [data.mask for data in self.data])
+            return np.argwhere(np.logical_not(combined_data_inv_mask))
         else:
             return np.transpose(np.where(np.ma.getmaskarray(self.data) == False)).tolist()
 
