@@ -25,7 +25,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Additional changes:
     - Made the `output` parameter case-insensitive
     - Improved speed of results insert
-    - Updated `id` field of insitu points to included depth. This solves an issue with NetCDF result rendering where different insitu observations at the same place & time but at different depths were being excluded for having the same `id`.
+    - Updated `id` field of insitu points to include depth. This solves an issue with NetCDF result rendering where different insitu observations at the same place & time but at different depths were being excluded for having the same `id`.
 ### Deprecated
 ### Removed
 ### Fixed
