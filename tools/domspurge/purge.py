@@ -19,6 +19,7 @@ from webservice.algorithms.doms.DomsInitialization import DomsInitializer
 
 logging.basicConfig(level=logging.INFO)
 log = logging.getLogger(__name__)
+dry_run = False
 
 
 def main(args, before, keep_completed, keep_failed, purge_all, recreate):
@@ -56,20 +57,49 @@ def main(args, before, keep_completed, keep_failed, purge_all, recreate):
 
             execution_count, ids = count_executions(session, before, keep_completed, keep_failed, purge_all)
 
-            do_continue = input(f'{execution_count:,} executions selected for deletion. Continue? [y]/n: ')
+            if dry_run:
+                if execution_count == 0:
+                    log.info('No executions will be deleted with the provided criteria')
+                elif purge_all:
+                    log.info(f'The \'{args.keyspace}\' keyspace will be dropped then recreated w/ all needed tables')
+                else:
+                    log.info(f'The following executions would be deleted: \n'
+                             f'{json.dumps([str(rid) for rid in ids], indent=4)} \n'
+                             f'Total: {len(ids):,}')
 
-            while do_continue not in ['y', 'n', '']:
+                exit(0)
+
+            if execution_count == 0 and not purge_all:
+                log.info('No executions will be deleted with the provided criteria')
+                exit(0)
+            elif execution_count == 0 and purge_all:
+                do_continue = input('No executions will be deleted with the provided criteria. '
+                                    f'Do you still wish to drop & recreate the \'{args.keyspace}\' keyspace? [y]/n: ')
+
+                while do_continue not in ['y', 'n', '']:
+                    do_continue = input('No executions will be deleted with the provided criteria. Do you still wish to'
+                                        f' drop & recreate the \'{args.keyspace}\' keyspace? [y]/n: ')
+
+                if do_continue == 'n':
+                    exit(0)
+            else:
                 do_continue = input(f'{execution_count:,} executions selected for deletion. Continue? [y]/n: ')
 
-            if do_continue == 'n':
-                exit(0)
+                while do_continue not in ['y', 'n', '']:
+                    do_continue = input(f'{execution_count:,} executions selected for deletion. Continue? [y]/n: ')
+
+                if do_continue == 'n':
+                    exit(0)
 
             if purge_all:
                 purge_all_data(session, args.keyspace)
             else:
-                print(json.dumps([str(rid) for rid in ids], indent=4))
-                for row_id in tqdm(ids):
+                for row_id in tqdm(ids, ascii=True, desc='Executions deleted', ncols=80, unit='Execution'):
                     delete_execution(session, row_id)
+
+                log.info(f'Successfully deleted the following executions: \n'
+                         f'{json.dumps([str(rid) for rid in ids], indent=4)} \n'
+                         f'Total: {len(ids):,}')
     except NoHostAvailable as ne:
         log.exception(ne)
 
@@ -103,12 +133,12 @@ def create_keyspace(session, keyspace):
 
 
 def purge_all_data(session, keyspace):
-    do_continue = input('You have selected to purge all data. This will drop and recreate the doms keyspace. '
-                        'Continue? [y]/n: ')
+    do_continue = input(f'You have selected to purge all data. This will drop and recreate the \'{keyspace}\' keyspace.'
+                        ' Continue? [y]/n: ')
 
     while do_continue not in ['y', 'n', '']:
-        do_continue = input('You have selected to purge all data. This will drop and recreate the doms keyspace. '
-                            'Continue? [y]/n: ')
+        do_continue = input(f'You have selected to purge all data. This will drop and recreate the \'{keyspace}\' '
+                            f'keyspace. Continue? [y]/n: ')
 
     if do_continue == 'n':
         exit(0)
@@ -118,10 +148,10 @@ def purge_all_data(session, keyspace):
     """
 
     log.info('Executing keyspace drop')
-    session.execute(cql, timeout=None)
-    log.info(f'\'{keyspace}\' keyspace dropped. Recreating it now.')
     log.info('NOTE: If something goes wrong with keyspace recreation, rerun this utility with just \'--recreate-ks\''
              ' and the cassandra auth options')
+    session.execute(cql, timeout=None)
+    log.info(f'\'{keyspace}\' keyspace dropped. Recreating it now.')
     create_keyspace(session, keyspace)
 
 
@@ -259,9 +289,16 @@ def parse_args():
                                action='store_true',
                                dest='keep_failed')
 
+    parser.add_argument('--dry-run',
+                        help='Only print the execution ids to be deleted / DB operations to be performed. Do not '
+                             'actually alter the DB',
+                        action='store_true',
+                        dest='dry_run')
+
     args = parser.parse_args()
 
-    # print(args)
+    global dry_run
+    dry_run = args.dry_run
 
     if args.recreate:
         return args, None, False, False, False, True
