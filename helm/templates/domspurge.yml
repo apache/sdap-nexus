@@ -3,7 +3,7 @@
 apiVersion: batch/v1
 kind: CronJob
 metadata:
-  name: domsPurge
+  name: doms-purge
 spec:
   schedule: {{ .Values.cronJobs.domsPurge.schedule }}
   concurrencyPolicy: {{ .Values.cronJobs.domsPurge.concurrency }}
@@ -12,7 +12,7 @@ spec:
       template:
         spec:
           containers:
-          - name: domsPurge
+          - name: doms-purge
             image: {{ .Values.cronJobs.domsPurge.image }}
             imagePullPolicy: IfNotPresent
             env:
