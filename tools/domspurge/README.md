@@ -25,3 +25,4 @@ _If you are running the `deletebyquery.py` script from within the nexus-webapp-d
 - Additional args
   - `--keep-failed`: Do not purge uncompleted executions (by default all are purged). Incompatible with `--keep-completed`
   - `--dry-run`: Only print the execution ids to be deleted / DB operations to be performed and exit. Do not actually alter the DB
+  - `-y / --yes`: Do not prompt user for confirmation.

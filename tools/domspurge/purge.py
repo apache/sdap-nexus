@@ -37,6 +37,19 @@ from webservice.algorithms.doms.DomsInitialization import DomsInitializer
 logging.basicConfig(level=logging.INFO, stream=sys.stdout)
 log = logging.getLogger(__name__)
 dry_run = False
+non_interactive = False
+
+
+def get_confirmation(prompt_string='Continue? [y]/n: '):
+    if non_interactive:
+        return True
+
+    do_continue = input(prompt_string)
+
+    while do_continue not in ['y', 'n', '']:
+        do_continue = input(prompt_string)
+
+    return do_continue != 'n'
 
 
 def main(args, before, keep_completed, keep_failed, purge_all, recreate):
@@ -90,22 +103,11 @@ def main(args, before, keep_completed, keep_failed, purge_all, recreate):
                 log.info('No executions will be deleted with the provided criteria')
                 exit(0)
             elif execution_count == 0 and purge_all:
-                do_continue = input('No executions will be deleted with the provided criteria. '
-                                    f'Do you still wish to drop & recreate the \'{args.keyspace}\' keyspace? [y]/n: ')
-
-                while do_continue not in ['y', 'n', '']:
-                    do_continue = input('No executions will be deleted with the provided criteria. Do you still wish to'
-                                        f' drop & recreate the \'{args.keyspace}\' keyspace? [y]/n: ')
-
-                if do_continue == 'n':
+                if not get_confirmation('No executions will be deleted with the provided criteria. Do you still wish '
+                                        f'to drop & recreate the \'{args.keyspace}\' keyspace? [y]/n: '):
                     exit(0)
             else:
-                do_continue = input(f'{execution_count:,} executions selected for deletion. Continue? [y]/n: ')
-
-                while do_continue not in ['y', 'n', '']:
-                    do_continue = input(f'{execution_count:,} executions selected for deletion. Continue? [y]/n: ')
-
-                if do_continue == 'n':
+                if not get_confirmation(f'{execution_count:,} executions selected for deletion. Continue? [y]/n: '):
                     exit(0)
 
             if purge_all:
@@ -150,14 +152,8 @@ def create_keyspace(session, keyspace):
 
 
 def purge_all_data(session, keyspace):
-    do_continue = input(f'You have selected to purge all data. This will drop and recreate the \'{keyspace}\' keyspace.'
-                        ' Continue? [y]/n: ')
-
-    while do_continue not in ['y', 'n', '']:
-        do_continue = input(f'You have selected to purge all data. This will drop and recreate the \'{keyspace}\' '
-                            f'keyspace. Continue? [y]/n: ')
-
-    if do_continue == 'n':
+    if not get_confirmation(f'You have selected to purge all data. This will drop and recreate the \'{keyspace}\' '
+                            'keyspace. Continue? [y]/n: '):
         exit(0)
 
     cql = f"""
@@ -312,10 +308,17 @@ def parse_args():
                         action='store_true',
                         dest='dry_run')
 
+    parser.add_argument('-y', '--yes',
+                        help='Do not ask for confirmation.',
+                        action='store_true',
+                        dest='yes')
+
     args = parser.parse_args()
 
     global dry_run
+    global non_interactive
     dry_run = args.dry_run
+    non_interactive = args.yes
 
     if args.recreate:
         return args, None, False, False, False, True
