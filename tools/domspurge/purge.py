@@ -17,6 +17,7 @@
 import argparse
 import json
 import logging
+import sys
 from datetime import datetime
 from typing import Tuple, List
 
@@ -33,7 +34,7 @@ logging.getLogger('webservice.NexusHandler').setLevel(logging.CRITICAL)
 from webservice.algorithms.doms.DomsInitialization import DomsInitializer
 
 
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(level=logging.INFO, stream=sys.stdout)
 log = logging.getLogger(__name__)
 dry_run = False
 
