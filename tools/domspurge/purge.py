@@ -29,10 +29,11 @@ from dateutil.relativedelta import relativedelta
 from six.moves import input
 from tqdm import tqdm
 
-logging.getLogger('webservice.NexusHandler').setLevel(logging.CRITICAL)
-
-from webservice.algorithms.doms.DomsInitialization import DomsInitializer
-
+try:
+    logging.getLogger('webservice.NexusHandler').setLevel(logging.CRITICAL)
+    from webservice.algorithms.doms.DomsInitialization import DomsInitializer
+except ImportError:
+    from DomsInitialization import DomsInitializer
 
 logging.basicConfig(level=logging.INFO, stream=sys.stdout)
 log = logging.getLogger(__name__)
@@ -63,8 +64,13 @@ def main(args, before, keep_completed, keep_failed, purge_all, recreate):
     else:
         auth_provider = None
 
+    contact_points = []
+
+    for host_list in args.hosts:
+        contact_points.extend(host_list.split(','))
+
     try:
-        with Cluster(args.hosts,
+        with Cluster(contact_points,
                      port=int(args.port),
                      execution_profiles={
                          EXEC_PROFILE_DEFAULT: ExecutionProfile(

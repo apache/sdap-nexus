@@ -18,7 +18,7 @@ _If you are running the `deletebyquery.py` script from within the nexus-webapp-d
   - `--keep-completed`: Keep all completed executions. (only purge uncompleted executions)
   - `--all`: Purge ALL data. (drops and re-creates keyspace)
 - Cassandra args (optional)
-  - `--cassandra`: Cassandra hostname(s) or IP(s). (Default: localhost)
+  - `--cassandra`: Cassandra hostname(s) or IP(s) Can provide a list of args or provide them separated by commas (eg: `host1 host2 host3` or `host1,host2,host3`). (Default: localhost)
   - `-k / --cassandraKeyspace`: Cassandra keyspace for storing DOMS data. (Default: doms)
   - `--cassandraPort`: Port used to connect to Cassandra. (Default: 9042)
   - `--cassandraProtocolVersion`: The version of the Cassandra protocol the driver should use. (Default: 3)
@@ -26,3 +26,12 @@ _If you are running the `deletebyquery.py` script from within the nexus-webapp-d
   - `--keep-failed`: Do not purge uncompleted executions (by default all are purged). Incompatible with `--keep-completed`
   - `--dry-run`: Only print the execution ids to be deleted / DB operations to be performed and exit. Do not actually alter the DB
   - `-y / --yes`: Do not prompt user for confirmation.
+
+## Build Docker Image
+
+You can build an image for this script to run it in a Kubernetes CronJob.
+
+```shell
+cd /incubator-sdap-nexus
+docker build . -f Dockerfile -t sdap-local/DomsPurge:<tag>
+```
