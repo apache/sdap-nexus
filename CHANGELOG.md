@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added Saildrone's `baja_2018` insitu dataset.
 - SDAP-454: Added new query parameter `prioritizeDistance` to matchup algorithm
 - SDAP-457: Added tool script to purge DOMS execution data. Can remove executions before a certain datetime, before a number of months in the future, uncompleted executions, or purge all execution data.
+  - Also added Helm template and values to deploy this script as a `CronJob` in k8s.
 ### Changed
 - SDAP-443:
   - Replacing DOMS terminology with CDMS terminology:
