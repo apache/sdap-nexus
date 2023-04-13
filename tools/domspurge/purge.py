@@ -127,6 +127,7 @@ def main(args, before, keep_completed, keep_failed, purge_all, recreate):
                          f'Total: {len(ids):,}')
     except NoHostAvailable as ne:
         log.exception(ne)
+        exit(1)
 
 
 def delete_execution(session, row_id):
@@ -351,4 +352,9 @@ def parse_args():
 
 
 if __name__ == '__main__':
-    main(*parse_args())
+    try:
+        main(*parse_args())
+    except Exception as e:
+        log.error('An unexpected error occurred...')
+        log.exception(e)
+        exit(-1)
