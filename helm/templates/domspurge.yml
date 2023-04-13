@@ -14,7 +14,7 @@ spec:
           containers:
           - name: doms-purge
             image: {{ .Values.cronJobs.domsPurge.image }}
-            imagePullPolicy: IfNotPresent
+            imagePullPolicy: Always
             env:
               - name: CASSANDRA_CONTACT_POINTS
                 value: {{ include "nexus.urls.cassandra" . }}
