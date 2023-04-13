@@ -185,6 +185,8 @@ def count_executions(session, before, keep_completed, keep_failed, purge_all) ->
     elif before and not keep_failed:    # Drop nulls & all before
         # Cassandra doesn't allow for selecting null values, so we have to check them all manually
 
+        log.info(f'Counting executions before {before} + uncompleted executions')
+
         cql = """
         SELECT * FROM doms_executions;
         """
@@ -197,6 +199,8 @@ def count_executions(session, before, keep_completed, keep_failed, purge_all) ->
 
         return len(to_delete), to_delete
     elif before and keep_failed:    # Drop all before but not nulls
+        log.info(f'Counting executions before {before}')
+
         cql = """
                 SELECT id FROM doms_executions WHERE time_completed<=? ALLOW FILTERING ;
                 """
@@ -210,6 +214,8 @@ def count_executions(session, before, keep_completed, keep_failed, purge_all) ->
         return len(to_delete), to_delete
     elif keep_completed:   # Only drop nulls
         # Cassandra doesn't allow for selecting null values, so we have to check them all manually
+
+        log.info(f'Counting uncompleted executions')
 
         cql = """
                 SELECT * FROM doms_executions;
@@ -268,7 +274,8 @@ def parse_args():
     time_before = purge_options.add_mutually_exclusive_group(required=True)
 
     time_before.add_argument('--before',
-                             help='Date & time before which data will be purged',
+                             help='Date & time before which data will be purged. Time entered should be UTC. Do not '
+                                  'specify timezone.',
                              type=du_parser.parse,
                              dest='before_dt',
                              metavar='DATETIME',
@@ -344,7 +351,7 @@ def parse_args():
     elif args.before_dt:
         before = args.before_dt
     else:
-        now = datetime.now()
+        now = datetime.utcnow()
         delta = relativedelta(months=-args.before_mo)
         before = now + delta
 

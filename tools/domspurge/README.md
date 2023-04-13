@@ -8,12 +8,12 @@ _If you are running the `deletebyquery.py` script from within the nexus-webapp-d
 * Run `pip install -r requirements.txt` in `incubator-sdap-nexus/tools/domspurge`
 
 ## Usage
-`python purge.py -u USERNAME -p PASSWORD [CASSANDRA ARGS...] (--before DATETIME | --before-months MONTHS | --keep-completed | --all) [--keep-failed] [--dry-run]`
+`python purge.py -u USERNAME -p PASSWORD [CASSANDRA ARGS...] (--before DATETIME | --before-months MONTHS | --keep-completed | --all) [--keep-failed] [--dry-run] [-y]`
 
 ### Options
 - `-u & -p`: Cassandra username and password
 - One of:
-  - `--before`: Datetime (ie, '2023-04-11T19:50:00') before which all data will be purged. 
+  - `--before`: Datetime (ie, '2023-04-11T19:50:00') before which all data will be purged. Should be entered in UTC and the timezone must not be specified.
   - `--before-months`: Number of months prior to current date before which all data will be purged. 
   - `--keep-completed`: Keep all completed executions. (only purge uncompleted executions)
   - `--all`: Purge ALL data. (drops and re-creates keyspace)
