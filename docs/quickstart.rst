@@ -49,11 +49,11 @@ Pull the necessary Docker images from the `Apache SDAP repository <https://hub.d
 
   export CASSANDRA_VERSION=3.11.6-debian-10-r138
   export RMQ_VERSION=3.8.9-debian-10-r37
-  export COLLECTION_MANAGER_VERSION=1.0.0
-  export GRANULE_INGESTER_VERSION=1.0.0
-  export WEBAPP_VERSION=1.0.0
-  export SOLR_VERSION=1.0.0
-  export SOLR_CLOUD_INIT_VERSION=1.0.0
+  export COLLECTION_MANAGER_VERSION=1.1.0
+  export GRANULE_INGESTER_VERSION=1.1.0
+  export WEBAPP_VERSION=1.1.0
+  export SOLR_VERSION=1.1.0
+  export SOLR_CLOUD_INIT_VERSION=1.1.0
   export ZK_VERSION=3.5.5
 
   export JUPYTER_VERSION=1.0.0-rc2
