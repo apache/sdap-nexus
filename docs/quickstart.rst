@@ -292,7 +292,7 @@ Then go ahead and download 1 month worth of AVHRR netCDF files.
 
   cd $DATA_DIRECTORY
 
-  curl -O https://raw.githubusercontent.com/RKuttruff/incubator-sdap-nexus/SDAP-451-qs-update/docs/granule-download.sh
+  curl -O https://raw.githubusercontent.com/apache/incubator-sdap-nexus/master/docs/granule-download.sh
   chmod 700 granule-download.sh
   ./granule-download.sh
 
