@@ -500,13 +500,7 @@ class NexusTileService(object):
                 if isinstance(max_lon, list):
                     max_lon = max_lon[0]
 
-                # In case it's been stored as a string
-                # Observed in JPL CDMS SDAP deployment
-                tile.bbox = BBox(
-                    float(min_lat), 
-                    float(max_lat), 
-                    float(min_lon), 
-                    float(max_lon))
+                tile.bbox = BBox(min_lat, max_lat, min_lon, max_lon)
             except KeyError:
                 pass
 
