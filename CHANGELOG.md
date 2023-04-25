@@ -26,6 +26,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Corrected volume mount paths for Solr and Cassandra containers
   - Fixed (potential) bug in RMQ monitor script
   - Updated granule download section: Replaced with a script that also accounts for dataset migration
+  - Bumped image tag versions (1.0.0 -> 1.1.0)
 ### Deprecated
 ### Removed
 ### Fixed
