@@ -16,7 +16,7 @@
 openapi: 3.0.3
 info:
   description: The next generation cloud-based science data service platform.
-  version: 1.0.0
+  version: 1.1.0
   title: Science Data Analytics Platform (SDAP)
   license:
     name: Apache 2.0
