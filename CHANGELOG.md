@@ -21,6 +21,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     - `platforms` parameter in `/match_spark` is now a multi-select list.
     - Added note to `/stats` endpoint to note it is limited to satellite datasets
 - SDAP-450: Updated helm chart to reflect k8s 1.22 changes. Bumped RMQ dependency version & updated Bitnami dependency chart URLs. Ingress template is already up to date.
+- SDAP-451: Updated quickstart documentation
+  - Specified default Docker platform as `linux/amd64`
+  - Added copy button extension for RDT pages
+  - Corrected volume mount paths for Solr and Cassandra containers
+  - Fixed (potential) bug in RMQ monitor script
+  - Updated granule download section: Replaced with a script that also accounts for dataset migration
+  - Bumped image tag versions (1.0.0 -> 1.1.0)
 ### Deprecated
 ### Removed
 ### Fixed
@@ -34,6 +41,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - SDAP-412: Explicit definition of `__eq__` and `__hash__` in matchup `DomsPoint` class. This ensures all primary-secondary pairs with the same primary point are merged in the `combineByKey` step.
 - SDAP-438: Replace variable value NaN with None to fix error in result storage
 - SDAP-444: Fixed `resultSizeLimit` param in `/match_spark` truncating the results that are stored for the results endpoint.
+- Fixed minor webapp image build issue
 ### Security
 
 ## [1.0.0] - 2022-12-05
