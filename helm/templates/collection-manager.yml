@@ -43,7 +43,7 @@ spec:
             - name: S3_BUCKET
               value: {{ .Values.ingestion.granules.s3.bucket }}
             {{- end }}
-            {{- if .Values.ingestion.granules.s3.serviceAccountName }}
+            {{- if not .Values.ingestion.granules.s3.serviceAccountName }}
             {{- range $name, $value := .Values.ingestion.granules.s3.awsCredsEnvs }}
             - name: {{ $name }}
               value: {{ $value }}

@@ -42,7 +42,7 @@ spec:
             - name: MAX_CONCURRENCY
               value: "{{ .Values.ingestion.granuleIngester.maxConcurrency }}"
             {{ end }}
-            {{- if .Values.ingestion.granules.s3.serviceAccountName }}
+            {{- if not .Values.ingestion.granules.s3.serviceAccountName }}
             {{- range $name, $value := .Values.ingestion.granules.s3.awsCredsEnvs }}
             - name: {{ $name }}
               value: {{ $value }}
