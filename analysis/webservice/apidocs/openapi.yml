@@ -71,7 +71,7 @@ paths:
           schema:
             type: string
             format: date-time
-          example: '2012-09-25T00:00:00Z'
+          example: "2012-09-25T00:00:00Z"
         - in: query
           name: endTime
           description: |
@@ -81,7 +81,7 @@ paths:
           schema:
             type: string
             format: date-time
-          example: '2012-09-30T23:59:59Z'
+          example: "2012-09-30T23:59:59Z"
         - in: query
           name: b
           description: |
@@ -91,7 +91,7 @@ paths:
           schema:
             type: string
           example: -45,15,-30,30
-        - $ref: '#/components/parameters/Platforms'
+        - $ref: "#/components/parameters/Platforms"
         - in: query
           name: depthMin
           description: |
@@ -181,24 +181,24 @@ paths:
             default: true
           example: true
       responses:
-        '200':
+        "200":
           description: Successful operation
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/MatchupResponse'
-        '400':
+                $ref: "#/components/schemas/MatchupResponse"
+        "400":
           description: Bad request
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
-        '500':
+                $ref: "#/components/schemas/Error"
+        "500":
           description: Server error
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                $ref: "#/components/schemas/Error"
   /match_spark_doms:
     get:
       summary: Execute matchup request (DOMS insitu)
@@ -216,7 +216,7 @@ paths:
           schema:
             type: string
             x-dspopulate:
-             - satellite
+              - satellite
           example: avhrr-l4-glob-v2-daily-ncei-ghrsst-sstblend-avhrr-oi-glob-v020-fv020
         - in: query
           name: secondary
@@ -238,7 +238,7 @@ paths:
           schema:
             type: string
             format: date-time
-          example: '2012-09-25T00:00:00Z'
+          example: "2012-09-25T00:00:00Z"
         - in: query
           name: endTime
           description: |
@@ -248,7 +248,7 @@ paths:
           schema:
             type: string
             format: date-time
-          example: '2012-09-30T23:59:59Z'
+          example: "2012-09-30T23:59:59Z"
         - in: query
           name: b
           description: |
@@ -309,7 +309,7 @@ paths:
           required: false
           schema:
             type: string
-            enum: ['sst', 'sss', 'wind']
+            enum: ["sst", "sss", "wind"]
             default: sst
           example: sst
         - in: query
@@ -339,24 +339,24 @@ paths:
             default: 500
           example: 500
       responses:
-        '200':
+        "200":
           description: Successful operation
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/MatchupResponse'
-        '400':
+                $ref: "#/components/schemas/MatchupResponse"
+        "400":
           description: Bad request
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
-        '500':
+                $ref: "#/components/schemas/Error"
+        "500":
           description: Server error
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                $ref: "#/components/schemas/Error"
   /cdmssubset:
     get:
       summary: Subset CDMS sources given the search domain
@@ -373,7 +373,7 @@ paths:
           schema:
             type: string
             x-dspopulate:
-             - satellite
+              - satellite
           example: MAVHRR_OI_L4_GHRSST_NCEI
         - in: query
           name: insitu
@@ -384,7 +384,7 @@ paths:
           schema:
             type: string
             x-dspopulate:
-             - insitu
+              - insitu
           example: icoads,samos,spurs,spurs2
         - in: query
           name: startTime
@@ -395,7 +395,7 @@ paths:
           schema:
             type: string
             format: date-time
-          example: '2013-10-21T00:00:00Z'
+          example: "2013-10-21T00:00:00Z"
         - in: query
           name: endTime
           description: |
@@ -405,7 +405,7 @@ paths:
           schema:
             type: string
             format: date-time
-          example: '2013-10-21T01:00:00Z'
+          example: "2013-10-21T01:00:00Z"
         - in: query
           name: b
           description: |
@@ -421,7 +421,8 @@ paths:
             The parameter of interest.
           schema:
             type: string
-          example: sea_surface_salinity
+            enum: ["sst", "sss", "wind"]
+          example: sss
         - in: query
           name: depthMin
           description: |
@@ -439,7 +440,7 @@ paths:
           schema:
             type: integer
           example: 5
-        - $ref: '#/components/parameters/Platforms'
+        - $ref: "#/components/parameters/Platforms"
         - in: query
           name: output
           description: |
@@ -447,29 +448,113 @@ paths:
           required: true
           schema:
             type: string
-            enum: ['ZIP']
+            enum: ["ZIP"]
             default: ZIP
           example: ZIP
       responses:
-        '200':
+        "200":
           description: Successful operation
           content:
             application/zip:
               schema:
                 type: string
                 format: binary
-        '400':
+        "400":
           description: Bad request
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
-        '500':
+                $ref: "#/components/schemas/Error"
+        "500":
           description: Server error
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                $ref: "#/components/schemas/Error"
+  /datainbounds:
+    get:
+      summary: Fetches point values for a given dataset and geographical area
+      operationId: datainbounds
+      tags:
+        - Subsetting
+      parameters:
+        - in: query
+          name: ds
+          description: |
+            The Dataset shortname to use in calculation
+          required: true
+          schema:
+            type: string
+            x-dspopulate:
+              - satellite
+          example: avhrr-l4-glob-v2-daily-ncei-ghrsst-sstblend-avhrr-oi-glob-v020-fv020
+        - in: query
+          name: startTime
+          description: |
+            Starting time in format YYYY-MM-DDTHH:mm:ssZ or seconds
+            since epoch
+          required: true
+          schema:
+            type: string
+            format: date-time
+          example: "2012-09-28T00:00:00Z"
+        - in: query
+          name: endTime
+          description: |
+            Ending time in format YYYY-MM-DDTHH:mm:ssZ or seconds
+            since epoch
+          required: true
+          schema:
+            type: string
+            format: date-time
+          example: "2012-09-28T00:01:00Z"
+        - in: query
+          name: b
+          description: |
+            Minimum (Western) Longitude, Minimum (Southern) Latitude,
+            Maximum (Eastern) Longitude, Maximum (Northern) Latitude
+          required: true
+          schema:
+            type: string
+          example: -45,15,-30,30
+        - in: query
+          name: parameter
+          description: |
+            The parameter of interest. One of 'sst', 'sss', 'wind'
+          required: true
+          schema:
+            type: string
+            enum: ["sst", "sss", "wind"]
+          example: sst
+        - in: query
+          name: output
+          description: |
+            Output type. Only 'CSV' or 'JSON' is currently supported
+          required: false
+          schema:
+            type: string
+            default: "JSON"
+            enum: ["CSV", "JSON"]
+          example: JSON
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MatchupResponse"
+        "400":
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
   /version:
     get:
       summary: List the version of the API
@@ -477,39 +562,148 @@ paths:
       tags:
         - Matchup
       responses:
-        '200':
+        "200":
           description: Successful operation
           content:
             text/plain:
               schema:
                 type: string
                 example: 1.6
-        '500':
+        "500":
           description: Server error
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
-  /cdmslist:
+                $ref: "#/components/schemas/Error"
+  /domslist:
     get:
       summary: Provides a list of available data sets
       operationId: domslist
       tags:
         - Matchup
       responses:
-        '200':
+        "200":
           description: Successful operation
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/DomsList'
-        '500':
+                $ref: "#/components/schemas/DomsList"
+        "500":
           description: Server error
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
-  /cdmsresults:
+                $ref: "#/components/schemas/Error"
+  /domsvalues:
+    get:
+      summary: |
+        Fetches stats and data values for the selected in situ source
+        and bounding box
+      operationId: domsvalues
+      tags:
+        - Matchup
+      parameters:
+        - in: query
+          name: source
+          description: |
+            The insitu shortname to find stats and data for
+          required: true
+          schema:
+            type: string
+            x-dspopulate:
+              - insitu
+          example: samos
+        - in: query
+          name: startTime
+          description: |
+            Starting time in format YYYY-MM-DDTHH:mm:ssZ or seconds
+            since epoch
+          required: true
+          schema:
+            type: string
+            format: date-time
+          example: "2013-10-21T00:00:00Z"
+        - in: query
+          name: endTime
+          description: |
+            Ending time in format YYYY-MM-DDTHH:mm:ssZ or seconds
+            since epoch
+          required: true
+          schema:
+            type: string
+            format: date-time
+          example: "2013-10-21T01:00:00Z"
+        - in: query
+          name: b
+          description: |
+            Minimum (Western) Longitude, Minimum (Southern) Latitude,
+            Maximum (Eastern) Longitude, Maximum (Northern) Latitude
+          required: true
+          schema:
+            type: string
+          example: -30,15,-45,30
+        - in: query
+          name: tt
+          description: |
+            Tolerance in time (seconds) when comparing two measurements.
+          required: true
+          schema:
+            type: integer
+          example: 86400
+        - in: query
+          name: rt
+          description: |
+            Tolerance in radius (meters) when comparing two
+            measurements.
+          required: true
+          schema:
+            type: number
+          example: 1000.0
+        - in: query
+          name: depthMin
+          description: |
+            Minimum depth of measurements. Must be less than depthMax.
+          required: false
+          schema:
+            type: integer
+          example: 0
+        - in: query
+          name: depthMax
+          description: |
+            Maximum depth of measurements. Must be greater than
+            depthMin.
+          required: false
+          schema:
+            type: integer
+          example: 5
+        - in: query
+          name: platforms
+          description: |
+            Platforms to include for subset consideration.
+          required: false
+          schema:
+            type: string
+          example: 1,2,3,4,5,6,7,8,9
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DomsValues"
+        "400":
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /domsresults:
     get:
       summary: |
         Convert matchup result
@@ -562,7 +756,7 @@ paths:
           schema:
             type: string
       responses:
-        '200':
+        "200":
           description: Successful operation
           content:
             text/csv:
@@ -572,18 +766,18 @@ paths:
               schema:
                 type: string
                 format: binary
-        '400':
+        "400":
           description: Bad request
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
-        '500':
+                $ref: "#/components/schemas/Error"
+        "500":
           description: Server error
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                $ref: "#/components/schemas/Error"
   /stats:
     get:
       summary: |
@@ -601,8 +795,8 @@ paths:
           schema:
             type: string
             x-dspopulate:
-             - satellite
-             - insitu
+              - satellite
+              - insitu
           example: MUR25-JPL-L4-GLOB-v04.2
         - in: query
           name: minLat
@@ -645,7 +839,7 @@ paths:
           schema:
             type: string
             format: date-time
-          example: '2013-10-21T00:00:00Z'
+          example: "2013-10-21T00:00:00Z"
         - in: query
           name: endTime
           description: |
@@ -655,7 +849,7 @@ paths:
           schema:
             type: string
             format: date-time
-          example: '2013-10-31T23:59:59Z'
+          example: "2013-10-31T23:59:59Z"
         - in: query
           name: output
           description: |
@@ -664,27 +858,100 @@ paths:
           required: false
           schema:
             type: string
-            enum: ['JSON', 'CSV']
+            enum: ["JSON", "CSV"]
           example: JSON
       responses:
-        '200':
+        "200":
           description: Successful operation
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Stats'
-        '400':
+                $ref: "#/components/schemas/Stats"
+        "400":
           description: Bad request
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
-        '500':
+                $ref: "#/components/schemas/Error"
+        "500":
           description: Server error
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
+  /timeSeriesSpark:
+    get:
+      summary: Compute time series analysis (Spark)
+      operationId: "timeSeriesSpark"
+      description: Compute a time series analysis between one or more datasets given an arbitrary geographical area and time range
+      tags:
+        - Analytics
+      parameters:
+        - in: query
+          name: ds
+          description: The dataset(s) used to generate the time series. Comma seperated for two datasets.
+          required: true
+          schema:
+            type: string
+            x-dspopulate:
+              - satellite
+          example: TELLUS_GRAC-GRFO_MASCON_CRI_GRID_RL06_V2_LAND
+        - in: query
+          name: startTime
+          description: Starting time in format YYYY-MM-DDTHH:mm:ssZ or seconds since epoch
+          required: true
+          schema:
+            type: string
+            format: date-time
+          example: "2013-10-21T00:00:00Z"
+        - in: query
+          name: endTime
+          description: Ending time in format YYYY-MM-DDTHH:mm:ssZ or seconds since epoch
+          required: true
+          schema:
+            type: string
+            format: date-time
+          example: "2013-10-21T01:00:00Z"
+        - in: query
+          name: b
+          description: Minimum (Western) Longitude, Minimum (Southern) Latitude, Maximum (Eastern) Longitude, Maximum (Northern) Latitude.
+          required: true
+          schema:
+            type: string
+          example: "-180,-90,180,90"
+        - in: query
+          name: seasonalFilter
+          description: Include time series analysis with seasonal cycle removed
+          required: false
+          schema:
+            type: boolean
+            default: false
+        - in: query
+          name: lowPassFilter
+          description: Include time series analysis with low pass filter applied
+          required: false
+          schema:
+            type: boolean
+            default: true
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TimeSeriesSpark"
+        "400":
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          description: Server error
+          content:
+            application/json:
+              schema:
+                  $ref: "#/components/schemas/Error"
   /job:
     get:
       summary: |
@@ -733,7 +1000,7 @@ components:
         Platforms to include for matchup consideration. Platform
         depends on which insitu dataset is selected. Use platform ID
         in the matchup query.
-        
+
         <details>
           <summary>Expand to see a list of valid platforms IDs:</summary>
         | Platform ID | Platform Name                           | Web Link                                                   |
@@ -781,37 +1048,37 @@ components:
           format: uuid
     MatchupResponse:
       allOf:
-        - $ref: '#/components/schemas/DomsQueryResult'
+        - $ref: "#/components/schemas/DomsQueryResult"
         - type: object
           properties:
             data:
               type: array
               items:
-                $ref: '#/components/schemas/DomsPointPrimary'
+                $ref: "#/components/schemas/DomsPointPrimary"
     DomsPointPrimary:
       allOf:
-        - $ref: '#/components/schemas/DomsPointBase'
+        - $ref: "#/components/schemas/DomsPointBase"
         - type: object
           properties:
             matches:
               type: array
               items:
-                $ref: '#/components/schemas/DomsPointSecondary'
+                $ref: "#/components/schemas/DomsPointSecondary"
         - type: object
           properties:
             primary:
               type: array
               items:
-                $ref: '#/components/schemas/DomsDataPoint'
+                $ref: "#/components/schemas/DomsDataPoint"
     DomsPointSecondary:
       allOf:
-        - $ref: '#/components/schemas/DomsPointBase'
+        - $ref: "#/components/schemas/DomsPointBase"
         - type: object
           properties:
             secondary:
               type: array
               items:
-                $ref: '#/components/schemas/DomsDataPoint'
+                $ref: "#/components/schemas/DomsDataPoint"
     DomsPointBase:
       type: object
       properties:
@@ -845,7 +1112,7 @@ components:
           type: number
     DomsList:
       allOf:
-        - $ref: '#/components/schemas/DomsQueryResult'
+        - $ref: "#/components/schemas/DomsQueryResult"
         - type: object
           properties:
             data:
@@ -905,7 +1172,7 @@ components:
     DomsValues:
       type: object
       allOf:
-        - $ref: '#/components/schemas/DomsQueryResult'
+        - $ref: "#/components/schemas/DomsQueryResult"
         - type: object
           properties:
             data:
@@ -1011,6 +1278,77 @@ components:
               type: number
             err:
               type: string
+    TimeSeriesSpark:
+      type: object
+      properties:
+        meta:
+          type: array
+          items:
+            type: object
+            properties:
+              shortname:
+                type: string
+              bounds:
+                type: object
+                properties:
+                  east:
+                    type: number
+                  west:
+                    type: number
+                  north:
+                    type: number
+                  south:
+                    type: number
+              time:
+                type: object
+                properties:
+                  start:
+                    type: integer
+                  stop:
+                    type: integer
+                  iso_start:
+                    type: string
+                    format: date
+                  iso_stop:
+                    type: string
+                    format: date
+        data:
+          type: array
+          items:
+            type: object
+            properties:
+              min:
+                type: number
+              max:
+                type: number
+              mean:
+                type: number
+              cnt:
+                type: integer
+              std:
+                type: number
+              time:
+                type: integer
+              meanSeasonal:
+                type: number
+              minSeasonal:
+                type: number
+              maxSeasonal:
+                type: number
+              meanLowPass:
+                type: number
+              maxLowPass:
+                type: number
+              meanSeasonalLowPass:
+                type: number
+              minSeasonalLowPass:
+                type: number
+              maxSeasonalLowPass:
+                type: number
+              ds:
+                type: integer
+        stats:
+          type: object
     Error:
       type: object
       properties:
