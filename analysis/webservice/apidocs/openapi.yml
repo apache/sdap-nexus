@@ -28,6 +28,8 @@ tags:
     description: Data Analytics API
   - name: Subsetting
     description: Data Subsetting API
+  - name: Mapping
+    description: Data Mapping API
 paths:
   /match_spark:
     get:
@@ -878,6 +880,65 @@ paths:
           content:
             application/json:
               schema:
+                $ref: "#/components/schemas/Error"
+  /timeAvgMapSpark:
+    get:
+      summary: Compute Lat/Lon time average analysis
+      operationId: "timeAvgMapSpark"
+      description: Compute a Lat/Lon time average analysis given an arbitrary geographical area and time range
+      tags:
+        - Mapping
+      parameters:
+        - in: query
+          name: ds
+          description: The dataset used to generate the analysis.
+          required: true
+          schema:
+            type: string
+            x-dspopulate:
+              - satellite
+          example: TELLUS_GRAC-GRFO_MASCON_CRI_GRID_RL06_V2_LAND
+        - in: query
+          name: startTime
+          description: Starting time in format YYYY-MM-DDTHH:mm:ssZ or seconds since epoch
+          required: true
+          schema:
+            type: string
+            format: date-time
+          example: "2013-10-21T00:00:00Z"
+        - in: query
+          name: endTime
+          description: Ending time in format YYYY-MM-DDTHH:mm:ssZ or seconds since epoch
+          required: true
+          schema:
+            type: string
+            format: date-time
+          example: "2013-10-21T01:00:00Z"
+        - in: query
+          name: b
+          description: Minimum (Western) Longitude, Minimum (Southern) Latitude, Maximum (Eastern) Longitude, Maximum (Northern) Latitude.
+          required: true
+          schema:
+            type: string
+          example: "-180,-90,180,90"
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TimeAvgMapSpark"
+        "400":
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          description: Server error
+          content:
+            application/json:
+              schema:
                 $ref: '#/components/schemas/Error'
   /timeSeriesSpark:
     get:
@@ -952,6 +1013,306 @@ paths:
             application/json:
               schema:
                   $ref: "#/components/schemas/Error"
+  /dailydifferenceaverage_spark:
+    get:
+      summary: Compute daily difference average
+      operationId: "dailydifferenceaverage_spark"
+      description: Averages the difference per day in data in box in dataset 1 from dataset 2
+      tags:
+        - Analytics
+      parameters:
+        - in: query
+          name: dataset
+          description: The dataset used in calculation
+          required: true
+          schema:
+            type: string
+          example: TELLUS_GRAC-GRFO_MASCON_CRI_GRID_RL06_V2_LAND
+        - in: query
+          name: climatology
+          description: The dataset's climatology shortname
+          required: true
+          schema:
+            type: string
+          example: TELLUS_GRAC-GRFO_MASCON_CRI_GRID_RL06_V2_LAND_clim
+        - in: query
+          name: startTime
+          description: Starting time in format YYYY-MM-DDTHH:mm:ssZ or seconds since epoch
+          required: true
+          schema:
+            type: string
+            format: date-time
+          example: "2013-10-21T00:00:00Z"
+        - in: query
+          name: endTime
+          description: Ending time in format YYYY-MM-DDTHH:mm:ssZ or seconds since epoch
+          required: true
+          schema:
+            type: string
+            format: date-time
+          example: "2013-10-21T01:00:00Z"
+        - in: query
+          name: b
+          description: Minimum (Western) Longitude, Minimum (Southern) Latitude, Maximum (Eastern) Longitude, Maximum (Northern) Latitude.
+          required: true
+          schema:
+            type: string
+          example: "-180,-90,180,90"
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DailyDifferenceAverageSpark"
+        "400":
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /latitudeTimeHofMoellerSpark:
+    get:
+      summary: Compute a latitude/time HofMoeller analysis
+      operationId: "latitudeTimeHofMoellerSpark"
+      description: Compute a latitude/time HofMoeller analysis given an arbitrary geographical area and time range
+      tags:
+        - Analytics
+      parameters:
+        - in: query
+          name: ds
+          description: The dataset used to generate the analysis.
+          required: true
+          schema:
+            type: string
+            x-dspopulate:
+              - satellite
+          example: TELLUS_GRAC-GRFO_MASCON_CRI_GRID_RL06_V2_LAND
+        - in: query
+          name: startTime
+          description: Starting time in format YYYY-MM-DDTHH:mm:ssZ or seconds since epoch
+          required: true
+          schema:
+            type: string
+            format: date-time
+          example: "2013-10-21T00:00:00Z"
+        - in: query
+          name: endTime
+          description: Ending time in format YYYY-MM-DDTHH:mm:ssZ or seconds since epoch
+          required: true
+          schema:
+            type: string
+            format: date-time
+          example: "2013-10-21T01:00:00Z"
+        - in: query
+          name: b
+          description: Minimum (Western) Longitude, Minimum (Southern) Latitude, Maximum (Eastern) Longitude, Maximum (Northern) Latitude.
+          required: true
+          schema:
+            type: string
+          example: "-180,-90,180,90"
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HofMoellerSpark"
+        "400":
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /longitudeTimeHofMoellerSpark:
+    get:
+      summary: Compute a longitude/time HofMoeller analysis
+      operationId: "longitudeTimeHofMoellerSpark"
+      description: Compute a longitude/time HofMoeller analysis given an arbitrary geographical area and time range
+      tags:
+        - Analytics
+      parameters:
+        - in: query
+          name: ds
+          description: The dataset used to generate the analysis.
+          required: true
+          schema:
+            type: string
+            x-dspopulate:
+              - satellite
+          example: TELLUS_GRAC-GRFO_MASCON_CRI_GRID_RL06_V2_LAND
+        - in: query
+          name: startTime
+          description: Starting time in format YYYY-MM-DDTHH:mm:ssZ or seconds since epoch
+          required: true
+          schema:
+            type: string
+            format: date-time
+          example: "2013-10-21T00:00:00Z"
+        - in: query
+          name: endTime
+          description: Ending time in format YYYY-MM-DDTHH:mm:ssZ or seconds since epoch
+          required: true
+          schema:
+            type: string
+            format: date-time
+          example: "2013-10-21T01:00:00Z"
+        - in: query
+          name: b
+          description: Minimum (Western) Longitude, Minimum (Southern) Latitude, Maximum (Eastern) Longitude, Maximum (Northern) Latitude.
+          required: true
+          schema:
+            type: string
+          example: "-180,-90,180,90"
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HofMoellerSpark"
+        "400":
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /maxMinMapSpark:
+    get:
+      summary: Compute map of maxima and minima
+      operationId: "maxMinMapSpark"
+      description: Compute a map of maxmima and minima of a field given an arbitrary geographical area and time range
+      tags:
+        - Mapping
+      parameters:
+        - in: query
+          name: ds
+          description: The dataset used to generate the analysis.
+          required: true
+          schema:
+            type: string
+            x-dspopulate:
+              - satellite
+          example: TELLUS_GRAC-GRFO_MASCON_CRI_GRID_RL06_V2_LAND
+        - in: query
+          name: startTime
+          description: Starting time in format YYYY-MM-DDTHH:mm:ssZ or seconds since epoch
+          required: true
+          schema:
+            type: string
+            format: date-time
+          example: "2013-10-21T00:00:00Z"
+        - in: query
+          name: endTime
+          description: Ending time in format YYYY-MM-DDTHH:mm:ssZ or seconds since epoch
+          required: true
+          schema:
+            type: string
+            format: date-time
+          example: "2013-10-21T01:00:00Z"
+        - in: query
+          name: b
+          description: Minimum (Western) Longitude, Minimum (Southern) Latitude, Maximum (Eastern) Longitude, Maximum (Northern) Latitude.
+          required: true
+          schema:
+            type: string
+          example: "-180,-90,180,90"
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MaxMinMapSpark"
+        "400":
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /varianceSpark:
+    get:
+      summary: Compute a map of the temporal variance
+      operationId: "varianceSpark"
+      description: Compute a map of the temporal variance
+      tags:
+        - Mapping
+      parameters:
+        - in: query
+          name: ds
+          description: The dataset used to generate the analysis.
+          required: true
+          schema:
+            type: string
+            x-dspopulate:
+              - satellite
+          example: TELLUS_GRAC-GRFO_MASCON_CRI_GRID_RL06_V2_LAND
+        - in: query
+          name: startTime
+          description: Starting time in format YYYY-MM-DDTHH:mm:ssZ or seconds since epoch
+          required: true
+          schema:
+            type: string
+            format: date-time
+          example: "2013-10-21T00:00:00Z"
+        - in: query
+          name: endTime
+          description: Ending time in format YYYY-MM-DDTHH:mm:ssZ or seconds since epoch
+          required: true
+          schema:
+            type: string
+            format: date-time
+          example: "2013-10-21T01:00:00Z"
+        - in: query
+          name: b
+          description: Minimum (Western) Longitude, Minimum (Southern) Latitude, Maximum (Eastern) Longitude, Maximum (Northern) Latitude.
+          required: true
+          schema:
+            type: string
+          example: "-180,-90,180,90"
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/VarianceSpark"
+        "400":
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
   /job:
     get:
       summary: |
@@ -1278,6 +1639,57 @@ components:
               type: number
             err:
               type: string
+    TimeAvgMapSpark:
+      type: object
+      properties:
+        meta:
+          type: array
+          items:
+            type: object
+            properties:
+              shortname:
+                type: string
+              bounds:
+                type: object
+                properties:
+                  east:
+                    type: number
+                  west:
+                    type: number
+                  north:
+                    type: number
+                  south:
+                    type: number
+              time:
+                type: object
+                properties:
+                  start:
+                    type: integer
+                  stop:
+                    type: integer
+                  iso_start:
+                    type: string
+                    format: date
+                  iso_stop:
+                    type: string
+                    format: date
+        data:
+          type: array
+          items:
+            type: array
+            items:
+              type: object
+              properties:
+                mean:
+                  type: number
+                cnt:
+                  type: integer
+                lat:
+                  type: number
+                lon:
+                  type: number
+        stats:
+          type: object
     TimeSeriesSpark:
       type: object
       properties:
@@ -1315,38 +1727,260 @@ components:
         data:
           type: array
           items:
+            type: array
+            items:
+              type: object
+              properties:
+                min:
+                  type: number
+                max:
+                  type: number
+                mean:
+                  type: number
+                cnt:
+                  type: integer
+                std:
+                  type: number
+                time:
+                  type: integer
+                meanSeasonal:
+                  type: number
+                minSeasonal:
+                  type: number
+                maxSeasonal:
+                  type: number
+                meanLowPass:
+                  type: number
+                maxLowPass:
+                  type: number
+                meanSeasonalLowPass:
+                  type: number
+                minSeasonalLowPass:
+                  type: number
+                maxSeasonalLowPass:
+                  type: number
+                ds:
+                  type: integer
+        stats:
+          type: object
+    DailyDifferenceAverageSpark:
+      type: object
+      properties:
+        meta:
+          type: array
+          items:
             type: object
             properties:
-              min:
-                type: number
-              max:
-                type: number
-              mean:
-                type: number
-              cnt:
-                type: integer
-              std:
-                type: number
+              title:
+                type: string
+              description:
+                type: string
+              units:
+                type: string
+              label:
+                type: string
+              shortName:
+                type: string
+              bounds:
+                type: object
+                properties:
+                  east:
+                    type: number
+                  west:
+                    type: number
+                  north:
+                    type: number
+                  south:
+                    type: number
               time:
-                type: integer
-              meanSeasonal:
-                type: number
-              minSeasonal:
-                type: number
-              maxSeasonal:
-                type: number
-              meanLowPass:
-                type: number
-              maxLowPass:
-                type: number
-              meanSeasonalLowPass:
-                type: number
-              minSeasonalLowPass:
-                type: number
-              maxSeasonalLowPass:
-                type: number
-              ds:
-                type: integer
+                type: object
+                properties:
+                  start:
+                    type: integer
+                  stop:
+                    type: integer
+                  iso_start:
+                    type: string
+                    format: date
+                  iso_stop:
+                    type: string
+                    format: date
+              climatology:
+                type: string
+        data:
+          type: array
+          items:
+            type: array
+            items:
+              type: object
+              properties:
+                time:
+                  type: integer
+                mean:
+                  type: number
+                std:
+                  type: number
+                ds:
+                  type: integer
+        stats:
+          type: object
+    HofMoellerSpark:
+      type: object
+      properties:
+        meta:
+          type: array
+          items:
+            type: object
+            properties:
+              shortName:
+                type: string
+              bounds:
+                type: object
+                properties:
+                  east:
+                    type: number
+                  west:
+                    type: number
+                  north:
+                    type: number
+                  south:
+                    type: number
+              time:
+                type: object
+                properties:
+                  start:
+                    type: integer
+                  stop:
+                    type: integer
+                  iso_start:
+                    type: string
+                    format: date
+                  iso_stop:
+                    type: string
+                    format: date
+        data:
+          type: array
+          items:
+            type: array
+            items:
+              type: object
+              properties:
+                mean:
+                  type: number
+                cnt:
+                  type: integer
+                lat:
+                  type: number
+                lon:
+                  type: number
+        stats:
+          type: object
+    MaxMinMapSpark:
+      type: object
+      properties:
+        meta:
+          type: array
+          items:
+            type: object
+            properties:
+              shortName:
+                type: string
+              bounds:
+                type: object
+                properties:
+                  east:
+                    type: number
+                  west:
+                    type: number
+                  north:
+                    type: number
+                  south:
+                    type: number
+              time:
+                type: object
+                properties:
+                  start:
+                    type: integer
+                  stop:
+                    type: integer
+                  iso_start:
+                    type: string
+                    format: date
+                  iso_stop:
+                    type: string
+                    format: date
+        data:
+          type: array
+          items:
+            type: array
+            items:
+              type: object
+              properties:
+                maxima:
+                  type: number
+                minima:
+                  type: number
+                absolute_maxima:
+                  type: number
+                absolute_minima:
+                  type: number
+                cnt:
+                  type: integer
+                lat:
+                  type: number
+                lon:
+                  type: number
+        stats:
+          type: object
+    VarianceSpark:
+      type: object
+      properties:
+        meta:
+          type: array
+          items:
+            type: object
+            properties:
+              shortName:
+                type: string
+              bounds:
+                type: object
+                properties:
+                  east:
+                    type: number
+                  west:
+                    type: number
+                  north:
+                    type: number
+                  south:
+                    type: number
+              time:
+                type: object
+                properties:
+                  start:
+                    type: integer
+                  stop:
+                    type: integer
+                  iso_start:
+                    type: string
+                    format: date
+                  iso_stop:
+                    type: string
+                    format: date
+        data:
+          type: array
+          items:
+            type: array
+            items:
+              type: object
+              properties:
+                variance:
+                  type: number
+                cnt:
+                  type: integer
+                lat:
+                  type: number
+                lon:
+                  type: number
         stats:
           type: object
     Error:
