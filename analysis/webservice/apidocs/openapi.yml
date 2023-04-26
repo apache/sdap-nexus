@@ -1557,432 +1557,268 @@ components:
                   depth:
                     type: number
                     nullable: true
+    SparkMeta:
+      type: object
+      properties:
+        meta:
+          type: array
+          items:
+            type: object
+            properties:
+              shortname:
+                type: string
+              bounds:
+                type: object
+                properties:
+                  east:
+                    type: number
+                  west:
+                    type: number
+                  north:
+                    type: number
+                  south:
+                    type: number
+              time:
+                type: object
+                properties:
+                  start:
+                    type: integer
+                  stop:
+                    type: integer
+                  iso_start:
+                    type: string
+                    format: date
+                  iso_stop:
+                    type: string
+                    format: date
     Stats:
-      type: object
-      properties:
-        meta:
-          type: array
-          items:
-            type: object
-            properties:
-              shortname:
-                type: string
-              bounds:
-                type: object
-                properties:
-                  east:
-                    type: number
-                  west:
-                    type: number
-                  north:
-                    type: number
-                  south:
-                    type: number
-              time:
-                type: object
-                properties:
-                  start:
-                    type: integer
-                  stop:
-                    type: integer
-                  iso_start:
-                    type: string
-                    format: date
-                  iso_stop:
-                    type: string
-                    format: date
-        data:
-          type: array
-          items:
-            type: object
-            properties:
-              min:
-                type: number
-              max:
-                type: number
-              mean:
-                type: number
-              cnt:
-                type: integer
-              std:
-                type: number
-              time:
-                type: integer
-              meanSeasonal:
-                type: number
-              minSeasonal:
-                type: number
-              maxSeasonal:
-                type: number
-              meanLowPass:
-                type: number
-              maxLowPass:
-                type: number
-              meanSeasonalLowPass:
-                type: number
-              minSeasonalLowPass:
-                type: number
-              maxSeasonalLowPass:
-                type: number
-              ds:
-                type: integer
-        stats:
-          type: object
+      allOf:
+        - $ref: "#/components/schemas/SparkMeta"
+        - type: object
           properties:
-            slope:
-              type: number
-            intercept:
-              type: number
-            r:
-              type: number
-            p:
-              type: number
-            err:
-              type: string
+            data:
+              type: array
+              items:
+                type: object
+                properties:
+                  min:
+                    type: number
+                  max:
+                    type: number
+                  mean:
+                    type: number
+                  cnt:
+                    type: integer
+                  std:
+                    type: number
+                  time:
+                    type: integer
+                  meanSeasonal:
+                    type: number
+                  minSeasonal:
+                    type: number
+                  maxSeasonal:
+                    type: number
+                  meanLowPass:
+                    type: number
+                  maxLowPass:
+                    type: number
+                  meanSeasonalLowPass:
+                    type: number
+                  minSeasonalLowPass:
+                    type: number
+                  maxSeasonalLowPass:
+                    type: number
+                  ds:
+                    type: integer
+            stats:
+              type: object
+              properties:
+                slope:
+                  type: number
+                intercept:
+                  type: number
+                r:
+                  type: number
+                p:
+                  type: number
+                err:
+                  type: string
     TimeAvgMapSpark:
-      type: object
-      properties:
-        meta:
-          type: array
-          items:
-            type: object
-            properties:
-              shortname:
-                type: string
-              bounds:
-                type: object
-                properties:
-                  east:
-                    type: number
-                  west:
-                    type: number
-                  north:
-                    type: number
-                  south:
-                    type: number
-              time:
-                type: object
-                properties:
-                  start:
-                    type: integer
-                  stop:
-                    type: integer
-                  iso_start:
-                    type: string
-                    format: date
-                  iso_stop:
-                    type: string
-                    format: date
-        data:
-          type: array
-          items:
-            type: array
-            items:
+      allOf:
+        - $ref: "#/components/schemas/SparkMeta"
+        - type: object
+          properties:
+            data:
+              type: array
+              items:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    mean:
+                      type: number
+                    cnt:
+                      type: integer
+                    lat:
+                      type: number
+                    lon:
+                      type: number
+            stats:
               type: object
-              properties:
-                mean:
-                  type: number
-                cnt:
-                  type: integer
-                lat:
-                  type: number
-                lon:
-                  type: number
-        stats:
-          type: object
     TimeSeriesSpark:
-      type: object
-      properties:
-        meta:
-          type: array
-          items:
-            type: object
-            properties:
-              shortname:
-                type: string
-              bounds:
-                type: object
-                properties:
-                  east:
-                    type: number
-                  west:
-                    type: number
-                  north:
-                    type: number
-                  south:
-                    type: number
-              time:
-                type: object
-                properties:
-                  start:
-                    type: integer
-                  stop:
-                    type: integer
-                  iso_start:
-                    type: string
-                    format: date
-                  iso_stop:
-                    type: string
-                    format: date
-        data:
-          type: array
-          items:
-            type: array
-            items:
+      allOf:
+        - $ref: "#/components/schemas/SparkMeta"
+        - type: object
+          properties:
+            data:
+              type: array
+              items:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    min:
+                      type: number
+                    max:
+                      type: number
+                    mean:
+                      type: number
+                    cnt:
+                      type: integer
+                    std:
+                      type: number
+                    time:
+                      type: integer
+                    meanSeasonal:
+                      type: number
+                    minSeasonal:
+                      type: number
+                    maxSeasonal:
+                      type: number
+                    meanLowPass:
+                      type: number
+                    maxLowPass:
+                      type: number
+                    meanSeasonalLowPass:
+                      type: number
+                    minSeasonalLowPass:
+                      type: number
+                    maxSeasonalLowPass:
+                      type: number
+                    ds:
+                      type: integer
+            stats:
               type: object
-              properties:
-                min:
-                  type: number
-                max:
-                  type: number
-                mean:
-                  type: number
-                cnt:
-                  type: integer
-                std:
-                  type: number
-                time:
-                  type: integer
-                meanSeasonal:
-                  type: number
-                minSeasonal:
-                  type: number
-                maxSeasonal:
-                  type: number
-                meanLowPass:
-                  type: number
-                maxLowPass:
-                  type: number
-                meanSeasonalLowPass:
-                  type: number
-                minSeasonalLowPass:
-                  type: number
-                maxSeasonalLowPass:
-                  type: number
-                ds:
-                  type: integer
-        stats:
-          type: object
     DailyDifferenceAverageSpark:
-      type: object
-      properties:
-        meta:
-          type: array
-          items:
-            type: object
-            properties:
-              title:
-                type: string
-              description:
-                type: string
-              units:
-                type: string
-              label:
-                type: string
-              shortName:
-                type: string
-              bounds:
+      allOf:
+        - $ref: "#/components/schemas/SparkMeta"
+        - type: object
+          properties:
+            meta:
+              type: array
+              items:
                 type: object
                 properties:
-                  east:
-                    type: number
-                  west:
-                    type: number
-                  north:
-                    type: number
-                  south:
-                    type: number
-              time:
-                type: object
-                properties:
-                  start:
-                    type: integer
-                  stop:
-                    type: integer
-                  iso_start:
+                  title:
                     type: string
-                    format: date
-                  iso_stop:
+                  description:
                     type: string
-                    format: date
-              climatology:
-                type: string
-        data:
-          type: array
-          items:
-            type: array
-            items:
+                  units:
+                    type: string
+                  label:
+                    type: string
+                  climatology:
+                    type: string
+            data:
+              type: array
+              items:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    time:
+                      type: integer
+                    mean:
+                      type: number
+                    std:
+                      type: number
+                    ds:
+                      type: integer
+            stats:
               type: object
-              properties:
-                time:
-                  type: integer
-                mean:
-                  type: number
-                std:
-                  type: number
-                ds:
-                  type: integer
-        stats:
-          type: object
     HofMoellerSpark:
-      type: object
-      properties:
-        meta:
-          type: array
-          items:
-            type: object
-            properties:
-              shortName:
-                type: string
-              bounds:
-                type: object
-                properties:
-                  east:
-                    type: number
-                  west:
-                    type: number
-                  north:
-                    type: number
-                  south:
-                    type: number
-              time:
-                type: object
-                properties:
-                  start:
-                    type: integer
-                  stop:
-                    type: integer
-                  iso_start:
-                    type: string
-                    format: date
-                  iso_stop:
-                    type: string
-                    format: date
-        data:
-          type: array
-          items:
-            type: array
-            items:
+      allOf:
+        - $ref: "#/components/schemas/SparkMeta"
+        - type: object
+          properties:
+            data:
+              type: array
+              items:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    mean:
+                      type: number
+                    cnt:
+                      type: integer
+                    lat:
+                      type: number
+                    lon:
+                      type: number
+            stats:
               type: object
-              properties:
-                mean:
-                  type: number
-                cnt:
-                  type: integer
-                lat:
-                  type: number
-                lon:
-                  type: number
-        stats:
-          type: object
     MaxMinMapSpark:
-      type: object
-      properties:
-        meta:
-          type: array
-          items:
-            type: object
-            properties:
-              shortName:
-                type: string
-              bounds:
-                type: object
-                properties:
-                  east:
-                    type: number
-                  west:
-                    type: number
-                  north:
-                    type: number
-                  south:
-                    type: number
-              time:
-                type: object
-                properties:
-                  start:
-                    type: integer
-                  stop:
-                    type: integer
-                  iso_start:
-                    type: string
-                    format: date
-                  iso_stop:
-                    type: string
-                    format: date
-        data:
-          type: array
-          items:
-            type: array
-            items:
+      allOf:
+        - $ref: "#/components/schemas/SparkMeta"
+        - type: object
+          properties:
+            data:
+              type: array
+              items:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    maxima:
+                      type: number
+                    minima:
+                      type: number
+                    absolute_maxima:
+                      type: number
+                    absolute_minima:
+                      type: number
+                    cnt:
+                      type: integer
+                    lat:
+                      type: number
+                    lon:
+                      type: number
+            stats:
               type: object
-              properties:
-                maxima:
-                  type: number
-                minima:
-                  type: number
-                absolute_maxima:
-                  type: number
-                absolute_minima:
-                  type: number
-                cnt:
-                  type: integer
-                lat:
-                  type: number
-                lon:
-                  type: number
-        stats:
-          type: object
     VarianceSpark:
-      type: object
-      properties:
-        meta:
-          type: array
-          items:
-            type: object
-            properties:
-              shortName:
-                type: string
-              bounds:
-                type: object
-                properties:
-                  east:
-                    type: number
-                  west:
-                    type: number
-                  north:
-                    type: number
-                  south:
-                    type: number
-              time:
-                type: object
-                properties:
-                  start:
-                    type: integer
-                  stop:
-                    type: integer
-                  iso_start:
-                    type: string
-                    format: date
-                  iso_stop:
-                    type: string
-                    format: date
-        data:
-          type: array
-          items:
-            type: array
-            items:
+      allOf:
+        - $ref: "#/components/schemas/SparkMeta"
+        - type: object
+          properties:
+            data:
+              type: array
+              items:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    variance:
+                      type: number
+                    cnt:
+                      type: integer
+                    lat:
+                      type: number
+                    lon:
+                      type: number
+            stats:
               type: object
-              properties:
-                variance:
-                  type: number
-                cnt:
-                  type: integer
-                lat:
-                  type: number
-                lon:
-                  type: number
-        stats:
-          type: object
     Error:
       type: object
       properties:
