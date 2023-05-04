@@ -6,6 +6,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 ### Added
+- SDAP-440: Added `CassandraSwathProxy` to process tiles in a method optimized for swath format
+- SDAP-440: Set up framework to roll out changes to SDAP algorithms to work with swath formatted data for both tile types rather than having tiles formatted as gridded which is very memory inefficient.
+### Changed
+### Deprecated
+### Removed
+### Fixed
+### Security
+
+## [1.1.0] - 2023-04-26
+### Added
 - Deletebyquery: Parameter to set the number of rows to fetch from Solr. Speeds up time to gather tiles to delete; especially when there is a lot of them.
 - Added Saildrone's `baja_2018` insitu dataset.
 - SDAP-454: Added new query parameter `prioritizeDistance` to matchup algorithm
@@ -20,7 +30,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     - `platforms` parameter in `/match_spark` is now a multi-select list.
     - Added note to `/stats` endpoint to note it is limited to satellite datasets
 - SDAP-450: Updated helm chart to reflect k8s 1.22 changes. Bumped RMQ dependency version & updated Bitnami dependency chart URLs. Ingress template is already up to date.
-- SDAP-440: Set up framework to roll out changes to SDAP algorithms to work with swath formatted data for both tile types rather than having tiles formatted as gridded which is very memory inefficient.
 ### Deprecated
 ### Removed
 ### Fixed
