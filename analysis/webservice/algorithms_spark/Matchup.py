@@ -912,15 +912,55 @@ def match_tile_to_point_generator(tile_service, tile_id, m_tree, edge_results, s
     the_time = datetime.now()
     # Get list of indices of valid values
     valid_indices = tile.get_indices()
-    time_slice, geo_slice = determine_slicing(valid_indices)
+
+    # print(valid_indices[:5])
+    # print(tile.data)
+    # print(type(tile.data))
+    # print(tile.latitudes.shape)
+    # print(tile.longitudes.shape)
+    # print(tile.times.shape)
+
+    # time_slice, geo_slice = determine_slicing(tile)
     primary_points = np.array(
-        [aeqd_proj(tile.longitudes[tuple(aslice)[geo_slice]], tile.latitudes[tuple(aslice)[geo_slice]]) for
+        [aeqd_proj(tile.longitudes[tuple(aslice)[1:]], tile.latitudes[tuple(aslice)[1:]]) for
          aslice in valid_indices])
+
+    for aslice in valid_indices:
+        lon = tile.longitudes[tuple(aslice)[1:]]
+        lat = tile.latitudes[tuple(aslice)[1:]]
+
+        proj = aeqd_proj(lon, lat)
+
+        if proj[0] == float("inf") or proj[0] == np.inf:
+            print(lon, lat, proj, aslice)
+            return
+
+
+    # print(tile.longitudes[tuple(valid_indices[0])[1:]])
+    # print(tile.longitudes)
+    #
+    #
+    # print('proj')
+    # print(aeqd_proj(tile.longitudes[tuple(valid_indices[0])[1:]], tile.latitudes[tuple(valid_indices[0])[1:]]))
+    #
+    # return
 
     print("%s Time to convert primary points for tile %s" % (str(datetime.now() - the_time), tile_id))
 
     a_time = datetime.now()
-    p_tree = spatial.cKDTree(primary_points, leafsize=30)
+    try:
+        p_tree = spatial.cKDTree(primary_points, leafsize=30)
+    except ValueError:
+        print('ptree error')
+        print(valid_indices[:5])
+        print(tile.data)
+        print(type(tile.data))
+        print(tile.latitudes.shape)
+        print(tile.longitudes.shape)
+        print(tile.times.shape)
+        print(primary_points)
+        raise
+
     print("%s Time to build primary tree" % (str(datetime.now() - a_time)))
 
     a_time = datetime.now()
@@ -933,10 +973,10 @@ def match_tile_to_point_generator(tile_service, tile_id, m_tree, edge_results, s
             else:
                 data_vals = tile.data[tuple(valid_indices[i])]
             p_nexus_point = NexusPoint(
-                latitude=tile.latitudes[tuple(valid_indices[i])[geo_slice]],
-                longitude=tile.longitudes[tuple(valid_indices[i])[geo_slice]],
+                latitude=tile.latitudes[tuple(valid_indices[i])[1:]],
+                longitude=tile.longitudes[tuple(valid_indices[i])[1:]],
                 depth=None,
-                time=tile.times[tuple(valid_indices[i])[time_slice]],
+                time=tile.times[tuple(valid_indices[i])[0]],
                 index=valid_indices[i],
                 data_vals=data_vals
             )
