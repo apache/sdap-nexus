@@ -113,9 +113,7 @@ class NexusTileService(object):
                 self._metadatastore = ElasticsearchProxy.ElasticsearchProxy(self._config)
 
         logger.info(f'Created new NexusTileService with data store {type(self._datastore)} and metadata '
-                    f'store {type(self._metadatastore)}')
-        # logger.info('Traceback for debugging...')
-        # logger.info(''.join(traceback.format_stack()))
+                    f'store {type(self._metadatastore)}. Desired projection: {desired_projection}')
 
     def override_config(self, config):
         for section in config.sections():
