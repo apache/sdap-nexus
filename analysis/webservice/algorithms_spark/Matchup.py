@@ -902,9 +902,8 @@ def match_tile_to_point_generator(tile_service, tile_id, m_tree, edge_results, s
         tile = tile_service.mask_tiles_to_polygon(wkt.loads(search_domain_bounding_wkt),
                                                   tile_service.find_tile_by_id(tile_id))[0]
         print("%s Time to load tile %s" % (str(datetime.now() - the_time), tile_id))
-    except IndexError as e:
+    except IndexError:
         # This should only happen if all measurements in a tile become masked after applying the bounding polygon
-        logging.exception(e)
         print('Tile is empty after masking spatially. Skipping this tile.')
         return
 
@@ -912,58 +911,14 @@ def match_tile_to_point_generator(tile_service, tile_id, m_tree, edge_results, s
     the_time = datetime.now()
     # Get list of indices of valid values
     valid_indices = tile.get_indices()
-
-    # for data in tile.data:
-    #     print(data.mask)
-    #
-    # print(valid_indices[:5])
-    # print(tile.data)
-    # print(type(tile.data))
-    # print(tile.latitudes.shape)
-    # print(tile.longitudes.shape)
-    # print(tile.times.shape)
-
-    # time_slice, geo_slice = determine_slicing(tile)
     primary_points = np.array(
         [aeqd_proj(tile.longitudes[tuple(aslice)[-2:]], tile.latitudes[tuple(aslice)[-2:]]) for
          aslice in valid_indices])
 
-    # for aslice in valid_indices:
-    #     lon = tile.longitudes[tuple(aslice)[1:]]
-    #     lat = tile.latitudes[tuple(aslice)[1:]]
-    #
-    #     proj = aeqd_proj(lon, lat)
-    #
-    #     if proj[0] == float("inf") or proj[0] == np.inf:
-    #         print(lon, lat, proj, aslice)
-    #         return
-
-
-    # print(tile.longitudes[tuple(valid_indices[0])[1:]])
-    # print(tile.longitudes)
-    #
-    #
-    # print('proj')
-    # print(aeqd_proj(tile.longitudes[tuple(valid_indices[0])[1:]], tile.latitudes[tuple(valid_indices[0])[1:]]))
-    #
-    # return
-
     print("%s Time to convert primary points for tile %s" % (str(datetime.now() - the_time), tile_id))
 
     a_time = datetime.now()
-    try:
-        p_tree = spatial.cKDTree(primary_points, leafsize=30)
-    except ValueError:
-        print('ptree error')
-        print(valid_indices[:5])
-        print(tile.data)
-        print(type(tile.data))
-        print(tile.latitudes.shape)
-        print(tile.longitudes.shape)
-        print(tile.times.shape)
-        print(primary_points)
-        raise
-
+    p_tree = spatial.cKDTree(primary_points, leafsize=30)
     print("%s Time to build primary tree" % (str(datetime.now() - a_time)))
 
     a_time = datetime.now()
