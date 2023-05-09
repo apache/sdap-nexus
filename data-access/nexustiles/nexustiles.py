@@ -88,9 +88,6 @@ class NexusTileService(object):
 
         if desired_projection not in ['grid', 'swath']:
             raise ValueError(f'Invalid value provided for NexusTileService desired_projection: {desired_projection}')
-            # warnings.warn(f'Invalid value provided for NexusTileService desired_projection: {desired_projection}. '
-            #               f'Defaulting to \'grid\'')
-            # desired_projection = 'grid'
 
         self.desired_projection = desired_projection
 

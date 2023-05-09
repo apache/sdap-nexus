@@ -128,7 +128,6 @@ class Tile(object):
 
     def nexus_point_generator(self, include_nan=False):
         indices = self.get_indices(include_nan)
-        idx_len = len(indices[0])
 
         if self.projection == 'grid':
             lat_slice = slice(1, 2)
