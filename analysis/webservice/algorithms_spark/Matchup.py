@@ -690,16 +690,6 @@ def determine_parallelism(num_tiles):
     return num_partitions
 
 
-def determine_slicing(indices):
-    try:
-        idx_len = len(indices[0])
-        time_slice = slice(0, 1) if idx_len == 3 else slice(None)
-        geo_slice = slice(-1, None) if idx_len == 3 else slice(None)
-        return time_slice, geo_slice
-    except IndexError:
-        return slice(None), slice(None)
-
-
 def add_meters_to_lon_lat(lon, lat, meters):
     """
     Uses a simple approximation of
@@ -742,8 +732,6 @@ def get_insitu_unit(variable_name, insitu_schema):
 
 def tile_to_edge_points(tile):
     indices = tile.get_indices()
-    time_slice, geo_slice = determine_slicing(indices)
-
     edge_points = []
 
     for idx in indices:
@@ -753,9 +741,9 @@ def tile_to_edge_points(tile):
             data = [tile.data[tuple(idx)]]
 
         edge_point = {
-            'latitude': tile.latitudes[tuple(idx)[geo_slice]],
-            'longitude': tile.longitudes[tuple(idx)[geo_slice]],
-            'time': datetime.utcfromtimestamp(tile.times[tuple(idx)[time_slice]]).strftime('%Y-%m-%dT%H:%M:%SZ'),
+            'latitude': tile.latitudes[tuple(idx)[-2:]],
+            'longitude': tile.longitudes[tuple(idx)[-2:]],
+            'time': datetime.utcfromtimestamp(tile.times[tuple(idx)[-2:]]).strftime('%Y-%m-%dT%H:%M:%SZ'),
             'source': tile.dataset,
             'platform': 'orbiting satellite',
             'device': None,
@@ -862,11 +850,10 @@ def match_satellite_to_insitu(tile_ids, primary_b, secondary_b, parameter_b, tt_
             tile = tiles[0]
 
             valid_indices = tile.get_indices()
-            _, geo_slice = determine_slicing(valid_indices)
 
             primary_points = np.array([aeqd_proj(
-                tile.longitudes[tuple(aslice)[geo_slice]],
-                tile.latitudes[tuple(aslice)[geo_slice]]
+                tile.longitudes[tuple(aslice)[-2:]],
+                tile.latitudes[tuple(aslice)[-2:]]
             ) for aslice in valid_indices])
             matchup_points.extend(primary_points)
             edge_results.extend(tile_to_edge_points(tile))
