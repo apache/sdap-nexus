@@ -484,7 +484,7 @@ class NexusTileService(object):
         if len(missing_data) > 0:
             raise Exception("Missing data for tile_id(s) %s." % missing_data)
 
-        desired_projection = kwargs['desired_projection'] if 'desired_projection' in kwargs else 'grid'
+        desired_projection = kwargs['desired_projection'] if 'desired_projection' in kwargs else self.desired_projection
 
         for a_tile in tiles:
             lats, lons, times, data, meta, is_multi_var = tile_data_by_id[a_tile.tile_id].get_lat_lon_time_data_meta(
