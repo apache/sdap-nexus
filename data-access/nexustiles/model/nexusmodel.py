@@ -175,7 +175,7 @@ class Tile(object):
         if include_nan:
             return list(np.ndindex(self.data.shape))
         if self.is_multi:
-            combined_data_inv_mask = reduce(np.logical_and, [data.mask for data in self.data])
+            combined_data_inv_mask = reduce(np.logical_and, [np.ma.getmaskarray(data) for data in self.data])
             return np.argwhere(np.logical_not(combined_data_inv_mask))
         else:
             return np.transpose(np.where(np.ma.getmaskarray(self.data) == False)).tolist()

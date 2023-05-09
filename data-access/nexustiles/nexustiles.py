@@ -395,7 +395,10 @@ class NexusTileService(object):
             # If this is multi-var, need to mask each variable separately.
             if tile.is_multi:
                 # Combine space/time mask with existing mask on data
-                data_mask = reduce(np.logical_or, [tile.data[0].mask, data_mask])
+                # Data masks are ANDed because we want to mask out only when ALL data vars are invalid
+                combined_data_mask = reduce(np.logical_and, [d.mask for d in tile.data])
+                # We now OR in the bounds mask because out of bounds data must be excluded regardless of validity
+                data_mask = np.logical_or(combined_data_mask, data_mask)
 
                 num_vars = len(tile.data)
                 multi_data_mask = np.repeat(data_mask[np.newaxis, ...], num_vars, axis=0)

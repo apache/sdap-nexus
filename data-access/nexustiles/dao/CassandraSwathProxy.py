@@ -91,8 +91,10 @@ class NexusTileData(Model):
             reflected_lat_array = np.broadcast_to(latitude_data, (len(longitude_data), len(latitude_data)))
             reflected_lat_array = np.transpose(reflected_lat_array)
 
-            if len(grid_tile_data.shape) == 2:
-                grid_tile_data = grid_tile_data[np.newaxis, :]
+            time_array = np.broadcast_to(grid_tile.time, grid_tile_data.shape)
+
+            # if len(grid_tile_data.shape) == 2:
+            #     grid_tile_data = grid_tile_data[np.newaxis, :]
 
             # Extract the meta data
             meta_data = {}
@@ -103,7 +105,7 @@ class NexusTileData(Model):
                     meta_array = meta_array[np.newaxis, :]
                 meta_data[name] = meta_array
 
-            return reflected_lat_array, reflected_lon_array, np.array([grid_tile.time]), grid_tile_data, meta_data, is_multi_var
+            return reflected_lat_array, reflected_lon_array, time_array, grid_tile_data, meta_data, is_multi_var
         elif self._get_nexus_tile().HasField('swath_tile'):
             swath_tile = self._get_nexus_tile().swath_tile
 
@@ -180,7 +182,7 @@ class NexusTileData(Model):
                 actual_meta_array = np.ma.masked_invalid(from_shaped_array(meta_data_obj.meta_data))
                 meta_data[name] = actual_meta_array
 
-            return latitude_data, longitude_data, time_data, tile_data, meta_data, is_multi_var
+            return latitude_data, longitude_data, time_data, np.ma.array(tile_data), meta_data, is_multi_var
         elif self._get_nexus_tile().HasField('grid_multi_variable_tile'):
             grid_multi_variable_tile = self._get_nexus_tile().grid_multi_variable_tile
             is_multi_var = True
