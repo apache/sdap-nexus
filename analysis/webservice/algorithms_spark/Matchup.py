@@ -913,6 +913,9 @@ def match_tile_to_point_generator(tile_service, tile_id, m_tree, edge_results, s
     # Get list of indices of valid values
     valid_indices = tile.get_indices()
 
+    # for data in tile.data:
+    #     print(data.mask)
+    #
     # print(valid_indices[:5])
     # print(tile.data)
     # print(type(tile.data))
@@ -922,18 +925,18 @@ def match_tile_to_point_generator(tile_service, tile_id, m_tree, edge_results, s
 
     # time_slice, geo_slice = determine_slicing(tile)
     primary_points = np.array(
-        [aeqd_proj(tile.longitudes[tuple(aslice)[1:]], tile.latitudes[tuple(aslice)[1:]]) for
+        [aeqd_proj(tile.longitudes[tuple(aslice)[-2:]], tile.latitudes[tuple(aslice)[-2:]]) for
          aslice in valid_indices])
 
-    for aslice in valid_indices:
-        lon = tile.longitudes[tuple(aslice)[1:]]
-        lat = tile.latitudes[tuple(aslice)[1:]]
-
-        proj = aeqd_proj(lon, lat)
-
-        if proj[0] == float("inf") or proj[0] == np.inf:
-            print(lon, lat, proj, aslice)
-            return
+    # for aslice in valid_indices:
+    #     lon = tile.longitudes[tuple(aslice)[1:]]
+    #     lat = tile.latitudes[tuple(aslice)[1:]]
+    #
+    #     proj = aeqd_proj(lon, lat)
+    #
+    #     if proj[0] == float("inf") or proj[0] == np.inf:
+    #         print(lon, lat, proj, aslice)
+    #         return
 
 
     # print(tile.longitudes[tuple(valid_indices[0])[1:]])
@@ -973,10 +976,10 @@ def match_tile_to_point_generator(tile_service, tile_id, m_tree, edge_results, s
             else:
                 data_vals = tile.data[tuple(valid_indices[i])]
             p_nexus_point = NexusPoint(
-                latitude=tile.latitudes[tuple(valid_indices[i])[1:]],
-                longitude=tile.longitudes[tuple(valid_indices[i])[1:]],
+                latitude=tile.latitudes[tuple(valid_indices[i])[-2:]],
+                longitude=tile.longitudes[tuple(valid_indices[i])[-2:]],
                 depth=None,
-                time=tile.times[tuple(valid_indices[i])[0]],
+                time=tile.times[tuple(valid_indices[i])[-2:]],
                 index=valid_indices[i],
                 data_vals=data_vals
             )
