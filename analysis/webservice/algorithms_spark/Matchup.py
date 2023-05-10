@@ -142,6 +142,13 @@ class Matchup(NexusCalcSparkTornadoHandler):
                            "If the number of primary matches is greater than this limit, the service will respond with "
                            "(HTTP 202: Accepted) and an empty response body. A value of 0 means return all results. "
                            "Default: 500"
+        },
+        "prioritizeDistance": {
+            "name": "Prioritize distance",
+            "type": "boolean",
+            "description": "If true, prioritize distance over time when computing matches. If false, prioritize time over "
+                           "distance. This is only relevant if matchOnce=true, because otherwise all matches will be "
+                           "included so long as they fit within the user-provided tolerances. Default is true."
         }
     }
     singleton = True
@@ -219,10 +226,13 @@ class Matchup(NexusCalcSparkTornadoHandler):
         start_seconds_from_epoch = int((start_time - EPOCH).total_seconds())
         end_seconds_from_epoch = int((end_time - EPOCH).total_seconds())
 
+        prioritize_distance = request.get_boolean_arg("prioritizeDistance", default=True)
+
+
         return bounding_polygon, primary_ds_name, secondary_ds_names, parameter_s, \
                start_time, start_seconds_from_epoch, end_time, end_seconds_from_epoch, \
                depth_min, depth_max, time_tolerance, radius_tolerance, \
-               platforms, match_once, result_size_limit
+               platforms, match_once, result_size_limit, prioritize_distance
 
     def async_calc(self, execution_id, tile_ids, bounding_polygon, primary_ds_name,
                    secondary_ds_names, parameter_s, start_time, end_time, depth_min,
@@ -289,7 +299,7 @@ class Matchup(NexusCalcSparkTornadoHandler):
         bounding_polygon, primary_ds_name, secondary_ds_names, parameter_s, \
         start_time, start_seconds_from_epoch, end_time, end_seconds_from_epoch, \
         depth_min, depth_max, time_tolerance, radius_tolerance, \
-        platforms, match_once, result_size_limit = self.parse_arguments(request)
+        platforms, match_once, result_size_limit, prioritize_distance = self.parse_arguments(request)
 
         args = {
             "primary": primary_ds_name,
@@ -626,7 +636,7 @@ DRIVER_LOCK = Lock()
 
 
 def spark_matchup_driver(tile_ids, bounding_wkt, primary_ds_name, secondary_ds_names, parameter, depth_min, depth_max,
-                         time_tolerance, radius_tolerance, platforms, match_once, tile_service_factory, sc=None):
+                         time_tolerance, radius_tolerance, platforms, match_once, tile_service_factory, prioritize_distance=True, sc=None):
     from functools import partial
 
     with DRIVER_LOCK:
@@ -673,12 +683,14 @@ def spark_matchup_driver(tile_ids, bounding_wkt, primary_ds_name, secondary_ds_n
         # Method used for calculating the distance between 2 DomsPoints
         from pyproj import Geod
 
-        def dist(primary, matchup):
+        def dist(primary, matchup, prioritize_distance):
             wgs84_geod = Geod(ellps='WGS84')
             lat1, lon1 = (primary.latitude, primary.longitude)
             lat2, lon2 = (matchup.latitude, matchup.longitude)
             az12, az21, distance = wgs84_geod.inv(lon1, lat1, lon2, lat2)
-            return distance, time_dist(primary, matchup)
+            if prioritize_distance:
+                return distance, time_dist(primary, matchup)
+            return time_dist(primary, matchup), distance
 
         def time_dist(primary, matchup):
             primary_time = iso_time_to_epoch(primary.time)
@@ -707,7 +719,11 @@ def spark_matchup_driver(tile_ids, bounding_wkt, primary_ds_name, secondary_ds_n
 
         rdd_filtered = rdd_filtered.map(
             lambda primary_matchup: tuple(
-                [primary_matchup[0], tuple([primary_matchup[1], dist(primary_matchup[0], primary_matchup[1])])]
+                [primary_matchup[0], tuple([primary_matchup[1], dist(
+                    primary_matchup[0],
+                    primary_matchup[1],
+                    prioritize_distance
+                )])]
             )).combineByKey(
                 lambda value: [value],
                 lambda value_list, value: value_list + [value],
