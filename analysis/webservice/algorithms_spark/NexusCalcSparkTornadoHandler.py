@@ -13,24 +13,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import logging
+from webservice.algorithms_spark.NexusCalcSparkHandler import NexusCalcSparkHandler
 
-from . import BaseDomsHandler
-from . import ExecutionStatus
-from . import ExecutionCancel
-from . import DatasetListQuery
-from . import DomsInitialization
-from . import MatchupQuery
-from . import MetadataQuery
-from . import ResultsPlotQuery
-from . import ResultsRetrieval
-from . import ResultsStorage
-from . import StatsQuery
-from . import ValuesQuery
-from . import config
-from . import datafetch
-from . import fetchedgeimpl
-from . import geo
-from . import insitusubset
-from . import subsetter
-from . import values
-from . import workerthread
+logger = logging.getLogger(__name__)
+
+
+class NexusCalcSparkTornadoHandler(NexusCalcSparkHandler):
+    pass
