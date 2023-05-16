@@ -31,6 +31,15 @@ Start downloading the Docker images and set up the Docker bridge network.
 
 .. _quickstart-step1:
 
+Set Default Docker Platform
+---
+
+To ensure consistency when building/running on different hardware architectures, we should set this variable to ensure docker uses ``linux/amd64``.
+
+.. code-block:: bash
+
+  export DOCKER_DEFAULT_PLATFORM=linux/amd64
+
 Set Tag Variables
 -------------------
 
@@ -40,11 +49,11 @@ Pull the necessary Docker images from the `Apache SDAP repository <https://hub.d
 
   export CASSANDRA_VERSION=3.11.6-debian-10-r138
   export RMQ_VERSION=3.8.9-debian-10-r37
-  export COLLECTION_MANAGER_VERSION=1.0.0
-  export GRANULE_INGESTER_VERSION=1.0.0
-  export WEBAPP_VERSION=1.0.0
-  export SOLR_VERSION=1.0.0
-  export SOLR_CLOUD_INIT_VERSION=1.0.0
+  export COLLECTION_MANAGER_VERSION=1.1.0
+  export GRANULE_INGESTER_VERSION=1.1.0
+  export WEBAPP_VERSION=1.1.0
+  export SOLR_VERSION=1.1.0
+  export SOLR_CLOUD_INIT_VERSION=1.1.0
   export ZK_VERSION=3.5.5
 
   export JUPYTER_VERSION=1.0.0-rc2
@@ -134,7 +143,7 @@ To start Solr using a volume mount and expose the admin webapp on port 8983:
 
   export SOLR_DATA=~/nexus-quickstart/solr
   mkdir -p ${SOLR_DATA}
-  docker run --name solr --network sdap-net -v ${SOLR_DATA}/:/opt/solr/server/solr/nexustiles/data -p 8983:8983 -e ZK_HOST="host.docker.internal:2181/solr" -d ${REPO}/sdap-solr-cloud:${SOLR_VERSION}
+  docker run --name solr --network sdap-net -v ${SOLR_DATA}/:/bitnami -p 8983:8983 -e ZK_HOST="host.docker.internal:2181/solr" -d ${REPO}/sdap-solr-cloud:${SOLR_VERSION}
 
 This will start an instance of Solr. To initialize it, we need to run the ``solr-cloud-init`` image.
 
@@ -174,7 +183,7 @@ Now we can start the image and run the initialization script.
 
   export CASSANDRA_DATA=~/nexus-quickstart/cassandra
   mkdir -p ${CASSANDRA_DATA}
-  docker run --name cassandra --network sdap-net -p 9042:9042 -v ${CASSANDRA_DATA}/cassandra/:/var/lib/cassandra -v "${CASSANDRA_INIT}/initdb.cql:/scripts/initdb.cql" -d bitnami/cassandra:${CASSANDRA_VERSION}
+  docker run --name cassandra --network sdap-net -p 9042:9042 -v ${CASSANDRA_DATA}/cassandra/:/bitnami -v "${CASSANDRA_INIT}/initdb.cql:/scripts/initdb.cql" -d bitnami/cassandra:${CASSANDRA_VERSION}
 
 Wait a few moments for the database to start.
 
@@ -273,23 +282,21 @@ Download Sample Data
 
 The data we will be downloading is part of the `AVHRR OI dataset <https://podaac.jpl.nasa.gov/dataset/AVHRR_OI-NCEI-L4-GLOB-v2.0>`_ which measures sea surface temperature. We will download 1 month of data and ingest it into a local Solr and Cassandra instance.
 
+.. note::
+
+  Before you are able to download the test data, you will need to `Create an Earthdata Login <https://urs.earthdata.nasa.gov/>`_.
+
 Then go ahead and download 1 month worth of AVHRR netCDF files.
 
 .. code-block:: bash
 
   cd $DATA_DIRECTORY
 
-  export URL_LIST="https://podaac-opendap.jpl.nasa.gov:443/opendap/allData/ghrsst/data/GDS2/L4/GLOB/NCEI/AVHRR_OI/v2/2015/305/20151101120000-NCEI-L4_GHRSST-SSTblend-AVHRR_OI-GLOB-v02.0-fv02.0.nc https://podaac-opendap.jpl.nasa.gov:443/opendap/allData/ghrsst/data/GDS2/L4/GLOB/NCEI/AVHRR_OI/v2/2015/306/20151102120000-NCEI-L4_GHRSST-SSTblend-AVHRR_OI-GLOB-v02.0-fv02.0.nc https://podaac-opendap.jpl.nasa.gov:443/opendap/allData/ghrsst/data/GDS2/L4/GLOB/NCEI/AVHRR_OI/v2/2015/307/20151103120000-NCEI-L4_GHRSST-SSTblend-AVHRR_OI-GLOB-v02.0-fv02.0.nc https://podaac-opendap.jpl.nasa.gov:443/opendap/allData/ghrsst/data/GDS2/L4/GLOB/NCEI/AVHRR_OI/v2/2015/308/20151104120000-NCEI-L4_GHRSST-SSTblend-AVHRR_OI-GLOB-v02.0-fv02.0.nc https://podaac-opendap.jpl.nasa.gov:443/opendap/allData/ghrsst/data/GDS2/L4/GLOB/NCEI/AVHRR_OI/v2/2015/309/20151105120000-NCEI-L4_GHRSST-SSTblend-AVHRR_OI-GLOB-v02.0-fv02.0.nc https://podaac-opendap.jpl.nasa.gov:443/opendap/allData/ghrsst/data/GDS2/L4/GLOB/NCEI/AVHRR_OI/v2/2015/310/20151106120000-NCEI-L4_GHRSST-SSTblend-AVHRR_OI-GLOB-v02.0-fv02.0.nc https://podaac-opendap.jpl.nasa.gov:443/opendap/allData/ghrsst/data/GDS2/L4/GLOB/NCEI/AVHRR_OI/v2/2015/311/20151107120000-NCEI-L4_GHRSST-SSTblend-AVHRR_OI-GLOB-v02.0-fv02.0.nc https://podaac-opendap.jpl.nasa.gov:443/opendap/allData/ghrsst/data/GDS2/L4/GLOB/NCEI/AVHRR_OI/v2/2015/312/20151108120000-NCEI-L4_GHRSST-SSTblend-AVHRR_OI-GLOB-v02.0-fv02.0.nc https://podaac-opendap.jpl.nasa.gov:443/opendap/allData/ghrsst/data/GDS2/L4/GLOB/NCEI/AVHRR_OI/v2/2015/313/20151109120000-NCEI-L4_GHRSST-SSTblend-AVHRR_OI-GLOB-v02.0-fv02.0.nc https://podaac-opendap.jpl.nasa.gov:443/opendap/allData/ghrsst/data/GDS2/L4/GLOB/NCEI/AVHRR_OI/v2/2015/314/20151110120000-NCEI-L4_GHRSST-SSTblend-AVHRR_OI-GLOB-v02.0-fv02.0.nc https://podaac-opendap.jpl.nasa.gov:443/opendap/allData/ghrsst/data/GDS2/L4/GLOB/NCEI/AVHRR_OI/v2/2015/315/20151111120000-NCEI-L4_GHRSST-SSTblend-AVHRR_OI-GLOB-v02.0-fv02.0.nc https://podaac-opendap.jpl.nasa.gov:443/opendap/allData/ghrsst/data/GDS2/L4/GLOB/NCEI/AVHRR_OI/v2/2015/316/20151112120000-NCEI-L4_GHRSST-SSTblend-AVHRR_OI-GLOB-v02.0-fv02.0.nc https://podaac-opendap.jpl.nasa.gov:443/opendap/allData/ghrsst/data/GDS2/L4/GLOB/NCEI/AVHRR_OI/v2/2015/317/20151113120000-NCEI-L4_GHRSST-SSTblend-AVHRR_OI-GLOB-v02.0-fv02.0.nc https://podaac-opendap.jpl.nasa.gov:443/opendap/allData/ghrsst/data/GDS2/L4/GLOB/NCEI/AVHRR_OI/v2/2015/318/20151114120000-NCEI-L4_GHRSST-SSTblend-AVHRR_OI-GLOB-v02.0-fv02.0.nc https://podaac-opendap.jpl.nasa.gov:443/opendap/allData/ghrsst/data/GDS2/L4/GLOB/NCEI/AVHRR_OI/v2/2015/319/20151115120000-NCEI-L4_GHRSST-SSTblend-AVHRR_OI-GLOB-v02.0-fv02.0.nc https://podaac-opendap.jpl.nasa.gov:443/opendap/allData/ghrsst/data/GDS2/L4/GLOB/NCEI/AVHRR_OI/v2/2015/320/20151116120000-NCEI-L4_GHRSST-SSTblend-AVHRR_OI-GLOB-v02.0-fv02.0.nc https://podaac-opendap.jpl.nasa.gov:443/opendap/allData/ghrsst/data/GDS2/L4/GLOB/NCEI/AVHRR_OI/v2/2015/321/20151117120000-NCEI-L4_GHRSST-SSTblend-AVHRR_OI-GLOB-v02.0-fv02.0.nc https://podaac-opendap.jpl.nasa.gov:443/opendap/allData/ghrsst/data/GDS2/L4/GLOB/NCEI/AVHRR_OI/v2/2015/322/20151118120000-NCEI-L4_GHRSST-SSTblend-AVHRR_OI-GLOB-v02.0-fv02.0.nc https://podaac-opendap.jpl.nasa.gov:443/opendap/allData/ghrsst/data/GDS2/L4/GLOB/NCEI/AVHRR_OI/v2/2015/323/20151119120000-NCEI-L4_GHRSST-SSTblend-AVHRR_OI-GLOB-v02.0-fv02.0.nc https://podaac-opendap.jpl.nasa.gov:443/opendap/allData/ghrsst/data/GDS2/L4/GLOB/NCEI/AVHRR_OI/v2/2015/324/20151120120000-NCEI-L4_GHRSST-SSTblend-AVHRR_OI-GLOB-v02.0-fv02.0.nc https://podaac-opendap.jpl.nasa.gov:443/opendap/allData/ghrsst/data/GDS2/L4/GLOB/NCEI/AVHRR_OI/v2/2015/325/20151121120000-NCEI-L4_GHRSST-SSTblend-AVHRR_OI-GLOB-v02.0-fv02.0.nc https://podaac-opendap.jpl.nasa.gov:443/opendap/allData/ghrsst/data/GDS2/L4/GLOB/NCEI/AVHRR_OI/v2/2015/326/20151122120000-NCEI-L4_GHRSST-SSTblend-AVHRR_OI-GLOB-v02.0-fv02.0.nc https://podaac-opendap.jpl.nasa.gov:443/opendap/allData/ghrsst/data/GDS2/L4/GLOB/NCEI/AVHRR_OI/v2/2015/327/20151123120000-NCEI-L4_GHRSST-SSTblend-AVHRR_OI-GLOB-v02.0-fv02.0.nc https://podaac-opendap.jpl.nasa.gov:443/opendap/allData/ghrsst/data/GDS2/L4/GLOB/NCEI/AVHRR_OI/v2/2015/328/20151124120000-NCEI-L4_GHRSST-SSTblend-AVHRR_OI-GLOB-v02.0-fv02.0.nc https://podaac-opendap.jpl.nasa.gov:443/opendap/allData/ghrsst/data/GDS2/L4/GLOB/NCEI/AVHRR_OI/v2/2015/329/20151125120000-NCEI-L4_GHRSST-SSTblend-AVHRR_OI-GLOB-v02.0-fv02.0.nc https://podaac-opendap.jpl.nasa.gov:443/opendap/allData/ghrsst/data/GDS2/L4/GLOB/NCEI/AVHRR_OI/v2/2015/330/20151126120000-NCEI-L4_GHRSST-SSTblend-AVHRR_OI-GLOB-v02.0-fv02.0.nc https://podaac-opendap.jpl.nasa.gov:443/opendap/allData/ghrsst/data/GDS2/L4/GLOB/NCEI/AVHRR_OI/v2/2015/331/20151127120000-NCEI-L4_GHRSST-SSTblend-AVHRR_OI-GLOB-v02.0-fv02.0.nc https://podaac-opendap.jpl.nasa.gov:443/opendap/allData/ghrsst/data/GDS2/L4/GLOB/NCEI/AVHRR_OI/v2/2015/332/20151128120000-NCEI-L4_GHRSST-SSTblend-AVHRR_OI-GLOB-v02.0-fv02.0.nc https://podaac-opendap.jpl.nasa.gov:443/opendap/allData/ghrsst/data/GDS2/L4/GLOB/NCEI/AVHRR_OI/v2/2015/333/20151129120000-NCEI-L4_GHRSST-SSTblend-AVHRR_OI-GLOB-v02.0-fv02.0.nc https://podaac-opendap.jpl.nasa.gov:443/opendap/allData/ghrsst/data/GDS2/L4/GLOB/NCEI/AVHRR_OI/v2/2015/334/20151130120000-NCEI-L4_GHRSST-SSTblend-AVHRR_OI-GLOB-v02.0-fv02.0.nc"
+  curl -O https://raw.githubusercontent.com/apache/incubator-sdap-nexus/master/docs/granule-download.sh
+  chmod 700 granule-download.sh
+  ./granule-download.sh
 
-  for url in ${URL_LIST}; do
-    curl -O "${url}"
-  done
-
-.. note::
-
-  The dataset is pending migration from PO.DAAC to the Earthdata Cloud in AWS. Following this migration, the above links may not work (though an updated download method will soon follow)
-
-  For reference: There are 30 granules for every day in November of 2015.
+  rm granule-download.sh
 
 You should now have 30 files downloaded to your data directory, one for each day in November 2015.
 
