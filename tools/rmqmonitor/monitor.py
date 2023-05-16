@@ -63,6 +63,6 @@ while True:
             print(f"RMQ request {req_number} failed: {response.status_code}", end='\n', flush=True)
     except Exception as err:
         delete_last_line()
-        print(f"An exception occurred: Request {req_number}, error: {type(err)=}", end='\n', flush=True)
+        print(f"An exception occurred: Request {req_number}, error: {type(err)}", end='\n', flush=True)
 
     time.sleep(5)
