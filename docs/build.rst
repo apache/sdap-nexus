@@ -25,8 +25,8 @@ We should also set variables for a consistent tag across all images. These shoul
 
 .. code-block:: bash
 
-  export NEXUS_VERSION=1.0.0
-  export INGESTER_VERSION=1.0.0
+  export NEXUS_VERSION=1.1.0
+  export INGESTER_VERSION=1.1.0
 
 To build the necessary images, we will need to first download the latest releases for SDAP NEXUS and SDAP Ingester ((URL)). We will not need to download the SDAP Nexusproto release directly.
 
@@ -50,6 +50,15 @@ Create a temporary directory to extract to.
 
   mv ${TMP_DIR}/Apache-SDAP/apache-sdap-ingester-${INGESTER_VERSION}-incubating-src/* ${INGESTER_DIR}
   mv ${TMP_DIR}/Apache-SDAP/apache-sdap-nexus-${NEXUS_VERSION}-incubating-src/* ${NEXUS_DIR}
+
+Set Default Docker Platform
+---
+
+To ensure consistency when building/running on different hardware architectures, we should set this variable to ensure docker uses ``linux/amd64``.
+
+.. code-block:: bash
+
+  export DOCKER_DEFAULT_PLATFORM=linux/amd64
 
 Build Ingester Components
 =========================
