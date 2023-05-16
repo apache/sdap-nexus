@@ -4,17 +4,9 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [1.1.0] - 2023-04-26
+## Unreleased
 ### Added
 - SDAP-461: Added 4 remaining Saildrone insitu datasets.
-### Changed
-### Deprecated
-### Removed
-### Fixed
-### Security
-
-## [1.1.0] - 2023-04-26
-### Added
 - SDAP-440: Added `CassandraSwathProxy` to process tiles in a method optimized for swath format
 - SDAP-440: Set up framework to roll out changes to SDAP algorithms to work with swath formatted data for both tile types rather than having tiles formatted as gridded which is very memory inefficient.
 ### Changed
