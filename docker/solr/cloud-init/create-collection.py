@@ -125,16 +125,23 @@ try:
             else:
                 logging.error("Error creating field type 'geo': {}".format(field_type_response.text))
 
-            field_payload = json.dumps({
-                "add-field": {
-                    "name": "geo",
-                    "type": "geo"}})
-            logging.info("Creating field 'geo'...")
-            field_response = requests.post(url=schema_api, data=field_payload)
-            if field_response.status_code < 400:
-                logging.info("Success.")
-            else:
-                logging.error("Error creating field 'geo': {}".format(field_response.text))
+            def add_field(schema_api, name, type):
+                field_payload = json.dumps({
+                    "add-field": {
+                        "name": name,
+                        "type": type}})
+                logging.info(f"Creating {type} field '{name}'...")
+                field_response = requests.post(url=schema_api, data=field_payload)
+                if field_response.status_code < 400:
+                    logging.info("Success.")
+                else:
+                    logging.error(f"Error creating field '{name}': {field_response.text}")
+
+            add_field(schema_api, 'geo', 'geo')
+            add_field(schema_api, 'tile_max_lat', 'pdouble')
+            add_field(schema_api, 'tile_min_lat', 'pdouble')
+            add_field(schema_api, 'tile_max_lon', 'pdouble')
+            add_field(schema_api, 'tile_min_lon', 'pdouble')
 
 finally:
     zk.stop()
