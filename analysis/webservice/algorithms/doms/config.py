@@ -70,6 +70,22 @@ INSITU_PROVIDER_MAP = [
             {
                 'name': 'baja_2018',
                 'platforms': ['3B']
+            },
+            {
+                'name': 'arctic_misst_2019',
+                'platforms': ['3B']
+            },
+            {
+                'name': 'arctic_misst_2021',
+                'platforms': ['3B']
+            },
+            {
+                'name': 'atomic_eurec4a_2020',
+                'platforms': ['3B']
+            },
+            {
+                'name': 'smode_2021',
+                'platforms': ['3B']
             }
         ]
     },
