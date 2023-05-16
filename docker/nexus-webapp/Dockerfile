@@ -95,7 +95,7 @@ RUN python3 setup.py install clean && mamba clean -afy
 
 
 WORKDIR /incubator-sdap-nexus/tools/deletebyquery
-RUN pip3 install cassandra-driver==3.20.1 --install-option="--no-cython"
+RUN pip3 install cassandra-driver==3.20.1
 RUN pip3 install pyspark py4j
 RUN pip3 install -r requirements.txt
 RUN pip3 install cython
