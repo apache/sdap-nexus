@@ -19,7 +19,7 @@ class NexusRendererFactory(object):
 
     @classmethod
     def get_renderer(cls, request):
-        content_type = request.get_content_type()
+        content_type = request.get_content_type().upper()
         if content_type in cls.content_types:
             renderer_name = 'Nexus' + content_type + 'Renderer'
             renderer = getattr(cls.module.nexus_tornado.request.renderers, renderer_name)

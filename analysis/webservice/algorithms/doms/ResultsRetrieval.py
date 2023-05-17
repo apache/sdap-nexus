@@ -161,5 +161,5 @@ class DomsResultsRetrievalHandler(BaseDomsHandler.BaseDomsQueryCalcHandler):
             params['caml_params'] = caml_params
             params['matchup'] = params['matchup'][0]
 
-        return BaseDomsHandler.DomsQueryResults(results=data, args=params, details=stats, bounds=None, count=None,
+        return BaseDomsHandler.DomsQueryResults(results=data, args=params, details=stats, bounds=None, count=len(data),
                                                 computeOptions=None, executionId=execution_id)
