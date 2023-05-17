@@ -163,8 +163,9 @@ class DomsInitializer:
               measurement_time timestamp,
               platform text,
               device text,
-              measurement_values map<text, decimal>,
+              measurement_values_json text,
               depth decimal,
+              file_url text,
               PRIMARY KEY (execution_id, is_primary, id)
             );
         """
