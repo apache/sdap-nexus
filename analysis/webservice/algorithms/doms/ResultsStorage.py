@@ -16,6 +16,7 @@
 import configparser
 import json
 import logging
+from time import sleep
 import math
 import uuid
 from datetime import datetime
@@ -28,6 +29,13 @@ from cassandra.policies import TokenAwarePolicy, DCAwareRoundRobinPolicy
 from cassandra.query import BatchStatement
 from pytz import UTC
 from webservice.algorithms.doms.BaseDomsHandler import DomsEncoder
+from webservice.webmodel import NexusProcessingException
+
+BATCH_SIZE = 1024
+
+
+class ResultInsertException(IOError):
+    pass
 
 
 class AbstractResultsContainer:
@@ -159,85 +167,92 @@ class ResultsStorage(AbstractResultsContainer):
 
         cql = """
            INSERT INTO doms_data
-                (id, execution_id, value_id, primary_value_id, x, y, source_dataset, measurement_time, platform, device, measurement_values, is_primary, depth)
+                (id, execution_id, value_id, primary_value_id, x, y, source_dataset, measurement_time, platform, device, measurement_values_json, is_primary, depth, file_url)
            VALUES
-                (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """
         insertStatement = self._session.prepare(cql)
-        batch = BatchStatement()
+
+        inserts = []
 
         for result in results:
-            self.__insertResult(execution_id, None, result, batch, insertStatement)
+            inserts.extend(self.__prepare_result(execution_id, None, result, insertStatement))
 
-        self._session.execute(batch)
+        for i in range(5):
+            if not self.__insert_result_batches(inserts, insertStatement):
+                if i < 4:
+                    self._log.warning('Some write attempts failed; retrying')
+                    sleep(10)
+                else:
+                    self._log.error('Some write attempts failed; max retries exceeded')
+                    raise ResultInsertException('Some result inserts failed')
+            else:
+                break
 
-    def __insertResult(self, execution_id, primaryId, result, batch, insertStatement):
-        data_dict = {}
+
+    def __insert_result_batches(self, insert_params, insertStatement):
+        query_batches = [insert_params[i:i + BATCH_SIZE] for i in range(0, len(insert_params), BATCH_SIZE)]
+        move_successful = True
+
+        n_inserts = len(insert_params)
+        writing = 0
+
+        self._log.info(f'Inserting {n_inserts} matchup entries in JSON format')
+
+        for batch in query_batches:
+            futures = []
+            writing += len(batch)
+            self._log.info(
+                f'Writing batch of {len(batch)} matchup entries | ({writing}/{n_inserts}) [{writing / n_inserts * 100:7.3f}%]')
+
+            for entry in batch:
+                futures.append(self._session.execute_async(insertStatement, entry))
+
+            for future in futures:
+                try:
+                    future.result()
+                except Exception:
+                    move_successful = False
+
+        self._log.info('Result data write attempt completed')
+        return move_successful
+
+    def __prepare_result(self, execution_id, primaryId, result, insertStatement):
         if 'primary' in result:
-            data_dict = result['primary']
+            data = result['primary']
         elif 'secondary' in result:
-            data_dict = result['secondary']
+            data = result['secondary']
+        else:
+            data = []
 
-        dataMap = self.__buildDataMap(data_dict)
         result_id = uuid.uuid4()
 
         insert_params = (
-                result_id,
-                execution_id,
-                result["id"],
-                primaryId,
-                result["lon"],
-                result["lat"],
-                result["source"],
-                result["time"],
-                result["platform"] if "platform" in result else None,
-                result["device"] if "device" in result else None,
-                dataMap,
-                1 if primaryId is None else 0,
-                result["depth"]
-            )
+            result_id,
+            execution_id,
+            result["id"],
+            primaryId,
+            result["lon"],
+            result["lat"],
+            result["source"],
+            result["time"],
+            result["platform"] if "platform" in result else None,
+            result["device"] if "device" in result else None,
+            json.dumps(data, cls=DomsEncoder),
+            1 if primaryId is None else 0,
+            result["depth"],
+            result['fileurl']
+        )
 
-        try:
-            batch.add(insertStatement, insert_params)
-        except:
-            self._log.error(f'Result batch INSERT preparation failed')
-            self._log.error('INSERT params %s', str(insert_params))
-            raise
+        params_list = [insert_params]
 
-        n = 0
         if "matches" in result:
             for match in result["matches"]:
-                self.__insertResult(execution_id, result["id"], match, batch, insertStatement)
-                n += 1
-                if n >= 20:
-                    if primaryId is None:
-                        self.__commitBatch(batch)
-                    n = 0
+                params_list.extend(self.__prepare_result(execution_id, result["id"], match, insertStatement))
 
-        if primaryId is None:
-            self.__commitBatch(batch)
+        return params_list
 
-    def __commitBatch(self, batch):
-        self._session.execute(batch)
-        batch.clear()
 
-    def __buildDataMap(self, result):
-        dataMap = {}
-        for data_dict in result:
-            name = data_dict.get('cf_variable_name')
-
-            if name is None:
-                name = data_dict['variable_name']
-
-            value = data_dict['variable_value']
-            if isinstance(value, np.generic):
-                value = value.item()
-
-            if math.isnan(value):
-                value = None
-
-            dataMap[name] = value
-        return dataMap
 
 
 class ResultsRetrieval(AbstractResultsContainer):
@@ -292,30 +307,37 @@ class ResultsRetrieval(AbstractResultsContainer):
             }
         else:
             entry = {
-                "id": row.value_id,
-                "lon": float(row.x),
-                "lat": float(row.y),
-                "source": row.source_dataset,
-                "device": row.device,
                 "platform": row.platform,
+                "device": row.device,
+                "lon": str(row.x),
+                "lat": str(row.y),
+                "point": f"Point({float(row.x):.3f} {float(row.y):.3f})",
                 "time": row.measurement_time.replace(tzinfo=UTC),
-                "depth": row.depth
+                "depth": float(row.depth) if row.depth is not None else None,
+                "fileurl": row.file_url if hasattr(row, 'file_url') else None,
+                "id": row.value_id,
+                "source": row.source_dataset,
             }
-        for key in row.measurement_values:
-            value = float(row.measurement_values[key])
-            entry[key] = value
+
+        # If doms_data uses the old schema, default to original behavior
+
+        try:
+            entry['primary' if row.is_primary else 'secondary'] = json.loads(row.measurement_values_json)
+        except AttributeError:
+            for key in row.measurement_values:
+                value = float(row.measurement_values[key])
+                entry[key] = value
+
         return entry
 
     def __retrieveStats(self, id):
-        cql = "SELECT * FROM doms_execution_stats where execution_id = %s limit 1"
+        cql = "SELECT num_gridded_matched, num_insitu_matched, time_to_complete FROM doms_execution_stats where execution_id = %s limit 1"
         rows = self._session.execute(cql, (id,))
         for row in rows:
             stats = {
-                "numGriddedMatched": row.num_gridded_matched,
-                "numGriddedChecked": row.num_gridded_checked,
-                "numInSituMatched": row.num_insitu_matched,
-                "numInSituChecked": row.num_insitu_checked,
-                "timeToComplete": row.time_to_complete
+                "timeToComplete": row.time_to_complete,
+                "numSecondaryMatched": row.num_insitu_matched,
+                "numPrimaryMatched": row.num_gridded_matched,
             }
             return stats
 
@@ -325,18 +347,23 @@ class ResultsRetrieval(AbstractResultsContainer):
         cql = "SELECT * FROM doms_params where execution_id = %s limit 1"
         rows = self._session.execute(cql, (id,))
         for row in rows:
+            matchup = row.matchup_datasets.split(",")
+
+            if len(matchup) == 1:
+                matchup = matchup[0]
+
             params = {
                 "primary": row.primary_dataset,
-                "matchup": row.matchup_datasets.split(","),
-                "depthMin": row.depth_min,
-                "depthMax": row.depth_max,
-                "timeTolerance": row.time_tolerance,
-                "radiusTolerance": row.radius_tolerance,
+                "matchup": matchup,
                 "startTime": row.start_time.replace(tzinfo=UTC),
                 "endTime": row.end_time.replace(tzinfo=UTC),
-                "platforms": row.platforms,
                 "bbox": row.bounding_box,
-                "parameter": row.parameter
+                "timeTolerance": int(row.time_tolerance) if row.time_tolerance is not None else None,
+                "radiusTolerance": float(row.radius_tolerance) if row.radius_tolerance is not None else None,
+                "platforms": row.platforms,
+                "parameter": row.parameter,
+                "depthMin": float(row.depth_min) if row.depth_min is not None else None,
+                "depthMax": float(row.depth_max) if row.depth_max is not None else None,
             }
             return params
 
