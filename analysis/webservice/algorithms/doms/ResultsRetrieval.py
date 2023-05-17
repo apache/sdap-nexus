@@ -46,5 +46,5 @@ class DomsResultsRetrievalHandler(BaseDomsHandler.BaseDomsQueryCalcHandler):
         with ResultsStorage.ResultsRetrieval(self.config) as storage:
             params, stats, data = storage.retrieveResults(execution_id, trim_data=simple_results)
 
-        return BaseDomsHandler.DomsQueryResults(results=data, args=params, details=stats, bounds=None, count=None,
+        return BaseDomsHandler.DomsQueryResults(results=data, args=params, details=stats, bounds=None, count=len(data),
                                                 computeOptions=None, executionId=execution_id)
