@@ -126,14 +126,31 @@ class DomsCSVFormatter:
         return csv_out
 
     @staticmethod
+    def __get_variable_name(variable):
+        def is_empty(s):
+            return s is None or s == ''
+
+        name = variable['cf_variable_name']
+
+        return name if not is_empty(name) else variable['variable_name']
+
+    @staticmethod
     def __packValues(csv_mem_file, results):
         primary_headers = list(dict.fromkeys(
-            key for result in results for key in result if key != 'matches'
+            key for result in results for key in result if key not in ['matches', 'primary']
         ))
 
+        primary_headers.extend(list(dict.fromkeys(
+            DomsCSVFormatter.__get_variable_name(variable) for result in results for variable in result['primary']
+        )))
+
         secondary_headers = list(dict.fromkeys(
-            key for result in results for match in result['matches'] for key in match
+            key for result in results for match in result['matches'] for key in match if key != 'secondary'
         ))
+
+        secondary_headers.extend(list(dict.fromkeys(
+            DomsCSVFormatter.__get_variable_name(variable) for result in results for match in result['matches'] for variable in match['secondary']
+        )))
 
         writer = csv.writer(csv_mem_file)
         writer.writerow(list(itertools.chain(primary_headers, secondary_headers)))
@@ -145,13 +162,24 @@ class DomsCSVFormatter:
                 for key, value in primaryValue.items():
                     if key == 'matches':
                         continue
-                    index = primary_headers.index(key)
-                    primary_row[index] = value
+
+                    if key != 'primary':
+                        index = primary_headers.index(key)
+                        primary_row[index] = value
+                    else:
+                        for variable in value:
+                            index = primary_headers.index(DomsCSVFormatter.__get_variable_name(variable))
+                            primary_row[index] = variable['variable_value']
                 # Secondary
                 secondary_row = [None for _ in range(len(secondary_headers))]
                 for key, value in matchup.items():
-                    index = secondary_headers.index(key)
-                    secondary_row[index] = value
+                    if key != 'secondary':
+                        index = secondary_headers.index(key)
+                        secondary_row[index] = value
+                    else:
+                        for variable in value:
+                            index = secondary_headers.index(DomsCSVFormatter.__get_variable_name(variable))
+                            secondary_row[index] = variable['variable_value']
                 writer.writerow(list(itertools.chain(primary_row, secondary_row)))
 
     @staticmethod
@@ -241,8 +269,8 @@ class DomsCSVFormatter:
 
             {"Global Attribute": "CDMS_time_to_complete", "Value": details["timeToComplete"]},
             {"Global Attribute": "CDMS_time_to_complete_units", "Value": "seconds"},
-            {"Global Attribute": "CDMS_num_secondary_matched", "Value": details["numInSituMatched"]},
-            {"Global Attribute": "CDMS_num_primary_matched", "Value": details["numGriddedMatched"]},
+            {"Global Attribute": "CDMS_num_secondary_matched", "Value": details["numSecondaryMatched"]},
+            {"Global Attribute": "CDMS_num_primary_matched", "Value": details["numPrimaryMatched"]},
 
             {"Global Attribute": "date_modified", "Value": datetime.utcnow().replace(tzinfo=UTC).strftime(ISO_8601)},
             {"Global Attribute": "date_created", "Value": datetime.utcnow().replace(tzinfo=UTC).strftime(ISO_8601)},
@@ -272,8 +300,8 @@ class DomsNetCDFFormatter:
         dataset.time_coverage_end = params["endTime"].strftime(ISO_8601)
         dataset.time_coverage_resolution = "point"
         dataset.CDMS_secondary = params["matchup"]
-        dataset.CDMS_num_matchup_matched = details["numInSituMatched"]
-        dataset.CDMS_num_primary_matched = details["numGriddedMatched"]
+        dataset.CDMS_num_matchup_matched = details["numSecondaryMatched"]
+        dataset.CDMS_num_primary_matched = details["numPrimaryMatched"]
 
         bbox = geo.BoundingBox(asString=params["bbox"])
         dataset.geospatial_lat_max = bbox.north
@@ -377,13 +405,15 @@ class DomsNetCDFFormatter:
 
             # Add each match only if it is not already in the array of in situ points
             for match in result["matches"]:
-                if match["id"] not in ids:
-                    ids[match["id"]] = insituIndex
+                key = (match['id'], f'{match["depth"]:.4}')
+
+                if key not in ids:
+                    ids[key] = insituIndex
                     insituIndex += 1
                     insituWriter.addData(match)
 
                 # Append an index pait of (satellite, in situ) to the array of matches
-                matches.append((r, ids[match["id"]]))
+                matches.append((r, ids[key]))
 
         # Add data/write to the netCDF file
         satelliteWriter.writeGroup()
@@ -413,7 +443,8 @@ class DomsNetCDFValueWriter:
         non_data_fields = [
             'id', 'lon', 'lat',
             'source', 'device',
-            'platform', 'time', 'matches'
+            'platform', 'time', 'matches',
+            'point', 'fileurl'
         ]
         self.lat.append(result_item.get('lat', None))
         self.lon.append(result_item.get('lon', None))
@@ -461,16 +492,38 @@ class DomsNetCDFValueWriter:
             depthVar[:] = self.depth
 
         for variable_name, data in self.data_map.items():
-            # Create a variable for each data point
-            data_variable = self.group.createVariable(variable_name, 'f4', ('dim',), fill_value=-32767.0)
-            # Find min/max for data variables. It is possible for 'None' to
-            # be in this list, so filter those out when doing the calculation.
-            min_data = min(val for val in data if val is not None)
-            max_data = max(val for val in data if val is not None)
-            self.__enrichVariable(data_variable, min_data, max_data, has_depth=self.depth)
-            data_variable[:] = data
-            data_variable.long_name = variable_name
-            data_variable.standard_name = variable_name
+            units = {}
+
+            variables = dict.fromkeys(
+                ((variable['variable_name'], variable['cf_variable_name']) for match in data for variable in match),
+                None
+            )
+
+            for variable in variables:
+                variables[variable] = np.repeat(np.nan, len(data))
+
+            for i, match in enumerate(data):
+                for variable in match:
+                    key = (variable['variable_name'], variable['cf_variable_name'])
+                    unit = variable['variable_unit']
+                    units[key] = str(unit) if unit is not None else 'UNKNOWN'
+                    variables[key][i] = variable['variable_value']
+
+            for variable in variables:
+                # Create a variable for each data point
+                name = variable[0]
+                cf_name = variable[1]
+
+                data_variable = self.group.createVariable(
+                    cf_name if cf_name is not None and cf_name != '' else name, 'f4', ('dim',), fill_value=-32767.0)
+                # Find min/max for data variables. It is possible for 'None' to
+                # be in this list, so filter those out when doing the calculation.
+                min_data = np.nanmin(variables[variable])
+                max_data = np.nanmax(variables[variable])
+                self.__enrichVariable(data_variable, min_data, max_data, has_depth=None, unit=units[variable])
+                data_variable[:] = np.ma.masked_invalid(variables[variable])
+                data_variable.long_name = name
+                data_variable.standard_name = cf_name
 
     #
     # Lists may include 'None" values, to calc min these must be filtered out
@@ -480,13 +533,13 @@ class DomsNetCDFValueWriter:
         return min(x for x in var if x is not None)
 
     @staticmethod
-    def __enrichVariable(var, var_min, var_max, has_depth):
+    def __enrichVariable(var, var_min, var_max, has_depth, unit='UNKNOWN'):
         coordinates = ['lat', 'lon', 'depth', 'time']
 
         if not has_depth:
             coordinates = ['lat', 'lon', 'time']
 
-        var.units = 'UNKNOWN'  # TODO populate this field once this metadata is in place
+        var.units = unit
         var.valid_min = var_min
         var.valid_max = var_max
         var.coordinates = ' '.join(coordinates)

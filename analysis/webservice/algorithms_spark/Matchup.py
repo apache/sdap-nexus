@@ -563,10 +563,15 @@ class DomsPoint(object):
             ) if var_value])
         point.data = data
 
-        if 'meta' in edge_point:
-            point.data_id = edge_point['meta']
+        meta = edge_point.get('meta', None)
+
+        # Appending depth to data_id. Currently, our insitu data has the same id value for measurements taken at
+        # different depths. This causes secondary insitu matches to be incorrectly filtered out from NetCDF files.
+
+        if meta:
+            point.data_id = f'{meta}@{point.depth}'
         else:
-            point.data_id = f'{point.time}:{point.longitude}:{point.latitude}'
+            point.data_id = f'{point.time}:{point.longitude}:{point.latitude}@{point.depth}'
 
         return point
 
