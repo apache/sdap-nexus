@@ -10,6 +10,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - SDAP-440: Added `CassandraSwathProxy` to process tiles in a method optimized for swath format
 - SDAP-440: Set up framework to roll out changes to SDAP algorithms to work with swath formatted data for both tile types rather than having tiles formatted as gridded which is very memory inefficient.
 ### Changed
+- SDAP-453: Updated results storage and retrieval to support output JSON from `/cdmsresults` that matches output from `/match_spark`.
+  - **NOTE:** Deploying these changes to an existing SDAP deployment will require modifying the Cassandra database with stored results. There is a script to do so at `/tools/update-doms-data-schema/update.py`
+  - Additional changes:
+    - Made the `output` parameter case-insensitive
+    - Improved speed of results insert
+    - Updated `id` field of insitu points to include depth. This solves an issue with NetCDF result rendering where different insitu observations at the same place & time but at different depths were being excluded for having the same `id`.
 ### Deprecated
 ### Removed
 ### Fixed
