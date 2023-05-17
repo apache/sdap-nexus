@@ -119,11 +119,11 @@ class ResultsStorage(AbstractResultsContainer):
         return execution_id
 
     def updateExecution(self, execution_id, completeTime, status, message, stats, results):
-        self.__updateExecution(execution_id, completeTime, status, message)
         if stats:
             self.__insertStats(execution_id, stats)
         if results:
             self.__insertResults(execution_id, results)
+        self.__updateExecution(execution_id, completeTime, status, message)
 
     def __insertExecution(self, execution_id, startTime, completeTime, userEmail, status):
         """
