@@ -185,7 +185,7 @@ def count_executions(session, before, keep_completed, keep_failed, purge_all) ->
     elif before and not keep_failed:    # Drop nulls & all before
         # Cassandra doesn't allow for selecting null values, so we have to check them all manually
 
-        log.info(f'Counting executions before {before} + uncompleted executions')
+        log.info(f'Counting executions before {before} including uncompleted executions')
 
         cql = """
         SELECT * FROM doms_executions;
@@ -194,12 +194,13 @@ def count_executions(session, before, keep_completed, keep_failed, purge_all) ->
         to_delete = []
 
         for row in session.execute(cql):
-            if row.time_completed is None or row.time_completed <= before:
+            if (row.time_completed is None and row.time_started <= before) or \
+               (row.time_completed is not None and row.time_completed <= before):
                 to_delete.append(row.id)
 
         return len(to_delete), to_delete
     elif before and keep_failed:    # Drop all before but not nulls
-        log.info(f'Counting executions before {before}')
+        log.info(f'Counting executions before {before} excluding uncompleted executions')
 
         cql = """
                 SELECT id FROM doms_executions WHERE time_completed<=? ALLOW FILTERING ;
@@ -215,7 +216,7 @@ def count_executions(session, before, keep_completed, keep_failed, purge_all) ->
     elif keep_completed:   # Only drop nulls
         # Cassandra doesn't allow for selecting null values, so we have to check them all manually
 
-        log.info(f'Counting uncompleted executions')
+        log.info(f'Counting ALL uncompleted executions')
 
         cql = """
                 SELECT * FROM doms_executions;
