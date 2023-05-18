@@ -480,8 +480,15 @@ class DomsPoint(object):
         point.file_url = edge_point.get('fileurl')
         point.depth = edge_point.get('depth')
 
-        if 'code' in point.platform:
+        def is_defined(key, d):
+            return key in d and d[key] is not None and d[key] != ''
+
+        if is_defined('id', point.platform):
+            point.platform = edge_point.get('platform')['id']
+        elif is_defined('code', point.platform):
             point.platform = edge_point.get('platform')['code']
+        elif is_defined('type', point.platform):
+            point.platform = edge_point.get('platform')['type']
 
         data_fields = [
             'air_pressure',
@@ -563,10 +570,15 @@ class DomsPoint(object):
             ) if var_value])
         point.data = data
 
-        if 'meta' in edge_point:
-            point.data_id = edge_point['meta']
+        meta = edge_point.get('meta', None)
+
+        # Appending depth to data_id. Currently, our insitu data has the same id value for measurements taken at
+        # different depths. This causes secondary insitu matches to be incorrectly filtered out from NetCDF files.
+
+        if meta:
+            point.data_id = f'{meta}@{point.depth}'
         else:
-            point.data_id = f'{point.time}:{point.longitude}:{point.latitude}'
+            point.data_id = f'{point.time}:{point.longitude}:{point.latitude}@{point.depth}'
 
         return point
 
