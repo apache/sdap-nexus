@@ -264,7 +264,7 @@ class Matchup(NexusCalcSparkTornadoHandler):
                     uuid.UUID(execution_id),
                     completeTime=end,
                     status=ExecutionStatus.FAILED.value,
-                    message=error,
+                    message=str(error),
                     stats=None,
                     results=None
                 )
