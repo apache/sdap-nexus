@@ -8,6 +8,6 @@ numpy==1.17.0
 pdoc==0.3.2
 Pygments==2.2.0
 pytz==2017.2
-requests==2.22.0
+requests==2.31.0
 shapely==1.5.17
 urllib3==1.25.3
