@@ -405,7 +405,10 @@ class DomsNetCDFFormatter:
 
             # Add each match only if it is not already in the array of in situ points
             for match in result["matches"]:
-                key = (match['id'], f'{match["depth"]:.4}')
+                depth_str = ''
+                if match['depth'] is not None:
+                    depth_str = f'{match.get["depth"]:.4}'
+                key = (match['id'], depth_str)
 
                 if key not in ids:
                     ids[key] = insituIndex
