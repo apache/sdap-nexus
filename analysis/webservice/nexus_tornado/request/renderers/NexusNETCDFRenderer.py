@@ -23,8 +23,13 @@ class NexusNETCDFRenderer(object):
         self._request = nexus_request
 
     def render(self, tornado_handler, result):
+        filename = self._request.get_argument('filename')
+        if filename is None:
+            filename = result.filename()
+        filename = f'{filename}.nc'
+
         tornado_handler.set_header("Content-Type", "application/x-netcdf")
-        tornado_handler.set_header("Content-Disposition", "attachment; filename=\"%s\"" % self._request.get_argument('filename', "download.nc"))
+        tornado_handler.set_header("Content-Disposition", f"attachment; filename=\"{filename}\"")
         try:
             tornado_handler.write(result.toNetCDF())
         except:

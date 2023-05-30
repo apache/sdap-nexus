@@ -23,8 +23,13 @@ class NexusCSVRenderer(object):
         self._request = nexus_request
 
     def render(self, tornado_handler, result):
+        filename = self._request.get_argument('filename')
+        if filename is None:
+            filename = result.filename()
+        filename = f'{filename}.csv'
+
         tornado_handler.set_header("Content-Type", "text/csv")
-        tornado_handler.set_header("Content-Disposition", "filename=\"%s\"" % self._request.get_argument('filename', "download.csv"))
+        tornado_handler.set_header("Content-Disposition", f"filename=\"{filename}\"")
         try:
             tornado_handler.write(result.toCSV())
             tornado_handler.finish()
