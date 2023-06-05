@@ -137,7 +137,8 @@ class ResultsStorage(AbstractResultsContainer):
         return execution_id
 
     def __updateExecution(self, execution_id, complete_time, status, message=None):
-        cql = "UPDATE doms_executions SET time_completed = %s, status = %s, message = %s WHERE id=%s"
+        # Only update the status if it's "running". Any other state is immutable.
+        cql = "UPDATE doms_executions SET time_completed = %s, status = %s, message = %s WHERE id=%s IF status = 'running'"
         self._session.execute(cql, (complete_time, status, message, execution_id))
         return execution_id
 
