@@ -53,8 +53,6 @@ class ExecutionStatusHandler(BaseDomsHandler.BaseDomsQueryCalcHandler):
                     code=404
                 )
 
-        # TODO check if job ID is valid. raise error w/meanginful error if not
-
         job_status = NexusExecutionResults.ExecutionStatus(execution_details['status'])
         host = f'{request.requestHandler.request.protocol}://{request.requestHandler.request.host}'
 
