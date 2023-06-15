@@ -1,3 +1,18 @@
+# Licensed to the Apache Software Foundation (ASF) under one or more
+# contributor license agreements.  See the NOTICE file distributed with
+# this work for additional information regarding copyright ownership.
+# The ASF licenses this file to You under the Apache License, Version 2.0
+# (the "License"); you may not use this file except in compliance with
+# the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 import argparse
 import concurrent.futures
 import json
@@ -328,7 +343,13 @@ def cassandra_to_solr(args):
 
     pool = concurrent.futures.ThreadPoolExecutor(max_workers=16, thread_name_prefix='solr-query-worker')
 
+    limit_reached = False
+
     for result in tqdm(results, total=num_tiles, desc='Cassandra query', unit=' rows'):
+        if limit_reached:
+            logger.warning('Reached check limit; stopping check')
+            break
+
         cassandra_tiles.append(str(result.tile_id))
         cassandra_tile_count += 1
 
@@ -337,6 +358,9 @@ def cassandra_to_solr(args):
             cassandra_tiles = cassandra_tiles[rows:]
 
             missing.extend(check_solr(args, to_check, pool))
+
+            if args.limit is not None and len(missing) >= args.limit:
+                limit_reached = True
 
     if len(cassandra_tiles) > 0:
         missing.extend(check_solr(args, cassandra_tiles, pool))
