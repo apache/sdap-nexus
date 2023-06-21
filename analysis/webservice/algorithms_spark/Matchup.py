@@ -539,7 +539,8 @@ class DomsPoint(object):
             'wind_to_direction_quality',
             'eastward_wind',
             'northward_wind',
-            'wind_component_quality'
+            'wind_component_quality',
+            'Qout'
         ]
         data = []
         # This is for in-situ secondary points
@@ -805,6 +806,8 @@ def match_satellite_to_insitu(tile_ids, primary_b, secondary_b, parameter_b, tt_
 
     # Query edge for all points within the spatial-temporal extents of this partition
     is_insitu_dataset = edge_endpoints.get_provider_name(secondary_b.value) is not None
+
+    print(f'{is_insitu_dataset=}')
 
     if is_insitu_dataset:
         the_time = datetime.now()
