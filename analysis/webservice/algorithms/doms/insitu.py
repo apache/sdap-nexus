@@ -90,7 +90,7 @@ def query_insitu(dataset, variable, start_time, end_time, bbox, platform, depth_
         else:
             insitu_response['results'].extend(insitu_page_response['results'])
 
-        next_page_url = insitu_page_response.get('next', None)
+        next_page_url = None#insitu_page_response.get('next', None)
         params = {}  # Remove params, they are already included in above URL
 
     return insitu_response

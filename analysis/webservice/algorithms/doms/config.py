@@ -13,88 +13,25 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-INSITU_API_ENDPOINT = 'https://doms.jpl.nasa.gov/insitu/1.0/query_data_doms_custom_pagination'
-INSITU_API_SCHEMA_ENDPOINT = 'https://doms.jpl.nasa.gov/insitu/1.0/cdms_schema'
+INSITU_API_ENDPOINT = 'https://ideas-digitaltwin.jpl.nasa.gov/insitu/1.0/query_data_doms_custom_pagination'
+INSITU_API_SCHEMA_ENDPOINT = 'https://ideas-digitaltwin.jpl.nasa.gov/insitu/1.0/cdms_schema'
 
 INSITU_PROVIDER_MAP = [
+    # {
+    #     'name': 'RAPID_LIS_1x_Garonne',
+    #     'projects': [
+    #         {
+    #             'name': 'IDEAS',
+    #             'platforms': ['23023522', '23024062']
+    #         }
+    #     ]
+    # },
     {
-        'name': 'NCAR',
-        'endpoint': 'https://cdms.ucar.edu/insitu/1.0/query_data_doms_custom_pagination',
+        'name': 'RAPID_CLSM_Mississippi',
         'projects': [
             {
-                'short_name': 'ICOADS_NCAR',
-                'name': 'ICOADS Release 3.0',
-                'platforms': ['0', '16', '17', '30', '41', '42']
-            }
-        ]
-    },
-    {
-        'name': 'NCAR',
-        'projects': [
-            {
-                'short_name': 'ICOADS_JPL',
-                'name': 'ICOADS Release 3.0',
-                'platforms': ['0', '16', '17', '30', '41', '42']
-            }
-        ]
-    },
-    {
-        'name': 'Florida State University, COAPS',
-        'projects': [
-            {
-                'name': 'SAMOS',
-                'platforms': ['30']
-            }
-        ]
-    },
-    {
-        'name': 'Saildrone',
-        'endpoint': 'https://nasa-cdms.saildrone.com/1.0/query_data_doms_custom_pagination',
-        'projects': [
-            {
-                'name': '1021_atlantic',
-                'platforms': ['3B']
-            },
-            {
-                'name': 'antarctic_circumnavigation_2019',
-                'platforms': ['3B']
-            },
-            {
-                'name': 'atlantic_to_med_2019_to_2020',
-                'platforms': ['3B']
-            },
-            {
-                'name': 'shark-2018',
-                'platforms': ['3B']
-            },
-            {
-                'name': 'baja_2018',
-                'platforms': ['3B']
-            },
-            {
-                'name': 'arctic_misst_2019',
-                'platforms': ['3B']
-            },
-            {
-                'name': 'arctic_misst_2021',
-                'platforms': ['3B']
-            },
-            {
-                'name': 'atomic_eurec4a_2020',
-                'platforms': ['3B']
-            },
-            {
-                'name': 'smode_2021',
-                'platforms': ['3B']
-            }
-        ]
-    },
-    {
-        'name': 'SPURS',
-        'projects': [
-            {
-                'name': 'SPURS',
-                'platforms': ['3B', '6A', '23', '31', '42', '46', '48']
+                'name': 'IDEAS',
+                'platforms': ['74069827']
             }
         ]
     }
