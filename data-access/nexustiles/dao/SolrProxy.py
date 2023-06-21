@@ -301,6 +301,39 @@ class SolrProxy(object):
                               search_start_s, search_end_s
                           )
             additionalparams['fq'].append(time_clause)
+            
+        min_depth = kwargs['min_depth'] if 'min_depth' in kwargs else None
+        max_depth = kwargs['max_depth'] if 'max_depth' in kwargs else None
+        
+        if min_depth and max_depth:
+            depth_clause = "(" \
+                          "tile_min_depth:[%s TO %s] " \
+                          "OR tile_max_depth:[%s TO %s] " \
+                          "OR (tile_min_depth:[* TO %s] AND tile_max_depth:[%s TO *])" \
+                          ")" % (
+                              min_depth, max_depth,
+                              min_depth, max_depth,
+                              min_depth, max_depth
+                          )
+            additionalparams['fq'].append(depth_clause)
+        elif min_depth:
+            depth_clause = "(" \
+                           "tile_min_depth:[%s TO *] " \
+                           "OR tile_max_depth:[%s TO *] " \
+                           ")" % (
+                               min_depth,
+                               min_depth
+                           )
+            additionalparams['fq'].append(depth_clause)
+        elif max_depth:
+            depth_clause = "(" \
+                           "tile_min_depth:[* TO %s] " \
+                           "OR tile_max_depth:[* TO %s] " \
+                           ")" % (
+                               max_depth,
+                               max_depth
+                           )
+            additionalparams['fq'].append(depth_clause)
 
         self._merge_kwargs(additionalparams, **kwargs)
 
