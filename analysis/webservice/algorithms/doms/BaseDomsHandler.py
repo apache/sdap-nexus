@@ -106,6 +106,9 @@ class DomsQueryResults(NexusResults):
     def toNetCDF(self):
         return DomsNetCDFFormatter.create(self.__executionId, self.results(), self.__args, self.__details)
 
+    def filename(self):
+        return f'CDMS_{self.__executionId}'
+
 
 class DomsCSVFormatter:
     @staticmethod
