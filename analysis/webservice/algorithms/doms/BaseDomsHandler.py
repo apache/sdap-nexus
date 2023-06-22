@@ -109,6 +109,9 @@ class DomsQueryResults(NexusResults):
     def toCAML(self, request):
         return DomsCAMLFormatter.create(self.__executionId, self.results(), self.__args, self.__details, request)
 
+    def filename(self):
+        return f'CDMS_{self.__executionId}'
+
 
 class DomsCSVFormatter:
     @staticmethod
