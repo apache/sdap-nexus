@@ -535,6 +535,16 @@ paths:
             type: string
             enum: ['CSV', 'NETCDF', 'JSON']
           example: CSV
+        - in: query
+          name: filename
+          description: |
+            Name of output file. Only works with CSV and NETCDF 
+            output types. Do not include file extension in this field. 
+            If this value is not provided, the filename will be 
+            `CDMS_[execution_id].[csv|nc]`
+          required: false
+          schema:
+            type: string
       responses:
         '200':
           description: Successful operation
