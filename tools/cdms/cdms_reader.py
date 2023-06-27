@@ -21,6 +21,8 @@ import datetime
 import csv
 from collections import OrderedDict
 import logging
+import xarray as xr
+
 
 #TODO: Get rid of numpy errors?
 #TODO: Update big SDAP README
@@ -49,6 +51,7 @@ def assemble_matches(filename):
    
     try:
         # Open the netCDF file
+
         with Dataset(filename, 'r') as cdms_nc:
             # Check that the number of groups is consistent w/ the MatchedGroups
             # dimension
@@ -57,7 +60,7 @@ def assemble_matches(filename):
             
             matches = []
             matched_records = cdms_nc.dimensions['MatchedRecords'].size
-            
+           
             # Loop through the match IDs to assemble matches
             for match in range(0, matched_records):
                 match_dict = OrderedDict()
@@ -69,7 +72,7 @@ def assemble_matches(filename):
                     match_dict[group][group + 'ID'] = ID
                     for var in cdms_nc.groups[group].variables.keys():
                         match_dict[group][var] = cdms_nc.groups[group][var][ID]
-                    
+
                     # Create a UTC datetime field from timestamp
                     dt = num2date(match_dict[group]['time'],
                                   cdms_nc.groups[group]['time'].units)
@@ -81,7 +84,78 @@ def assemble_matches(filename):
     except (OSError, IOError) as err:
         LOGGER.exception("Error reading netCDF file " + filename)
         raise err
+   
+def return_matches_array(filename):
+     """
+        Read a CDMS netCDF file and return a list of matches in a more rudimentary format.
     
+        Parameters
+        ----------
+        filename : str
+            The CDMS netCDF file name.
+    
+        Returns
+        -------
+        matches : list
+            List of matches.
+            For match m:
+                matches[m][0 - 8]: Contains either floats or arrays representing data for
+                PrimaryData and its associated SecondaryData.
+
+            Please refer to the code in this function as well as the README to obtain information
+            regarding the ordering of this data. 
+     """
+
+    match_ids = xr.open_dataset(filename)
+    primary = xr.open_dataset(filename, group= "PrimaryData")
+    secondary = xr.open_dataset(filename, group= "SecondaryData")
+
+    #set up primary arrays
+    matches = [[0.0, 0.0, 0.0, 0.0, [], [], [], [], []] for x in range(primary.sizes['dim'])]
+
+    #set up secondary arrays
+    sec_lon = []
+    sec_lat = []
+    sec_time = []
+    sec_speed = []
+    sec_dir = []
+    prev_x = 0
+    
+    #load values into the arrays 
+    matches[0][0] = float(primary.lon[0].values)
+    matches[0][1] = float(primary.lat[0].values)
+    matches[0][2] = float(primary.time[0].values)
+    matches[0][3] = float(primary.sea_surface_foundation_temperature[0].values)
+
+    for x, y in match_ids.matchIDs.values:
+        if prev_x != int(x):
+            matches[prev_x][4] = (sec_lon)
+            matches[prev_x][5] = (sec_lat)
+            matches[prev_x][6] = (sec_time)
+            matches[prev_x][7] = (sec_speed)
+            matches[prev_x][8] = (sec_dir)
+
+            matches[int(x)][0] = float(primary.lon[int(x)].values)
+            matches[int(x)][1] = float(primary.lat[int(x)].values)
+            matches[int(x)][2] = float(primary.time[int(x)].values)
+            matches[int(x)][3] = float(primary.sea_surface_foundation_temperature[int(x)].values)
+                
+            sec_lon = []
+            sec_lat = []
+            sec_time = []
+            sec_speed = []
+            sec_dir = []
+
+        sec_lon.append(float(secondary.lon[int(y)].values))
+        sec_lat.append(float(secondary.lat[int(y)].values))
+        sec_time.append(float(secondary.time[int(y)].values))
+        sec_speed.append(float(secondary.wind_speed[int(y)].values))
+        sec_dir.append(float(secondary.wind_to_direction[int(y)].values))
+
+        prev_x = int(x)
+
+    return matches
+
 def matches_to_csv(matches, csvfile):
     """
     Write the CDMS matches to a CSV file. Include a header of column names
@@ -194,7 +268,6 @@ def create_logs(user_option, logName):
     
 
 
-
 if __name__ == '__main__':
     """
     Execution:
@@ -241,10 +314,3 @@ if __name__ == '__main__':
     if args.meta == 'Y' :
         get_globals(args.filename)
 
-
-
-
-    
-
-    
-    

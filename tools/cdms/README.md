@@ -14,7 +14,7 @@ Imported packages:
 * csv
 * collections
 * logging
-    
+* xarray   
 
 ## Functions
 ### Function: `assemble_matches(filename)`
@@ -24,10 +24,10 @@ Read a CDMS netCDF file into memory and return a list of matches from the file.
 - `filename` (str): the CDMS netCDF file name.
     
 #### Returns
-- `matches` (list): List of matches. 
+- `matches` (list): List of matches.
 
 Each list element in `matches` is a dictionary organized as follows:
-    For match `m`, netCDF group `GROUP` ('PrimaryData' or 'SecondaryData'), and netCDF group variable `VARIABLE`:
+	For match `m`, netCDF group `GROUP` ('PrimaryData' or 'SecondaryData'), and netCDF group variable `VARIABLE`:
 
 `matches[m][GROUP]['matchID']`: netCDF `MatchedRecords` dimension ID for the match
 `matches[m][GROUP]['GROUPID']`: GROUP netCDF `dim` dimension ID for the record
@@ -42,7 +42,35 @@ matches[0]['PrimaryData']['PrimaryDataID']
 matches[0]['SecondaryData']['SecondaryDataID']
 ```
 
-        
+### Function: `return_matches_array(filename)`
+Read a CDMS netCDF file into memory and return a list of matches from the file.
+This format returns the matches in a more primitive array structure, where each element corresponds to a set of PrimaryData and all its associated SecondaryData.
+
+#### Parameters 
+- `filename` (str): the CDMS netCDF file name.
+    
+#### Returns
+- `matches` (list): Two dimensional array of matches. 
+
+Each list element in `matches` is an array that contains the following sub-elements:
+	For match `m`, all information can be accessed by the following indices (ex. matches[m][0-8]):
+
+`matches[m][0]`: longitude for the PrimaryData (float) 
+`matches[m][1]`: latitude for the PrimaryData (float)
+`matches[m][2]`: time for the PrimaryData (float)
+`matches[m][3]`: sea surface foundation temperature for the PrimaryData (float)
+`matches[m][4]`: longitude for the SecondaryData (array of floats)
+`matches[m][5]`: latitude for the SecondaryData (array of floats)
+`matches[m][6]`: time for the SecondaryData (array of floats)
+`matches[m][7]`: wind speed for the SecondaryData (array of floats)
+`matches[m][8]`: wind direction for the SecondaryData (array of floats)
+
+For example, to access the timestamps of the primary data and the secondary data of the first match in the list:
+```python
+matches[0][2] #returns PrimaryData time as a float
+matches[0][6] #returns SecondaryData time as an array
+```
+
 ### Function: `matches_to_csv(matches, csvfile)`
 Write the CDMS matches to a CSV file. Include a header of column names which are based on the group and variable names from the netCDF file.
     
