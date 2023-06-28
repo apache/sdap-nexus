@@ -26,7 +26,7 @@ import pkg_resources
 from cassandra.auth import PlainTextAuthProvider
 from cassandra.cluster import Cluster
 from cassandra.policies import TokenAwarePolicy, DCAwareRoundRobinPolicy
-from cassandra.query import BatchStatement
+from cassandra.query import BatchStatement, SimpleStatement
 from pytz import UTC
 from webservice.algorithms.doms.BaseDomsHandler import DomsEncoder
 from webservice.webmodel import NexusProcessingException
@@ -274,17 +274,17 @@ class ResultsRetrieval(AbstractResultsContainer):
     def __init__(self, config=None):
         AbstractResultsContainer.__init__(self, config)
 
-    def retrieveResults(self, execution_id, trim_data=False):
+    def retrieveResults(self, execution_id, trim_data=False, page_num=1, page_size=1000):
         if isinstance(execution_id, str):
             execution_id = uuid.UUID(execution_id)
 
         params = self.retrieveParams(execution_id)
         stats = self.__retrieveStats(execution_id)
-        data = self.__retrieveData(execution_id, trim_data=trim_data)
+        data = self.__retrieveData(execution_id, trim_data=trim_data, page_num=page_num, page_size=page_size)
         return params, stats, data
 
-    def __retrieveData(self, id, trim_data=False):
-        dataMap = self.__retrievePrimaryData(id, trim_data=trim_data)
+    def __retrieveData(self, id, trim_data=False, page_num=1, page_size=1000):
+        dataMap = self.__retrievePrimaryData(id, trim_data=trim_data, page_num=page_num, page_size=page_size)
         self.__enrichPrimaryDataWithMatches(id, dataMap, trim_data=trim_data)
         data = [dataMap[name] for name in dataMap]
         return data
@@ -302,12 +302,12 @@ class ResultsRetrieval(AbstractResultsContainer):
             else:
                 print(row)
 
-    def __retrievePrimaryData(self, id, trim_data=False):
-        cql = "SELECT * FROM doms_data where execution_id = %s and is_primary = true"
-        rows = self._session.execute(cql, (id,))
+    def __retrievePrimaryData(self, id, trim_data=False, page_num=2, page_size=10):
+        cql = "SELECT * FROM doms_data where execution_id = %s and is_primary = true limit %s"
+        rows = self._session.execute(cql, [id, page_num * page_size])
 
         dataMap = {}
-        for row in rows:
+        for row in rows[(page_num-1)*page_size:page_num*page_size]:
             entry = self.__rowToDataEntry(row, trim_data=trim_data)
             dataMap[row.value_id] = entry
         return dataMap
