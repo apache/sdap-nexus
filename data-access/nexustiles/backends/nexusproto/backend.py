@@ -18,7 +18,7 @@ import logging
 import sys
 import json
 from datetime import datetime
-from functools import wraps, reduce
+from functools import reduce
 
 import numpy as np
 import numpy.ma as ma
@@ -32,14 +32,8 @@ from .dao import S3Proxy
 from .dao import SolrProxy
 from .dao import ElasticsearchProxy
 
-from .backends.nexusproto.backend import NexusprotoTileService
-
-
-from abc import ABC, abstractmethod
-
-from .AbstractTileService import AbstractTileService
-
-from .model.nexusmodel import Tile, BBox, TileStats, TileVariable
+from nexustiles.model.nexusmodel import Tile, BBox, TileStats, TileVariable
+from nexustiles.nexustiles import NexusTileServiceException
 
 EPOCH = timezone('UTC').localize(datetime(1970, 1, 1))
 
@@ -50,50 +44,13 @@ logging.basicConfig(
 logger = logging.getLogger("testing")
 
 
-def tile_data(default_fetch=True):
-    def tile_data_decorator(func):
-        @wraps(func)
-        def fetch_data_for_func(*args, **kwargs):
-            metadatastore_start = datetime.now()
-            metadatastore_docs = func(*args, **kwargs)
-            metadatastore_duration = (datetime.now() - metadatastore_start).total_seconds()
-            tiles = args[0]._metadata_store_docs_to_tiles(*metadatastore_docs)
-
-            cassandra_duration = 0
-            if ('fetch_data' in kwargs and kwargs['fetch_data']) or ('fetch_data' not in kwargs and default_fetch):
-                if len(tiles) > 0:
-                    cassandra_start = datetime.now()
-                    args[0].fetch_data_for_tiles(*tiles)
-                    cassandra_duration += (datetime.now() - cassandra_start).total_seconds()
-
-            if 'metrics_callback' in kwargs and kwargs['metrics_callback'] is not None:
-                try:
-                    kwargs['metrics_callback'](cassandra=cassandra_duration,
-                                               metadatastore=metadatastore_duration,
-                                               num_tiles=len(tiles))
-                except Exception as e:
-                    logger.error("Metrics callback '{}'raised an exception. Will continue anyway. " +
-                                 "The exception was: {}".format(kwargs['metrics_callback'], e))
-            return tiles
-
-        return fetch_data_for_func
-
-    return tile_data_decorator
-
-
-class NexusTileServiceException(Exception):
-    pass
-
-
-class NexusTileService(AbstractTileService):
-    backends = {}
-
+class NexusprotoTileService(object):
     def __init__(self, skipDatastore=False, skipMetadatastore=False, config=None):
         self._datastore = None
         self._metadatastore = None
 
         self._config = configparser.RawConfigParser()
-        self._config.read(NexusTileService._get_config_files('config/datastores.ini'))
+        self._config.read(NexusprotoTileService._get_config_files('config/datastores.ini'))
 
         if config:
             self.override_config(config)
@@ -129,11 +86,9 @@ class NexusTileService(AbstractTileService):
         else:
             return self._metadatastore.get_data_series_list()
 
-    @tile_data()
     def find_tile_by_id(self, tile_id, **kwargs):
         return self._metadatastore.find_tile_by_id(tile_id)
 
-    @tile_data()
     def find_tiles_by_id(self, tile_ids, ds=None, **kwargs):
         return self._metadatastore.find_tiles_by_id(tile_ids, ds=ds, **kwargs)
 
@@ -148,7 +103,6 @@ class NexusTileService(AbstractTileService):
             metrics_callback(solr=duration)
         return result
 
-    @tile_data()
     def find_tile_by_polygon_and_most_recent_day_of_year(self, bounding_polygon, ds, day_of_year, **kwargs):
         """
         Given a bounding polygon, dataset, and day of year, find tiles in that dataset with the same bounding
@@ -180,18 +134,15 @@ class NexusTileService(AbstractTileService):
 
         return tile
 
-    @tile_data()
     def find_all_tiles_in_box_at_time(self, min_lat, max_lat, min_lon, max_lon, dataset, time, **kwargs):
         return self._metadatastore.find_all_tiles_in_box_at_time(min_lat, max_lat, min_lon, max_lon, dataset, time,
                                                                  rows=5000,
                                                                  **kwargs)
 
-    @tile_data()
     def find_all_tiles_in_polygon_at_time(self, bounding_polygon, dataset, time, **kwargs):
         return self._metadatastore.find_all_tiles_in_polygon_at_time(bounding_polygon, dataset, time, rows=5000,
                                                                      **kwargs)
 
-    @tile_data()
     def find_tiles_in_box(self, min_lat, max_lat, min_lon, max_lon, ds=None, start_time=0, end_time=-1, **kwargs):
         # Find tiles that fall in the given box in the Solr index
         if type(start_time) is datetime:
@@ -201,7 +152,6 @@ class NexusTileService(AbstractTileService):
         return self._metadatastore.find_all_tiles_in_box_sorttimeasc(min_lat, max_lat, min_lon, max_lon, ds, start_time,
                                                                      end_time, **kwargs)
 
-    @tile_data()
     def find_tiles_in_polygon(self, bounding_polygon, ds=None, start_time=0, end_time=-1, **kwargs):
         # Find tiles that fall within the polygon in the Solr index
         if 'sort' in list(kwargs.keys()):
@@ -212,7 +162,6 @@ class NexusTileService(AbstractTileService):
                                                                               **kwargs)
         return tiles
 
-    @tile_data()
     def find_tiles_by_metadata(self, metadata, ds=None, start_time=0, end_time=-1, **kwargs):
         """
         Return list of tiles whose metadata matches the specified metadata, start_time, end_time.
@@ -241,7 +190,6 @@ class NexusTileService(AbstractTileService):
 
         return tiles
 
-    @tile_data()
     def find_tiles_by_exact_bounds(self, bounds, ds, start_time, end_time, **kwargs):
         """
         The method will return tiles with the exact given bounds within the time range. It differs from
@@ -260,7 +208,6 @@ class NexusTileService(AbstractTileService):
                                                                end_time)
         return tiles
 
-    @tile_data()
     def find_all_boundary_tiles_at_time(self, min_lat, max_lat, min_lon, max_lon, dataset, time, **kwargs):
         return self._metadatastore.find_all_boundary_tiles_at_time(min_lat, max_lat, min_lon, max_lon, dataset, time,
                                                                    rows=5000,
@@ -360,6 +307,92 @@ class NexusTileService(AbstractTileService):
         """
         bounds = self._metadatastore.find_distinct_bounding_boxes_in_polygon(bounding_polygon, ds, start_time, end_time)
         return [box(*b) for b in bounds]
+
+    def mask_tiles_to_bbox(self, min_lat, max_lat, min_lon, max_lon, tiles):
+
+        for tile in tiles:
+            tile.latitudes = ma.masked_outside(tile.latitudes, min_lat, max_lat)
+            tile.longitudes = ma.masked_outside(tile.longitudes, min_lon, max_lon)
+
+            # Or together the masks of the individual arrays to create the new mask
+            data_mask = ma.getmaskarray(tile.times)[:, np.newaxis, np.newaxis] \
+                        | ma.getmaskarray(tile.latitudes)[np.newaxis, :, np.newaxis] \
+                        | ma.getmaskarray(tile.longitudes)[np.newaxis, np.newaxis, :]
+
+            # If this is multi-var, need to mask each variable separately.
+            if tile.is_multi:
+                # Combine space/time mask with existing mask on data
+                data_mask = reduce(np.logical_or, [tile.data[0].mask, data_mask])
+
+                num_vars = len(tile.data)
+                multi_data_mask = np.repeat(data_mask[np.newaxis, ...], num_vars, axis=0)
+                tile.data = ma.masked_where(multi_data_mask, tile.data)
+            else:
+                tile.data = ma.masked_where(data_mask, tile.data)
+
+        tiles[:] = [tile for tile in tiles if not tile.data.mask.all()]
+
+        return tiles
+
+    def mask_tiles_to_bbox_and_time(self, min_lat, max_lat, min_lon, max_lon, start_time, end_time, tiles):
+        for tile in tiles:
+            tile.times = ma.masked_outside(tile.times, start_time, end_time)
+            tile.latitudes = ma.masked_outside(tile.latitudes, min_lat, max_lat)
+            tile.longitudes = ma.masked_outside(tile.longitudes, min_lon, max_lon)
+
+            # Or together the masks of the individual arrays to create the new mask
+            data_mask = ma.getmaskarray(tile.times)[:, np.newaxis, np.newaxis] \
+                        | ma.getmaskarray(tile.latitudes)[np.newaxis, :, np.newaxis] \
+                        | ma.getmaskarray(tile.longitudes)[np.newaxis, np.newaxis, :]
+
+            tile.data = ma.masked_where(data_mask, tile.data)
+
+        tiles[:] = [tile for tile in tiles if not tile.data.mask.all()]
+
+        return tiles
+
+    def mask_tiles_to_polygon(self, bounding_polygon, tiles):
+
+        min_lon, min_lat, max_lon, max_lat = bounding_polygon.bounds
+
+        return self.mask_tiles_to_bbox(min_lat, max_lat, min_lon, max_lon, tiles)
+
+    def mask_tiles_to_polygon_and_time(self, bounding_polygon, start_time, end_time, tiles):
+        min_lon, min_lat, max_lon, max_lat = bounding_polygon.bounds
+
+        return self.mask_tiles_to_bbox_and_time(min_lat, max_lat, min_lon, max_lon, start_time, end_time, tiles)
+
+    def mask_tiles_to_time_range(self, start_time, end_time, tiles):
+        """
+        Masks data in tiles to specified time range.
+        :param start_time: The start time to search for tiles
+        :param end_time: The end time to search for tiles
+        :param tiles: List of tiles
+        :return: A list tiles with data masked to specified time range
+        """
+        if 0 <= start_time <= end_time:
+            for tile in tiles:
+                tile.times = ma.masked_outside(tile.times, start_time, end_time)
+
+                # Or together the masks of the individual arrays to create the new mask
+                data_mask = ma.getmaskarray(tile.times)[:, np.newaxis, np.newaxis] \
+                            | ma.getmaskarray(tile.latitudes)[np.newaxis, :, np.newaxis] \
+                            | ma.getmaskarray(tile.longitudes)[np.newaxis, np.newaxis, :]
+
+                # If this is multi-var, need to mask each variable separately.
+                if tile.is_multi:
+                    # Combine space/time mask with existing mask on data
+                    data_mask = reduce(np.logical_or, [tile.data[0].mask, data_mask])
+
+                    num_vars = len(tile.data)
+                    multi_data_mask = np.repeat(data_mask[np.newaxis, ...], num_vars, axis=0)
+                    tile.data = ma.masked_where(multi_data_mask, tile.data)
+                else:
+                    tile.data = ma.masked_where(data_mask, tile.data)
+
+            tiles[:] = [tile for tile in tiles if not tile.data.mask.all()]
+
+        return tiles
 
     def get_tile_count(self, ds, bounding_polygon=None, start_time=0, end_time=-1, metadata=None, **kwargs):
         """
@@ -479,8 +512,8 @@ class NexusTileService(AbstractTileService):
                     var_names = [store_doc['tile_var_name_s']]
 
                 standard_name = store_doc.get(
-                        'tile_standard_name_s',
-                        json.dumps([None] * len(var_names))
+                    'tile_standard_name_s',
+                    json.dumps([None] * len(var_names))
                 )
                 if '[' in standard_name:
                     standard_names = json.loads(standard_name)
@@ -495,7 +528,6 @@ class NexusTileService(AbstractTileService):
                     ))
             except KeyError:
                 pass
-
 
             if 'tile_var_name_ss' in store_doc:
                 tile.variables = []
