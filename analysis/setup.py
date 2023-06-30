@@ -17,19 +17,18 @@
 import setuptools
 from subprocess import check_call, CalledProcessError
 
-# with open('../VERSION.txt', 'r') as f:
-#     __version__ = f.read()
-__version__ = '1.1.0a3'
+with open('../VERSION.txt', 'r') as f:
+    __version__ = f.read()
 
 
-# try:
-#     check_call(['mamba', 'install', '-y', '-c', 'conda-forge', '--file', 'conda-requirements.txt'])
-# except (CalledProcessError, IOError) as e:
-#     print('Failed install with mamba; falling back to conda')
-#     try:
-#         check_call(['conda', 'install', '-y', '-c', 'conda-forge', '--file', 'conda-requirements.txt'])
-#     except (CalledProcessError, IOError) as e:
-#         raise EnvironmentError("Error installing conda packages", e)
+try:
+    check_call(['mamba', 'install', '-y', '-c', 'conda-forge', '--file', 'conda-requirements.txt'])
+except (CalledProcessError, IOError) as e:
+    print('Failed install with mamba; falling back to conda')
+    try:
+        check_call(['conda', 'install', '-y', '-c', 'conda-forge', '--file', 'conda-requirements.txt'])
+    except (CalledProcessError, IOError) as e:
+        raise EnvironmentError("Error installing conda packages", e)
 
 
 setuptools.setup(
