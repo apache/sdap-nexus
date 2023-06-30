@@ -535,6 +535,22 @@ paths:
             type: string
             enum: ['CSV', 'NETCDF', 'JSON']
           example: CSV
+        - in: query
+          name: pageNum
+          description: |
+            Page of results to retrieve.
+          required: false
+          schema:
+            type: integer
+          example: 1
+        - in: query
+          name: pageSize
+          description: |
+            Number of items to return in each page.
+          required: false
+          schema:
+            type: integer
+          example: 100
       responses:
         '200':
           description: Successful operation
