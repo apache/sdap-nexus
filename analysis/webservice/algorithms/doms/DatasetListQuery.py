@@ -23,7 +23,7 @@ from . import config
 from . import values
 from webservice.algorithms.NexusCalcHandler import NexusCalcHandler as BaseHandler
 from webservice.NexusHandler import nexus_handler
-from webservice.webmodel import cached
+from webservice.webmodel import cached, NexusResults
 
 
 @nexus_handler
@@ -120,4 +120,4 @@ class DomsDatasetListQueryHandler(BaseDomsHandler.BaseDomsQueryCalcHandler):
             "insitu": insituList
         }
 
-        return BaseDomsHandler.DomsQueryResults(results=values)
+        return NexusResults(results=values)
