@@ -18,14 +18,16 @@ import logging
 import sys
 import json
 from datetime import datetime
-from functools import wraps, reduce
+from functools import wraps, reduce, partial
 
 import numpy as np
 import numpy.ma as ma
 import pkg_resources
 from pytz import timezone, UTC
 from shapely.geometry import MultiPolygon, box
+import pysolr
 
+import threading
 from .dao import CassandraProxy
 from .dao import DynamoProxy
 from .dao import S3Proxy
@@ -40,6 +42,8 @@ from abc import ABC, abstractmethod
 from .AbstractTileService import AbstractTileService
 
 from .model.nexusmodel import Tile, BBox, TileStats, TileVariable
+
+from webservice.webmodel import DatasetNotFoundException
 
 EPOCH = timezone('UTC').localize(datetime(1970, 1, 1))
 
@@ -85,36 +89,64 @@ class NexusTileServiceException(Exception):
     pass
 
 
+SOLR_LOCK = threading.Lock()
+thread_local = threading.local()
+
+
+
 class NexusTileService(AbstractTileService):
-    backends = {}
+    backends = {} # relate ds names to factory func objects
 
-    def __init__(self, skipDatastore=False, skipMetadatastore=False, config=None):
-        self._datastore = None
-        self._metadatastore = None
-
+    def __init__(self, config=None):
         self._config = configparser.RawConfigParser()
-        self._config.read(NexusTileService._get_config_files('config/datastores.ini'))
+        self._config.read(NexusTileService._get_config_files('config/datasets.ini'))
+
+        self._alg_config = config
 
         if config:
             self.override_config(config)
 
-        if not skipDatastore:
-            datastore = self._config.get("datastore", "store")
-            if datastore == "cassandra":
-                self._datastore = CassandraProxy.CassandraProxy(self._config)
-            elif datastore == "s3":
-                self._datastore = S3Proxy.S3Proxy(self._config)
-            elif datastore == "dynamo":
-                self._datastore = DynamoProxy.DynamoProxy(self._config)
-            else:
-                raise ValueError("Error reading datastore from config file")
+        NexusTileService.backends[None] = NexusprotoTileService(False, False, config)
+        NexusTileService.backends['__nexusproto__'] = NexusTileService.backends[None]
 
-        if not skipMetadatastore:
-            metadatastore = self._config.get("metadatastore", "store", fallback='solr')
-            if metadatastore == "solr":
-                self._metadatastore = SolrProxy.SolrProxy(self._config)
-            elif metadatastore == "elasticsearch":
-                self._metadatastore = ElasticsearchProxy.ElasticsearchProxy(self._config)
+
+
+    def _get_ingested_datasets(self):
+        solr_url = self._config.get("solr", "host")
+        solr_core = self._config.get("solr", "core")
+        solr_kwargs = {}
+
+        if self._config.has_option("solr", "time_out"):
+            solr_kwargs["timeout"] = self._config.get("solr", "time_out")
+
+        with SOLR_LOCK:
+            solrcon = getattr(thread_local, 'solrcon', None)
+            if solrcon is None:
+                solr_url = '%s/solr/%s' % (solr_url, solr_core)
+                solrcon = pysolr.Solr(solr_url, **solr_kwargs)
+                thread_local.solrcon = solrcon
+
+            solrcon = solrcon
+
+            response = solrcon.search('*:*')
+
+        for dataset in response.docs:
+            d_id = dataset['dataset_s']
+            store_type = dataset.get('store_type_s', 'nexusproto')
+
+            if store_type == 'nexus_proto':
+                NexusTileService.backends[d_id] = NexusTileService.backends[None]
+            else:
+                ds_config = dataset['config']
+                # NexusTileService.backends[d_id] =
+
+
+
+
+    def get_tileservice_factory(self, dataset=None):
+        pass
+
+
 
     def override_config(self, config):
         for section in config.sections():

@@ -37,6 +37,11 @@ from nexustiles.model.nexusmodel import Tile, BBox, TileStats, TileVariable
 from nexustiles.nexustiles import NexusTileServiceException
 
 class AbstractTileService(ABC):
+    @staticmethod
+    @abstractmethod
+    def open_dataset(dataset_s, **kwargs):
+        pass
+
     @abstractmethod
     def get_dataseries_list(self, simple=False):
         raise NotImplementedError()
