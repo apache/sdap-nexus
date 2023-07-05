@@ -120,4 +120,14 @@ class DomsDatasetListQueryHandler(BaseDomsHandler.BaseDomsQueryCalcHandler):
             "insitu": insituList
         }
 
-        return NexusResults(results=values)
+        return DatasetListResults(results=values)
+
+
+class DatasetListResults(NexusResults):
+    def __init__(self, results=None):
+        NexusResults.__init__(self, results=results)
+
+        self.__results = results
+
+    def toJson(self):
+        return json.dumps({'data': self.__results}, indent=4)
