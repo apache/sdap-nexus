@@ -34,6 +34,7 @@ from .dao import ElasticsearchProxy
 
 from nexustiles.model.nexusmodel import Tile, BBox, TileStats, TileVariable
 from nexustiles.nexustiles import NexusTileServiceException
+from nexustiles.AbstractTileService import AbstractTileService
 
 EPOCH = timezone('UTC').localize(datetime(1970, 1, 1))
 
@@ -44,8 +45,9 @@ logging.basicConfig(
 logger = logging.getLogger("testing")
 
 
-class NexusprotoTileService(object):
+class NexusprotoTileService(AbstractTileService):
     def __init__(self, skipDatastore=False, skipMetadatastore=False, config=None):
+        AbstractTileService.__init__(self)
         self._datastore = None
         self._metadatastore = None
 

@@ -28,13 +28,10 @@ from shapely.geometry import MultiPolygon, box
 import pysolr
 
 import threading
-from .dao import CassandraProxy
-from .dao import DynamoProxy
-from .dao import S3Proxy
-from .dao import SolrProxy
-from .dao import ElasticsearchProxy
+from time import sleep
 
 from .backends.nexusproto.backend import NexusprotoTileService
+from .backends.zarr.backend import ZarrBackend
 
 
 from abc import ABC, abstractmethod
@@ -42,8 +39,9 @@ from abc import ABC, abstractmethod
 from .AbstractTileService import AbstractTileService
 
 from .model.nexusmodel import Tile, BBox, TileStats, TileVariable
+from typing import Dict, Union
 
-from webservice.webmodel import DatasetNotFoundException
+from webservice.webmodel import DatasetNotFoundException, NexusProcessingException
 
 EPOCH = timezone('UTC').localize(datetime(1970, 1, 1))
 
@@ -90,12 +88,13 @@ class NexusTileServiceException(Exception):
 
 
 SOLR_LOCK = threading.Lock()
+DS_LOCK = threading.Lock()
 thread_local = threading.local()
 
 
 
 class NexusTileService(AbstractTileService):
-    backends = {} # relate ds names to factory func objects
+    backends: Dict[Union[None, str], Dict[str, Union[AbstractTileService, bool]]] = {}
 
     def __init__(self, config=None):
         self._config = configparser.RawConfigParser()
@@ -106,12 +105,37 @@ class NexusTileService(AbstractTileService):
         if config:
             self.override_config(config)
 
-        NexusTileService.backends[None] = NexusprotoTileService(False, False, config)
+        NexusTileService.backends[None] = {"backend": NexusprotoTileService(False, False, config), 'up': True}
         NexusTileService.backends['__nexusproto__'] = NexusTileService.backends[None]
 
+        def __update_datasets():
+            while True:
+                with DS_LOCK:
+                    self._update_datasets()
+                sleep(3600)
+
+        threading.Thread(target=__update_datasets, name='dataset_update', daemon=False).start()
 
 
-    def _get_ingested_datasets(self):
+
+    @staticmethod
+    def __get_backend(dataset_s) -> AbstractTileService:
+        if dataset_s not in NexusTileService.backends:
+            raise DatasetNotFoundException(reason=f'Dataset {dataset_s} is not currently loaded/ingested')
+
+        b = NexusTileService.backends[dataset_s]
+
+        if not b['up']:
+            success = b['backend'].try_connect()
+
+            if not success:
+                raise NexusProcessingException(reason=f'Dataset {dataset_s} is currently unavailable')
+            else:
+                NexusTileService.backends[dataset_s]['up'] = True
+
+        return b['backend']
+
+    def _update_datasets(self):
         solr_url = self._config.get("solr", "host")
         solr_core = self._config.get("solr", "core")
         solr_kwargs = {}
@@ -130,23 +154,34 @@ class NexusTileService(AbstractTileService):
 
             response = solrcon.search('*:*')
 
+        present_datasets = set()
+
         for dataset in response.docs:
             d_id = dataset['dataset_s']
             store_type = dataset.get('store_type_s', 'nexusproto')
 
-            if store_type == 'nexus_proto':
+            present_datasets.add(d_id)
+
+            if d_id in NexusTileService.backends:
+                continue
+                # is_up = NexusTileService.backends[d_id]['backend'].try_connect()
+
+            if store_type == 'nexus_proto' or store_type == 'nexusproto':
                 NexusTileService.backends[d_id] = NexusTileService.backends[None]
+            elif store_type == 'zarr':
+                ds_config = json.loads(dataset['config'][0])
+                NexusTileService.backends[d_id] = {
+                    'backend': ZarrBackend(ds_config),
+                    'up': True
+                }
             else:
-                ds_config = dataset['config']
-                # NexusTileService.backends[d_id] =
+                logger.warning(f'Unsupported backend {store_type} for dataset {d_id}')
 
+        removed_datasets = set(NexusTileService.backends.keys()).difference(present_datasets)
 
-
-
-    def get_tileservice_factory(self, dataset=None):
-        pass
-
-
+        for dataset in removed_datasets:
+            logger.info(f"Removing dataset {dataset}")
+            del NexusTileService.backends[dataset]
 
     def override_config(self, config):
         for section in config.sections():
@@ -163,65 +198,35 @@ class NexusTileService(AbstractTileService):
 
     @tile_data()
     def find_tile_by_id(self, tile_id, **kwargs):
-        return self._metadatastore.find_tile_by_id(tile_id)
+        return NexusTileService.__get_backend('__nexusproto__').find_tile_by_id(tile_id)
 
     @tile_data()
     def find_tiles_by_id(self, tile_ids, ds=None, **kwargs):
-        return self._metadatastore.find_tiles_by_id(tile_ids, ds=ds, **kwargs)
+        return NexusTileService.__get_backend('__nexusproto__').find_tiles_by_id(tile_ids, ds=ds, **kwargs)
 
     def find_days_in_range_asc(self, min_lat, max_lat, min_lon, max_lon, dataset, start_time, end_time,
                                metrics_callback=None, **kwargs):
-        start = datetime.now()
-        result = self._metadatastore.find_days_in_range_asc(min_lat, max_lat, min_lon, max_lon, dataset, start_time,
-                                                            end_time,
-                                                            **kwargs)
-        duration = (datetime.now() - start).total_seconds()
-        if metrics_callback:
-            metrics_callback(solr=duration)
-        return result
+        return NexusTileService.__get_backend(dataset).find_days_in_range_asc(min_lat, max_lat, min_lon, max_lon,
+                                                                              dataset, start_time, end_time,
+                                                                              metrics_callback, **kwargs)
 
     @tile_data()
     def find_tile_by_polygon_and_most_recent_day_of_year(self, bounding_polygon, ds, day_of_year, **kwargs):
-        """
-        Given a bounding polygon, dataset, and day of year, find tiles in that dataset with the same bounding
-        polygon and the closest day of year.
-
-        For example:
-            given a polygon minx=0, miny=0, maxx=1, maxy=1; dataset=MY_DS; and day of year=32
-            search for first tile in MY_DS with identical bbox and day_of_year <= 32 (sorted by day_of_year desc)
-
-        Valid matches:
-            minx=0, miny=0, maxx=1, maxy=1; dataset=MY_DS; day of year = 32
-            minx=0, miny=0, maxx=1, maxy=1; dataset=MY_DS; day of year = 30
-
-        Invalid matches:
-            minx=1, miny=0, maxx=2, maxy=1; dataset=MY_DS; day of year = 32
-            minx=0, miny=0, maxx=1, maxy=1; dataset=MY_OTHER_DS; day of year = 32
-            minx=0, miny=0, maxx=1, maxy=1; dataset=MY_DS; day of year = 30 if minx=0, miny=0, maxx=1, maxy=1; dataset=MY_DS; day of year = 32 also exists
-
-        :param bounding_polygon: The exact bounding polygon of tiles to search for
-        :param ds: The dataset name being searched
-        :param day_of_year: Tile day of year to search for, tile nearest to this day (without going over) will be returned
-        :return: List of one tile from ds with bounding_polygon on or before day_of_year or raise NexusTileServiceException if no tile found
-        """
-        try:
-            tile = self._metadatastore.find_tile_by_polygon_and_most_recent_day_of_year(bounding_polygon, ds,
-                                                                                        day_of_year)
-        except IndexError:
-            raise NexusTileServiceException("No tile found.").with_traceback(sys.exc_info()[2])
-
-        return tile
+        return NexusTileService.__get_backend(ds).find_tile_by_polygon_and_most_recent_day_of_year(
+            bounding_polygon, ds, day_of_year, **kwargs
+        )
 
     @tile_data()
     def find_all_tiles_in_box_at_time(self, min_lat, max_lat, min_lon, max_lon, dataset, time, **kwargs):
-        return self._metadatastore.find_all_tiles_in_box_at_time(min_lat, max_lat, min_lon, max_lon, dataset, time,
-                                                                 rows=5000,
-                                                                 **kwargs)
+        return NexusTileService.__get_backend(dataset).find_all_tiles_in_box_at_time(
+            min_lat, max_lat, min_lon, max_lon, dataset, time, **kwargs
+        )
 
     @tile_data()
     def find_all_tiles_in_polygon_at_time(self, bounding_polygon, dataset, time, **kwargs):
-        return self._metadatastore.find_all_tiles_in_polygon_at_time(bounding_polygon, dataset, time, rows=5000,
-                                                                     **kwargs)
+        return NexusTileService.__get_backend(dataset).find_all_tiles_in_polygon_at_time(
+            bounding_polygon, dataset, time, **kwargs
+        )
 
     @tile_data()
     def find_tiles_in_box(self, min_lat, max_lat, min_lon, max_lon, ds=None, start_time=0, end_time=-1, **kwargs):
@@ -230,33 +235,22 @@ class NexusTileService(AbstractTileService):
             start_time = (start_time - EPOCH).total_seconds()
         if type(end_time) is datetime:
             end_time = (end_time - EPOCH).total_seconds()
-        return self._metadatastore.find_all_tiles_in_box_sorttimeasc(min_lat, max_lat, min_lon, max_lon, ds, start_time,
-                                                                     end_time, **kwargs)
+
+        return NexusTileService.__get_backend(ds).find_tiles_in_box(
+            min_lat, max_lat, min_lon, max_lon, ds, start_time, end_time, **kwargs
+        )
 
     @tile_data()
     def find_tiles_in_polygon(self, bounding_polygon, ds=None, start_time=0, end_time=-1, **kwargs):
-        # Find tiles that fall within the polygon in the Solr index
-        if 'sort' in list(kwargs.keys()):
-            tiles = self._metadatastore.find_all_tiles_in_polygon(bounding_polygon, ds, start_time, end_time, **kwargs)
-        else:
-            tiles = self._metadatastore.find_all_tiles_in_polygon_sorttimeasc(bounding_polygon, ds, start_time,
-                                                                              end_time,
-                                                                              **kwargs)
-        return tiles
+        return NexusTileService.__get_backend(ds).find_tiles_in_polygon(
+            bounding_polygon, ds, start_time, end_time, **kwargs
+        )
 
     @tile_data()
     def find_tiles_by_metadata(self, metadata, ds=None, start_time=0, end_time=-1, **kwargs):
-        """
-        Return list of tiles whose metadata matches the specified metadata, start_time, end_time.
-        :param metadata: List of metadata values to search for tiles e.g ["river_id_i:1", "granule_s:granule_name"]
-        :param ds: The dataset name to search
-        :param start_time: The start time to search for tiles
-        :param end_time: The end time to search for tiles
-        :return: A list of tiles
-        """
-        tiles = self._metadatastore.find_all_tiles_by_metadata(metadata, ds, start_time, end_time, **kwargs)
-
-        return tiles
+        return NexusTileService.__get_backend(ds).find_tiles_by_metadata(
+            metadata, ds, start_time, end_time, **kwargs
+        )
 
     def get_tiles_by_metadata(self, metadata, ds=None, start_time=0, end_time=-1, **kwargs):
         """
@@ -287,16 +281,15 @@ class NexusTileService(AbstractTileService):
         :param kwargs: fetch_data: True/False = whether or not to retrieve tile data
         :return:
         """
-        tiles = self._metadatastore.find_tiles_by_exact_bounds(bounds[0], bounds[1], bounds[2], bounds[3], ds,
-                                                               start_time,
-                                                               end_time)
-        return tiles
+        return NexusTileService.__get_backend(ds).find_tiles_by_exact_bounds(
+            bounds, ds, start_time, end_time, **kwargs
+        )
 
     @tile_data()
     def find_all_boundary_tiles_at_time(self, min_lat, max_lat, min_lon, max_lon, dataset, time, **kwargs):
-        return self._metadatastore.find_all_boundary_tiles_at_time(min_lat, max_lat, min_lon, max_lon, dataset, time,
-                                                                   rows=5000,
-                                                                   **kwargs)
+        return NexusTileService.__get_backend(dataset).find_all_boundary_tiles_at_time(
+            min_lat, max_lat, min_lon, max_lon, dataset, time, **kwargs
+        )
 
     def get_tiles_bounded_by_box(self, min_lat, max_lat, min_lon, max_lon, ds=None, start_time=0, end_time=-1,
                                  **kwargs):
@@ -317,12 +310,12 @@ class NexusTileService(AbstractTileService):
         return tiles
 
     def get_min_max_time_by_granule(self, ds, granule_name):
-        start_time, end_time = self._metadatastore.find_min_max_date_from_granule(ds, granule_name)
-
-        return start_time, end_time
+        return NexusTileService.__get_backend(ds).get_min_max_time_by_granule(
+            ds, granule_name
+        )
 
     def get_dataset_overall_stats(self, ds):
-        return self._metadatastore.get_data_series_stats(ds)
+        return NexusTileService.__get_backend(ds).get_dataset_overall_stats(ds)
 
     def get_tiles_bounded_by_box_at_time(self, min_lat, max_lat, min_lon, max_lon, dataset, time, **kwargs):
         tiles = self.find_all_tiles_in_box_at_time(min_lat, max_lat, min_lon, max_lon, dataset, time, **kwargs)

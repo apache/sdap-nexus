@@ -36,11 +36,16 @@ from .dao import ElasticsearchProxy
 from nexustiles.model.nexusmodel import Tile, BBox, TileStats, TileVariable
 from nexustiles.nexustiles import NexusTileServiceException
 
+
 class AbstractTileService(ABC):
-    @staticmethod
+    # @staticmethod
+    # @abstractmethod
+    # def open_dataset(dataset_s, **kwargs):
+    #     pass
+
     @abstractmethod
-    def open_dataset(dataset_s, **kwargs):
-        pass
+    def try_connect(self) -> bool:
+        raise NotImplementedError()
 
     @abstractmethod
     def get_dataseries_list(self, simple=False):
@@ -116,19 +121,6 @@ class AbstractTileService(ABC):
         raise NotImplementedError()
 
     @abstractmethod
-    def get_tiles_by_metadata(self, metadata, ds=None, start_time=0, end_time=-1, **kwargs):
-        """
-        Return list of tiles that matches the specified metadata, start_time, end_time with tile data outside of time
-        range properly masked out.
-        :param metadata: List of metadata values to search for tiles e.g ["river_id_i:1", "granule_s:granule_name"]
-        :param ds: The dataset name to search
-        :param start_time: The start time to search for tiles
-        :param end_time: The end time to search for tiles
-        :return: A list of tiles
-        """
-        raise NotImplementedError()
-
-    @abstractmethod
     def find_tiles_by_exact_bounds(self, bounds, ds, start_time, end_time, **kwargs):
         """
         The method will return tiles with the exact given bounds within the time range. It differs from
@@ -149,32 +141,11 @@ class AbstractTileService(ABC):
         raise NotImplementedError()
 
     @abstractmethod
-    def get_tiles_bounded_by_box(self, min_lat, max_lat, min_lon, max_lon, ds=None, start_time=0, end_time=-1,
-                                 **kwargs):
-        raise NotImplementedError()
-
-    @abstractmethod
-    def get_tiles_bounded_by_polygon(self, polygon, ds=None, start_time=0, end_time=-1, **kwargs):
-        raise NotImplementedError()
-
-    @abstractmethod
     def get_min_max_time_by_granule(self, ds, granule_name):
         raise NotImplementedError()
 
     @abstractmethod
     def get_dataset_overall_stats(self, ds):
-        raise NotImplementedError()
-
-    @abstractmethod
-    def get_tiles_bounded_by_box_at_time(self, min_lat, max_lat, min_lon, max_lon, dataset, time, **kwargs):
-        raise NotImplementedError()
-
-    @abstractmethod
-    def get_tiles_bounded_by_polygon_at_time(self, polygon, dataset, time, **kwargs):
-        raise NotImplementedError()
-
-    @abstractmethod
-    def get_boundary_tiles_at_time(self, min_lat, max_lat, min_lon, max_lon, dataset, time, **kwargs):
         raise NotImplementedError()
 
     @abstractmethod
