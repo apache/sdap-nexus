@@ -30,6 +30,7 @@ import pysolr
 from pytz import timezone, UTC
 from shapely.geometry import box
 from webservice.webmodel import DatasetNotFoundException, NexusProcessingException
+from webservice.NexusHandler import nexus_initializer
 
 from .AbstractTileService import AbstractTileService
 from .backends.nexusproto.backend import NexusprotoTileService
@@ -81,6 +82,16 @@ DS_LOCK = threading.Lock()
 thread_local = threading.local()
 
 
+@nexus_initializer
+class NTSInitializer:
+    def __init__(self):
+        self._log = logger.getChild('init')
+
+    def init(self, config):
+        self._log.info('*** RUNNING NTS INITIALIZATION ***')
+        NexusTileService(config)
+
+
 class NexusTileService:
     backends: Dict[Union[None, str], Dict[str, Union[AbstractTileService, bool]]] = {}
 
@@ -89,7 +100,7 @@ class NexusTileService:
     __update_thread = None
 
     @staticmethod
-    def __update_datasets():
+    def __update_datasets_loop():
         while True:
             with DS_LOCK:
                 NexusTileService._update_datasets()
@@ -115,7 +126,7 @@ class NexusTileService:
 
         if not NexusTileService.__update_thread:
             NexusTileService.__update_thread = threading.Thread(
-                target=NexusTileService.__update_datasets,
+                target=NexusTileService.__update_datasets_loop,
                 name='dataset_update',
                 daemon=False
             )
@@ -128,7 +139,11 @@ class NexusTileService:
     def __get_backend(dataset_s) -> AbstractTileService:
         with DS_LOCK:
             if dataset_s not in NexusTileService.backends:
-                raise DatasetNotFoundException(reason=f'Dataset {dataset_s} is not currently loaded/ingested')
+                logger.warning(f'Dataset {dataset_s} not currently loaded. Checking to see if it was recently'
+                               f'added')
+                NexusTileService._update_datasets()
+                if dataset_s not in NexusTileService.backends:
+                    raise DatasetNotFoundException(reason=f'Dataset {dataset_s} is not currently loaded/ingested')
 
             b = NexusTileService.backends[dataset_s]
 
@@ -162,10 +177,12 @@ class NexusTileService:
 
             solrcon = solrcon
 
-            update_logger.info('Executing update query to check for new datasets')
+            update_logger.info('Executing Solr query to check for new datasets')
 
             present_datasets = {None, '__nexusproto__'}
             next_cursor_mark = '*'
+
+            added_datasets = 0
 
             while True:
                 response = solrcon.search('*:*', cursorMark=next_cursor_mark, sort='id asc')
@@ -190,6 +207,8 @@ class NexusTileService:
                         continue
                         # is_up = NexusTileService.backends[d_id]['backend'].try_connect()
 
+                    added_datasets += 1
+
                     if store_type == 'nexus_proto' or store_type == 'nexusproto':
                         update_logger.info(f"Detected new nexusproto dataset {d_id}, using default nexusproto backend")
                         NexusTileService.backends[d_id] = NexusTileService.backends[None]
@@ -198,20 +217,24 @@ class NexusTileService:
 
                         ds_config = json.loads(dataset['config'][0])
                         NexusTileService.backends[d_id] = {
-                            'backend': ZarrBackend(ds_config),
+                            'backend': ZarrBackend(**ds_config),
                             'up': True
                         }
                     else:
-                        logger.warning(f'Unsupported backend {store_type} for dataset {d_id}')
+                        update_logger.warning(f'Unsupported backend {store_type} for dataset {d_id}')
+                        added_datasets -= 1
 
         removed_datasets = set(NexusTileService.backends.keys()).difference(present_datasets)
 
         if len(removed_datasets) > 0:
-            logger.info(f'{len(removed_datasets)} marked for removal')
+            update_logger.info(f'{len(removed_datasets)} old datasets marked for removal')
 
         for dataset in removed_datasets:
-            logger.info(f"Removing dataset {dataset}")
+            update_logger.info(f"Removing dataset {dataset}")
             del NexusTileService.backends[dataset]
+
+        update_logger.info(f'Finished dataset update: {added_datasets} added, {len(removed_datasets)} removed, '
+                           f'{len(NexusTileService.backends) - 2} total')
 
     def override_config(self, config):
         for section in config.sections():
