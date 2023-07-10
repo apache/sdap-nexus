@@ -27,7 +27,7 @@ from pytz import timezone, UTC
 from shapely.geometry import MultiPolygon, box
 
 from nexustiles.model.nexusmodel import Tile, BBox, TileStats, TileVariable
-from nexustiles.nexustiles import NexusTileServiceException
+from nexustiles.exception import NexusTileServiceException
 from nexustiles.AbstractTileService import AbstractTileService
 
 EPOCH = timezone('UTC').localize(datetime(1970, 1, 1))

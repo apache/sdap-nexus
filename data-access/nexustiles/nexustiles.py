@@ -14,34 +14,27 @@
 # limitations under the License.
 
 import configparser
+import json
 import logging
 import sys
-import json
+import threading
 from datetime import datetime
-from functools import wraps, reduce, partial
+from functools import reduce, wraps
+from time import sleep
+from typing import Dict, Union
 
 import numpy as np
 import numpy.ma as ma
 import pkg_resources
-from pytz import timezone, UTC
-from shapely.geometry import MultiPolygon, box
 import pysolr
-
-import threading
-from time import sleep
-
-from .backends.nexusproto.backend import NexusprotoTileService
-from .backends.zarr.backend import ZarrBackend
-
-
-from abc import ABC, abstractmethod
+from pytz import timezone, UTC
+from shapely.geometry import box
+from webservice.webmodel import DatasetNotFoundException, NexusProcessingException
 
 from .AbstractTileService import AbstractTileService
-
+from .backends.nexusproto.backend import NexusprotoTileService
+from .backends.zarr.backend import ZarrBackend
 from .model.nexusmodel import Tile, BBox, TileStats, TileVariable
-from typing import Dict, Union
-
-from webservice.webmodel import DatasetNotFoundException, NexusProcessingException
 
 EPOCH = timezone('UTC').localize(datetime(1970, 1, 1))
 
@@ -49,7 +42,7 @@ logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     datefmt="%Y-%m-%dT%H:%M:%S", stream=sys.stdout)
-logger = logging.getLogger("testing")
+logger = logging.getLogger("nexus-tile-svc")
 
 
 def tile_data(default_fetch=True):
@@ -83,18 +76,24 @@ def tile_data(default_fetch=True):
     return tile_data_decorator
 
 
-class NexusTileServiceException(Exception):
-    pass
-
-
 SOLR_LOCK = threading.Lock()
 DS_LOCK = threading.Lock()
 thread_local = threading.local()
 
 
-
-class NexusTileService(AbstractTileService):
+class NexusTileService:
     backends: Dict[Union[None, str], Dict[str, Union[AbstractTileService, bool]]] = {}
+
+    ds_config = None
+
+    __update_thread = None
+
+    @staticmethod
+    def __update_datasets():
+        while True:
+            with DS_LOCK:
+                NexusTileService._update_datasets()
+            sleep(3600)
 
     def __init__(self, config=None):
         self._config = configparser.RawConfigParser()
@@ -105,43 +104,54 @@ class NexusTileService(AbstractTileService):
         if config:
             self.override_config(config)
 
-        NexusTileService.backends[None] = {"backend": NexusprotoTileService(False, False, config), 'up': True}
-        NexusTileService.backends['__nexusproto__'] = NexusTileService.backends[None]
+        if not NexusTileService.backends:
+            NexusTileService.ds_config = configparser.RawConfigParser()
+            NexusTileService.ds_config.read(NexusTileService._get_config_files('config/datasets.ini'))
 
-        def __update_datasets():
-            while True:
-                with DS_LOCK:
-                    self._update_datasets()
-                sleep(3600)
+            default_backend = {"backend": NexusprotoTileService(False, False, config), 'up': True}
 
-        threading.Thread(target=__update_datasets, name='dataset_update', daemon=False).start()
+            NexusTileService.backends[None] = default_backend
+            NexusTileService.backends['__nexusproto__'] = default_backend
 
+        if not NexusTileService.__update_thread:
+            NexusTileService.__update_thread = threading.Thread(
+                target=NexusTileService.__update_datasets,
+                name='dataset_update',
+                daemon=False
+            )
 
+            logger.info('Starting dataset refresh thread')
+
+            NexusTileService.__update_thread.start()
 
     @staticmethod
     def __get_backend(dataset_s) -> AbstractTileService:
-        if dataset_s not in NexusTileService.backends:
-            raise DatasetNotFoundException(reason=f'Dataset {dataset_s} is not currently loaded/ingested')
+        with DS_LOCK:
+            if dataset_s not in NexusTileService.backends:
+                raise DatasetNotFoundException(reason=f'Dataset {dataset_s} is not currently loaded/ingested')
 
-        b = NexusTileService.backends[dataset_s]
+            b = NexusTileService.backends[dataset_s]
 
-        if not b['up']:
-            success = b['backend'].try_connect()
+            if not b['up']:
+                success = b['backend'].try_connect()
 
-            if not success:
-                raise NexusProcessingException(reason=f'Dataset {dataset_s} is currently unavailable')
-            else:
-                NexusTileService.backends[dataset_s]['up'] = True
+                if not success:
+                    raise NexusProcessingException(reason=f'Dataset {dataset_s} is currently unavailable')
+                else:
+                    NexusTileService.backends[dataset_s]['up'] = True
 
-        return b['backend']
+            return b['backend']
 
-    def _update_datasets(self):
-        solr_url = self._config.get("solr", "host")
-        solr_core = self._config.get("solr", "core")
+    @staticmethod
+    def _update_datasets():
+        solr_url = NexusTileService.ds_config.get("solr", "host")
+        solr_core = NexusTileService.ds_config.get("solr", "core")
         solr_kwargs = {}
 
-        if self._config.has_option("solr", "time_out"):
-            solr_kwargs["timeout"] = self._config.get("solr", "time_out")
+        update_logger = logging.getLogger("nexus-tile-svc.backends")
+
+        if NexusTileService.ds_config.has_option("solr", "time_out"):
+            solr_kwargs["timeout"] = NexusTileService.ds_config.get("solr", "time_out")
 
         with SOLR_LOCK:
             solrcon = getattr(thread_local, 'solrcon', None)
@@ -152,32 +162,52 @@ class NexusTileService(AbstractTileService):
 
             solrcon = solrcon
 
-            response = solrcon.search('*:*')
+            update_logger.info('Executing update query to check for new datasets')
 
-        present_datasets = set()
+            present_datasets = {None, '__nexusproto__'}
+            next_cursor_mark = '*'
 
-        for dataset in response.docs:
-            d_id = dataset['dataset_s']
-            store_type = dataset.get('store_type_s', 'nexusproto')
+            while True:
+                response = solrcon.search('*:*', cursorMark=next_cursor_mark, sort='id asc')
 
-            present_datasets.add(d_id)
+                try:
+                    response_cursor_mark = response.nextCursorMark
+                except AttributeError:
+                    break
 
-            if d_id in NexusTileService.backends:
-                continue
-                # is_up = NexusTileService.backends[d_id]['backend'].try_connect()
+                if response_cursor_mark == next_cursor_mark:
+                    break
+                else:
+                    next_cursor_mark = response_cursor_mark
 
-            if store_type == 'nexus_proto' or store_type == 'nexusproto':
-                NexusTileService.backends[d_id] = NexusTileService.backends[None]
-            elif store_type == 'zarr':
-                ds_config = json.loads(dataset['config'][0])
-                NexusTileService.backends[d_id] = {
-                    'backend': ZarrBackend(ds_config),
-                    'up': True
-                }
-            else:
-                logger.warning(f'Unsupported backend {store_type} for dataset {d_id}')
+                for dataset in response.docs:
+                    d_id = dataset['dataset_s']
+                    store_type = dataset.get('store_type_s', 'nexusproto')
+
+                    present_datasets.add(d_id)
+
+                    if d_id in NexusTileService.backends:
+                        continue
+                        # is_up = NexusTileService.backends[d_id]['backend'].try_connect()
+
+                    if store_type == 'nexus_proto' or store_type == 'nexusproto':
+                        update_logger.info(f"Detected new nexusproto dataset {d_id}, using default nexusproto backend")
+                        NexusTileService.backends[d_id] = NexusTileService.backends[None]
+                    elif store_type == 'zarr':
+                        update_logger.info(f"Detected new zarr dataset {d_id}, opening new zarr backend")
+
+                        ds_config = json.loads(dataset['config'][0])
+                        NexusTileService.backends[d_id] = {
+                            'backend': ZarrBackend(ds_config),
+                            'up': True
+                        }
+                    else:
+                        logger.warning(f'Unsupported backend {store_type} for dataset {d_id}')
 
         removed_datasets = set(NexusTileService.backends.keys()).difference(present_datasets)
+
+        if len(removed_datasets) > 0:
+            logger.info(f'{len(removed_datasets)} marked for removal')
 
         for dataset in removed_datasets:
             logger.info(f"Removing dataset {dataset}")
@@ -336,23 +366,17 @@ class NexusTileService(AbstractTileService):
         return tiles
 
     def get_stats_within_box_at_time(self, min_lat, max_lat, min_lon, max_lon, dataset, time, **kwargs):
-        tiles = self._metadatastore.find_all_tiles_within_box_at_time(min_lat, max_lat, min_lon, max_lon, dataset, time,
-                                                                      **kwargs)
+        return NexusTileService.get_stats_within_box_at_time(
+            min_lat, max_lat, min_lon, max_lon, dataset, time, **kwargs
+        )
 
-        return tiles
-
-    def get_bounding_box(self, tile_ids):
+    def get_bounding_box(self, tile_ids, ds=None):
         """
         Retrieve a bounding box that encompasses all of the tiles represented by the given tile ids.
         :param tile_ids: List of tile ids
         :return: shapely.geometry.Polygon that represents the smallest bounding box that encompasses all of the tiles
         """
-        tiles = self.find_tiles_by_id(tile_ids, fl=['tile_min_lat', 'tile_max_lat', 'tile_min_lon', 'tile_max_lon'],
-                                      fetch_data=False, rows=len(tile_ids))
-        polys = []
-        for tile in tiles:
-            polys.append(box(tile.bbox.min_lon, tile.bbox.min_lat, tile.bbox.max_lon, tile.bbox.max_lat))
-        return box(*MultiPolygon(polys).bounds)
+        return NexusTileService.__get_backend(ds).get_bounding_box(tile_ids, ds)
 
     def get_min_time(self, tile_ids, ds=None):
         """
@@ -361,8 +385,7 @@ class NexusTileService(AbstractTileService):
         :param ds: Filter by a specific dataset. Defaults to None (queries all datasets)
         :return: long time in seconds since epoch
         """
-        min_time = self._metadatastore.find_min_date_from_tiles(tile_ids, ds=ds)
-        return int((min_time - EPOCH).total_seconds())
+        return NexusTileService.__get_backend(ds).get_min_time(tile_ids, ds)
 
     def get_max_time(self, tile_ids, ds=None):
         """
@@ -371,8 +394,7 @@ class NexusTileService(AbstractTileService):
         :param ds: Filter by a specific dataset. Defaults to None (queries all datasets)
         :return: long time in seconds since epoch
         """
-        max_time = self._metadatastore.find_max_date_from_tiles(tile_ids, ds=ds)
-        return int((max_time - EPOCH).total_seconds())
+        return int(NexusTileService.__get_backend(ds).get_max_time(tile_ids))
 
     def get_distinct_bounding_boxes_in_polygon(self, bounding_polygon, ds, start_time, end_time):
         """
@@ -398,33 +420,95 @@ class NexusTileService(AbstractTileService):
         """
         return self._metadatastore.get_tile_count(ds, bounding_polygon, start_time, end_time, metadata, **kwargs)
 
-    def fetch_data_for_tiles(self, *tiles):
+    def mask_tiles_to_bbox(self, min_lat, max_lat, min_lon, max_lon, tiles):
+        for tile in tiles:
+            tile.latitudes = ma.masked_outside(tile.latitudes, min_lat, max_lat)
+            tile.longitudes = ma.masked_outside(tile.longitudes, min_lon, max_lon)
 
-        nexus_tile_ids = set([tile.tile_id for tile in tiles])
-        matched_tile_data = self._datastore.fetch_nexus_tiles(*nexus_tile_ids)
+            # Or together the masks of the individual arrays to create the new mask
+            data_mask = ma.getmaskarray(tile.times)[:, np.newaxis, np.newaxis] \
+                        | ma.getmaskarray(tile.latitudes)[np.newaxis, :, np.newaxis] \
+                        | ma.getmaskarray(tile.longitudes)[np.newaxis, np.newaxis, :]
 
-        tile_data_by_id = {str(a_tile_data.tile_id): a_tile_data for a_tile_data in matched_tile_data}
+            # If this is multi-var, need to mask each variable separately.
+            if tile.is_multi:
+                # Combine space/time mask with existing mask on data
+                data_mask = reduce(np.logical_or, [tile.data[0].mask, data_mask])
 
-        missing_data = nexus_tile_ids.difference(list(tile_data_by_id.keys()))
-        if len(missing_data) > 0:
-            raise Exception("Missing data for tile_id(s) %s." % missing_data)
+                num_vars = len(tile.data)
+                multi_data_mask = np.repeat(data_mask[np.newaxis, ...], num_vars, axis=0)
+                tile.data = ma.masked_where(multi_data_mask, tile.data)
+            else:
+                tile.data = ma.masked_where(data_mask, tile.data)
 
-        for a_tile in tiles:
-            lats, lons, times, data, meta, is_multi_var = tile_data_by_id[a_tile.tile_id].get_lat_lon_time_data_meta()
-
-            a_tile.latitudes = lats
-            a_tile.longitudes = lons
-            a_tile.times = times
-            a_tile.data = data
-            a_tile.meta_data = meta
-            a_tile.is_multi = is_multi_var
-
-            del (tile_data_by_id[a_tile.tile_id])
+        tiles[:] = [tile for tile in tiles if not tile.data.mask.all()]
 
         return tiles
 
-    def _metadata_store_docs_to_tiles(self, *store_docs):
+    def mask_tiles_to_bbox_and_time(self, min_lat, max_lat, min_lon, max_lon, start_time, end_time, tiles):
+        for tile in tiles:
+            tile.times = ma.masked_outside(tile.times, start_time, end_time)
+            tile.latitudes = ma.masked_outside(tile.latitudes, min_lat, max_lat)
+            tile.longitudes = ma.masked_outside(tile.longitudes, min_lon, max_lon)
 
+            # Or together the masks of the individual arrays to create the new mask
+            data_mask = ma.getmaskarray(tile.times)[:, np.newaxis, np.newaxis] \
+                        | ma.getmaskarray(tile.latitudes)[np.newaxis, :, np.newaxis] \
+                        | ma.getmaskarray(tile.longitudes)[np.newaxis, np.newaxis, :]
+
+            tile.data = ma.masked_where(data_mask, tile.data)
+
+        tiles[:] = [tile for tile in tiles if not tile.data.mask.all()]
+
+        return tiles
+
+    def mask_tiles_to_polygon(self, bounding_polygon, tiles):
+
+        min_lon, min_lat, max_lon, max_lat = bounding_polygon.bounds
+
+        return self.mask_tiles_to_bbox(min_lat, max_lat, min_lon, max_lon, tiles)
+
+    def mask_tiles_to_polygon_and_time(self, bounding_polygon, start_time, end_time, tiles):
+        min_lon, min_lat, max_lon, max_lat = bounding_polygon.bounds
+
+        return self.mask_tiles_to_bbox_and_time(min_lat, max_lat, min_lon, max_lon, start_time, end_time, tiles)
+
+    def mask_tiles_to_time_range(self, start_time, end_time, tiles):
+        """
+        Masks data in tiles to specified time range.
+        :param start_time: The start time to search for tiles
+        :param end_time: The end time to search for tiles
+        :param tiles: List of tiles
+        :return: A list tiles with data masked to specified time range
+        """
+        if 0 <= start_time <= end_time:
+            for tile in tiles:
+                tile.times = ma.masked_outside(tile.times, start_time, end_time)
+
+                # Or together the masks of the individual arrays to create the new mask
+                data_mask = ma.getmaskarray(tile.times)[:, np.newaxis, np.newaxis] \
+                            | ma.getmaskarray(tile.latitudes)[np.newaxis, :, np.newaxis] \
+                            | ma.getmaskarray(tile.longitudes)[np.newaxis, np.newaxis, :]
+
+                # If this is multi-var, need to mask each variable separately.
+                if tile.is_multi:
+                    # Combine space/time mask with existing mask on data
+                    data_mask = reduce(np.logical_or, [tile.data[0].mask, data_mask])
+
+                    num_vars = len(tile.data)
+                    multi_data_mask = np.repeat(data_mask[np.newaxis, ...], num_vars, axis=0)
+                    tile.data = ma.masked_where(multi_data_mask, tile.data)
+                else:
+                    tile.data = ma.masked_where(data_mask, tile.data)
+
+            tiles[:] = [tile for tile in tiles if not tile.data.mask.all()]
+
+        return tiles
+
+    def fetch_data_for_tiles(self, *tiles, dataset=None):
+        return NexusTileService.__get_backend(dataset).fetch_data_for_tiles(*tiles)
+
+    def _metadata_store_docs_to_tiles(self, *store_docs):
         tiles = []
         for store_doc in store_docs:
             tile = Tile()
@@ -521,7 +605,6 @@ class NexusTileService(AbstractTileService):
             except KeyError:
                 pass
 
-
             if 'tile_var_name_ss' in store_doc:
                 tile.variables = []
                 for var_name in store_doc['tile_var_name_ss']:
@@ -535,13 +618,6 @@ class NexusTileService(AbstractTileService):
             tiles.append(tile)
 
         return tiles
-
-    def pingSolr(self):
-        status = self._metadatastore.ping()
-        if status and status["status"] == "OK":
-            return True
-        else:
-            return False
 
     @staticmethod
     def _get_config_files(filename):

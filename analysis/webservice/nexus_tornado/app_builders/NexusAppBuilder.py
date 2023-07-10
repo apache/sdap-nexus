@@ -53,7 +53,7 @@ class NexusAppBuilder:
         NexusHandler.executeInitializers(algorithm_config)
 
         self.log.info("Initializing request ThreadPool to %s" % max_request_threads)
-        tile_service_factory = partial(NexusTileService, False, False, algorithm_config)
+        tile_service_factory = partial(NexusTileService, algorithm_config)
         handler_args_builder = HandlerArgsBuilder(
             max_request_threads,
             tile_service_factory,

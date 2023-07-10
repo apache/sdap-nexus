@@ -13,28 +13,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import configparser
-import logging
-import sys
-import json
 from abc import ABC, abstractmethod
-from datetime import datetime
 from functools import reduce
 
 import numpy as np
 import numpy.ma as ma
-import pkg_resources
-from pytz import timezone, UTC
-from shapely.geometry import MultiPolygon, box
-
-from .dao import CassandraProxy
-from .dao import DynamoProxy
-from .dao import S3Proxy
-from .dao import SolrProxy
-from .dao import ElasticsearchProxy
-
-from nexustiles.model.nexusmodel import Tile, BBox, TileStats, TileVariable
-from nexustiles.nexustiles import NexusTileServiceException
 
 
 class AbstractTileService(ABC):
@@ -43,9 +26,9 @@ class AbstractTileService(ABC):
     # def open_dataset(dataset_s, **kwargs):
     #     pass
 
-    @abstractmethod
-    def try_connect(self) -> bool:
-        raise NotImplementedError()
+    # @abstractmethod
+    # def try_connect(self) -> bool:
+    #     raise NotImplementedError()
 
     @abstractmethod
     def get_dataseries_list(self, simple=False):
@@ -193,91 +176,6 @@ class AbstractTileService(ABC):
         """
         raise NotImplementedError()
 
-    def mask_tiles_to_bbox(self, min_lat, max_lat, min_lon, max_lon, tiles):
-        for tile in tiles:
-            tile.latitudes = ma.masked_outside(tile.latitudes, min_lat, max_lat)
-            tile.longitudes = ma.masked_outside(tile.longitudes, min_lon, max_lon)
-
-            # Or together the masks of the individual arrays to create the new mask
-            data_mask = ma.getmaskarray(tile.times)[:, np.newaxis, np.newaxis] \
-                        | ma.getmaskarray(tile.latitudes)[np.newaxis, :, np.newaxis] \
-                        | ma.getmaskarray(tile.longitudes)[np.newaxis, np.newaxis, :]
-
-            # If this is multi-var, need to mask each variable separately.
-            if tile.is_multi:
-                # Combine space/time mask with existing mask on data
-                data_mask = reduce(np.logical_or, [tile.data[0].mask, data_mask])
-
-                num_vars = len(tile.data)
-                multi_data_mask = np.repeat(data_mask[np.newaxis, ...], num_vars, axis=0)
-                tile.data = ma.masked_where(multi_data_mask, tile.data)
-            else:
-                tile.data = ma.masked_where(data_mask, tile.data)
-
-        tiles[:] = [tile for tile in tiles if not tile.data.mask.all()]
-
-        return tiles
-
-    def mask_tiles_to_bbox_and_time(self, min_lat, max_lat, min_lon, max_lon, start_time, end_time, tiles):
-        for tile in tiles:
-            tile.times = ma.masked_outside(tile.times, start_time, end_time)
-            tile.latitudes = ma.masked_outside(tile.latitudes, min_lat, max_lat)
-            tile.longitudes = ma.masked_outside(tile.longitudes, min_lon, max_lon)
-
-            # Or together the masks of the individual arrays to create the new mask
-            data_mask = ma.getmaskarray(tile.times)[:, np.newaxis, np.newaxis] \
-                        | ma.getmaskarray(tile.latitudes)[np.newaxis, :, np.newaxis] \
-                        | ma.getmaskarray(tile.longitudes)[np.newaxis, np.newaxis, :]
-
-            tile.data = ma.masked_where(data_mask, tile.data)
-
-        tiles[:] = [tile for tile in tiles if not tile.data.mask.all()]
-
-        return tiles
-
-    def mask_tiles_to_polygon(self, bounding_polygon, tiles):
-
-        min_lon, min_lat, max_lon, max_lat = bounding_polygon.bounds
-
-        return self.mask_tiles_to_bbox(min_lat, max_lat, min_lon, max_lon, tiles)
-
-    def mask_tiles_to_polygon_and_time(self, bounding_polygon, start_time, end_time, tiles):
-        min_lon, min_lat, max_lon, max_lat = bounding_polygon.bounds
-
-        return self.mask_tiles_to_bbox_and_time(min_lat, max_lat, min_lon, max_lon, start_time, end_time, tiles)
-
-    def mask_tiles_to_time_range(self, start_time, end_time, tiles):
-        """
-        Masks data in tiles to specified time range.
-        :param start_time: The start time to search for tiles
-        :param end_time: The end time to search for tiles
-        :param tiles: List of tiles
-        :return: A list tiles with data masked to specified time range
-        """
-        if 0 <= start_time <= end_time:
-            for tile in tiles:
-                tile.times = ma.masked_outside(tile.times, start_time, end_time)
-
-                # Or together the masks of the individual arrays to create the new mask
-                data_mask = ma.getmaskarray(tile.times)[:, np.newaxis, np.newaxis] \
-                            | ma.getmaskarray(tile.latitudes)[np.newaxis, :, np.newaxis] \
-                            | ma.getmaskarray(tile.longitudes)[np.newaxis, np.newaxis, :]
-
-                # If this is multi-var, need to mask each variable separately.
-                if tile.is_multi:
-                    # Combine space/time mask with existing mask on data
-                    data_mask = reduce(np.logical_or, [tile.data[0].mask, data_mask])
-
-                    num_vars = len(tile.data)
-                    multi_data_mask = np.repeat(data_mask[np.newaxis, ...], num_vars, axis=0)
-                    tile.data = ma.masked_where(multi_data_mask, tile.data)
-                else:
-                    tile.data = ma.masked_where(data_mask, tile.data)
-
-            tiles[:] = [tile for tile in tiles if not tile.data.mask.all()]
-
-        return tiles
-
     @abstractmethod
     def get_tile_count(self, ds, bounding_polygon=None, start_time=0, end_time=-1, metadata=None, **kwargs):
         """
@@ -293,10 +191,6 @@ class AbstractTileService(ABC):
 
     @abstractmethod
     def fetch_data_for_tiles(self, *tiles):
-        raise NotImplementedError()
-
-    @abstractmethod
-    def open_dataset(self, dataset):
         raise NotImplementedError()
 
     @abstractmethod

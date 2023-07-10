@@ -1,0 +1,2 @@
+class NexusTileServiceException(Exception):
+    pass
