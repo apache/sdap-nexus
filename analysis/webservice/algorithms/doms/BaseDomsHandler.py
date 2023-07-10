@@ -267,7 +267,7 @@ class DomsCSVFormatter:
 
             {"Global Attribute": "CDMS_DatasetMetadata", "Value": ', '.join(insituLinks)},
             {"Global Attribute": "CDMS_primary", "Value": params["primary"]},
-            {"Global Attribute": "CDMS_secondary", "Value": ','.join(params['matchup'])},
+            {"Global Attribute": "CDMS_secondary", "Value": ','.join(params['matchup']) if isinstance(params["matchup"], list) else params['matchup']},
             {"Global Attribute": "CDMS_ParameterPrimary", "Value": params.get("parameter", "")},
 
             {"Global Attribute": "CDMS_time_to_complete", "Value": details["timeToComplete"]},
