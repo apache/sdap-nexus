@@ -30,6 +30,9 @@ class AbstractTileService(ABC):
     # def try_connect(self) -> bool:
     #     raise NotImplementedError()
 
+    def __init__(self, dataset_name):
+        self._name = dataset_name
+
     @abstractmethod
     def get_dataseries_list(self, simple=False):
         raise NotImplementedError()

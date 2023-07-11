@@ -37,6 +37,8 @@ from .backends.nexusproto.backend import NexusprotoTileService
 from .backends.zarr.backend import ZarrBackend
 from .model.nexusmodel import Tile, BBox, TileStats, TileVariable
 
+from requests.structures import CaseInsensitiveDict
+
 EPOCH = timezone('UTC').localize(datetime(1970, 1, 1))
 
 logging.basicConfig(
@@ -53,13 +55,27 @@ def tile_data(default_fetch=True):
             metadatastore_start = datetime.now()
             metadatastore_docs = func(*args, **kwargs)
             metadatastore_duration = (datetime.now() - metadatastore_start).total_seconds()
-            tiles = args[0]._metadata_store_docs_to_tiles(*metadatastore_docs)
+
+            # Try to determine source dataset to route calls to proper backend
+            guessed_dataset = None
+
+            if 'ds' in kwargs:
+                guessed_dataset = kwargs['ds']
+            elif 'dataset' in kwargs:
+                guessed_dataset = kwargs['dataset']
+            else:
+                for arg in args:
+                    if arg is not None and arg in NexusTileService.backends:
+                        guessed_dataset = arg
+                        break
+
+            tiles = NexusTileService._get_backend(guessed_dataset)._metadata_store_docs_to_tiles(*metadatastore_docs)
 
             cassandra_duration = 0
             if ('fetch_data' in kwargs and kwargs['fetch_data']) or ('fetch_data' not in kwargs and default_fetch):
                 if len(tiles) > 0:
                     cassandra_start = datetime.now()
-                    args[0].fetch_data_for_tiles(*tiles)
+                    NexusTileService._get_backend(guessed_dataset).fetch_data_for_tiles(*tiles)
                     cassandra_duration += (datetime.now() - cassandra_start).total_seconds()
 
             if 'metrics_callback' in kwargs and kwargs['metrics_callback'] is not None:
@@ -128,7 +144,7 @@ class NexusTileService:
             NexusTileService.__update_thread = threading.Thread(
                 target=NexusTileService.__update_datasets_loop,
                 name='dataset_update',
-                daemon=False
+                daemon=True
             )
 
             logger.info('Starting dataset refresh thread')
@@ -136,7 +152,10 @@ class NexusTileService:
             NexusTileService.__update_thread.start()
 
     @staticmethod
-    def __get_backend(dataset_s) -> AbstractTileService:
+    def _get_backend(dataset_s) -> AbstractTileService:
+        if dataset_s is not None:
+            dataset_s = dataset_s.lower()
+
         with DS_LOCK:
             if dataset_s not in NexusTileService.backends:
                 logger.warning(f'Dataset {dataset_s} not currently loaded. Checking to see if it was recently'
@@ -198,7 +217,7 @@ class NexusTileService:
                     next_cursor_mark = response_cursor_mark
 
                 for dataset in response.docs:
-                    d_id = dataset['dataset_s']
+                    d_id = dataset['dataset_s'].lower()
                     store_type = dataset.get('store_type_s', 'nexusproto')
 
                     present_datasets.add(d_id)
@@ -217,7 +236,7 @@ class NexusTileService:
 
                         ds_config = json.loads(dataset['config'][0])
                         NexusTileService.backends[d_id] = {
-                            'backend': ZarrBackend(**ds_config),
+                            'backend': ZarrBackend(dataset_name=dataset['dataset_s'], **ds_config),
                             'up': True
                         }
                     else:
@@ -251,33 +270,33 @@ class NexusTileService:
 
     @tile_data()
     def find_tile_by_id(self, tile_id, **kwargs):
-        return NexusTileService.__get_backend('__nexusproto__').find_tile_by_id(tile_id)
+        return NexusTileService._get_backend('__nexusproto__').find_tile_by_id(tile_id)
 
     @tile_data()
     def find_tiles_by_id(self, tile_ids, ds=None, **kwargs):
-        return NexusTileService.__get_backend('__nexusproto__').find_tiles_by_id(tile_ids, ds=ds, **kwargs)
+        return NexusTileService._get_backend('__nexusproto__').find_tiles_by_id(tile_ids, ds=ds, **kwargs)
 
     def find_days_in_range_asc(self, min_lat, max_lat, min_lon, max_lon, dataset, start_time, end_time,
                                metrics_callback=None, **kwargs):
-        return NexusTileService.__get_backend(dataset).find_days_in_range_asc(min_lat, max_lat, min_lon, max_lon,
-                                                                              dataset, start_time, end_time,
-                                                                              metrics_callback, **kwargs)
+        return NexusTileService._get_backend(dataset).find_days_in_range_asc(min_lat, max_lat, min_lon, max_lon,
+                                                                             dataset, start_time, end_time,
+                                                                             metrics_callback, **kwargs)
 
     @tile_data()
     def find_tile_by_polygon_and_most_recent_day_of_year(self, bounding_polygon, ds, day_of_year, **kwargs):
-        return NexusTileService.__get_backend(ds).find_tile_by_polygon_and_most_recent_day_of_year(
+        return NexusTileService._get_backend(ds).find_tile_by_polygon_and_most_recent_day_of_year(
             bounding_polygon, ds, day_of_year, **kwargs
         )
 
     @tile_data()
     def find_all_tiles_in_box_at_time(self, min_lat, max_lat, min_lon, max_lon, dataset, time, **kwargs):
-        return NexusTileService.__get_backend(dataset).find_all_tiles_in_box_at_time(
+        return NexusTileService._get_backend(dataset).find_all_tiles_in_box_at_time(
             min_lat, max_lat, min_lon, max_lon, dataset, time, **kwargs
         )
 
     @tile_data()
     def find_all_tiles_in_polygon_at_time(self, bounding_polygon, dataset, time, **kwargs):
-        return NexusTileService.__get_backend(dataset).find_all_tiles_in_polygon_at_time(
+        return NexusTileService._get_backend(dataset).find_all_tiles_in_polygon_at_time(
             bounding_polygon, dataset, time, **kwargs
         )
 
@@ -289,19 +308,19 @@ class NexusTileService:
         if type(end_time) is datetime:
             end_time = (end_time - EPOCH).total_seconds()
 
-        return NexusTileService.__get_backend(ds).find_tiles_in_box(
+        return NexusTileService._get_backend(ds).find_tiles_in_box(
             min_lat, max_lat, min_lon, max_lon, ds, start_time, end_time, **kwargs
         )
 
     @tile_data()
     def find_tiles_in_polygon(self, bounding_polygon, ds=None, start_time=0, end_time=-1, **kwargs):
-        return NexusTileService.__get_backend(ds).find_tiles_in_polygon(
+        return NexusTileService._get_backend(ds).find_tiles_in_polygon(
             bounding_polygon, ds, start_time, end_time, **kwargs
         )
 
     @tile_data()
     def find_tiles_by_metadata(self, metadata, ds=None, start_time=0, end_time=-1, **kwargs):
-        return NexusTileService.__get_backend(ds).find_tiles_by_metadata(
+        return NexusTileService._get_backend(ds).find_tiles_by_metadata(
             metadata, ds, start_time, end_time, **kwargs
         )
 
@@ -334,13 +353,13 @@ class NexusTileService:
         :param kwargs: fetch_data: True/False = whether or not to retrieve tile data
         :return:
         """
-        return NexusTileService.__get_backend(ds).find_tiles_by_exact_bounds(
+        return NexusTileService._get_backend(ds).find_tiles_by_exact_bounds(
             bounds, ds, start_time, end_time, **kwargs
         )
 
     @tile_data()
     def find_all_boundary_tiles_at_time(self, min_lat, max_lat, min_lon, max_lon, dataset, time, **kwargs):
-        return NexusTileService.__get_backend(dataset).find_all_boundary_tiles_at_time(
+        return NexusTileService._get_backend(dataset).find_all_boundary_tiles_at_time(
             min_lat, max_lat, min_lon, max_lon, dataset, time, **kwargs
         )
 
@@ -363,12 +382,12 @@ class NexusTileService:
         return tiles
 
     def get_min_max_time_by_granule(self, ds, granule_name):
-        return NexusTileService.__get_backend(ds).get_min_max_time_by_granule(
+        return NexusTileService._get_backend(ds).get_min_max_time_by_granule(
             ds, granule_name
         )
 
     def get_dataset_overall_stats(self, ds):
-        return NexusTileService.__get_backend(ds).get_dataset_overall_stats(ds)
+        return NexusTileService._get_backend(ds).get_dataset_overall_stats(ds)
 
     def get_tiles_bounded_by_box_at_time(self, min_lat, max_lat, min_lon, max_lon, dataset, time, **kwargs):
         tiles = self.find_all_tiles_in_box_at_time(min_lat, max_lat, min_lon, max_lon, dataset, time, **kwargs)
@@ -399,7 +418,7 @@ class NexusTileService:
         :param tile_ids: List of tile ids
         :return: shapely.geometry.Polygon that represents the smallest bounding box that encompasses all of the tiles
         """
-        return NexusTileService.__get_backend(ds).get_bounding_box(tile_ids, ds)
+        return NexusTileService._get_backend(ds).get_bounding_box(tile_ids, ds)
 
     def get_min_time(self, tile_ids, ds=None):
         """
@@ -408,7 +427,7 @@ class NexusTileService:
         :param ds: Filter by a specific dataset. Defaults to None (queries all datasets)
         :return: long time in seconds since epoch
         """
-        return NexusTileService.__get_backend(ds).get_min_time(tile_ids, ds)
+        return NexusTileService._get_backend(ds).get_min_time(tile_ids, ds)
 
     def get_max_time(self, tile_ids, ds=None):
         """
@@ -417,7 +436,7 @@ class NexusTileService:
         :param ds: Filter by a specific dataset. Defaults to None (queries all datasets)
         :return: long time in seconds since epoch
         """
-        return int(NexusTileService.__get_backend(ds).get_max_time(tile_ids))
+        return int(NexusTileService._get_backend(ds).get_max_time(tile_ids))
 
     def get_distinct_bounding_boxes_in_polygon(self, bounding_polygon, ds, start_time, end_time):
         """
@@ -528,8 +547,10 @@ class NexusTileService:
 
         return tiles
 
-    def fetch_data_for_tiles(self, *tiles, dataset=None):
-        return NexusTileService.__get_backend(dataset).fetch_data_for_tiles(*tiles)
+    def fetch_data_for_tiles(self, *tiles):
+        dataset = tiles[0].dataset
+
+        return NexusTileService._get_backend(dataset).fetch_data_for_tiles(*tiles)
 
     def _metadata_store_docs_to_tiles(self, *store_docs):
         tiles = []

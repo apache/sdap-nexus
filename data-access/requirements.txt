@@ -22,3 +22,4 @@ nexusproto
 Shapely
 s3fs
 fsspec
+xarray~=2022.3.0

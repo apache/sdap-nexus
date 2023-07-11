@@ -30,20 +30,72 @@ from nexustiles.model.nexusmodel import Tile, BBox, TileStats, TileVariable
 from nexustiles.exception import NexusTileServiceException
 from nexustiles.AbstractTileService import AbstractTileService
 
+from yarl import URL
+
+import xarray as xr
+import s3fs
+from urllib.parse import urlparse
+
 EPOCH = timezone('UTC').localize(datetime(1970, 1, 1))
 
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     datefmt="%Y-%m-%dT%H:%M:%S", stream=sys.stdout)
-logger = logging.getLogger("testing")
+logger = logging.getLogger()
 
 
 class ZarrBackend(AbstractTileService):
-    def __init__(self, path, config):
-        AbstractTileService.__init__(self)
-        self.__config = config
-        
+    def __init__(self, dataset_name, path, config=None):
+        AbstractTileService.__init__(self, dataset_name)
+        self.__config = config if config is not None else {}
+
+        logger.info(f'Opening zarr backend at {path} for dataset {self._name}')
+
+        url = urlparse(path)
+
+        self.__url = path
+
+        self.__store_type = url.scheme
+        self.__host = url.netloc
+        self.__path = url.path
+
+        if 'variable' in config:
+            data_vars = config['variable']
+        elif 'variables' in config:
+            data_vars = config['variables']
+        else:
+            raise KeyError('Data variables not provided in config')
+
+        if isinstance(data_vars, str):
+            self.__variables = [data_vars]
+        elif isinstance(data_vars, list):
+            self.__variables = data_vars
+        else:
+            raise TypeError(f'Improper type for variables config: {type(data_vars)}')
+
+        self.__longitude = config['coords']['longitude']
+        self.__latitude = config['coords']['latitude']
+        self.__time = config['coords']['time']
+
+        self.__depth = config['coords'].get('depth')
+
+        if self.__store_type in ['', 'file']:
+            store = self.__path
+        elif self.__store_type == 's3':
+            aws_cfg = self.__config['aws']
+
+            if aws_cfg['public']:
+                region = aws_cfg.get('region', 'us-west-2')
+                store = f'https://{self.__host}.s3.{region}.amazonaws.com{self.__path}'
+            else:
+                s3 = s3fs.S3FileSystem(False, key=aws_cfg['accessKeyID'], secret=aws_cfg['secretAccessKey'])
+                store = s3fs.S3Map(root=path, s3=s3, check=False)
+        else:
+            raise ValueError(self.__store_type)
+
+        self.__ds: xr.Dataset = xr.open_zarr(store, consolidated=True)
+
     def get_dataseries_list(self, simple=False):
         raise NotImplementedError()
 
@@ -89,10 +141,31 @@ class ZarrBackend(AbstractTileService):
         raise NotImplementedError()
 
     def find_tiles_in_box(self, min_lat, max_lat, min_lon, max_lon, ds=None, start_time=0, end_time=-1, **kwargs):
-        # Find tiles that fall in the given box in the Solr index
-        raise NotImplementedError()
+        if type(start_time) is datetime:
+            start_time = (start_time - EPOCH).total_seconds()
+        if type(end_time) is datetime:
+            end_time = (end_time - EPOCH).total_seconds()
 
-    def find_tiles_in_polygon(self, bounding_polygon, ds=None, start_time=0, end_time=-1, **kwargs):
+        params = {
+            'min_lat': min_lat,
+            'max_lat': max_lat,
+            'min_lon': min_lon,
+            'max_lon': max_lon
+        }
+
+        if 0 <= start_time <= end_time:
+            params['min_time'] = start_time
+            params['max_time'] = end_time
+
+        if 'depth' in kwargs:
+            params['depth'] = kwargs['depth']
+        elif 'min_depth' in kwargs or 'max_depth' in kwargs:
+            params['min_depth'] = kwargs.get('min_depth')
+            params['max_depth'] = kwargs.get('max_depth')
+
+        return [ZarrBackend.__to_url(self._name, **params)]
+
+    def find_tiles_in_polygon(self, bounding_polygon, ds=None, start_time=None, end_time=None, **kwargs):
         # Find tiles that fall within the polygon in the Solr index
         raise NotImplementedError()
 
@@ -184,10 +257,110 @@ class ZarrBackend(AbstractTileService):
         raise NotImplementedError()
 
     def fetch_data_for_tiles(self, *tiles):
-        raise NotImplementedError()
+        for tile in tiles:
+            self.__fetch_data_for_tile(tile)
+
+        return tiles
+
+    def __fetch_data_for_tile(self, tile: Tile):
+        bbox: BBox = tile.bbox
+
+        min_lat = None
+        min_lon = None
+        max_lat = None
+        max_lon = None
+
+        min_time = float(tile.min_time)
+        max_time = float(tile.max_time)
+
+        if min_time:
+            min_time = datetime.fromtimestamp(min_time)
+
+        if max_time:
+            max_time = datetime.fromtimestamp(max_time)
+
+        if bbox:
+            min_lat = bbox.min_lat
+            min_lon = bbox.min_lon
+            max_lat = bbox.max_lat
+            max_lon = bbox.max_lon
+
+        sel = {
+            self.__latitude: slice(min_lat, max_lat),
+            self.__longitude: slice(min_lon, max_lon),
+            self.__time: slice(min_time, max_time)
+        }
+
+        tile.variables = [
+            TileVariable(v, v) for v in self.__variables
+        ]
+
+        matched = self.__ds.sel(sel)
+
+        tile.latitudes = ma.masked_invalid(matched[self.__latitude].to_numpy())
+        tile.longitudes = ma.masked_invalid(matched[self.__longitude].to_numpy())
+
+        times = matched[self.__time].to_numpy()
+
+        if np.issubdtype(times.dtype, np.datetime64):
+            times = ((times - np.datetime64(EPOCH)) / 1e9).astype(int)
+
+        tile.times = ma.masked_invalid(times)
+
+        tile.data = ma.masked_invalid(
+            [matched[var].to_numpy() for var in self.__variables]
+        )
+
+        tile.is_multi = True
 
     def _metadata_store_docs_to_tiles(self, *store_docs):
-        raise NotImplementedError()
+        return [ZarrBackend.__nts_url_to_tile(d) for d in store_docs]
 
+    @staticmethod
+    def __nts_url_to_tile(nts_url):
+        tile = Tile()
+
+        url = URL(nts_url)
+
+        tile.tile_id = nts_url
+
+        try:
+            min_lat = float(url.query['min_lat'])
+            min_lon = float(url.query['min_lon'])
+            max_lat = float(url.query['max_lat'])
+            max_lon = float(url.query['max_lon'])
+
+            tile.bbox = BBox(min_lat, max_lat, min_lon, max_lon)
+        except KeyError:
+            pass
+
+        tile.dataset = url.host
+
+        try:
+            tile.min_time = int(url.query['min_time'])
+        except KeyError:
+            pass
+
+        try:
+            tile.max_time = int(url.query['max_time'])
+        except KeyError:
+            pass
+
+        return tile
+
+    @staticmethod
+    def __to_url(dataset, **kwargs):
+        if 'dataset' in kwargs:
+            del kwargs['dataset']
+
+        if 'ds' in kwargs:
+            del kwargs['ds']
+
+        return str(URL.build(
+            scheme='nts',
+            host=dataset,
+            path='/',
+            query=kwargs
+        ))
 
 

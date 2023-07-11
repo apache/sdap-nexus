@@ -38,16 +38,12 @@ from nexustiles.AbstractTileService import AbstractTileService
 
 EPOCH = timezone('UTC').localize(datetime(1970, 1, 1))
 
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    datefmt="%Y-%m-%dT%H:%M:%S", stream=sys.stdout)
-logger = logging.getLogger("testing")
+logger = logging.getLogger(__name__)
 
 
 class NexusprotoTileService(AbstractTileService):
     def __init__(self, skipDatastore=False, skipMetadatastore=False, config=None):
-        AbstractTileService.__init__(self)
+        AbstractTileService.__init__(self, None)
         self._datastore = None
         self._metadatastore = None
 
