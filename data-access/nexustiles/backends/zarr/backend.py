@@ -123,14 +123,38 @@ class ZarrBackend(AbstractTileService):
         return [ds]
 
     def find_tile_by_id(self, tile_id, **kwargs):
-        raise NotImplementedError()
+        return tile_id
 
     def find_tiles_by_id(self, tile_ids, ds=None, **kwargs):
-        raise NotImplementedError()
+        return tile_ids
 
     def find_days_in_range_asc(self, min_lat, max_lat, min_lon, max_lon, dataset, start_time, end_time,
                                metrics_callback=None, **kwargs):
-        raise NotImplementedError()
+        start = datetime.now()
+
+        if not isinstance(start_time, datetime):
+            start_time = datetime.fromtimestamp(start_time)
+
+        if not isinstance(end_time, datetime):
+            end_time = datetime.fromtimestamp(end_time)
+
+        sel = {
+            self.__latitude: slice(min_lat, max_lat),
+            self.__longitude: slice(min_lon, max_lon),
+            self.__time: slice(start_time, end_time)
+        }
+
+        times = self.__ds.sel(sel)[self.__time].to_numpy()
+
+        if np.issubdtype(times.dtype, np.datetime64):
+            times = ((times - np.datetime64(EPOCH)) / 1e9).astype(int)
+
+        times = sorted(list(times))
+
+        if metrics_callback:
+            metrics_callback(backend=(datetime.now() - start).total_seconds())
+
+        return times
 
     def find_tile_by_polygon_and_most_recent_day_of_year(self, bounding_polygon, ds, day_of_year, **kwargs):
         """
@@ -158,10 +182,10 @@ class ZarrBackend(AbstractTileService):
         raise NotImplementedError()
 
     def find_all_tiles_in_box_at_time(self, min_lat, max_lat, min_lon, max_lon, dataset, time, **kwargs):
-        raise NotImplementedError()
+        return self.find_tiles_in_box(min_lat, max_lat, min_lon, max_lon, dataset, time, time, **kwargs)
 
     def find_all_tiles_in_polygon_at_time(self, bounding_polygon, dataset, time, **kwargs):
-        raise NotImplementedError()
+        return self.find_tiles_in_polygon(bounding_polygon, dataset, time, time, **kwargs)
 
     def find_tiles_in_box(self, min_lat, max_lat, min_lon, max_lon, ds=None, start_time=0, end_time=-1, **kwargs):
         if type(start_time) is datetime:
@@ -190,7 +214,14 @@ class ZarrBackend(AbstractTileService):
 
     def find_tiles_in_polygon(self, bounding_polygon, ds=None, start_time=None, end_time=None, **kwargs):
         # Find tiles that fall within the polygon in the Solr index
-        raise NotImplementedError()
+        bounds = bounding_polygon.bounds
+
+        min_lon = bounds[0]
+        min_lat = bounds[1]
+        max_lon = bounds[2]
+        max_lat = bounds[3]
+
+        return self.find_tiles_in_box(min_lat, max_lat, min_lon, max_lon, ds, start_time, end_time, **kwargs)
 
     def find_tiles_by_metadata(self, metadata, ds=None, start_time=0, end_time=-1, **kwargs):
         """
@@ -216,10 +247,17 @@ class ZarrBackend(AbstractTileService):
         :param kwargs: fetch_data: True/False = whether or not to retrieve tile data
         :return:
         """
-        raise NotImplementedError()
+        min_lon = bounds[0]
+        min_lat = bounds[1]
+        max_lon = bounds[2]
+        max_lat = bounds[3]
+
+        return self.find_tiles_in_box(min_lat, max_lat, min_lon, max_lon, ds, start_time, end_time, **kwargs)
 
     def find_all_boundary_tiles_at_time(self, min_lat, max_lat, min_lon, max_lon, dataset, time, **kwargs):
-        raise NotImplementedError()
+        # Due to the precise nature of gridded Zarr's subsetting, it doesn't make sense to have a boundary region like
+        # this
+        return []
 
     def get_min_max_time_by_granule(self, ds, granule_name):
         raise NotImplementedError()
@@ -236,7 +274,20 @@ class ZarrBackend(AbstractTileService):
         :param tile_ids: List of tile ids
         :return: shapely.geometry.Polygon that represents the smallest bounding box that encompasses all of the tiles
         """
-        raise NotImplementedError()
+
+        bounds = [
+            (
+                float(URL(u).query['min_lon']),
+                float(URL(u).query['min_lat']),
+                float(URL(u).query['max_lon']),
+                float(URL(u).query['max_lat'])
+            )
+            for u in tile_ids
+        ]
+
+        poly = MultiPolygon([box(*b) for b in bounds])
+
+        return box(*poly.bounds)
 
     def __get_ds_min_max_date(self):
         min_date = self.__ds[self.__time].min().to_numpy()
@@ -257,11 +308,13 @@ class ZarrBackend(AbstractTileService):
         :param ds: Filter by a specific dataset. Defaults to None (queries all datasets)
         :return: long time in seconds since epoch
         """
-        if len(tile_ids) == 0:
+        times = list(filter(lambda x: x is not None, [int(URL(tid).query['min_time']) for tid in tile_ids]))
+
+        if len(times) == 0:
             min_date, max_date = self.__get_ds_min_max_date()
             return min_date
         else:
-            raise NotImplementedError()
+            return min(times)
 
     def get_max_time(self, tile_ids, ds=None):
         """
@@ -270,11 +323,13 @@ class ZarrBackend(AbstractTileService):
         :param ds: Filter by a specific dataset. Defaults to None (queries all datasets)
         :return: long time in seconds since epoch
         """
+        times = list(filter(lambda x: x is not None, [int(URL(tid).query['max_time']) for tid in tile_ids]))
+
         if len(tile_ids) == 0:
             min_date, max_date = self.__get_ds_min_max_date()
             return max_date
         else:
-            raise NotImplementedError()
+            max(times)
 
     def get_distinct_bounding_boxes_in_polygon(self, bounding_polygon, ds, start_time, end_time):
         """
@@ -331,14 +386,20 @@ class ZarrBackend(AbstractTileService):
         sel = {
             self.__latitude: slice(min_lat, max_lat),
             self.__longitude: slice(min_lon, max_lon),
-            self.__time: slice(min_time, max_time)
         }
+
+        if min_time == max_time:
+            sel[self.__time] = min_time
+            method = 'nearest'
+        else:
+            sel[self.__time] = slice(min_time, max_time)
+            method = None
 
         tile.variables = [
             TileVariable(v, v) for v in self.__variables
         ]
 
-        matched = self.__ds.sel(sel)
+        matched = self.__ds.sel(sel, method=method)
 
         tile.latitudes = ma.masked_invalid(matched[self.__latitude].to_numpy())
         tile.longitudes = ma.masked_invalid(matched[self.__longitude].to_numpy())
