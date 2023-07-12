@@ -286,13 +286,16 @@ class NexusTileService:
 
 
     @tile_data()
+    @catch_not_implemented
     def find_tile_by_id(self, tile_id, **kwargs):
         return NexusTileService._get_backend('__nexusproto__').find_tile_by_id(tile_id)
 
     @tile_data()
+    @catch_not_implemented
     def find_tiles_by_id(self, tile_ids, ds=None, **kwargs):
-        return NexusTileService._get_backend('__nexusproto__').find_tiles_by_id(tile_ids, ds=ds, **kwargs)
+        return NexusTileService._get_backend(ds).find_tiles_by_id(tile_ids, ds=ds, **kwargs)
 
+    @catch_not_implemented
     def find_days_in_range_asc(self, min_lat, max_lat, min_lon, max_lon, dataset, start_time, end_time,
                                metrics_callback=None, **kwargs):
         return NexusTileService._get_backend(dataset).find_days_in_range_asc(min_lat, max_lat, min_lon, max_lon,
@@ -300,24 +303,28 @@ class NexusTileService:
                                                                              metrics_callback, **kwargs)
 
     @tile_data()
+    @catch_not_implemented
     def find_tile_by_polygon_and_most_recent_day_of_year(self, bounding_polygon, ds, day_of_year, **kwargs):
         return NexusTileService._get_backend(ds).find_tile_by_polygon_and_most_recent_day_of_year(
             bounding_polygon, ds, day_of_year, **kwargs
         )
 
     @tile_data()
+    @catch_not_implemented
     def find_all_tiles_in_box_at_time(self, min_lat, max_lat, min_lon, max_lon, dataset, time, **kwargs):
         return NexusTileService._get_backend(dataset).find_all_tiles_in_box_at_time(
             min_lat, max_lat, min_lon, max_lon, dataset, time, **kwargs
         )
 
     @tile_data()
+    @catch_not_implemented
     def find_all_tiles_in_polygon_at_time(self, bounding_polygon, dataset, time, **kwargs):
         return NexusTileService._get_backend(dataset).find_all_tiles_in_polygon_at_time(
             bounding_polygon, dataset, time, **kwargs
         )
 
     @tile_data()
+    @catch_not_implemented
     def find_tiles_in_box(self, min_lat, max_lat, min_lon, max_lon, ds=None, start_time=0, end_time=-1, **kwargs):
         # Find tiles that fall in the given box in the Solr index
         if type(start_time) is datetime:
@@ -330,12 +337,14 @@ class NexusTileService:
         )
 
     @tile_data()
+    @catch_not_implemented
     def find_tiles_in_polygon(self, bounding_polygon, ds=None, start_time=0, end_time=-1, **kwargs):
         return NexusTileService._get_backend(ds).find_tiles_in_polygon(
             bounding_polygon, ds, start_time, end_time, **kwargs
         )
 
     @tile_data()
+    @catch_not_implemented
     def find_tiles_by_metadata(self, metadata, ds=None, start_time=0, end_time=-1, **kwargs):
         return NexusTileService._get_backend(ds).find_tiles_by_metadata(
             metadata, ds, start_time, end_time, **kwargs
@@ -357,6 +366,7 @@ class NexusTileService:
         return tiles
 
     @tile_data()
+    @catch_not_implemented
     def find_tiles_by_exact_bounds(self, bounds, ds, start_time, end_time, **kwargs):
         """
         The method will return tiles with the exact given bounds within the time range. It differs from
@@ -375,6 +385,7 @@ class NexusTileService:
         )
 
     @tile_data()
+    @catch_not_implemented
     def find_all_boundary_tiles_at_time(self, min_lat, max_lat, min_lon, max_lon, dataset, time, **kwargs):
         return NexusTileService._get_backend(dataset).find_all_boundary_tiles_at_time(
             min_lat, max_lat, min_lon, max_lon, dataset, time, **kwargs
@@ -398,11 +409,13 @@ class NexusTileService:
 
         return tiles
 
+    @catch_not_implemented
     def get_min_max_time_by_granule(self, ds, granule_name):
         return NexusTileService._get_backend(ds).get_min_max_time_by_granule(
             ds, granule_name
         )
 
+    @catch_not_implemented
     def get_dataset_overall_stats(self, ds):
         return NexusTileService._get_backend(ds).get_dataset_overall_stats(ds)
 
@@ -424,6 +437,7 @@ class NexusTileService:
 
         return tiles
 
+    @catch_not_implemented
     def get_stats_within_box_at_time(self, min_lat, max_lat, min_lon, max_lon, dataset, time, **kwargs):
         return NexusTileService.get_stats_within_box_at_time(
             min_lat, max_lat, min_lon, max_lon, dataset, time, **kwargs
@@ -435,7 +449,7 @@ class NexusTileService:
         :param tile_ids: List of tile ids
         :return: shapely.geometry.Polygon that represents the smallest bounding box that encompasses all of the tiles
         """
-        return NexusTileService._get_backend(ds).get_bounding_box(tile_ids, ds)
+        return NexusTileService._get_backend(ds).get_bounding_box(tile_ids)
 
     def get_min_time(self, tile_ids, ds=None):
         """
