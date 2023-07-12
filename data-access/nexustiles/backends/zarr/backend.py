@@ -37,12 +37,13 @@ import s3fs
 from urllib.parse import urlparse
 
 EPOCH = timezone('UTC').localize(datetime(1970, 1, 1))
+ISO_8601 = '%Y-%m-%dT%H:%M:%S%z'
 
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     datefmt="%Y-%m-%dT%H:%M:%S", stream=sys.stdout)
-logger = logging.getLogger()
+logger = logging.getLogger(__name__)
 
 
 class ZarrBackend(AbstractTileService):
@@ -83,21 +84,43 @@ class ZarrBackend(AbstractTileService):
         if self.__store_type in ['', 'file']:
             store = self.__path
         elif self.__store_type == 's3':
-            aws_cfg = self.__config['aws']
+            try:
+                aws_cfg = self.__config['aws']
 
-            if aws_cfg['public']:
-                region = aws_cfg.get('region', 'us-west-2')
-                store = f'https://{self.__host}.s3.{region}.amazonaws.com{self.__path}'
-            else:
-                s3 = s3fs.S3FileSystem(False, key=aws_cfg['accessKeyID'], secret=aws_cfg['secretAccessKey'])
-                store = s3fs.S3Map(root=path, s3=s3, check=False)
+                if aws_cfg['public']:
+                    region = aws_cfg.get('region', 'us-west-2')
+                    store = f'https://{self.__host}.s3.{region}.amazonaws.com{self.__path}'
+                else:
+                    s3 = s3fs.S3FileSystem(False, key=aws_cfg['accessKeyID'], secret=aws_cfg['secretAccessKey'])
+                    store = s3fs.S3Map(root=path, s3=s3, check=False)
+            except Exception as e:
+                logger.error(f'Failed to open zarr dataset at {self.__path}, ignoring it. Cause: {e}')
+                raise NexusTileServiceException(f'Cannot open S3 dataset ({e})')
         else:
             raise ValueError(self.__store_type)
 
-        self.__ds: xr.Dataset = xr.open_zarr(store, consolidated=True)
+        try:
+            self.__ds: xr.Dataset = xr.open_zarr(store, consolidated=True)
+        except Exception as e:
+            logger.error(f'Failed to open zarr dataset at {self.__path}, ignoring it. Cause: {e}')
+            raise NexusTileServiceException(f'Cannot open dataset ({e})')
 
     def get_dataseries_list(self, simple=False):
-        raise NotImplementedError()
+        ds = {
+            "shortName": self._name,
+            "title": self._name,
+            "type": "zarr"
+        }
+
+        if not simple:
+            min_date = self.get_min_time([])
+            max_date = self.get_max_time([])
+            ds['start'] = min_date
+            ds['end'] = max_date
+            ds['iso_start'] = datetime.fromtimestamp(min_date).strftime(ISO_8601)
+            ds['iso_end'] = datetime.fromtimestamp(max_date).strftime(ISO_8601)
+
+        return [ds]
 
     def find_tile_by_id(self, tile_id, **kwargs):
         raise NotImplementedError()
@@ -215,6 +238,18 @@ class ZarrBackend(AbstractTileService):
         """
         raise NotImplementedError()
 
+    def __get_ds_min_max_date(self):
+        min_date = self.__ds[self.__time].min().to_numpy()
+        max_date = self.__ds[self.__time].max().to_numpy()
+
+        if np.issubdtype(min_date.dtype, np.datetime64):
+            min_date = ((min_date - np.datetime64(EPOCH)) / 1e9).astype(int).item()
+
+        if np.issubdtype(max_date.dtype, np.datetime64):
+            max_date = ((max_date - np.datetime64(EPOCH)) / 1e9).astype(int).item()
+
+        return min_date, max_date
+
     def get_min_time(self, tile_ids, ds=None):
         """
         Get the minimum tile date from the list of tile ids
@@ -222,7 +257,11 @@ class ZarrBackend(AbstractTileService):
         :param ds: Filter by a specific dataset. Defaults to None (queries all datasets)
         :return: long time in seconds since epoch
         """
-        raise NotImplementedError()
+        if len(tile_ids) == 0:
+            min_date, max_date = self.__get_ds_min_max_date()
+            return min_date
+        else:
+            raise NotImplementedError()
 
     def get_max_time(self, tile_ids, ds=None):
         """
@@ -231,7 +270,11 @@ class ZarrBackend(AbstractTileService):
         :param ds: Filter by a specific dataset. Defaults to None (queries all datasets)
         :return: long time in seconds since epoch
         """
-        raise NotImplementedError()
+        if len(tile_ids) == 0:
+            min_date, max_date = self.__get_ds_min_max_date()
+            return max_date
+        else:
+            raise NotImplementedError()
 
     def get_distinct_bounding_boxes_in_polygon(self, bounding_polygon, ds, start_time, end_time):
         """
@@ -334,7 +377,7 @@ class ZarrBackend(AbstractTileService):
         except KeyError:
             pass
 
-        tile.dataset = url.host
+        tile.dataset = url.path
 
         try:
             tile.min_time = int(url.query['min_time'])
@@ -358,8 +401,8 @@ class ZarrBackend(AbstractTileService):
 
         return str(URL.build(
             scheme='nts',
-            host=dataset,
-            path='/',
+            host='',
+            path=dataset,
             query=kwargs
         ))
 

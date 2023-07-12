@@ -14,4 +14,5 @@
 # limitations under the License.
 
 class NexusTileServiceException(Exception):
-    pass
+    def __init__(self, reason):
+        Exception.__init__(self, reason)

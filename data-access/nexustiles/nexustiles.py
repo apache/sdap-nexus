@@ -37,6 +37,8 @@ from .backends.nexusproto.backend import NexusprotoTileService
 from .backends.zarr.backend import ZarrBackend
 from .model.nexusmodel import Tile, BBox, TileStats, TileVariable
 
+from .exception import NexusTileServiceException
+
 from requests.structures import CaseInsensitiveDict
 
 EPOCH = timezone('UTC').localize(datetime(1970, 1, 1))
@@ -91,6 +93,16 @@ def tile_data(default_fetch=True):
         return fetch_data_for_func
 
     return tile_data_decorator
+
+
+def catch_not_implemented(func):
+    def wrapper(*args, **kwargs):
+        try:
+            return func(*args, **kwargs)
+        except NotImplementedError:
+            raise NexusTileServiceException('Action unsupported by backend')
+
+    return wrapper
 
 
 SOLR_LOCK = threading.Lock()
@@ -154,7 +166,7 @@ class NexusTileService:
     @staticmethod
     def _get_backend(dataset_s) -> AbstractTileService:
         if dataset_s is not None:
-            dataset_s = dataset_s.lower()
+            dataset_s = dataset_s
 
         with DS_LOCK:
             if dataset_s not in NexusTileService.backends:
@@ -217,7 +229,7 @@ class NexusTileService:
                     next_cursor_mark = response_cursor_mark
 
                 for dataset in response.docs:
-                    d_id = dataset['dataset_s'].lower()
+                    d_id = dataset['dataset_s']
                     store_type = dataset.get('store_type_s', 'nexusproto')
 
                     present_datasets.add(d_id)
@@ -235,10 +247,13 @@ class NexusTileService:
                         update_logger.info(f"Detected new zarr dataset {d_id}, opening new zarr backend")
 
                         ds_config = json.loads(dataset['config'][0])
-                        NexusTileService.backends[d_id] = {
-                            'backend': ZarrBackend(dataset_name=dataset['dataset_s'], **ds_config),
-                            'up': True
-                        }
+                        try:
+                            NexusTileService.backends[d_id] = {
+                                'backend': ZarrBackend(dataset_name=dataset['dataset_s'], **ds_config),
+                                'up': True
+                            }
+                        except NexusTileServiceException:
+                            added_datasets -= 1
                     else:
                         update_logger.warning(f'Unsupported backend {store_type} for dataset {d_id}')
                         added_datasets -= 1
@@ -263,10 +278,12 @@ class NexusTileService:
                         self._config.set(section, option, config.get(section, option))
 
     def get_dataseries_list(self, simple=False):
-        if simple:
-            return self._metadatastore.get_data_series_list_simple()
-        else:
-            return self._metadatastore.get_data_series_list()
+        datasets = []
+        for backend in set([b['backend'] for b in NexusTileService.backends.values() if b['up']]):
+            datasets.extend(backend.get_dataseries_list(simple))
+
+        return datasets
+
 
     @tile_data()
     def find_tile_by_id(self, tile_id, **kwargs):
