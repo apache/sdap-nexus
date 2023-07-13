@@ -13,28 +13,21 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import configparser
 import logging
 import sys
-import json
 from datetime import datetime
-from functools import reduce
+from urllib.parse import urlparse
 
 import numpy as np
 import numpy.ma as ma
-import pkg_resources
-from pytz import timezone, UTC
-from shapely.geometry import MultiPolygon, box
-
-from nexustiles.model.nexusmodel import Tile, BBox, TileStats, TileVariable
-from nexustiles.exception import NexusTileServiceException
-from nexustiles.AbstractTileService import AbstractTileService
-
-from yarl import URL
-
-import xarray as xr
 import s3fs
-from urllib.parse import urlparse
+import xarray as xr
+from nexustiles.AbstractTileService import AbstractTileService
+from nexustiles.exception import NexusTileServiceException
+from nexustiles.model.nexusmodel import Tile, BBox, TileVariable
+from pytz import timezone
+from shapely.geometry import MultiPolygon, box
+from yarl import URL
 
 EPOCH = timezone('UTC').localize(datetime(1970, 1, 1))
 ISO_8601 = '%Y-%m-%dT%H:%M:%S%z'

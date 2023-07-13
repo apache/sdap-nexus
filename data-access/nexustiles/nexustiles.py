@@ -67,7 +67,7 @@ def tile_data(default_fetch=True):
                 guessed_dataset = kwargs['dataset']
             else:
                 for arg in args:
-                    if arg is not None and arg in NexusTileService.backends:
+                    if isinstance(arg, str) and arg in NexusTileService.backends:
                         guessed_dataset = arg
                         break
 
@@ -178,13 +178,13 @@ class NexusTileService:
 
             b = NexusTileService.backends[dataset_s]
 
-            if not b['up']:
-                success = b['backend'].try_connect()
-
-                if not success:
-                    raise NexusProcessingException(reason=f'Dataset {dataset_s} is currently unavailable')
-                else:
-                    NexusTileService.backends[dataset_s]['up'] = True
+            # if not b['up']:
+            #     success = b['backend'].try_connect()
+            #
+            #     if not success:
+            #         raise NexusProcessingException(reason=f'Dataset {dataset_s} is currently unavailable')
+            #     else:
+            #         NexusTileService.backends[dataset_s]['up'] = True
 
             return b['backend']
 

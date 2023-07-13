@@ -269,6 +269,9 @@ class NexusprotoTileService(AbstractTileService):
         """
         tiles = self.find_tiles_by_id(tile_ids, fl=['tile_min_lat', 'tile_max_lat', 'tile_min_lon', 'tile_max_lon'],
                                       fetch_data=False, rows=len(tile_ids))
+
+        tiles = self._metadata_store_docs_to_tiles(*tiles)
+
         polys = []
         for tile in tiles:
             polys.append(box(tile.bbox.min_lon, tile.bbox.min_lat, tile.bbox.max_lon, tile.bbox.max_lat))
