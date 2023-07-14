@@ -28,6 +28,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Deletebyquery: Parameter to set the number of rows to fetch from Solr. Speeds up time to gather tiles to delete; especially when there is a lot of them.
 - Added Saildrone's `baja_2018` insitu dataset.
 - SDAP-454: Added new query parameter `prioritizeDistance` to matchup algorithm
+- SDAP-476: Support for service accounts for handling AWS credentials
 - SDAP-459: Added explicit definitions of min/max lat/lon values in nexustiles Solr collection creation script
 ### Changed
 - SDAP-443:
