@@ -188,13 +188,12 @@ class NexusTileService:
 
             return b['backend']
 
+
     @staticmethod
-    def _update_datasets():
+    def _get_datasets_store():
         solr_url = NexusTileService.ds_config.get("solr", "host")
         solr_core = NexusTileService.ds_config.get("solr", "core")
         solr_kwargs = {}
-
-        update_logger = logging.getLogger("nexus-tile-svc.backends")
 
         if NexusTileService.ds_config.has_option("solr", "time_out"):
             solr_kwargs["timeout"] = NexusTileService.ds_config.get("solr", "time_out")
@@ -208,55 +207,62 @@ class NexusTileService:
 
             solrcon = solrcon
 
-            update_logger.info('Executing Solr query to check for new datasets')
+            return solrcon
 
-            present_datasets = {None, '__nexusproto__'}
-            next_cursor_mark = '*'
+    @staticmethod
+    def _update_datasets():
+        update_logger = logging.getLogger("nexus-tile-svc.backends")
+        solrcon = NexusTileService._get_datasets_store()
 
-            added_datasets = 0
+        update_logger.info('Executing Solr query to check for new datasets')
 
-            while True:
-                response = solrcon.search('*:*', cursorMark=next_cursor_mark, sort='id asc')
+        present_datasets = {None, '__nexusproto__'}
+        next_cursor_mark = '*'
 
-                try:
-                    response_cursor_mark = response.nextCursorMark
-                except AttributeError:
-                    break
+        added_datasets = 0
 
-                if response_cursor_mark == next_cursor_mark:
-                    break
-                else:
-                    next_cursor_mark = response_cursor_mark
+        while True:
+            response = solrcon.search('*:*', cursorMark=next_cursor_mark, sort='id asc')
 
-                for dataset in response.docs:
-                    d_id = dataset['dataset_s']
-                    store_type = dataset.get('store_type_s', 'nexusproto')
+            try:
+                response_cursor_mark = response.nextCursorMark
+            except AttributeError:
+                break
 
-                    present_datasets.add(d_id)
+            if response_cursor_mark == next_cursor_mark:
+                break
+            else:
+                next_cursor_mark = response_cursor_mark
 
-                    if d_id in NexusTileService.backends:
-                        continue
-                        # is_up = NexusTileService.backends[d_id]['backend'].try_connect()
+            for dataset in response.docs:
+                d_id = dataset['dataset_s']
+                store_type = dataset.get('store_type_s', 'nexusproto')
 
-                    added_datasets += 1
+                present_datasets.add(d_id)
 
-                    if store_type == 'nexus_proto' or store_type == 'nexusproto':
-                        update_logger.info(f"Detected new nexusproto dataset {d_id}, using default nexusproto backend")
-                        NexusTileService.backends[d_id] = NexusTileService.backends[None]
-                    elif store_type == 'zarr':
-                        update_logger.info(f"Detected new zarr dataset {d_id}, opening new zarr backend")
+                if d_id in NexusTileService.backends:
+                    continue
+                    # is_up = NexusTileService.backends[d_id]['backend'].try_connect()
 
-                        ds_config = json.loads(dataset['config'][0])
-                        try:
-                            NexusTileService.backends[d_id] = {
-                                'backend': ZarrBackend(dataset_name=dataset['dataset_s'], **ds_config),
-                                'up': True
-                            }
-                        except NexusTileServiceException:
-                            added_datasets -= 1
-                    else:
-                        update_logger.warning(f'Unsupported backend {store_type} for dataset {d_id}')
+                added_datasets += 1
+
+                if store_type == 'nexus_proto' or store_type == 'nexusproto':
+                    update_logger.info(f"Detected new nexusproto dataset {d_id}, using default nexusproto backend")
+                    NexusTileService.backends[d_id] = NexusTileService.backends[None]
+                elif store_type == 'zarr':
+                    update_logger.info(f"Detected new zarr dataset {d_id}, opening new zarr backend")
+
+                    ds_config = json.loads(dataset['config'][0])
+                    try:
+                        NexusTileService.backends[d_id] = {
+                            'backend': ZarrBackend(dataset_name=dataset['dataset_s'], **ds_config),
+                            'up': True
+                        }
+                    except NexusTileServiceException:
                         added_datasets -= 1
+                else:
+                    update_logger.warning(f'Unsupported backend {store_type} for dataset {d_id}')
+                    added_datasets -= 1
 
         removed_datasets = set(NexusTileService.backends.keys()).difference(present_datasets)
 
@@ -269,6 +275,21 @@ class NexusTileService:
 
         update_logger.info(f'Finished dataset update: {added_datasets} added, {len(removed_datasets)} removed, '
                            f'{len(NexusTileService.backends) - 2} total')
+
+    # Update cfg (ie, creds) of dataset
+    @staticmethod
+    def user_ds_update():
+        pass
+
+    # Add dataset + backend
+    @staticmethod
+    def user_ds_add(name, config):
+        pass
+
+    # Delete dataset backend (error if it's a hardcoded one)
+    @staticmethod
+    def user_ds_delete():
+        pass
 
     def override_config(self, config):
         for section in config.sections():
