@@ -283,7 +283,7 @@ class NexusTileService:
 
     # Add dataset + backend
     @staticmethod
-    def user_ds_add(name, config):
+    def user_ds_add(name, path, config):
         pass
 
     # Delete dataset backend (error if it's a hardcoded one)

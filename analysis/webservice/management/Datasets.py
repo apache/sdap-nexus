@@ -18,10 +18,32 @@ import json
 from webservice.NexusHandler import nexus_handler
 from nexustiles.nexustiles import NexusTileService
 from webservice.webmodel import NexusRequestObject, NexusProcessingException
+
+from schema import Schema, Or, SchemaError
+from schema import Optional as Opt
+
+from urllib.parse import urlparse
 try:
     from yaml import CLoader as Loader
 except ImportError:
     from yaml import Loader
+
+
+CONFIG_SCHEMA = Schema({
+    Or('variable', 'variables'): Or(str, [str]),
+    'coords': {
+        'latitude': str,
+        'longitude': str,
+        'time': str,
+        Opt('depth'): str
+    },
+    Opt('aws'): {
+        'accessKeyID': Or(str, None),
+        'secretAccessKey': Or(str, None),
+        'public': bool,
+        Opt('region'): str
+    }
+})
 
 
 class DatasetManagement:
@@ -34,11 +56,21 @@ class DatasetManagement:
         content_type = request.get_headers()['Content-Type']
 
         if content_type in ['application/json', 'application/x-json']:
-            return json.loads(request.get_request_body())
+            config_dict = json.loads(request.get_request_body())
         elif content_type == 'application/yaml':
-            return load(request.get_request_body(), Loader=Loader)
+            config_dict = load(request.get_request_body(), Loader=Loader)
         else:
             raise NexusProcessingException(reason='Invalid Content-Type header', code=400)
+
+        try:
+            CONFIG_SCHEMA.validate(config_dict)
+        except SchemaError as e:
+            raise NexusProcessingException(
+                reason=str(e),
+                code=400
+            )
+
+        return config_dict
 
 
 @nexus_handler
@@ -51,7 +83,6 @@ class DatasetAdd(DatasetManagement):
         pass
 
     def calc(self, request: NexusRequestObject, **args):
-        # print('CALC')
         try:
             config = DatasetManagement.parse_config(request)
         except Exception as e:
@@ -68,8 +99,27 @@ class DatasetAdd(DatasetManagement):
                 code=400
             )
 
+        path = request.get_argument('path')
+
+        if path is None:
+            raise NexusProcessingException(
+                reason='Path argument must be provided',
+                code=400
+            )
+
         try:
-            NexusTileService.user_ds_add(name, config)
+            if urlparse(path).scheme not in ['file','','s3']:
+                raise NexusProcessingException(
+                    reason='Dataset URL must be for a local file or S3 URL',
+                    code=400
+                )
+        except ValueError:
+            raise NexusProcessingException(
+                reason='Could not parse path URL', code=400
+            )
+
+        try:
+            NexusTileService.user_ds_add(name, path, config)
         except Exception as e:
             raise NexusProcessingException(
                 reason=repr(e),
