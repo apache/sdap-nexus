@@ -278,18 +278,82 @@ class NexusTileService:
 
     # Update cfg (ie, creds) of dataset
     @staticmethod
-    def user_ds_update():
-        pass
+    def user_ds_update(name, config):
+        solr = NexusTileService._get_datasets_store()
+
+        docs = solr.search(f'dataset_s:{name}').docs
+
+        if len(docs) != 1:
+            raise ValueError(f'Given name must match exactly one existing dataset; matched {len(docs)}')
+
+        ds = docs[0]
+
+        if 'source_s' not in ds or ds['source_s'] == 'collection_config':
+            raise ValueError('Provided dataset is source_s in collection config and cannot be deleted')
+
+        config_dict = json.loads(ds['config'][0])
+
+        config_dict['config'] = config
+
+        solr.delete(id=ds['id'])
+        solr.add([{
+            'id': name,
+            'dataset_s': name,
+            'latest_update_l': int(datetime.now().timestamp()),
+            'store_type_s': ds['store_type_s'],
+            'config': json.dumps(config_dict),
+            'source_s': 'user_added'
+        }])
+        solr.commit()
+
+        return {'success': True}
 
     # Add dataset + backend
     @staticmethod
-    def user_ds_add(name, path, config):
-        pass
+    def user_ds_add(name, path, config, type='zarr'):
+        solr = NexusTileService._get_datasets_store()
+
+        docs = solr.search(f'dataset_s:{name}').docs
+
+        if len(docs) > 0:
+            raise ValueError(f'Dataset {name} already exists')
+
+        config_dict = {
+            'path': path,
+            'config': config
+        }
+
+        solr.add([{
+            'id': name,
+            'dataset_s': name,
+            'latest_update_l': int(datetime.now().timestamp()),
+            'store_type_s': type,
+            'config': json.dumps(config_dict),
+            'source_s': 'user_added'
+        }])
+        solr.commit()
+
+        return {'success': True}
 
     # Delete dataset backend (error if it's a hardcoded one)
     @staticmethod
-    def user_ds_delete():
-        pass
+    def user_ds_delete(name):
+        solr = NexusTileService._get_datasets_store()
+
+        docs = solr.search(f'dataset_s:{name}').docs
+
+        if len(docs) != 1:
+            raise ValueError(f'Given name must match exactly one existing dataset; matched {len(docs)}')
+
+        ds = docs[0]
+
+        if 'source_s' not in ds or ds['source_s'] == 'collection_config':
+            raise ValueError('Provided dataset is source_s in collection config and cannot be deleted')
+
+        solr.delete(id=ds['id'])
+        solr.commit()
+
+        return {'success': True}
 
     def override_config(self, config):
         for section in config.sections():

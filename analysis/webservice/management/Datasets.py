@@ -73,6 +73,14 @@ class DatasetManagement:
         return config_dict
 
 
+class Response:
+    def __init__(self, response):
+        self.response = response if response is not None else {}
+
+    def toJson(self):
+        return json.dumps(self.response)
+
+
 @nexus_handler
 class DatasetAdd(DatasetManagement):
     name = 'Add dataset'
@@ -120,6 +128,68 @@ class DatasetAdd(DatasetManagement):
 
         try:
             NexusTileService.user_ds_add(name, path, config)
+        except Exception as e:
+            raise NexusProcessingException(
+                reason=repr(e),
+                code=500
+            )
+
+
+@nexus_handler
+class DatasetUpdate(DatasetManagement):
+    name = 'Update dynamically added dataset'
+    path = '/datasets/update'
+    description = "Update dataset in running SDAP instance"
+
+    def __init__(self, **args):
+        pass
+
+    def calc(self, request: NexusRequestObject, **args):
+        try:
+            config = DatasetManagement.parse_config(request)
+        except Exception as e:
+            raise NexusProcessingException(
+                reason=repr(e),
+                code=400
+            )
+
+        name = request.get_argument('name')
+
+        if name is None:
+            raise NexusProcessingException(
+                reason='Name argument must be provided',
+                code=400
+            )
+
+        try:
+            return Response(NexusTileService.user_ds_update(name, config))
+        except Exception as e:
+            raise NexusProcessingException(
+                reason=repr(e),
+                code=500
+            )
+
+
+@nexus_handler
+class DatasetDelete(DatasetManagement):
+    name = 'Remove dataset'
+    path = '/datasets/remove'
+    description = "Remove dataset from running SDAP instance"
+
+    def __init__(self, **args):
+        pass
+
+    def calc(self, request: NexusRequestObject, **args):
+        name = request.get_argument('name')
+
+        if name is None:
+            raise NexusProcessingException(
+                reason='Name argument must be provided',
+                code=400
+            )
+
+        try:
+            return Response(NexusTileService.user_ds_delete(name))
         except Exception as e:
             raise NexusProcessingException(
                 reason=repr(e),

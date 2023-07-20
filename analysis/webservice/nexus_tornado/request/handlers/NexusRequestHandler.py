@@ -65,7 +65,7 @@ class NexusRequestHandler(tornado.web.RequestHandler):
 
     @tornado.gen.coroutine
     def post(self):
-        self.logger.info("Received POST %s" % self._request_summary())
+        self.logger.info("Received %s" % self._request_summary())
 
         request = NexusRequestObject(self)
 
@@ -83,7 +83,7 @@ class NexusRequestHandler(tornado.web.RequestHandler):
                 except AttributeError:
                     pass
 
-                renderer = NexusRendererFactory.get_renderer("JSON")
+                renderer = NexusRendererFactory.get_renderer(request)
                 renderer.render(self, results)
 
         except NexusProcessingException as e:
