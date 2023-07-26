@@ -285,7 +285,8 @@ class ResultsRetrieval(AbstractResultsContainer):
                     dataMap[row.primary_value_id]["matches"] = []
                 dataMap[row.primary_value_id]["matches"].append(entry)
             else:
-                print(row)
+                # print(row)
+                pass
 
     def __retrievePrimaryData(self, id, trim_data=False):
         cql = "SELECT * FROM doms_data where execution_id = %s and is_primary = true"
