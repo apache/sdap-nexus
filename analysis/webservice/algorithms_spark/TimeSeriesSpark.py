@@ -488,8 +488,9 @@ def calc_average_on_day(tile_service_factory, metrics_callback, normalize_dates,
                                             timestamps[0],
                                             timestamps[-1],
                                             rows=5000,
-                                            metrics_callback=metrics_callback)
-    
+                                            metrics_callback=metrics_callback,
+                                            distinct=True)
+
     calculation_start = datetime.now()
 
     tile_dict = {}

@@ -110,8 +110,8 @@ class ZarrBackend(AbstractTileService):
             max_date = self.get_max_time([])
             ds['start'] = min_date
             ds['end'] = max_date
-            ds['iso_start'] = datetime.fromtimestamp(min_date).strftime(ISO_8601)
-            ds['iso_end'] = datetime.fromtimestamp(max_date).strftime(ISO_8601)
+            ds['iso_start'] = datetime.utcfromtimestamp(min_date).strftime(ISO_8601)
+            ds['iso_end'] = datetime.utcfromtimestamp(max_date).strftime(ISO_8601)
 
         return [ds]
 
@@ -126,10 +126,10 @@ class ZarrBackend(AbstractTileService):
         start = datetime.now()
 
         if not isinstance(start_time, datetime):
-            start_time = datetime.fromtimestamp(start_time)
+            start_time = datetime.utcfromtimestamp(start_time)
 
         if not isinstance(end_time, datetime):
-            end_time = datetime.fromtimestamp(end_time)
+            end_time = datetime.utcfromtimestamp(end_time)
 
         sel = {
             self.__latitude: slice(min_lat, max_lat),
@@ -142,7 +142,7 @@ class ZarrBackend(AbstractTileService):
         if np.issubdtype(times.dtype, np.datetime64):
             times = ((times - np.datetime64(EPOCH)) / 1e9).astype(int)
 
-        times = sorted(list(times))
+        times = sorted(times.tolist())
 
         if metrics_callback:
             metrics_callback(backend=(datetime.now() - start).total_seconds())
@@ -193,9 +193,14 @@ class ZarrBackend(AbstractTileService):
             'max_lon': max_lon
         }
 
+        times = None
+
         if 0 <= start_time <= end_time:
-            params['min_time'] = start_time
-            params['max_time'] = end_time
+            if kwargs.get('distinct', False):
+                times_asc = self.find_days_in_range_asc(min_lat, max_lat, min_lon, max_lon, ds, start_time, end_time)
+                times = [(t, t) for t in times_asc]
+            else:
+                times = [(start_time, end_time)]
 
         if 'depth' in kwargs:
             params['depth'] = kwargs['depth']
@@ -203,7 +208,10 @@ class ZarrBackend(AbstractTileService):
             params['min_depth'] = kwargs.get('min_depth')
             params['max_depth'] = kwargs.get('max_depth')
 
-        return [ZarrBackend.__to_url(self._name, **params)]
+        if times:
+            return [ZarrBackend.__to_url(self._name, min_time=t[0], max_time=t[1], **params) for t in times]
+        else:
+            return [ZarrBackend.__to_url(self._name, **params)]
 
     def find_tiles_in_polygon(self, bounding_polygon, ds=None, start_time=None, end_time=None, **kwargs):
         # Find tiles that fall within the polygon in the Solr index
@@ -365,10 +373,10 @@ class ZarrBackend(AbstractTileService):
         max_time = float(tile.max_time)
 
         if min_time:
-            min_time = datetime.fromtimestamp(min_time)
+            min_time = datetime.utcfromtimestamp(min_time)
 
         if max_time:
-            max_time = datetime.fromtimestamp(max_time)
+            max_time = datetime.utcfromtimestamp(max_time)
 
         if bbox:
             min_lat = bbox.min_lat
@@ -376,23 +384,25 @@ class ZarrBackend(AbstractTileService):
             max_lat = bbox.max_lat
             max_lon = bbox.max_lon
 
-        sel = {
+        sel_g = {
             self.__latitude: slice(min_lat, max_lat),
             self.__longitude: slice(min_lon, max_lon),
         }
 
+        sel_t = {}
+
         if min_time == max_time:
-            sel[self.__time] = min_time
+            sel_t[self.__time] = [min_time]  # List, otherwise self.__time dim will be dropped
             method = 'nearest'
         else:
-            sel[self.__time] = slice(min_time, max_time)
+            sel_t[self.__time] = slice(min_time, max_time)
             method = None
 
         tile.variables = [
             TileVariable(v, v) for v in self.__variables
         ]
 
-        matched = self.__ds.sel(sel, method=method)
+        matched = self.__ds.sel(sel_g).sel(sel_t, method=method)
 
         tile.latitudes = ma.masked_invalid(matched[self.__latitude].to_numpy())
         tile.longitudes = ma.masked_invalid(matched[self.__longitude].to_numpy())
@@ -452,6 +462,15 @@ class ZarrBackend(AbstractTileService):
 
         if 'ds' in kwargs:
             del kwargs['ds']
+
+        # If any params are numpy dtypes, extract them to base python types
+        for kw in kwargs:
+            v = kwargs[kw]
+
+            if isinstance(v, np.generic):
+                v = v.item()
+
+            kwargs[kw] = v
 
         return str(URL.build(
             scheme='nts',
