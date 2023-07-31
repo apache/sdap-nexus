@@ -44,6 +44,8 @@ from webservice.webmodel.NexusExecutionResults import ExecutionStatus
 EPOCH = timezone('UTC').localize(datetime(1970, 1, 1))
 ISO_8601 = '%Y-%m-%dT%H:%M:%S%z'
 
+LARGE_JOB_THRESHOLD = 4000
+
 
 class Schema:
     def __init__(self):
@@ -234,6 +236,11 @@ class Matchup(NexusCalcSparkTornadoHandler):
                depth_min, depth_max, time_tolerance, radius_tolerance, \
                platforms, match_once, result_size_limit, prioritize_distance
 
+    def get_job_pool(self, tile_ids):
+        if len(tile_ids) > LARGE_JOB_THRESHOLD:
+            return 'large'
+        return 'small'
+
     def async_calc(self, execution_id, tile_ids, bounding_polygon, primary_ds_name,
                    secondary_ds_names, parameter_s, start_time, end_time, depth_min,
                    depth_max, time_tolerance, radius_tolerance, platforms, match_once,
@@ -241,8 +248,11 @@ class Matchup(NexusCalcSparkTornadoHandler):
         # Call spark_matchup
         self.log.debug("Calling Spark Driver")
 
+        job_priority = self.get_job_pool(tile_ids)
+
         try:
             self._sc.setJobGroup(execution_id, execution_id)
+            self._sc.setLocalProperty('spark.scheduler.pool', job_priority)
             spark_result = spark_matchup_driver(
                 tile_ids, wkt.dumps(bounding_polygon),
                 primary_ds_name,
