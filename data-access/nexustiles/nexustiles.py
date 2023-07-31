@@ -306,6 +306,11 @@ class NexusTileService:
         }])
         solr.commit()
 
+        logger.info(f'Updated dataset {name} in Solr. Updating backends')
+
+        with DS_LOCK:
+            NexusTileService._update_datasets()
+
         return {'success': True}
 
     # Add dataset + backend
@@ -333,6 +338,11 @@ class NexusTileService:
         }])
         solr.commit()
 
+        logger.info(f'Added dataset {name} to Solr. Updating backends')
+
+        with DS_LOCK:
+            NexusTileService._update_datasets()
+
         return {'success': True}
 
     # Delete dataset backend (error if it's a hardcoded one)
@@ -352,6 +362,11 @@ class NexusTileService:
 
         solr.delete(id=ds['id'])
         solr.commit()
+
+        logger.info(f'Removed dataset {name} from Solr. Updating backends')
+
+        with DS_LOCK:
+            NexusTileService._update_datasets()
 
         return {'success': True}
 
