@@ -81,8 +81,10 @@ class ZarrBackend(AbstractTileService):
                 aws_cfg = self.__config['aws']
 
                 if aws_cfg['public']:
-                    region = aws_cfg.get('region', 'us-west-2')
-                    store = f'https://{self.__host}.s3.{region}.amazonaws.com{self.__path}'
+                    # region = aws_cfg.get('region', 'us-west-2')
+                    # store = f'https://{self.__host}.s3.{region}.amazonaws.com{self.__path}'
+                    s3 = s3fs.S3FileSystem(True)
+                    store = s3fs.S3Map(root=path, s3=s3, check=False)
                 else:
                     s3 = s3fs.S3FileSystem(False, key=aws_cfg['accessKeyID'], secret=aws_cfg['secretAccessKey'])
                     store = s3fs.S3Map(root=path, s3=s3, check=False)
@@ -116,7 +118,7 @@ class ZarrBackend(AbstractTileService):
         return [ds]
 
     def find_tile_by_id(self, tile_id, **kwargs):
-        return tile_id
+        return [tile_id]
 
     def find_tiles_by_id(self, tile_ids, ds=None, **kwargs):
         return tile_ids
@@ -330,7 +332,7 @@ class ZarrBackend(AbstractTileService):
             min_date, max_date = self.__get_ds_min_max_date()
             return max_date
         else:
-            max(times)
+            return max(times)
 
     def get_distinct_bounding_boxes_in_polygon(self, bounding_polygon, ds, start_time, end_time):
         """
@@ -442,6 +444,7 @@ class ZarrBackend(AbstractTileService):
             pass
 
         tile.dataset = url.path
+        tile.dataset_id = url.path
 
         try:
             tile.min_time = int(url.query['min_time'])
@@ -453,6 +456,8 @@ class ZarrBackend(AbstractTileService):
         except KeyError:
             pass
 
+        tile.meta_data = {}
+
         return tile
 
     @staticmethod
@@ -463,20 +468,25 @@ class ZarrBackend(AbstractTileService):
         if 'ds' in kwargs:
             del kwargs['ds']
 
+        params = {}
+
         # If any params are numpy dtypes, extract them to base python types
         for kw in kwargs:
             v = kwargs[kw]
 
+            if v is None:
+                continue
+
             if isinstance(v, np.generic):
                 v = v.item()
 
-            kwargs[kw] = v
+            params[kw] = v
 
         return str(URL.build(
             scheme='nts',
             host='',
             path=dataset,
-            query=kwargs
+            query=params
         ))
 
 

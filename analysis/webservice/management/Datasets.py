@@ -38,8 +38,8 @@ CONFIG_SCHEMA = Schema({
         Opt('depth'): str
     },
     Opt('aws'): {
-        'accessKeyID': Or(str, None),
-        'secretAccessKey': Or(str, None),
+        Opt('accessKeyID'): str,
+        Opt('secretAccessKey'): str,
         'public': bool,
         Opt('region'): str
     }
@@ -64,6 +64,14 @@ class DatasetManagement:
 
         try:
             CONFIG_SCHEMA.validate(config_dict)
+
+            if 'aws' in config_dict:
+                if not config_dict['aws']['public']:
+                    if 'accessKeyID' not in config_dict['aws'] or 'secretAccessKey' not in config_dict['aws']:
+                        raise NexusProcessingException(
+                            reason='Must provide AWS creds for non-public bucket',
+                            code=400
+                        )
         except SchemaError as e:
             raise NexusProcessingException(
                 reason=str(e),

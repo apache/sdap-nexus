@@ -31,6 +31,7 @@ from pytz import timezone, UTC
 from shapely.geometry import box
 from webservice.webmodel import DatasetNotFoundException, NexusProcessingException
 from webservice.NexusHandler import nexus_initializer
+from yarl import URL
 
 from .AbstractTileService import AbstractTileService
 from .backends.nexusproto.backend import NexusprotoTileService
@@ -388,11 +389,18 @@ class NexusTileService:
     @tile_data()
     @catch_not_implemented
     def find_tile_by_id(self, tile_id, **kwargs):
-        return NexusTileService._get_backend('__nexusproto__').find_tile_by_id(tile_id)
+        tile = URL(tile_id)
+
+        if tile.scheme == 'nts':
+            return NexusTileService._get_backend(tile.path).find_tile_by_id(tile_id)
+        else:
+            return NexusTileService._get_backend('__nexusproto__').find_tile_by_id(tile_id)
 
     @tile_data()
     @catch_not_implemented
     def find_tiles_by_id(self, tile_ids, ds=None, **kwargs):
+        if ds is None:
+            return [self.find_tile_by_id(tid, **kwargs, fetch_data=False) for tid in tile_ids]
         return NexusTileService._get_backend(ds).find_tiles_by_id(tile_ids, ds=ds, **kwargs)
 
     @catch_not_implemented
