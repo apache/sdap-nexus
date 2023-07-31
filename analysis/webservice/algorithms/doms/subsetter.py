@@ -209,7 +209,10 @@ class DomsResultsRetrievalHandler(BaseDomsHandler.BaseDomsQueryCalcHandler):
                 elif variable.variable_name:
                     return variable.variable_name
                 else:
-                    return 'UNNAMED_VARIABLE'
+                    raise NexusProcessingException(
+                        reason=f'Variable in subsetted data does not have defined name',
+                        code=500
+                    )
 
             for nexus_point in tile.nexus_point_generator():
                 if tile.is_multi:
