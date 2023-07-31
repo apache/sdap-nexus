@@ -64,9 +64,6 @@ class ExecutionStatusHandler(NexusCalcSparkTornadoHandler):
 
         # Only proceed if status is "running". Otherwise, noop
         if job_status == ExecutionStatus.RUNNING:
-            # Cancel Spark job
-            self._sc.cancelJobGroup(str(execution_id))
-
             # Update job status to "cancelled"
             end = datetime.utcnow()
             with ResultsStorage(self.config) as storage:
@@ -78,6 +75,9 @@ class ExecutionStatusHandler(NexusCalcSparkTornadoHandler):
                     stats=None,
                     results=None
                 )
+
+            # Cancel Spark job
+            self._sc.cancelJobGroup(str(execution_id))
 
         # Redirect to job status endpoint
         request.requestHandler.redirect(f'/job?id={execution_id}')

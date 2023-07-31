@@ -107,6 +107,10 @@ class NexusResults:
                 self.__meta = self.__meta  # Risky
             self._extendMeta(self.__meta, minLat, maxLat, minLon, maxLon, ds, startTime, endTime)
 
+    @staticmethod
+    def filename(self):
+        return 'download'
+
     def toJson(self):
         data = {
             'meta': self.__meta,

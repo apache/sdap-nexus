@@ -113,6 +113,9 @@ class DomsQueryResults(NexusResults):
     def toNetCDF(self):
         return DomsNetCDFFormatter.create(self.__executionId, self.results(), self.__args, self.__details)
 
+    def filename(self):
+        return f'CDMS_{self.__executionId}'
+
 
 class DomsCSVFormatter:
     @staticmethod
@@ -419,7 +422,7 @@ class DomsNetCDFFormatter:
             for match in result["matches"]:
                 depth_str = ''
                 if match['depth'] is not None:
-                    depth_str = f'{match.get["depth"]:.4}'
+                    depth_str = f'{match["depth"]:.4}'
                 key = (match['id'], depth_str)
 
                 if key not in ids:
