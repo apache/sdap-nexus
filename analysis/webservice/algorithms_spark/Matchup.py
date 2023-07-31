@@ -777,9 +777,9 @@ def match_satellite_to_insitu(tile_ids, primary_b, secondary_b, parameter_b, tt_
     tile_service = tile_service_factory()
 
     # Determine the spatial temporal extents of this partition of tiles
-    tiles_bbox = tile_service.get_bounding_box(tile_ids)
-    tiles_min_time = tile_service.get_min_time(tile_ids)
-    tiles_max_time = tile_service.get_max_time(tile_ids)
+    tiles_bbox = tile_service.get_bounding_box(tile_ids, ds=primary_b.value)
+    tiles_min_time = tile_service.get_min_time(tile_ids, ds=primary_b.value)
+    tiles_max_time = tile_service.get_max_time(tile_ids, ds=primary_b.value)
 
     # Increase spatial extents by the radius tolerance
     matchup_min_lon, matchup_min_lat = add_meters_to_lon_lat(tiles_bbox.bounds[0], tiles_bbox.bounds[1],
@@ -858,7 +858,7 @@ def match_satellite_to_insitu(tile_ids, primary_b, secondary_b, parameter_b, tt_
         edge_results = []
         for tile in matchup_tiles:
             # Retrieve tile data and convert to lat/lon projection
-            tiles = tile_service.find_tile_by_id(tile.tile_id, fetch_data=True)
+            tiles = tile_service.find_tile_by_id(tile.tile_id, fetch_data=True, ds=secondary_b.value)
             tile = tiles[0]
 
             valid_indices = tile.get_indices()
@@ -884,14 +884,14 @@ def match_satellite_to_insitu(tile_ids, primary_b, secondary_b, parameter_b, tt_
 
     # The actual matching happens in the generator. This is so that we only load 1 tile into memory at a time
     match_generators = [match_tile_to_point_generator(tile_service, tile_id, m_tree, edge_results, bounding_wkt_b.value,
-                                                      parameter_b.value, rt_b.value, aeqd_proj) for tile_id
-                        in tile_ids]
+                                                      parameter_b.value, rt_b.value, aeqd_proj, primary_b.value)
+                        for tile_id in tile_ids]
 
     return chain(*match_generators)
 
 
 def match_tile_to_point_generator(tile_service, tile_id, m_tree, edge_results, search_domain_bounding_wkt,
-                                  search_parameter, radius_tolerance, aeqd_proj):
+                                  search_parameter, radius_tolerance, aeqd_proj, primary_ds):
     from nexustiles.model.nexusmodel import NexusPoint
     from webservice.algorithms_spark.Matchup import DomsPoint  # Must import DomsPoint or Spark complains
 
@@ -899,7 +899,7 @@ def match_tile_to_point_generator(tile_service, tile_id, m_tree, edge_results, s
     try:
         the_time = datetime.now()
         tile = tile_service.mask_tiles_to_polygon(wkt.loads(search_domain_bounding_wkt),
-                                                  tile_service.find_tile_by_id(tile_id))[0]
+                                                  tile_service.find_tile_by_id(tile_id, ds=primary_ds))[0]
         print("%s Time to load tile %s" % (str(datetime.now() - the_time), tile_id))
     except IndexError:
         # This should only happen if all measurements in a tile become masked after applying the bounding polygon
