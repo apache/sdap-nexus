@@ -56,15 +56,16 @@ def construct_done(status, created, completed, execution_id, params, host):
 
     # Construct urls
     formats = [
-        'CSV',
-        'JSON',
-        'NETCDF'
+        ('CSV', 'text/csv'),
+        ('JSON', 'application/json'),
+        ('NETCDF', 'binary/octet-stream')
     ]
     data_links = [{
         'href': f'{host}/cdmsresults?id={execution_id}&output={output_format}',
         'title': 'Download results',
+        'type': mime,
         'rel': 'data'
-    } for output_format in formats]
+    } for output_format, mime in formats]
     job_body['links'].extend(data_links)
     return job_body
 
