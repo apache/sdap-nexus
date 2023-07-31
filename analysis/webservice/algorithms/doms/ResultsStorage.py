@@ -300,8 +300,6 @@ class ResultsRetrieval(AbstractResultsContainer):
                 if not "matches" in dataMap[row.primary_value_id]:
                     dataMap[row.primary_value_id]["matches"] = []
                 dataMap[row.primary_value_id]["matches"].append(entry)
-            else:
-                print(row)
 
     def __retrievePrimaryData(self, id, trim_data=False, page_num=2, page_size=10):
         cql = "SELECT * FROM doms_data where execution_id = %s and is_primary = true limit %s"
