@@ -94,6 +94,9 @@ class DomsQueryResults(NexusResults):
         self.__details = details
         self.__executionId = str(executionId)
 
+        if self.__details is None:
+            self.__details = {}
+
         # Add page num and size to details block
         self.__details['pageNum'] = page_num
         self.__details['pageSize'] = page_size
