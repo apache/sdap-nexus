@@ -203,14 +203,22 @@ class DomsResultsRetrievalHandler(BaseDomsHandler.BaseDomsQueryCalcHandler):
 
             tile = tile[0]
 
+            def get_best_name(variable):
+                if variable.standard_name:
+                    return variable.standard_name
+                elif variable.variable_name:
+                    return variable.variable_name
+                else:
+                    return 'UNNAMED_VARIABLE'
+
             for nexus_point in tile.nexus_point_generator():
                 if tile.is_multi:
                     data_points = {
-                        tile.variables[idx].standard_name: nexus_point.data_vals[idx]
+                        get_best_name(tile.variables[idx]): nexus_point.data_vals[idx]
                         for idx in range(len(tile.variables))
                     }
                 else:
-                    data_points = {tile.variables[0].standard_name: nexus_point.data_vals}
+                    data_points = {get_best_name(tile.variables[0]): nexus_point.data_vals}
                 data.append({
                     'latitude': nexus_point.latitude,
                     'longitude': nexus_point.longitude,

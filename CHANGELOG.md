@@ -21,6 +21,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - SDAP-465: Removed `climatology` directory. 
 ### Fixed
 - SDAP-474: Fixed bug in CSV attributes where secondary dataset would be rendered as comma separated characters
+- SDAP-479: Fixed `/cdmssubset` failure for variables without specified standard_name. 
 ### Security
 
 ## [1.1.0] - 2023-04-26
