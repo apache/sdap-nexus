@@ -198,7 +198,7 @@ class ZarrBackend(AbstractTileService):
         times = None
 
         if 0 <= start_time <= end_time:
-            if kwargs.get('distinct', False):
+            if kwargs.get('distinct', True):
                 times_asc = self.find_days_in_range_asc(min_lat, max_lat, min_lon, max_lon, ds, start_time, end_time)
                 times = [(t, t) for t in times_asc]
             else:
@@ -416,11 +416,15 @@ class ZarrBackend(AbstractTileService):
 
         tile.times = ma.masked_invalid(times)
 
-        tile.data = ma.masked_invalid(
-            [matched[var].to_numpy() for var in self.__variables]
-        )
+        var_data = [matched[var].to_numpy() for var in self.__variables]
 
-        tile.is_multi = True
+        if len(self.__variables) > 1:
+            tile.data = ma.masked_invalid(var_data)
+            tile.is_multi = True
+        else:
+            tile.data = ma.masked_invalid(var_data[0])
+            tile.is_multi = False
+
 
     def _metadata_store_docs_to_tiles(self, *store_docs):
         return [ZarrBackend.__nts_url_to_tile(d) for d in store_docs]
