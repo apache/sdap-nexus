@@ -16,6 +16,9 @@ spec:
       labels:
         app: granule-ingester
     spec:
+      {{- if .Values.ingestion.granules.s3.serviceAccountName }}
+      serviceAccountName: {{ .Values.ingestion.granules.s3.serviceAccountName }}
+      {{- end }}
       containers:
         - image: {{ .Values.ingestion.granuleIngester.image }}
           imagePullPolicy: Always
@@ -39,9 +42,11 @@ spec:
             - name: MAX_CONCURRENCY
               value: "{{ .Values.ingestion.granuleIngester.maxConcurrency }}"
             {{ end }}
+            {{- if not .Values.ingestion.granules.s3.serviceAccountName }}
             {{- range $name, $value := .Values.ingestion.granules.s3.awsCredsEnvs }}
             - name: {{ $name }}
               value: {{ $value }}
+            {{- end }}
             {{- end }}
           resources:
             requests:
