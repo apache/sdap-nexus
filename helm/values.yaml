@@ -76,7 +76,12 @@ ingestion:
       ## If bucket has a value, S3 ingestion will be enabled (and nfsServer will be ignored even if it has a value).
       bucket:
 
-      ## awsCredsEnvs can include any environment variables that contain AWS credentials
+      ## If serviceAccountName has a value, credentials will be handled by the service account (awsCredsEnvs will be ignored
+      ## even if it has a value).
+      serviceAccountName: 
+
+      ## awsCredsEnvs can include any environment variables that contain AWS credentials. Will be ignored if 
+      ## serviceAccountName has a value.
       awsCredsEnvs: {}
 
   ## Where to find the Collections Config file
