@@ -16,6 +16,9 @@ spec:
       labels:
         app: collection-manager
     spec:
+      {{- if .Values.ingestion.granules.s3.serviceAccountName }}
+      serviceAccountName: {{ .Values.ingestion.granules.s3.serviceAccountName }}
+      {{- end }}
       containers:
         - image: {{ .Values.ingestion.collectionManager.image }}
           imagePullPolicy: Always
@@ -40,9 +43,11 @@ spec:
             - name: S3_BUCKET
               value: {{ .Values.ingestion.granules.s3.bucket }}
             {{- end }}
+            {{- if not .Values.ingestion.granules.s3.serviceAccountName }}
             {{- range $name, $value := .Values.ingestion.granules.s3.awsCredsEnvs }}
             - name: {{ $name }}
               value: {{ $value }}
+            {{- end }}
             {{- end }}
           resources:
             requests:
