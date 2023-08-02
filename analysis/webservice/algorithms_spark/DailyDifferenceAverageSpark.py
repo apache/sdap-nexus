@@ -324,7 +324,7 @@ def calculate_diff(tile_service_factory, tile_ids, bounding_wkt, dataset, climat
     for tile_id in tile_ids:
         # Get the dataset tile
         try:
-            dataset_tile = get_dataset_tile(tile_service, wkt.loads(bounding_wkt.value), tile_id)
+            dataset_tile = get_dataset_tile(tile_service, wkt.loads(bounding_wkt.value), tile_id, dataset.value)
         except NoDatasetTile:
             # This should only happen if all measurements in a tile become masked after applying the bounding polygon
             continue
@@ -348,12 +348,12 @@ def calculate_diff(tile_service_factory, tile_ids, bounding_wkt, dataset, climat
     return chain(*diff_generators)
 
 
-def get_dataset_tile(tile_service, search_bounding_shape, tile_id):
+def get_dataset_tile(tile_service, search_bounding_shape, tile_id, dataset):
     the_time = datetime.now()
 
     try:
         # Load the dataset tile
-        dataset_tile = tile_service.find_tile_by_id(tile_id)[0]
+        dataset_tile = tile_service.find_tile_by_id(tile_id, ds=dataset)[0]
         # Mask it to the search domain
         dataset_tile = tile_service.mask_tiles_to_polygon(search_bounding_shape, [dataset_tile])[0]
     except IndexError:
