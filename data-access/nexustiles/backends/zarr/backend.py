@@ -174,7 +174,24 @@ class ZarrBackend(AbstractTileService):
         :param day_of_year: Tile day of year to search for, tile nearest to this day (without going over) will be returned
         :return: List of one tile from ds with bounding_polygon on or before day_of_year or raise NexusTileServiceException if no tile found
         """
-        raise NotImplementedError()
+
+        times = self.__ds[self.__time].to_numpy()
+
+        to_doy = lambda dt: datetime.utcfromtimestamp(int(dt)).timetuple().tm_yday
+
+        vfunc = np.vectorize(to_doy)
+        days_of_year = vfunc(times.astype(datetime) / 1e9)
+
+        try:
+            time = times[np.where(days_of_year <= day_of_year)[0][-1]].astype(datetime) / 1e9
+        except IndexError:
+            raise NexusTileServiceException(reason='No tiles matched')
+
+        min_lon, min_lat, max_lon, max_lat = bounding_polygon.bounds
+
+        return self.find_tiles_in_box(
+            min_lat, max_lat, min_lon, max_lon, ds, time, time
+        )
 
     def find_all_tiles_in_box_at_time(self, min_lat, max_lat, min_lon, max_lon, dataset, time, **kwargs):
         return self.find_tiles_in_box(min_lat, max_lat, min_lon, max_lon, dataset, time, time, **kwargs)
@@ -371,14 +388,14 @@ class ZarrBackend(AbstractTileService):
         max_lat = None
         max_lon = None
 
-        min_time = float(tile.min_time)
-        max_time = float(tile.max_time)
+        min_time = tile.min_time
+        max_time = tile.max_time
 
-        if min_time:
-            min_time = datetime.utcfromtimestamp(min_time)
-
-        if max_time:
-            max_time = datetime.utcfromtimestamp(max_time)
+        # if min_time:
+        #     min_time = datetime.utcfromtimestamp(min_time)
+        #
+        # if max_time:
+        #     max_time = datetime.utcfromtimestamp(max_time)
 
         if bbox:
             min_lat = bbox.min_lat
@@ -451,12 +468,14 @@ class ZarrBackend(AbstractTileService):
         tile.dataset_id = url.path
 
         try:
-            tile.min_time = int(url.query['min_time'])
+            # tile.min_time = int(url.query['min_time'])
+            tile.min_time = datetime.utcfromtimestamp(int(url.query['min_time']))
         except KeyError:
             pass
 
         try:
-            tile.max_time = int(url.query['max_time'])
+            # tile.max_time = int(url.query['max_time'])
+            tile.max_time = datetime.utcfromtimestamp(int(url.query['max_time']))
         except KeyError:
             pass
 
