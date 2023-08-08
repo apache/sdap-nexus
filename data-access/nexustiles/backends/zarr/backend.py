@@ -410,7 +410,10 @@ class ZarrBackend(AbstractTileService):
 
         sel_t = {}
 
-        if min_time == max_time:
+        if min_time is None and max_time is None:
+            sel_t = None
+            method = None
+        elif min_time == max_time:
             sel_t[self.__time] = [min_time]  # List, otherwise self.__time dim will be dropped
             method = 'nearest'
         else:
@@ -421,7 +424,10 @@ class ZarrBackend(AbstractTileService):
             TileVariable(v, v) for v in self.__variables
         ]
 
-        matched = self.__ds.sel(sel_g).sel(sel_t, method=method)
+        matched = self.__ds.sel(sel_g) #.sel(sel_t, method=method)
+
+        if sel_t is not None:
+            matched = matched.sel(sel_t, method=method)
 
         tile.latitudes = ma.masked_invalid(matched[self.__latitude].to_numpy())
         tile.longitudes = ma.masked_invalid(matched[self.__longitude].to_numpy())
