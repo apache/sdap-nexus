@@ -195,10 +195,13 @@ class NexusTileData(Model):
             reflected_lat_array = np.broadcast_to(latitude_data, (len(longitude_data), len(latitude_data)))
             reflected_lat_array = np.transpose(reflected_lat_array)
 
+            time = np.array([grid_multi_variable_tile.time])
+            reflected_time_array = np.broadcast_to(time, (len(latitude_data), len(longitude_data)))
+
             # If there are 3 dimensions, that means the time dimension
             # was squeezed. Add back in
             if len(grid_tile_data.shape) == 3:
-                grid_tile_data = np.expand_dims(grid_tile_data, axis=1)
+                grid_tile_data = np.expand_dims(grid_tile_data, axis=0)
             # If there are 4 dimensions, that means the time dimension
             # is present. Move the multivar dimension.
             if len(grid_tile_data.shape) == 4:
@@ -213,7 +216,7 @@ class NexusTileData(Model):
                     meta_array = meta_array[np.newaxis, :]
                 meta_data[name] = meta_array
 
-            return reflected_lat_array, reflected_lon_array, np.array([grid_multi_variable_tile.time]), grid_tile_data, meta_data, is_multi_var
+            return reflected_lat_array, reflected_lon_array, reflected_time_array, grid_tile_data, meta_data, is_multi_var
         else:
             raise NotImplementedError("Only supports grid_tile, swath_tile, swath_multi_variable_tile, and time_series_tile")
 

@@ -129,17 +129,22 @@ class Tile(object):
     def nexus_point_generator(self, include_nan=False):
         indices = self.get_indices(include_nan)
 
+        if len(indices) == 0 or (isinstance(indices, np.ndarray) and indices.size == 0):
+            return
         if self.projection == 'grid':
             lat_slice = slice(1, 2)
             lon_slice = slice(2, 3)
             time_slice = slice(0, 1)
         else:
-            lat_slice = slice(None)
-            lon_slice = slice(None)
-            time_slice = slice(None)
+            def slice_for_var(v):
+                if len(v.shape) < len(indices[0]):
+                    return slice(-len(v.shape), -1)
+                else:
+                    return None
 
-        if len(indices) == 0 or (isinstance(indices, np.ndarray) and indices.size == 0):
-            return
+            lat_slice = slice_for_var(self.latitudes)
+            lon_slice = slice_for_var(self.longitudes)
+            time_slice = slice_for_var(self.times)
 
         if include_nan:
             for index in indices:
