@@ -136,15 +136,9 @@ class Tile(object):
             lon_slice = slice(2, 3)
             time_slice = slice(0, 1)
         else:
-            def slice_for_var(v):
-                if len(v.shape) < len(indices[0]):
-                    return slice(-len(v.shape), -1)
-                else:
-                    return None
-
-            lat_slice = slice_for_var(self.latitudes)
-            lon_slice = slice_for_var(self.longitudes)
-            time_slice = slice_for_var(self.times)
+            lat_slice = slice(None)
+            lon_slice = slice(None)
+            time_slice = slice(None)
 
         if include_nan:
             for index in indices:
@@ -153,7 +147,12 @@ class Tile(object):
                 lon = self.longitudes[index[lon_slice]]
 
                 if self.is_multi:
-                    data_vals = [data[index] for data in self.data]
+                    data_vals = []
+
+                    for data in self.data:
+                        val = data[index]
+
+                        data_vals.append(val if val is not np.ma.masked else np.nan)
                 else:
                     data_vals = self.data[index]
 
@@ -168,7 +167,12 @@ class Tile(object):
                 lon = self.longitudes[index[lon_slice]]
 
                 if self.is_multi:
-                    data_vals = [data[index] for data in self.data]
+                    data_vals = []
+
+                    for data in self.data:
+                        val = data[index]
+
+                        data_vals.append(val if val is not np.ma.masked else np.nan)
                 else:
                     data_vals = self.data[index]
 

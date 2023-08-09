@@ -195,8 +195,13 @@ class NexusTileData(Model):
             reflected_lat_array = np.broadcast_to(latitude_data, (len(longitude_data), len(latitude_data)))
             reflected_lat_array = np.transpose(reflected_lat_array)
 
+            reflected_lat_array = np.expand_dims(reflected_lat_array, axis=0)
+            reflected_lon_array = np.expand_dims(reflected_lon_array, axis=0)
+
             time = np.array([grid_multi_variable_tile.time])
             reflected_time_array = np.broadcast_to(time, (len(latitude_data), len(longitude_data)))
+
+            reflected_time_array = np.expand_dims(reflected_time_array, axis=0)
 
             # If there are 3 dimensions, that means the time dimension
             # was squeezed. Add back in
