@@ -57,7 +57,7 @@ class CorrMapNexusSparkHandlerImpl(NexusCalcSparkHandler):
         # print 'days_at_a_time = ', days_at_a_time
         t_incr = 86400 * days_at_a_time
 
-        tile_service = tile_service_factory
+        tile_service = tile_service_factory()
 
         # Compute the intermediate summations needed for the Pearson 
         # Correlation Coefficient.  We use a one-pass online algorithm
