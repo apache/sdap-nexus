@@ -244,7 +244,7 @@ class Matchup(NexusCalcSparkTornadoHandler):
     def async_calc(self, execution_id, tile_ids, bounding_polygon, primary_ds_name,
                    secondary_ds_names, parameter_s, start_time, end_time, depth_min,
                    depth_max, time_tolerance, radius_tolerance, platforms, match_once,
-                   result_size_limit, start):
+                   result_size_limit, start, prioritize_distance):
         # Call spark_matchup
         self.log.debug("Calling Spark Driver")
 
@@ -264,7 +264,8 @@ class Matchup(NexusCalcSparkTornadoHandler):
                 platforms,
                 match_once,
                 self.tile_service_factory,
-                sc=self._sc
+                sc=self._sc,
+                prioritize_distance=prioritize_distance
             )
         except Exception as error:
             self.log.exception(error)
@@ -378,7 +379,8 @@ class Matchup(NexusCalcSparkTornadoHandler):
             platforms=platforms,
             match_once=match_once,
             result_size_limit=result_size_limit,
-            start=start
+            start=start,
+            prioritize_distance=prioritize_distance
         ))
 
         request.requestHandler.redirect(f'/job?id={execution_id}')
