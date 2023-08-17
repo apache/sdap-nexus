@@ -357,7 +357,9 @@ class Matchup(NexusCalcSparkTornadoHandler):
                     uuid.UUID(execution_id),
                     completeTime=end,
                     status=ExecutionStatus.FAILED.value,
-                    message='No tiles matched the provided domain'
+                    message='No tiles matched the provided domain',
+                    stats=None,
+                    results=None
                 )
 
         # Start async processing with Spark. Do not wait for response
