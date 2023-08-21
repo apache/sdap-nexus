@@ -1,0 +1,10 @@
+<?xml version="1.0"?>
+<allocations>
+  <pool name="small">
+    <weight>1000</weight>
+    <minShare>1</minShare>
+  </pool>
+  <pool name="large">
+    <weight>1</weight>
+  </pool>
+</allocations>
