@@ -85,7 +85,7 @@ class DomsEncoder(json.JSONEncoder):
 
 class DomsQueryResults(NexusResults):
     def __init__(self, results=None, args=None, bounds=None, count=None, details=None, computeOptions=None,
-                 executionId=None, status_code=200):
+                 executionId=None, status_code=200, page_num=None, page_size=None):
         NexusResults.__init__(self, results=results, meta=None, stats=None, computeOptions=computeOptions,
                               status_code=status_code)
         self.__args = args
@@ -93,6 +93,13 @@ class DomsQueryResults(NexusResults):
         self.__count = count
         self.__details = details
         self.__executionId = str(executionId)
+
+        if self.__details is None:
+            self.__details = {}
+
+        # Add page num and size to details block
+        self.__details['pageNum'] = page_num
+        self.__details['pageSize'] = page_size
 
     def toJson(self):
         bounds = self.__bounds.toMap() if self.__bounds is not None else {}
@@ -279,6 +286,9 @@ class DomsCSVFormatter:
             {"Global Attribute": "date_created", "Value": datetime.utcnow().replace(tzinfo=UTC).strftime(ISO_8601)},
 
             {"Global Attribute": "URI_Matchup", "Value": "https://doms.jpl.nasa.gov/domsresults?id=" + executionId + "&output=CSV"}, # TODO how to replace with actual req URL
+
+            {"Global Attribute": "CDMS_page_num", "Value": details["pageNum"]},
+            {"Global Attribute": "CDMS_page_size", "Value": details["pageSize"]},
         ]
 
         writer = csv.DictWriter(csvfile, sorted(next(iter(global_attrs)).keys()))
@@ -329,6 +339,8 @@ class DomsNetCDFFormatter:
         dataset.CDMS_primary = params["primary"]
         dataset.CDMS_time_to_complete = details["timeToComplete"]
         dataset.CDMS_time_to_complete_units = "seconds"
+        dataset.CDMS_page_num = details["pageNum"]
+        dataset.CDMS_page_size = details["pageSize"]
 
         insituDatasets = params["matchup"]
         insituLinks = set()
@@ -408,7 +420,10 @@ class DomsNetCDFFormatter:
 
             # Add each match only if it is not already in the array of in situ points
             for match in result["matches"]:
-                key = (match['id'], f'{match["depth"]:.4}')
+                depth_str = ''
+                if match['depth'] is not None:
+                    depth_str = f'{match["depth"]:.4}'
+                key = (match['id'], depth_str)
 
                 if key not in ids:
                     ids[key] = insituIndex

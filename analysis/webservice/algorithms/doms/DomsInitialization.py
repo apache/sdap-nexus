@@ -119,7 +119,8 @@ class DomsInitializer:
               id uuid PRIMARY KEY,
               time_started timestamp,
               time_completed timestamp,
-              user_email text
+              user_email text,
+              status text
             );
                 """
         session.execute(cql)

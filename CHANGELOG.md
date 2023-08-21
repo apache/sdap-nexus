@@ -4,9 +4,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## Unreleased
+## [Unreleased]
 ### Added
+- SDAP-467: Added pagination to cdmsresults endpoint
 - SDAP-461: Added 4 remaining Saildrone insitu datasets.
+- SDAP-473: Added support for matchup job prioritization
 ### Changed
 - SDAP-453: Updated results storage and retrieval to support output JSON from `/cdmsresults` that matches output from `/match_spark`.
   - **NOTE:** Deploying these changes to an existing SDAP deployment will require modifying the Cassandra database with stored results. There is a script to do so at `/tools/update-doms-data-schema/update.py`
@@ -14,8 +16,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     - Made the `output` parameter case-insensitive
     - Improved speed of results insert
     - Updated `id` field of insitu points to include depth. This solves an issue with NetCDF result rendering where different insitu observations at the same place & time but at different depths were being excluded for having the same `id`.
+- SDAP-455: Large job tracking
 - SDAP-466: Matchup now defines secondary `platform` fields with `platform.id` if it is available and not blank. It then uses `platform.code` and `platform.type` as fallbacks, then just the value of `platform` if none work.
 - SDAP-468: Updated matchup output filename
+- SDAP-482: Updated Saildrone in situ endpoint in config file
 ### Deprecated
 ### Removed
 - SDAP-465: Removed `climatology` directory. 
