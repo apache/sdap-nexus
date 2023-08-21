@@ -52,6 +52,8 @@ class DomsResultsRetrievalHandler(BaseDomsHandler.BaseDomsQueryCalcHandler):
         from webservice.algorithms_spark.Matchup import get_insitu_params
 
         execution_id = computeOptions.get_argument("id", None)
+        page_num = computeOptions.get_int_arg('pageNum', default=1)
+        page_size = computeOptions.get_int_arg('pageSize', default=1000)
 
         caml_params = {}
 
@@ -155,11 +157,11 @@ class DomsResultsRetrievalHandler(BaseDomsHandler.BaseDomsQueryCalcHandler):
         simple_results = computeOptions.get_boolean_arg("simpleResults", default=False)
 
         with ResultsStorage.ResultsRetrieval(self.config) as storage:
-            params, stats, data = storage.retrieveResults(execution_id, trim_data=simple_results)
+            params, stats, data = storage.retrieveResults(execution_id, trim_data=simple_results, page_num=page_num, page_size=page_size)
 
         if output_type == 'CAML':
             params['caml_params'] = caml_params
             params['matchup'] = params['matchup'][0]
 
         return BaseDomsHandler.DomsQueryResults(results=data, args=params, details=stats, bounds=None, count=len(data),
-                                                computeOptions=None, executionId=execution_id)
+                                                computeOptions=None, executionId=execution_id, page_num=page_num, page_size=page_size)

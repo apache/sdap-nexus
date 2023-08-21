@@ -60,7 +60,8 @@ setuptools.setup(
             'config/algorithms.ini',
             'apidocs/index.html',
             'apidocs/openapi.yml',
-            'apidocs/dataset-populate.js'
+            'apidocs/dataset-populate.js',
+            'config/scheduler.xml'
         ],
         'webservice.algorithms.doms': ['domsconfig.ini.default'],
     },
