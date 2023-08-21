@@ -49,7 +49,7 @@ INSITU_PROVIDER_MAP = [
     },
     {
         'name': 'Saildrone',
-        'endpoint': 'https://nasa-cdms.saildrone.com/1.0/query_data_doms_custom_pagination',
+        'endpoint': 'https://nasa-cdms.saildrone.com/insitu/1.0/query_data_doms_custom_pagination',
         'projects': [
             {
                 'name': '1021_atlantic',
