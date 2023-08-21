@@ -141,9 +141,6 @@ class NexusTileService:
 
         self._alg_config = config
 
-        if config:
-            self.override_config(config)
-
         if not NexusTileService.backends:
             NexusTileService.ds_config = configparser.RawConfigParser()
             NexusTileService.ds_config.read(NexusTileService._get_config_files('config/datasets.ini'))
@@ -152,6 +149,9 @@ class NexusTileService:
 
             NexusTileService.backends[None] = default_backend
             NexusTileService.backends['__nexusproto__'] = default_backend
+
+        if config:
+            self.override_config(config)
 
         if not NexusTileService.__update_thread:
             NexusTileService.__update_thread = threading.Thread(
@@ -377,6 +377,10 @@ class NexusTileService:
                 for option in config.options(section):
                     if config.get(section, option) is not None:
                         self._config.set(section, option, config.get(section, option))
+            if NexusTileService.ds_config.has_section(section):  # only override preexisting section, ignores the other
+                for option in config.options(section):
+                    if config.get(section, option) is not None:
+                        NexusTileService.ds_config.set(section, option, config.get(section, option))
 
     def get_dataseries_list(self, simple=False):
         datasets = []
