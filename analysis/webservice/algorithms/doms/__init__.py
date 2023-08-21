@@ -15,6 +15,8 @@
 
 
 from . import BaseDomsHandler
+from . import ExecutionStatus
+from . import ExecutionCancel
 from . import DatasetListQuery
 from . import DomsInitialization
 from . import MatchupQuery
