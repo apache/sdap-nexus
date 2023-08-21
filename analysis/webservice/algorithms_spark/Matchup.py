@@ -12,8 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
-
+import uuid
 from typing import Optional
 import logging
 import threading
@@ -30,19 +29,22 @@ from pytz import timezone, UTC
 from scipy import spatial
 from shapely import wkt
 from shapely.geometry import box
+import functools
 
 from webservice.NexusHandler import nexus_handler
-from webservice.algorithms_spark.NexusCalcSparkHandler import NexusCalcSparkHandler
+from webservice.algorithms_spark.NexusCalcSparkTornadoHandler import NexusCalcSparkTornadoHandler
 from webservice.algorithms.doms import config as edge_endpoints
 from webservice.algorithms.doms import values as doms_values
-from webservice.algorithms.doms.BaseDomsHandler import DomsQueryResults
 from webservice.algorithms.doms.ResultsStorage import ResultsStorage
 from webservice.algorithms.doms.insitu import query_insitu as query_edge
 from webservice.algorithms.doms.insitu import query_insitu_schema
 from webservice.webmodel import NexusProcessingException
+from webservice.webmodel.NexusExecutionResults import ExecutionStatus
 
 EPOCH = timezone('UTC').localize(datetime(1970, 1, 1))
 ISO_8601 = '%Y-%m-%dT%H:%M:%S%z'
+
+LARGE_JOB_THRESHOLD = 4000
 
 
 class Schema:
@@ -66,7 +68,7 @@ def iso_time_to_epoch(str_time):
 
 
 @nexus_handler
-class Matchup(NexusCalcSparkHandler):
+class Matchup(NexusCalcSparkTornadoHandler):
     name = "Matchup"
     path = "/match_spark"
     description = "Match measurements between two or more datasets"
@@ -154,7 +156,12 @@ class Matchup(NexusCalcSparkHandler):
     singleton = True
 
     def __init__(self, algorithm_config=None, sc=None, tile_service_factory=None, config=None):
-        NexusCalcSparkHandler.__init__(self, algorithm_config=algorithm_config, sc=sc, tile_service_factory=tile_service_factory)
+        NexusCalcSparkTornadoHandler.__init__(
+            self,
+            algorithm_config=algorithm_config,
+            sc=sc,
+            tile_service_factory=tile_service_factory
+        )
         self.log = logging.getLogger(__name__)
         self.tile_service_factory = tile_service_factory
         self.config = config
@@ -229,7 +236,75 @@ class Matchup(NexusCalcSparkHandler):
                depth_min, depth_max, time_tolerance, radius_tolerance, \
                platforms, match_once, result_size_limit, prioritize_distance
 
-    def calc(self, request, **args):
+    def get_job_pool(self, tile_ids):
+        if len(tile_ids) > LARGE_JOB_THRESHOLD:
+            return 'large'
+        return 'small'
+
+    def async_calc(self, execution_id, tile_ids, bounding_polygon, primary_ds_name,
+                   secondary_ds_names, parameter_s, start_time, end_time, depth_min,
+                   depth_max, time_tolerance, radius_tolerance, platforms, match_once,
+                   result_size_limit, start, prioritize_distance):
+        # Call spark_matchup
+        self.log.debug("Calling Spark Driver")
+
+        job_priority = self.get_job_pool(tile_ids)
+
+        try:
+            self._sc.setJobGroup(execution_id, execution_id)
+            self._sc.setLocalProperty('spark.scheduler.pool', job_priority)
+            spark_result = spark_matchup_driver(
+                tile_ids, wkt.dumps(bounding_polygon),
+                primary_ds_name,
+                secondary_ds_names,
+                parameter_s,
+                depth_min,
+                depth_max, time_tolerance,
+                radius_tolerance,
+                platforms,
+                match_once,
+                self.tile_service_factory,
+                sc=self._sc,
+                prioritize_distance=prioritize_distance
+            )
+        except Exception as error:
+            self.log.exception(error)
+            end = datetime.utcnow()
+            with ResultsStorage(self.config) as storage:
+                storage.updateExecution(
+                    uuid.UUID(execution_id),
+                    completeTime=end,
+                    status=ExecutionStatus.FAILED.value,
+                    message=str(error),
+                    stats=None,
+                    results=None
+                )
+            return
+
+        self.log.debug("Building and saving results")
+        end = datetime.utcnow()
+
+        total_keys = len(list(spark_result.keys()))
+        total_values = sum(len(v) for v in spark_result.values())
+        details = {
+            "timeToComplete": int((end - start).total_seconds()),
+            "numSecondaryMatched": total_values,
+            "numPrimaryMatched": total_keys
+        }
+
+        matches = Matchup.convert_to_matches(spark_result)
+
+        with ResultsStorage(self.config) as storage:
+            storage.updateExecution(
+                uuid.UUID(execution_id),
+                completeTime=end,
+                status=ExecutionStatus.SUCCESS.value,
+                message=None,
+                stats=details,
+                results=matches
+            )
+
+    def calc(self, request, tornado_io_loop, **args):
         start = datetime.utcnow()
         # TODO Assuming Satellite primary
         bounding_polygon, primary_ds_name, secondary_ds_names, parameter_s, \
@@ -237,34 +312,6 @@ class Matchup(NexusCalcSparkHandler):
         depth_min, depth_max, time_tolerance, radius_tolerance, \
         platforms, match_once, result_size_limit, prioritize_distance = self.parse_arguments(request)
 
-        with ResultsStorage(self.config) as resultsStorage:
-
-            execution_id = str(resultsStorage.insertExecution(None, start, None, None))
-
-        self.log.debug("Querying for tiles in search domain")
-        # Get tile ids in box
-        tile_ids = [tile.tile_id for tile in
-                    self._get_tile_service().find_tiles_in_polygon(bounding_polygon, primary_ds_name,
-                                                             start_seconds_from_epoch, end_seconds_from_epoch,
-                                                             fetch_data=False, fl='id',
-                                                             sort=['tile_min_time_dt asc', 'tile_min_lon asc',
-                                                                   'tile_min_lat asc'], rows=5000)]
-
-        self.log.info('Found %s tile_ids', len(tile_ids))
-        # Call spark_matchup
-        self.log.debug("Calling Spark Driver")
-        try:
-            spark_result = spark_matchup_driver(tile_ids, wkt.dumps(bounding_polygon), primary_ds_name,
-                                                secondary_ds_names, parameter_s, depth_min, depth_max, time_tolerance,
-                                                radius_tolerance, platforms, match_once, self.tile_service_factory,
-                                                prioritize_distance, sc=self._sc)
-        except Exception as e:
-            self.log.exception(e)
-            raise NexusProcessingException(reason="An unknown error occurred while computing matches", code=500)
-
-        end = datetime.utcnow()
-
-        self.log.debug("Building and saving results")
         args = {
             "primary": primary_ds_name,
             "matchup": secondary_ds_names,
@@ -283,37 +330,63 @@ class Matchup(NexusCalcSparkHandler):
         if depth_max is not None:
             args["depthMax"] = float(depth_max)
 
-        total_keys = len(list(spark_result.keys()))
-        total_values = sum(len(v) for v in spark_result.values())
-        details = {
-            "timeToComplete": int((end - start).total_seconds()),
-            "numSecondaryMatched": total_values,
-            "numPrimaryMatched": total_keys
-        }
 
-        matches = Matchup.convert_to_matches(spark_result)
+        with ResultsStorage(self.config) as resultsStorage:
+            execution_id = str(resultsStorage.insertInitialExecution(
+                params=args,
+                startTime=start,
+                status=ExecutionStatus.RUNNING.value
+            ))
 
-        def do_result_insert():
+        self.log.debug("Querying for tiles in search domain")
+        # Get tile ids in box
+        tile_ids = [tile.tile_id for tile in
+                    self._get_tile_service().find_tiles_in_polygon(bounding_polygon, primary_ds_name,
+                                                             start_seconds_from_epoch, end_seconds_from_epoch,
+                                                             fetch_data=False, fl='id',
+                                                             sort=['tile_min_time_dt asc', 'tile_min_lon asc',
+                                                                   'tile_min_lat asc'], rows=5000)]
+
+        self.log.info('Found %s tile_ids', len(tile_ids))
+
+        if not tile_ids:
+            # There are no matching tiles
+            end = datetime.utcnow()
             with ResultsStorage(self.config) as storage:
-                storage.insertResults(results=matches, params=args, stats=details,
-                                      startTime=start, completeTime=end, userEmail="",
-                                      execution_id=execution_id)
+                storage.updateExecution(
+                    uuid.UUID(execution_id),
+                    completeTime=end,
+                    status=ExecutionStatus.FAILED.value,
+                    message='No tiles matched the provided domain',
+                    stats=None,
+                    results=None
+                )
 
-        threading.Thread(target=do_result_insert).start()
+        # Start async processing with Spark. Do not wait for response
+        # before returning to user.
+        tornado_io_loop.run_in_executor(request.requestHandler.executor, functools.partial(
+            self.async_calc,
+            execution_id=execution_id,
+            tile_ids=tile_ids,
+            bounding_polygon=bounding_polygon,
+            primary_ds_name=primary_ds_name,
+            secondary_ds_names=secondary_ds_names,
+            parameter_s=parameter_s,
+            start_time=start_time,
+            end_time=end_time,
+            depth_min=depth_min,
+            depth_max=depth_max,
+            time_tolerance=time_tolerance,
+            radius_tolerance=radius_tolerance,
+            platforms=platforms,
+            match_once=match_once,
+            result_size_limit=result_size_limit,
+            start=start,
+            prioritize_distance=prioritize_distance
+        ))
 
-        # Get only the first "result_size_limit" results
-        # '0' means returns everything
-        if result_size_limit > 0:
-            return_matches = matches[0:result_size_limit]
-        else:
-            return_matches = matches
+        request.requestHandler.redirect(f'/job?id={execution_id}')
 
-        result = DomsQueryResults(results=return_matches, args=args,
-                                  details=details, bounds=None,
-                                  count=len(matches), computeOptions=None,
-                                  executionId=execution_id)
-
-        return result
 
     @classmethod
     def convert_to_matches(cls, spark_result):
