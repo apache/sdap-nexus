@@ -37,6 +37,7 @@ class HandlerArgsBuilder:
                 class_wrapper == webservice.algorithms_spark.Matchup.Matchup
                 or class_wrapper == webservice.algorithms_spark.MatchupDoms.MatchupDoms
                 or issubclass(class_wrapper, webservice.algorithms.doms.BaseDomsHandler.BaseDomsQueryCalcHandler)
+                or issubclass(class_wrapper, webservice.algorithms_spark.NexusCalcSparkTornadoHandler.NexusCalcSparkTornadoHandler)
                 or class_wrapper == webservice.algorithms.doms.ResultsRetrieval.DomsResultsRetrievalHandler
                 or class_wrapper == webservice.algorithms.doms.ResultsPlotQuery.DomsResultsPlotHandler
         )
