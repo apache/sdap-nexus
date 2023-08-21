@@ -20,6 +20,7 @@ import tornado.ioloop
 
 from webservice.nexus_tornado.request.renderers import NexusRendererFactory
 from webservice.webmodel import NexusRequestObjectTornadoFree, NexusRequestObject, NexusProcessingException
+from webservice.algorithms_spark.NexusCalcSparkTornadoHandler import NexusCalcSparkTornadoHandler
 
 
 class NexusRequestHandler(tornado.web.RequestHandler):
@@ -44,18 +45,29 @@ class NexusRequestHandler(tornado.web.RequestHandler):
         # create NexusCalcHandler which will process the request
         instance = self.__clazz(**self._clazz_init_args)
 
+        io_loop = tornado.ioloop.IOLoop.current()
+
         try:
-            # process the request asynchronously on a different thread,
-            # the current tornado handler is still available to get other user requests
-            results = yield tornado.ioloop.IOLoop.current().run_in_executor(self.executor, instance.calc, request)
+            if isinstance(instance, NexusCalcSparkTornadoHandler):
+                results = instance.calc(request, io_loop)
+            else:
+                results = yield io_loop.run_in_executor(
+                    self.executor,
+                    instance.calc,
+                    request
+                )
 
             try:
                 self.set_status(results.status_code)
             except AttributeError:
                 pass
 
-            renderer = NexusRendererFactory.get_renderer(request)
-            renderer.render(self, results)
+            # Only render results if there are results to render.
+            # "NexusCalcSparkTornadoHandler" endpoints redirectm so no
+            # need to render.
+            if not isinstance(instance, NexusCalcSparkTornadoHandler):
+                renderer = NexusRendererFactory.get_renderer(request)
+                renderer.render(self, results)
 
         except NexusProcessingException as e:
             self.async_onerror_callback(e.reason, e.code)
