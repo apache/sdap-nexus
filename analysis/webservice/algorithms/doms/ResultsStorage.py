@@ -26,7 +26,7 @@ import pkg_resources
 from cassandra.auth import PlainTextAuthProvider
 from cassandra.cluster import Cluster
 from cassandra.policies import TokenAwarePolicy, DCAwareRoundRobinPolicy
-from cassandra.query import BatchStatement
+from cassandra.query import BatchStatement, SimpleStatement
 from pytz import UTC
 from webservice.algorithms.doms.BaseDomsHandler import DomsEncoder
 from webservice.webmodel import NexusProcessingException
@@ -106,24 +106,40 @@ class ResultsStorage(AbstractResultsContainer):
     def __init__(self, config=None):
         AbstractResultsContainer.__init__(self, config)
 
-    def insertResults(self, results, params, stats, startTime, completeTime, userEmail, execution_id=None):
-        self._log.info('Beginning results write')
+    def insertInitialExecution(self, params, startTime, status, userEmail='', execution_id=None):
+        """
+        Initial insert into database for CDMS matchup request. This
+        populates the execution and params table.
+        """
         if isinstance(execution_id, str):
             execution_id = uuid.UUID(execution_id)
 
-        execution_id = self.insertExecution(execution_id, startTime, completeTime, userEmail)
+        execution_id = self.__insertExecution(execution_id, startTime, None, userEmail, status)
         self.__insertParams(execution_id, params)
-        self.__insertStats(execution_id, stats)
-        self.__insertResults(execution_id, results)
-        self._log.info('Results write finished')
         return execution_id
 
-    def insertExecution(self, execution_id, startTime, completeTime, userEmail):
+    def updateExecution(self, execution_id, completeTime, status, message, stats, results):
+        if stats:
+            self.__insertStats(execution_id, stats)
+        if results:
+            self.__insertResults(execution_id, results)
+        self.__updateExecution(execution_id, completeTime, status, message)
+
+    def __insertExecution(self, execution_id, startTime, completeTime, userEmail, status):
+        """
+        Insert new entry into execution table
+        """
         if execution_id is None:
             execution_id = uuid.uuid4()
 
-        cql = "INSERT INTO doms_executions (id, time_started, time_completed, user_email) VALUES (%s, %s, %s, %s)"
-        self._session.execute(cql, (execution_id, startTime, completeTime, userEmail))
+        cql = "INSERT INTO doms_executions (id, time_started, time_completed, user_email, status) VALUES (%s, %s, %s, %s, %s)"
+        self._session.execute(cql, (execution_id, startTime, completeTime, userEmail, status))
+        return execution_id
+
+    def __updateExecution(self, execution_id, complete_time, status, message=None):
+        # Only update the status if it's "running". Any other state is immutable.
+        cql = "UPDATE doms_executions SET time_completed = %s, status = %s, message = %s WHERE id=%s IF status = 'running'"
+        self._session.execute(cql, (complete_time, status, message, execution_id))
         return execution_id
 
     def __insertParams(self, execution_id, params):
@@ -259,17 +275,17 @@ class ResultsRetrieval(AbstractResultsContainer):
     def __init__(self, config=None):
         AbstractResultsContainer.__init__(self, config)
 
-    def retrieveResults(self, execution_id, trim_data=False):
+    def retrieveResults(self, execution_id, trim_data=False, page_num=1, page_size=1000):
         if isinstance(execution_id, str):
             execution_id = uuid.UUID(execution_id)
 
-        params = self.__retrieveParams(execution_id)
+        params = self.retrieveParams(execution_id)
         stats = self.__retrieveStats(execution_id)
-        data = self.__retrieveData(execution_id, trim_data=trim_data)
+        data = self.__retrieveData(execution_id, trim_data=trim_data, page_num=page_num, page_size=page_size)
         return params, stats, data
 
-    def __retrieveData(self, id, trim_data=False):
-        dataMap = self.__retrievePrimaryData(id, trim_data=trim_data)
+    def __retrieveData(self, id, trim_data=False, page_num=1, page_size=1000):
+        dataMap = self.__retrievePrimaryData(id, trim_data=trim_data, page_num=page_num, page_size=page_size)
         self.__enrichPrimaryDataWithMatches(id, dataMap, trim_data=trim_data)
         data = [dataMap[name] for name in dataMap]
         return data
@@ -284,15 +300,13 @@ class ResultsRetrieval(AbstractResultsContainer):
                 if not "matches" in dataMap[row.primary_value_id]:
                     dataMap[row.primary_value_id]["matches"] = []
                 dataMap[row.primary_value_id]["matches"].append(entry)
-            else:
-                print(row)
 
-    def __retrievePrimaryData(self, id, trim_data=False):
-        cql = "SELECT * FROM doms_data where execution_id = %s and is_primary = true"
-        rows = self._session.execute(cql, (id,))
+    def __retrievePrimaryData(self, id, trim_data=False, page_num=2, page_size=10):
+        cql = "SELECT * FROM doms_data where execution_id = %s and is_primary = true limit %s"
+        rows = self._session.execute(cql, [id, page_num * page_size])
 
         dataMap = {}
-        for row in rows:
+        for row in rows[(page_num-1)*page_size:page_num*page_size]:
             entry = self.__rowToDataEntry(row, trim_data=trim_data)
             dataMap[row.value_id] = entry
         return dataMap
@@ -343,7 +357,7 @@ class ResultsRetrieval(AbstractResultsContainer):
 
         raise Exception("Execution not found with id '%s'" % id)
 
-    def __retrieveParams(self, id):
+    def retrieveParams(self, id):
         cql = "SELECT * FROM doms_params where execution_id = %s limit 1"
         rows = self._session.execute(cql, (id,))
         for row in rows:
@@ -368,3 +382,23 @@ class ResultsRetrieval(AbstractResultsContainer):
             return params
 
         raise Exception("Execution not found with id '%s'" % id)
+
+    def retrieveExecution(self, execution_id):
+        """
+        Retrieve execution details from database.
+
+        :param execution_id: Execution ID
+        :return: execution status dictionary
+        """
+
+        cql = "SELECT * FROM doms_executions where id = %s limit 1"
+        rows = self._session.execute(cql, (execution_id,))
+        for row in rows:
+            return {
+                'status': row.status,
+                'message': row.message,
+                'timeCompleted': row.time_completed,
+                'timeStarted': row.time_started
+            }
+
+        raise ValueError('Execution not found with id %s', execution_id)
