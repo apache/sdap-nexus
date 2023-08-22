@@ -57,7 +57,7 @@ class CorrMapNexusSparkHandlerImpl(NexusCalcSparkHandler):
         # print 'days_at_a_time = ', days_at_a_time
         t_incr = 86400 * days_at_a_time
 
-        tile_service = tile_service_factory
+        tile_service = tile_service_factory()
 
         # Compute the intermediate summations needed for the Pearson 
         # Correlation Coefficient.  We use a one-pass online algorithm
@@ -205,9 +205,9 @@ class CorrMapNexusSparkHandlerImpl(NexusCalcSparkHandler):
             self.log.debug('{0}, {1}'.format(i, datetime.utcfromtimestamp(d)))
 
         # Create array of tuples to pass to Spark map function
-        nexus_tiles_spark = [[self._find_tile_bounds(t),
+        nexus_tiles_spark = np.array([[self._find_tile_bounds(t),
                               self._startTime, self._endTime,
-                              self._ds] for t in nexus_tiles]
+                              self._ds] for t in nexus_tiles], dtype='object')
 
         # Remove empty tiles (should have bounds set to None)
         bad_tile_inds = np.where([t[0] is None for t in nexus_tiles_spark])[0]

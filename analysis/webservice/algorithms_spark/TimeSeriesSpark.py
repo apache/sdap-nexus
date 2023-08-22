@@ -226,19 +226,14 @@ class TimeSeriesSparkHandlerImpl(NexusCalcSparkHandler):
                                                spark_nparts=spark_nparts,
                                                sc=self._sc)
                 clim_indexed_by_month = {datetime.utcfromtimestamp(result['time']).month: result for result in results_clim}
-                if len(clim_indexed_by_month) < 12:
-                    raise NexusProcessingException(reason="There are only " +
-                                                   len(clim_indexed_by_month) + " months of climatology data for dataset " + 
-                                                   shortName + ". A full year of climatology data is required for computing deseasoned timeseries.")
-
+                
                 for result in results:
                     month = datetime.utcfromtimestamp(result['time']).month
 
-                    result['meanSeasonal'] = result['mean'] - clim_indexed_by_month[month]['mean']
-                    result['minSeasonal'] = result['min'] - clim_indexed_by_month[month]['min']
-                    result['maxSeasonal'] = result['max'] - clim_indexed_by_month[month]['max']
-                self.log.info(
-                    "Seasonal calculation took %s for dataset %s" % (str(datetime.now() - the_time), shortName))
+                    result['meanSeasonal'] = result['mean'] - clim_indexed_by_month.get(month, result)['mean']
+                    result['minSeasonal'] = result['min'] - clim_indexed_by_month.get(month, result)['min']
+                    result['maxSeasonal'] = result['max'] - clim_indexed_by_month.get(month, result)['max']
+                self.log.info("Seasonal calculation took %s for dataset %s" % (str(datetime.now() - the_time), shortName))
 
             the_time = datetime.now()
             filtering.applyAllFiltersOnField(results, 'mean', applySeasonal=False, applyLowPass=apply_low_pass_filter)

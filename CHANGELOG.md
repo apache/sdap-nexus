@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - SDAP-467: Added pagination to cdmsresults endpoint
 - SDAP-461: Added 4 remaining Saildrone insitu datasets.
 - SDAP-473: Added support for matchup job prioritization
+- SDAP-483: Added `.asf.yaml` to configure Jira auto-linking.
 - SDAP-401: Added JSON output formatting for use with COVERAGE to `/match_spark`
 ### Changed
 - SDAP-453: Updated results storage and retrieval to support output JSON from `/cdmsresults` that matches output from `/match_spark`.
@@ -26,6 +27,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - SDAP-465: Removed `climatology` directory. 
 ### Fixed
 - SDAP-474: Fixed bug in CSV attributes where secondary dataset would be rendered as comma separated characters
+- SDAP-475: Bug fixes for `/timeSeriesSpark` and `/timeAvgMapSpark`
 ### Security
 
 ## [1.1.0] - 2023-04-26
