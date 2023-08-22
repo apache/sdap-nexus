@@ -207,3 +207,13 @@ cassandra:
     limits:
       cpu: 1
       memory: 8Gi
+
+cronJobs:
+  domsPurge:
+    enabled: true
+    schedule: "0 0 * * *"
+    keepBeforeMonths: "2"
+    keepUncompleted: false
+    image: "nexusjpl/domspurge:1.0.0"
+    restartPolicy: Never
+    concurrency: Forbid
