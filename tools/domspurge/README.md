@@ -2,7 +2,7 @@
 
 ## Prerequisites
 
-_If you are running the `deletebyquery.py` script from within the nexus-webapp-driver Docker image, the following prerequisites are not necessary._
+_If you are running the `purge.py` script from within the nexus-webapp-driver Docker image, the following prerequisites are not necessary._
 
 * Run `python setup.py install` in `incubator-sdap-nexus/analysis` 
 * Run `pip install -r requirements.txt` in `incubator-sdap-nexus/tools/domspurge`
