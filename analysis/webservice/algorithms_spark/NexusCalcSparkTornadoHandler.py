@@ -12,28 +12,12 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-import pkg_resources
+
+import logging
+from webservice.algorithms_spark.NexusCalcSparkHandler import NexusCalcSparkHandler
+
+logger = logging.getLogger(__name__)
 
 
-class SparkContextBuilder:
-    def __init__(self):
-        pass
-
-    spark_context = None
-
-    @classmethod
-    def get_spark_context(cls):
-        if cls.spark_context is None:
-            from pyspark.sql import SparkSession
-
-            scheduler_path = pkg_resources.resource_filename('webservice', "config/scheduler.xml")
-
-            spark = SparkSession.builder.appName("nexus-analysis").config(
-                "spark.scheduler.allocation.file", scheduler_path
-            ).config(
-                "spark.scheduler.mode", "FAIR"
-            ).getOrCreate()
-            cls.spark_context = spark.sparkContext
-
-        return cls.spark_context
-
+class NexusCalcSparkTornadoHandler(NexusCalcSparkHandler):
+    pass
