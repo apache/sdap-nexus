@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - SDAP-467: Added pagination to cdmsresults endpoint
 - SDAP-461: Added 4 remaining Saildrone insitu datasets.
 - SDAP-473: Added support for matchup job prioritization
+- SDAP-483: Added `.asf.yaml` to configure Jira auto-linking.
 - SDAP-440: Added `CassandraSwathProxy` to process tiles in a method optimized for swath format
 - SDAP-440: Set up framework to roll out changes to SDAP algorithms to work with swath formatted data for both tile types rather than having tiles formatted as gridded which is very memory inefficient.
 ### Changed
@@ -27,6 +28,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - SDAP-465: Removed `climatology` directory. 
 ### Fixed
 - SDAP-474: Fixed bug in CSV attributes where secondary dataset would be rendered as comma separated characters
+- SDAP-475: Bug fixes for `/timeSeriesSpark` and `/timeAvgMapSpark`
 ### Security
 
 ## [1.1.0] - 2023-04-26
