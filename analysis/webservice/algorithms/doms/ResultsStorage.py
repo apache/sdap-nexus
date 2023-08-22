@@ -195,9 +195,12 @@ class ResultsStorage(AbstractResultsContainer):
             inserts.extend(self.__prepare_result(execution_id, None, result, insertStatement))
 
         for i in range(5):
-            if not self.__insert_result_batches(inserts, insertStatement):
+            success, failed_entries = self.__insert_result_batches(inserts, insertStatement)
+
+            if not success:
                 if i < 4:
                     self._log.warning('Some write attempts failed; retrying')
+                    inserts = failed_entries
                     sleep(10)
                 else:
                     self._log.error('Some write attempts failed; max retries exceeded')
@@ -213,6 +216,8 @@ class ResultsStorage(AbstractResultsContainer):
         n_inserts = len(insert_params)
         writing = 0
 
+        failed = []
+
         self._log.info(f'Inserting {n_inserts} matchup entries in JSON format')
 
         for batch in query_batches:
@@ -222,16 +227,17 @@ class ResultsStorage(AbstractResultsContainer):
                 f'Writing batch of {len(batch)} matchup entries | ({writing}/{n_inserts}) [{writing / n_inserts * 100:7.3f}%]')
 
             for entry in batch:
-                futures.append(self._session.execute_async(insertStatement, entry))
+                futures.append((entry, self._session.execute_async(insertStatement, entry)))
 
-            for future in futures:
+            for entry, future in futures:
                 try:
                     future.result()
                 except Exception:
                     move_successful = False
+                    failed.append(entry)
 
         self._log.info('Result data write attempt completed')
-        return move_successful
+        return move_successful, failed
 
     def __prepare_result(self, execution_id, primaryId, result, insertStatement):
         if 'primary' in result:
