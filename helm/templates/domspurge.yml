@@ -1,0 +1,35 @@
+{{ if .Values.cronJobs.domsPurge.enabled }}
+
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: doms-purge
+spec:
+  schedule: {{ .Values.cronJobs.domsPurge.schedule }}
+  concurrencyPolicy: {{ .Values.cronJobs.domsPurge.concurrency }}
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          containers:
+          - name: doms-purge
+            image: {{ .Values.cronJobs.domsPurge.image }}
+            imagePullPolicy: Always
+            env:
+              - name: CASSANDRA_CONTACT_POINTS
+                value: {{ include "nexus.urls.cassandra" . }}
+              - name: CASSANDRA_USERNAME
+                value: {{ include "nexus.credentials.cassandra.username" . }}
+              - name: CASSANDRA_PASSWORD
+                value: {{ include "nexus.credentials.cassandra.password" . }}
+              - name: "YES"
+                value: "true"
+              - name: BEFORE_MONTHS
+                value: {{ .Values.cronJobs.domsPurge.keepBeforeMonths }}
+              {{ if .Values.cronJobs.domsPurge.keepUncompleted }}
+              - name: KEEP_FAILED
+                value: {{ .Values.cronJobs.domsPurge.keepUncompleted }}
+              {{ end }}
+          restartPolicy: {{ .Values.cronJobs.domsPurge.restartPolicy }}
+
+{{ end }}
