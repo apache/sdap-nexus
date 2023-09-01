@@ -34,9 +34,11 @@ from webservice.NexusHandler import nexus_initializer
 from yarl import URL
 
 from .AbstractTileService import AbstractTileService
-from .backends.nexusproto.backend import NexusprotoTileService
-from .backends.zarr.backend import ZarrBackend
+# from .backends.nexusproto.backend import NexusprotoTileService
+# from .backends.zarr.backend import ZarrBackend
 from .model.nexusmodel import Tile, BBox, TileStats, TileVariable
+
+from nexustiles.backends import *
 
 from .exception import NexusTileServiceException
 
