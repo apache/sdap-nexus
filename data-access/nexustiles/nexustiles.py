@@ -14,6 +14,7 @@
 # limitations under the License.
 
 import configparser
+import io
 import json
 import logging
 import sys
@@ -263,6 +264,30 @@ class NexusTileService:
                         }
                     except NexusTileServiceException:
                         added_datasets -= 1
+                elif store_type.lower() in ['cog', 'cloud_optimized_geotiff']:
+                        update_logger.info(f'Detected new CoG dataset {d_id}, opening new CoG backend')
+
+                        ds_config = json.loads(dataset['config'][0])
+
+                        solr_config_str = io.StringIO()
+                        NexusTileService.ds_config.write(solr_config_str)
+
+                        solr_config_str.seek(0)
+                        solr_config = configparser.ConfigParser()
+                        solr_config.read(solr_config_str)
+                        solr_config.set('solr', 'core', 'nexusgranules')
+
+                        try:
+                            NexusTileService.backends[d_id] = {
+                                'backend': CoGBackend(
+                                    dataset_name=dataset['dataset_s'],
+                                    solr_config=solr_config,
+                                    **ds_config
+                                ),
+                                'up': True
+                            }
+                        except NexusTileServiceException:
+                            added_datasets -= 1
                 else:
                     update_logger.warning(f'Unsupported backend {store_type} for dataset {d_id}')
                     added_datasets -= 1

@@ -21,6 +21,7 @@ from urllib.parse import urlparse
 import numpy as np
 import numpy.ma as ma
 import s3fs
+import rioxarray
 import xarray as xr
 from nexustiles.AbstractTileService import AbstractTileService
 from nexustiles.exception import NexusTileServiceException
@@ -28,6 +29,8 @@ from nexustiles.model.nexusmodel import Tile, BBox, TileVariable
 from pytz import timezone
 from shapely.geometry import MultiPolygon, box
 from yarl import URL
+
+from nexustiles.backends.cog import SolrProxy
 
 EPOCH = timezone('UTC').localize(datetime(1970, 1, 1))
 ISO_8601 = '%Y-%m-%dT%H:%M:%S%z'
@@ -40,68 +43,34 @@ logger = logging.getLogger(__name__)
 
 
 class CoGBackend(AbstractTileService):
-    def __init__(self, dataset_name, path, config=None):
+    def __init__(self, dataset_name, bands, solr_config, config=None):
         AbstractTileService.__init__(self, dataset_name)
         self.__config = config if config is not None else {}
 
-        logger.info(f'Opening zarr backend at {path} for dataset {self._name}')
+        logger.info(f'Opening CoG backend at for dataset {self._name}')
 
-        url = urlparse(path)
+        self.__bands = bands
 
-        self.__url = path
+        self.__longitude = 'longitude'
+        self.__latitude = 'latitude'
+        self.__time = 'time'
 
-        self.__store_type = url.scheme
-        self.__host = url.netloc
-        self.__path = url.path
+        # self.__depth = config['coords'].get('depth')
 
-        if 'variable' in config:
-            data_vars = config['variable']
-        elif 'variables' in config:
-            data_vars = config['variables']
-        else:
-            raise KeyError('Data variables not provided in config')
-
-        if isinstance(data_vars, str):
-            self.__variables = [data_vars]
-        elif isinstance(data_vars, list):
-            self.__variables = data_vars
-        else:
-            raise TypeError(f'Improper type for variables config: {type(data_vars)}')
-
-        self.__longitude = config['coords']['longitude']
-        self.__latitude = config['coords']['latitude']
-        self.__time = config['coords']['time']
-
-        self.__depth = config['coords'].get('depth')
-
-        if self.__store_type in ['', 'file']:
-            store = self.__path
-        elif self.__store_type == 's3':
-            try:
-                aws_cfg = self.__config['aws']
-
-                if aws_cfg['public']:
-                    # region = aws_cfg.get('region', 'us-west-2')
-                    # store = f'https://{self.__host}.s3.{region}.amazonaws.com{self.__path}'
-                    s3 = s3fs.S3FileSystem(True)
-                    store = s3fs.S3Map(root=path, s3=s3, check=False)
-                else:
-                    s3 = s3fs.S3FileSystem(False, key=aws_cfg['accessKeyID'], secret=aws_cfg['secretAccessKey'])
-                    store = s3fs.S3Map(root=path, s3=s3, check=False)
-            except Exception as e:
-                logger.error(f'Failed to open zarr dataset at {self.__path}, ignoring it. Cause: {e}')
-                raise NexusTileServiceException(f'Cannot open S3 dataset ({e})')
-        else:
-            raise ValueError(self.__store_type)
-
-        try:
-            self.__ds: xr.Dataset = xr.open_zarr(store, consolidated=True)
-        except Exception as e:
-            logger.error(f'Failed to open zarr dataset at {self.__path}, ignoring it. Cause: {e}')
-            raise NexusTileServiceException(f'Cannot open dataset ({e})')
+        self.__solr = SolrProxy(solr_config)
 
     def get_dataseries_list(self, simple=False):
-        raise NotImplementedError()
+        ds = dict(
+            shortName=self._name,
+            title=self._name,
+            type='Cloud Optimized GeoTIFF'
+        )
+
+        if not simple:
+            min_date, max_date = self.__solr.date_range_for_dataset(self._name)
+
+            ds['iso_start'] = datetime.utcfromtimestamp(min_date).strftime(ISO_8601)
+            ds['iso_end'] = datetime.utcfromtimestamp(max_date).strftime(ISO_8601)
 
     def find_tile_by_id(self, tile_id, **kwargs):
         return [tile_id]
@@ -263,9 +232,8 @@ class CoGBackend(AbstractTileService):
     def __fetch_data_for_tile(self, tile: Tile):
         raise NotImplementedError()
 
-
     def _metadata_store_docs_to_tiles(self, *store_docs):
-        return [ZarrBackend.__nts_url_to_tile(d) for d in store_docs]
+        return [CoGBackend.__nts_url_to_tile(d) for d in store_docs]
 
     @staticmethod
     def __nts_url_to_tile(nts_url):
