@@ -401,4 +401,4 @@ class ResultsRetrieval(AbstractResultsContainer):
                 'timeStarted': row.time_started
             }
 
-        raise ValueError('Execution not found with id %s', execution_id)
+        raise NexusProcessingException(reason=f'Execution not found with id {str(execution_id)}', code=404)
