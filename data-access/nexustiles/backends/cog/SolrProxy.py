@@ -16,6 +16,8 @@
 import logging
 from nexustiles.backends.nexusproto.dao.SolrProxy import SolrProxy as SolrProxyBase
 from datetime import datetime
+from shapely import Polygon
+from typing import Union, Optional, Dict
 
 
 SOLR_FORMAT = '%Y-%m-%dT%H:%M:%SZ'
@@ -23,10 +25,17 @@ SOLR_FORMAT = '%Y-%m-%dT%H:%M:%SZ'
 
 class SolrProxy(SolrProxyBase):
     def __init__(self, config):
-        super(self, config)
+        SolrProxyBase.__init__(self, config)
         self.logger = logging.getLogger(__name__)
 
-    def find_tiffs_in_date_range(self, dataset, start, end, **kwargs):
+    def find_tiffs_in_bounds(
+            self,
+            dataset,
+            start,
+            end,
+            bounds: Optional[Union[Dict[str, float], str, Polygon]] = None,
+            **kwargs
+    ):
         search = f'dataset_s:{dataset}'
 
         time_clause = "(" \
@@ -41,8 +50,22 @@ class SolrProxy(SolrProxyBase):
 
         params = {
             'fq': [time_clause],
-            'fl': 'path_s, granule_s'
+            # 'fl': ['path_s', 'granule_s']
         }
+
+        if bounds is not None:
+            if type(bounds) in [dict, str]:
+                if isinstance(bounds, dict):
+                    max_lat = bounds['max_lat']
+                    max_lon = bounds['max_lon']
+                    min_lat = bounds['min_lat']
+                    min_lon = bounds['min_lon']
+                else:
+                    min_lon, min_lat, max_lon, max_lat = tuple([float(p) for p in bounds.split(',')])
+
+                params['fq'].append("geo:[%s,%s TO %s,%s]" % (min_lat, min_lon, max_lat, max_lon))
+            elif isinstance(bounds, Polygon):
+                params['fq'].append('{!field f=geo}Intersects(%s)' % bounds.wkt)
 
         self._merge_kwargs(params, **kwargs)
 
@@ -56,7 +79,7 @@ class SolrProxy(SolrProxyBase):
 
         kwargs['rows'] = 1
         kwargs['sort'] = ['max_time_dt desc']
-        kwargs['fl'] = 'min_time_dt, max_time_dt'
+        # kwargs['fl'] = ['min_time_dt', 'max_time_dt']
 
         params = {}
 

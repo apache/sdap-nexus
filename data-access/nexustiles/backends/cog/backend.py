@@ -29,7 +29,7 @@ from nexustiles.model.nexusmodel import Tile, BBox, TileVariable
 from pytz import timezone
 from shapely.geometry import MultiPolygon, box
 from yarl import URL
-
+from rioxarray.exceptions import MissingCRS
 from nexustiles.backends.cog import SolrProxy
 
 EPOCH = timezone('UTC').localize(datetime(1970, 1, 1))
@@ -229,18 +229,143 @@ class CoGBackend(AbstractTileService):
 
         return tiles
 
+
+    @staticmethod
+    def __open_granule_at_url(url, time: np.datetime64, bands, **kwargs):
+        url = urlparse(url)
+
+        if url.scheme in ['file', '']:
+            tiff = rioxarray.open_rasterio(url.path, mask_and_scale=True)
+        else:
+            raise NotImplementedError(f'Support not yet added for tiffs with {url.scheme} URLs')
+
+        try:
+            tiff.rio.reproject(dst_crs='EPSG:4326', nodata=np.nan)
+        except MissingCRS:
+            tiff.rio.write_crs('EPSG:4326').rio.reproject(dst_crs='EPSG:4326', nodata=np.nan)
+
+        rename = dict(x='longitude', y='latitude')
+
+        for band in bands:
+            band_num = bands[band]
+
+            rename[f'band_{band_num}'] = band
+
+        tiff.rename(rename)
+
+        tiff.expand_dims({"time": 1})
+        tiff = tiff.assign_coords({"time": [time]})
+
+        return tiff
+
+
     def __fetch_data_for_tile(self, tile: Tile):
-        raise NotImplementedError()
+        bbox: BBox = tile.bbox
+
+        min_lat = None
+        min_lon = None
+        max_lat = None
+        max_lon = None
+
+        if tile.min_time:
+            min_time = tile.min_time
+        else:
+            min_time = None
+
+        if tile.max_time:
+            max_time = tile.max_time
+        else:
+            max_time = None
+
+        # if min_time:
+        #     min_time = datetime.utcfromtimestamp(min_time)
+        #
+        # if max_time:
+        #     max_time = datetime.utcfromtimestamp(max_time)
+
+        if bbox:
+            min_lat = bbox.min_lat
+            min_lon = bbox.min_lon
+            max_lat = bbox.max_lat
+            max_lon = bbox.max_lon
+
+        granule = tile.granule
+
+        ds = CoGBackend.__open_granule_at_url(granule, np.datetime64(min_time.isoformat()), self.__bands)
 
     def _metadata_store_docs_to_tiles(self, *store_docs):
         return [CoGBackend.__nts_url_to_tile(d) for d in store_docs]
 
     @staticmethod
     def __nts_url_to_tile(nts_url):
-        raise NotImplementedError()
+        tile = Tile()
+
+        url = URL(nts_url)
+
+        tile.tile_id = nts_url
+
+        try:
+            min_lat = float(url.query['min_lat'])
+            min_lon = float(url.query['min_lon'])
+            max_lat = float(url.query['max_lat'])
+            max_lon = float(url.query['max_lon'])
+
+            tile.bbox = BBox(min_lat, max_lat, min_lon, max_lon)
+        except KeyError:
+            pass
+
+        tile.dataset = url.path
+        tile.dataset_id = url.path
+        tile.granule = url.query['path']
+
+        try:
+            # tile.min_time = int(url.query['min_time'])
+            tile.min_time = datetime.utcfromtimestamp(int(url.query['min_time']))
+        except KeyError:
+            pass
+
+        try:
+            # tile.max_time = int(url.query['max_time'])
+            tile.max_time = datetime.utcfromtimestamp(int(url.query['max_time']))
+        except KeyError:
+            pass
+
+        tile.meta_data = {}
+
+        return tile
 
     @staticmethod
-    def __to_url(dataset, **kwargs):
-        raise NotImplementedError()
+    def __to_url(dataset, tiff, **kwargs):
+        if 'dataset' in kwargs:
+            del kwargs['dataset']
+
+        if 'ds' in kwargs:
+            del kwargs['ds']
+
+        if 'path' in kwargs:
+            del kwargs['path']
+
+        params = {}
+
+        # If any params are numpy dtypes, extract them to base python types
+        for kw in kwargs:
+            v = kwargs[kw]
+
+            if v is None:
+                continue
+
+            if isinstance(v, np.generic):
+                v = v.item()
+
+            params[kw] = v
+
+        params['path'] = tiff
+
+        return str(URL.build(
+            scheme='cog',
+            host='',
+            path=dataset,
+            query=params
+        ))
 
 

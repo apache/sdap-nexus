@@ -512,7 +512,7 @@ class ZarrBackend(AbstractTileService):
             params[kw] = v
 
         return str(URL.build(
-            scheme='nts',
+            scheme='zarr',
             host='',
             path=dataset,
             query=params
