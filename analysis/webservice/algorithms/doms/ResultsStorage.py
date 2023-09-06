@@ -33,6 +33,8 @@ from webservice.webmodel import NexusProcessingException
 
 BATCH_SIZE = 1024
 
+logger = logging.getLogger(__name__)
+
 
 class ResultInsertException(IOError):
     pass
@@ -192,7 +194,9 @@ class ResultsStorage(AbstractResultsContainer):
         inserts = []
 
         for result in results:
-            inserts.extend(self.__prepare_result(execution_id, None, result, insertStatement))
+            # 'PRIMARY' arg since primary values cannot have primary_value_id be null anymore
+            # Secondary matches are prepped recursively from this call
+            inserts.extend(self.__prepare_result(execution_id, 'PRIMARY', result, insertStatement))
 
         for i in range(5):
             if not self.__insert_result_batches(inserts, insertStatement):
@@ -291,15 +295,29 @@ class ResultsRetrieval(AbstractResultsContainer):
         return data
 
     def __enrichPrimaryDataWithMatches(self, id, dataMap, trim_data=False):
-        cql = "SELECT * FROM doms_data where execution_id = %s and is_primary = false"
-        rows = self._session.execute(cql, (id,))
+        cql = f"SELECT * FROM doms_data where execution_id = ? and is_primary = false and primary_value_id = ?"
+        statement = self._session.prepare(cql)
 
-        for row in rows:
-            entry = self.__rowToDataEntry(row, trim_data=trim_data)
-            if row.primary_value_id in dataMap:
-                if not "matches" in dataMap[row.primary_value_id]:
-                    dataMap[row.primary_value_id]["matches"] = []
-                dataMap[row.primary_value_id]["matches"].append(entry)
+        primary_ids = list(dataMap.keys())
+
+        for primary in primary_ids:
+            rows = self._session.execute(statement, (id, primary))
+
+            for row in rows:
+                entry = self.__rowToDataEntry(row, trim_data=trim_data)
+                if row.primary_value_id in dataMap:
+                    if not "matches" in dataMap[row.primary_value_id]:
+                        dataMap[row.primary_value_id]["matches"] = []
+                    dataMap[row.primary_value_id]["matches"].append(entry)
+
+        # rows = self._session.execute(cql, (id,))
+        #
+        # for row in rows:
+        #     entry = self.__rowToDataEntry(row, trim_data=trim_data)
+        #     if row.primary_value_id in dataMap:
+        #         if not "matches" in dataMap[row.primary_value_id]:
+        #             dataMap[row.primary_value_id]["matches"] = []
+        #         dataMap[row.primary_value_id]["matches"].append(entry)
 
     def __retrievePrimaryData(self, id, trim_data=False, page_num=2, page_size=10):
         cql = "SELECT * FROM doms_data where execution_id = %s and is_primary = true limit %s"
@@ -355,7 +373,7 @@ class ResultsRetrieval(AbstractResultsContainer):
             }
             return stats
 
-        raise Exception("Execution not found with id '%s'" % id)
+        raise NexusProcessingException(reason=f'Execution not found with id {str(execution_id)}', code=404)
 
     def retrieveParams(self, id):
         cql = "SELECT * FROM doms_params where execution_id = %s limit 1"
@@ -381,7 +399,7 @@ class ResultsRetrieval(AbstractResultsContainer):
             }
             return params
 
-        raise Exception("Execution not found with id '%s'" % id)
+        raise NexusProcessingException(reason=f'Execution not found with id {str(execution_id)}', code=404)
 
     def retrieveExecution(self, execution_id):
         """
