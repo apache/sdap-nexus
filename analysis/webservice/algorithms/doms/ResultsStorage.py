@@ -16,17 +16,15 @@
 import configparser
 import json
 import logging
-from time import sleep
-import math
 import uuid
 from datetime import datetime
+from time import sleep
 
-import numpy as np
 import pkg_resources
 from cassandra.auth import PlainTextAuthProvider
 from cassandra.cluster import Cluster
+from cassandra.concurrent import execute_concurrent_with_args
 from cassandra.policies import TokenAwarePolicy, DCAwareRoundRobinPolicy
-from cassandra.query import BatchStatement, SimpleStatement
 from pytz import UTC
 from webservice.algorithms.doms.BaseDomsHandler import DomsEncoder
 from webservice.webmodel import NexusProcessingException
@@ -273,8 +271,6 @@ class ResultsStorage(AbstractResultsContainer):
         return params_list
 
 
-
-
 class ResultsRetrieval(AbstractResultsContainer):
     def __init__(self, config=None):
         AbstractResultsContainer.__init__(self, config)
@@ -295,14 +291,16 @@ class ResultsRetrieval(AbstractResultsContainer):
         return data
 
     def __enrichPrimaryDataWithMatches(self, id, dataMap, trim_data=False):
-        cql = f"SELECT * FROM doms_data where execution_id = ? and is_primary = false and primary_value_id = ?"
+        cql = f"SELECT * FROM doms_data where execution_id = {str(id)} and is_primary = false and primary_value_id = ?"
         statement = self._session.prepare(cql)
 
         primary_ids = list(dataMap.keys())
 
-        for primary in primary_ids:
-            rows = self._session.execute(statement, (id, primary))
+        logger.info(f'Getting secondary data for {len(primary_ids)} primaries of {str(id)}')
 
+        for (success, rows) in execute_concurrent_with_args(
+            self._session, statement, [(i,) for i in primary_ids], concurrency=50, results_generator=True
+        ):
             for row in rows:
                 entry = self.__rowToDataEntry(row, trim_data=trim_data)
                 if row.primary_value_id in dataMap:
@@ -320,7 +318,7 @@ class ResultsRetrieval(AbstractResultsContainer):
         #         dataMap[row.primary_value_id]["matches"].append(entry)
 
     def __retrievePrimaryData(self, id, trim_data=False, page_num=2, page_size=10):
-        cql = "SELECT * FROM doms_data where execution_id = %s and is_primary = true limit %s"
+        cql = "SELECT * FROM doms_data_temp where execution_id = %s and is_primary = true limit %s"
         rows = self._session.execute(cql, [id, page_num * page_size])
 
         dataMap = {}

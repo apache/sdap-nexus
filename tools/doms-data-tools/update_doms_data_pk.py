@@ -18,14 +18,15 @@ import configparser
 import decimal
 import json
 import logging
+from time import sleep
 import sys
 
 from cassandra.auth import PlainTextAuthProvider
 from cassandra.cluster import Cluster, NoHostAvailable, ExecutionProfile, EXEC_PROFILE_DEFAULT
-from cassandra.policies import RoundRobinPolicy, TokenAwarePolicy
+from cassandra.policies import RoundRobinPolicy, TokenAwarePolicy, RetryPolicy
 from cassandra.concurrent import execute_concurrent_with_args
 
-BATCH_SIZE = 1024
+BATCH_SIZE = 10000
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s [%(levelname)s] [%(name)s::%(lineno)d] %(message)s',
@@ -156,12 +157,7 @@ def main():
                     (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """
 
-                delete_cql = f"""
-                DELETE FROM {src_t} WHERE execution_id = ? AND is_primary = ? AND id = ? ;
-                """
-
                 insert_statement = session.prepare(insert_cql)
-                # delete_statement = session.prepare(delete_cql)
 
                 n_moved = 0
 
@@ -189,6 +185,8 @@ def main():
                             log.warning(f'Need to retry {len(remaining_rows):,} inserts')
                         else:
                             remaining_rows = []
+
+                        return len(rows)
 
                     # if args.action == 'move' and can_delete:
                     #     log.info(f'Deleting rows from {dst_t}')
@@ -229,11 +227,13 @@ def main():
                     )
 
                     if len(move_rows) >= BATCH_SIZE:
-                        do_move(move_rows)
+                        n_moved += do_move(move_rows)
+                        log.info(f'Moved {n_moved:,} rows so far')
                         move_rows = []
 
                 if len(move_rows) > 0:
-                    do_move(move_rows)
+                    n_moved += do_move(move_rows)
+                    log.info(f'Moved {n_moved:,} rows so far')
 
             log.info('Copying data to temp table')
 
