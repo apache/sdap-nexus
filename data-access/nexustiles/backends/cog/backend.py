@@ -57,7 +57,7 @@ class CoGBackend(AbstractTileService):
 
         # self.__depth = config['coords'].get('depth')
 
-        self.__solr = SolrProxy(solr_config)
+        self.__solr: SolrProxy = SolrProxy(solr_config)
 
     def get_dataseries_list(self, simple=False):
         ds = dict(
@@ -80,7 +80,16 @@ class CoGBackend(AbstractTileService):
 
     def find_days_in_range_asc(self, min_lat, max_lat, min_lon, max_lon, dataset, start_time, end_time,
                                metrics_callback=None, **kwargs):
-        raise NotImplementedError()
+        return self.__solr.find_days_in_range_asc(
+            min_lat,
+            max_lat,
+            min_lon,
+            max_lon,
+            dataset,
+            start_time,
+            end_time,
+            **kwargs
+        )
 
     def find_tile_by_polygon_and_most_recent_day_of_year(self, bounding_polygon, ds, day_of_year, **kwargs):
         """
@@ -115,11 +124,64 @@ class CoGBackend(AbstractTileService):
         return self.find_tiles_in_polygon(bounding_polygon, dataset, time, time, **kwargs)
 
     def find_tiles_in_box(self, min_lat, max_lat, min_lon, max_lon, ds=None, start_time=0, end_time=-1, **kwargs):
-        raise NotImplementedError()
+        tiffs = self.__solr.find_tiffs_in_bounds(
+            ds,
+            start_time,
+            end_time,
+            {
+                'min_lat': min_lat,
+                'max_lat': max_lat,
+                'min_lon': min_lon,
+                'max_lon': max_lon
+            }
+        )
+
+        params = {
+                'min_lat': min_lat,
+                'max_lat': max_lat,
+                'min_lon': min_lon,
+                'max_lon': max_lon
+            }
+
+        if 'depth' in kwargs:
+            params['depth'] = kwargs['depth']
+        elif 'min_depth' in kwargs or 'max_depth' in kwargs:
+            params['min_depth'] = kwargs.get('min_depth')
+            params['max_depth'] = kwargs.get('max_depth')
+
+        return[CoGBackend.__to_url(
+            self._name,
+            tiff['path_s'],
+            **params) for tiff in tiffs]
 
     def find_tiles_in_polygon(self, bounding_polygon, ds=None, start_time=None, end_time=None, **kwargs):
         # Find tiles that fall within the polygon in the Solr index
-        raise NotImplementedError()
+        tiffs = self.__solr.find_tiffs_in_bounds(
+            ds,
+            start_time,
+            end_time,
+            bounding_polygon
+        )
+
+        bounds = bounding_polygon.bounds
+
+        params = {
+            'min_lat': bounds[1],
+            'max_lat': bounds[3],
+            'min_lon': bounds[0],
+            'max_lon': bounds[2]
+        }
+
+        if 'depth' in kwargs:
+            params['depth'] = kwargs['depth']
+        elif 'min_depth' in kwargs or 'max_depth' in kwargs:
+            params['min_depth'] = kwargs.get('min_depth')
+            params['max_depth'] = kwargs.get('max_depth')
+
+        return [CoGBackend.__to_url(
+            self._name,
+            tiff['path_s'],
+            **params) for tiff in tiffs]
 
     def find_tiles_by_metadata(self, metadata, ds=None, start_time=0, end_time=-1, **kwargs):
         """
@@ -145,7 +207,12 @@ class CoGBackend(AbstractTileService):
         :param kwargs: fetch_data: True/False = whether or not to retrieve tile data
         :return:
         """
-        raise NotImplementedError()
+        min_lon = bounds[0]
+        min_lat = bounds[1]
+        max_lon = bounds[2]
+        max_lat = bounds[3]
+
+        return self.find_tiles_in_box(min_lat, max_lat, min_lon, max_lon, ds, start_time, end_time, **kwargs)
 
     def find_all_boundary_tiles_at_time(self, min_lat, max_lat, min_lon, max_lon, dataset, time, **kwargs):
         # Due to the precise nature of gridded Zarr's subsetting, it doesn't make sense to have a boundary region like
@@ -189,7 +256,10 @@ class CoGBackend(AbstractTileService):
         :param ds: Filter by a specific dataset. Defaults to None (queries all datasets)
         :return: long time in seconds since epoch
         """
-        raise NotImplementedError()
+        paths = [URL(t).query['path'] for t in tile_ids]
+
+        min_time = self.__solr.find_min_date_from_tiles(paths, self._name)
+        return int((min_time - EPOCH).total_seconds())
 
     def get_max_time(self, tile_ids, ds=None):
         """
@@ -198,7 +268,10 @@ class CoGBackend(AbstractTileService):
         :param ds: Filter by a specific dataset. Defaults to None (queries all datasets)
         :return: long time in seconds since epoch
         """
-        raise NotImplementedError()
+        paths = [URL(t).query['path'] for t in tile_ids]
+
+        max_time = self.__solr.find_max_date_from_tiles(paths, self._name)
+        return int((max_time - EPOCH).total_seconds())
 
     def get_distinct_bounding_boxes_in_polygon(self, bounding_polygon, ds, start_time, end_time):
         """
@@ -221,14 +294,18 @@ class CoGBackend(AbstractTileService):
         :param metadata: List of metadata values to search for tiles e.g ["river_id_i:1", "granule_s:granule_name"]
         :return: number of tiles that match search criteria
         """
-        raise NotImplementedError()
+        return len(self.__solr.find_tiffs_in_bounds(
+            ds,
+            start_time,
+            end_time,
+            bounds=bounding_polygon
+        ))
 
     def fetch_data_for_tiles(self, *tiles):
         for tile in tiles:
             self.__fetch_data_for_tile(tile)
 
         return tiles
-
 
     @staticmethod
     def __open_granule_at_url(url, time: np.datetime64, bands, **kwargs):
@@ -246,18 +323,23 @@ class CoGBackend(AbstractTileService):
 
         rename = dict(x='longitude', y='latitude')
 
+        drop = set(tiff.data_vars)
+
         for band in bands:
             band_num = bands[band]
 
-            rename[f'band_{band_num}'] = band
+            key = f'band_{band_num}'
 
-        tiff.rename(rename)
+            rename[key] = band
+            drop.discard(key)
 
-        tiff.expand_dims({"time": 1})
-        tiff = tiff.assign_coords({"time": [time]})
+        drop.discard('spatial_ref')
+
+        tiff = tiff.rename(rename).drop_vars(drop, errors='ignore')
+
+        tiff = tiff.expand_dims({"time": 1}).assign_coords({"time": [time]})
 
         return tiff
-
 
     def __fetch_data_for_tile(self, tile: Tile):
         bbox: BBox = tile.bbox
@@ -291,7 +373,53 @@ class CoGBackend(AbstractTileService):
 
         granule = tile.granule
 
-        ds = CoGBackend.__open_granule_at_url(granule, np.datetime64(min_time.isoformat()), self.__bands)
+        ds: xr.Dataset = CoGBackend.__open_granule_at_url(granule, np.datetime64(min_time.isoformat()), self.__bands)
+        variables = list(ds.data_vars)
+
+        sel_g = {
+            self.__latitude: slice(min_lat, max_lat),
+            self.__longitude: slice(min_lon, max_lon),
+        }
+
+        sel_t = {}
+
+        if min_time is None and max_time is None:
+            sel_t = None
+            method = None
+        elif min_time == max_time:
+            sel_t[self.__time] = [min_time]  # List, otherwise self.__time dim will be dropped
+            method = 'nearest'
+        else:
+            sel_t[self.__time] = slice(min_time, max_time)
+            method = None
+
+        tile.variables = [
+            TileVariable(v, v) for v in variables
+        ]
+
+        matched = self.__ds.sel(sel_g)
+
+        if sel_t is not None:
+            matched = matched.sel(sel_t, method=method)
+
+        tile.latitudes = ma.masked_invalid(matched[self.__latitude].to_numpy())
+        tile.longitudes = ma.masked_invalid(matched[self.__longitude].to_numpy())
+
+        times = matched[self.__time].to_numpy()
+
+        if np.issubdtype(times.dtype, np.datetime64):
+            times = ((times - np.datetime64(EPOCH)) / 1e9).astype(int)
+
+        tile.times = ma.masked_invalid(times)
+
+        var_data = [matched[var].to_numpy() for var in variables]
+
+        if len(variables) > 1:
+            tile.data = ma.masked_invalid(var_data)
+            tile.is_multi = True
+        else:
+            tile.data = ma.masked_invalid(var_data[0])
+            tile.is_multi = False
 
     def _metadata_store_docs_to_tiles(self, *store_docs):
         return [CoGBackend.__nts_url_to_tile(d) for d in store_docs]
@@ -367,5 +495,3 @@ class CoGBackend(AbstractTileService):
             path=dataset,
             query=params
         ))
-
-
