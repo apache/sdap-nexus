@@ -21,6 +21,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - SDAP-466: Matchup now defines secondary `platform` fields with `platform.id` if it is available and not blank. It then uses `platform.code` and `platform.type` as fallbacks, then just the value of `platform` if none work.
 - SDAP-468: Updated matchup output filename
 - SDAP-482: Updated Saildrone in situ endpoint in config file
+- SDAP-485: Improved behavior for retrying failed Cassandra inserts when saving matchup results.
 - SDAP-440: Rolled out L2 change to the following algorithms:
   - SDAP-441: `/match_spark`
 ### Deprecated
@@ -29,6 +30,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 - SDAP-474: Fixed bug in CSV attributes where secondary dataset would be rendered as comma separated characters
 - SDAP-475: Bug fixes for `/timeSeriesSpark` and `/timeAvgMapSpark`
+- SDAP-479: Fixed `/cdmssubset` failure for variables without specified standard_name. 
 - Status code for results endpoint if execution id is not found fixed to be `404` instead of `500`.
 ### Security
 
