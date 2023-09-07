@@ -448,7 +448,6 @@ class ZarrBackend(AbstractTileService):
             tile.data = ma.masked_invalid(var_data[0])
             tile.is_multi = False
 
-
     def _metadata_store_docs_to_tiles(self, *store_docs):
         return [ZarrBackend.__nts_url_to_tile(d) for d in store_docs]
 

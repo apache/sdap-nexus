@@ -97,6 +97,42 @@ class SolrProxy(SolrProxyBase):
 
         return min_time, max_time
 
+    def find_min_date_from_tiffs(self, paths, ds, **kwargs):
+        search = f'dataset_s:{ds}'
+
+        kwargs['rows'] = 1
+        kwargs['fl'] = 'min_time_dt'
+        kwargs['sort'] = ['min_time_dt asc']
+        additionalparams = {
+            'fq': [
+                "{!terms f=path_s}%s" % ','.join(paths) if len(paths) > 0 else ''
+            ]
+        }
+
+        self._merge_kwargs(additionalparams, **kwargs)
+
+        results, start, found = self.do_query(*(search, None, None, True, None), **additionalparams)
+
+        return self.convert_iso_to_datetime(results[0]['min_time_dt'])
+
+    def find_max_date_from_tiffs(self, paths, ds, **kwargs):
+        search = f'dataset_s:{ds}'
+
+        kwargs['rows'] = 1
+        kwargs['fl'] = 'max_time_dt'
+        kwargs['sort'] = ['max_time_dt desc']
+        additionalparams = {
+            'fq': [
+                "{!terms f=path_s}%s" % ','.join(paths) if len(paths) > 0 else ''
+            ]
+        }
+
+        self._merge_kwargs(additionalparams, **kwargs)
+
+        results, start, found = self.do_query(*(search, None, None, True, None), **additionalparams)
+
+        return self.convert_iso_to_datetime(results[0]['max_time_dt'])
+
     def find_days_in_range_asc(self, min_lat, max_lat, min_lon, max_lon, ds, start_time, end_time, **kwargs):
 
         search = 'dataset_s:%s' % ds
