@@ -87,6 +87,7 @@ class Tile(object):
     variables: list = None
     latitudes: np.array = None
     longitudes: np.array = None
+    elevation: np.array = None
     times: np.array = None
     data: np.array = None
     is_multi: bool = None

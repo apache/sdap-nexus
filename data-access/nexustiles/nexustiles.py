@@ -438,6 +438,37 @@ class NexusTileService(object):
 
         return tiles
 
+
+    def mask_tiles_to_elevation(self, min_e, max_e, tiles):
+        """
+        Masks data in tiles to specified time range.
+        :param start_time: The start time to search for tiles
+        :param end_time: The end time to search for tiles
+        :param tiles: List of tiles
+        :return: A list tiles with data masked to specified time range
+        """
+        for tile in tiles:
+            tile.elevation = ma.masked_outside(tile.elevation, min_e, max_e)
+
+            # Or together the masks of the individual arrays to create the new mask
+            data_mask = ma.getmaskarray(tile.times)[:, np.newaxis, np.newaxis] \
+                        | ma.getmaskarray(tile.elevation)[np.newaxis, :, :] \
+
+            # If this is multi-var, need to mask each variable separately.
+            if tile.is_multi:
+                # Combine space/time mask with existing mask on data
+                data_mask = reduce(np.logical_or, [tile.data[0].mask, data_mask])
+
+                num_vars = len(tile.data)
+                multi_data_mask = np.repeat(data_mask[np.newaxis, ...], num_vars, axis=0)
+                tile.data = ma.masked_where(multi_data_mask, tile.data)
+            else:
+                tile.data = ma.masked_where(data_mask, tile.data)
+
+        tiles[:] = [tile for tile in tiles if not tile.data.mask.all()]
+
+        return tiles
+
     def get_tile_count(self, ds, bounding_polygon=None, start_time=0, end_time=-1, metadata=None, **kwargs):
         """
         Return number of tiles that match search criteria.
@@ -470,6 +501,7 @@ class NexusTileService(object):
             a_tile.data = data
             a_tile.meta_data = meta
             a_tile.is_multi = is_multi_var
+            a_tile.elevation = tile_data_by_id[a_tile.tile_id].get_elevation_array()
 
             del (tile_data_by_id[a_tile.tile_id])
 
