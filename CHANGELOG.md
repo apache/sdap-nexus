@@ -10,6 +10,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - SDAP-461: Added 4 remaining Saildrone insitu datasets.
 - SDAP-473: Added support for matchup job prioritization
 - SDAP-483: Added `.asf.yaml` to configure Jira auto-linking.
+- Added logging message for start of insitu query + added status code & elapsed time to post query log message.
+- Added explicit timeouts for all insitu related queries to prevent hanging issue.
 ### Changed
 - SDAP-453: Updated results storage and retrieval to support output JSON from `/cdmsresults` that matches output from `/match_spark`.
   - **NOTE:** Deploying these changes to an existing SDAP deployment will require modifying the Cassandra database with stored results. There is a script to do so at `/tools/update-doms-data-schema/update.py`
