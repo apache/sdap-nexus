@@ -169,9 +169,9 @@ class TimeAvgMapNexusSparkHandlerImpl(NexusCalcSparkHandler):
                                                               self._maxLonCent))
 
         # Create array of tuples to pass to Spark map function
-        nexus_tiles_spark = [[self._find_tile_bounds(t),
+        nexus_tiles_spark = np.array([[self._find_tile_bounds(t),
                               self._startTime, self._endTime,
-                              self._ds] for t in nexus_tiles]
+                              self._ds] for t in nexus_tiles], dtype='object')
 
         # Remove empty tiles (should have bounds set to None)
         bad_tile_inds = np.where([t[0] is None for t in nexus_tiles_spark])[0]

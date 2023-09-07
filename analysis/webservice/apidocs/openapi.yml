@@ -536,6 +536,22 @@ paths:
             enum: ['CSV', 'NETCDF', 'JSON']
           example: CSV
         - in: query
+          name: pageNum
+          description: |
+            Page of results to retrieve.
+          required: false
+          schema:
+            type: integer
+          example: 1
+        - in: query
+          name: pageSize
+          description: |
+            Number of items to return in each page.
+          required: false
+          schema:
+            type: integer
+          example: 100
+        - in: query
           name: filename
           description: |
             Name of output file. Only works with CSV and NETCDF 
@@ -669,6 +685,42 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
+  /job:
+    get:
+      summary: |
+        Get job status
+      operationId: job
+      tags:
+        - Analytics
+      description: "Get job status by execution id"
+      parameters:
+        - in: query
+          name: id
+          description: |
+            The job execution ID
+          required: true
+          schema:
+            type: string
+            format: uuid
+          example: c864a51b-3d87-4872-9070-632820b1cae2
+  /job/cancel:
+    get:
+      summary: |
+        Cancel running job
+      operationId: jobCancel
+      tags:
+        - Analytics
+      description: "Cancel running job"
+      parameters:
+        - in: query
+          name: id
+          description: |
+            The job execution ID
+          required: true
+          schema:
+            type: string
+            format: uuid
+          example: c864a51b-3d87-4872-9070-632820b1cae2
 externalDocs:
   description: Documentation
   url: https://incubator-sdap-nexus.readthedocs.io/en/latest/index.html

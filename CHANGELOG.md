@@ -4,9 +4,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## Unreleased
+## [Unreleased]
 ### Added
+- SDAP-467: Added pagination to cdmsresults endpoint
 - SDAP-461: Added 4 remaining Saildrone insitu datasets.
+- SDAP-473: Added support for matchup job prioritization
+- SDAP-483: Added `.asf.yaml` to configure Jira auto-linking.
 ### Changed
 - SDAP-453: Updated results storage and retrieval to support output JSON from `/cdmsresults` that matches output from `/match_spark`.
   - **NOTE:** Deploying these changes to an existing SDAP deployment will require modifying the Cassandra database with stored results. There is a script to do so at `/tools/update-doms-data-schema/update.py`
@@ -14,14 +17,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     - Made the `output` parameter case-insensitive
     - Improved speed of results insert
     - Updated `id` field of insitu points to include depth. This solves an issue with NetCDF result rendering where different insitu observations at the same place & time but at different depths were being excluded for having the same `id`.
+- SDAP-455: Large job tracking
 - SDAP-466: Matchup now defines secondary `platform` fields with `platform.id` if it is available and not blank. It then uses `platform.code` and `platform.type` as fallbacks, then just the value of `platform` if none work.
 - SDAP-468: Updated matchup output filename
+- SDAP-482: Updated Saildrone in situ endpoint in config file
+- SDAP-485: Improved behavior for retrying failed Cassandra inserts when saving matchup results.
 ### Deprecated
 ### Removed
 - SDAP-465: Removed `climatology` directory. 
 ### Fixed
 - SDAP-474: Fixed bug in CSV attributes where secondary dataset would be rendered as comma separated characters
+- SDAP-475: Bug fixes for `/timeSeriesSpark` and `/timeAvgMapSpark`
 - SDAP-479: Fixed `/cdmssubset` failure for variables without specified standard_name. 
+- Status code for results endpoint if execution id is not found fixed to be `404` instead of `500`.
 ### Security
 
 ## [1.1.0] - 2023-04-26
@@ -31,6 +39,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - SDAP-454: Added new query parameter `prioritizeDistance` to matchup algorithm
 - SDAP-476: Support for service accounts for handling AWS credentials
 - SDAP-459: Added explicit definitions of min/max lat/lon values in nexustiles Solr collection creation script
+- SDAP-457: Added tool script to purge DOMS execution data. Can remove executions before a certain datetime, before a number of months in the future, uncompleted executions, or purge all execution data.
+  - Also added Helm template and values to deploy this script as a `CronJob` in k8s.
 ### Changed
 - SDAP-443:
   - Replacing DOMS terminology with CDMS terminology:

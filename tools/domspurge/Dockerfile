@@ -12,28 +12,20 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-import pkg_resources
 
+FROM python:3.8.13
 
-class SparkContextBuilder:
-    def __init__(self):
-        pass
+COPY tools/domspurge/purge.py /domspurge/purge.py
+COPY tools/domspurge/requirements.txt /domspurge/requirements.txt
+COPY tools/domspurge/entrypoint.sh /domspurge/entrypoint.sh
+COPY analysis/webservice/algorithms/doms/DomsInitialization.py /domspurge/DomsInitialization.py
 
-    spark_context = None
+# We just need the keyspace & table initialization. Remove references to other SDAP modules.
+# Doing this because if the schemas change, we want it to be reflected in this utility
+RUN sed '/nexus_initializer/d' -i /domspurge/DomsInitialization.py
 
-    @classmethod
-    def get_spark_context(cls):
-        if cls.spark_context is None:
-            from pyspark.sql import SparkSession
+WORKDIR /domspurge
 
-            scheduler_path = pkg_resources.resource_filename('webservice', "config/scheduler.xml")
+RUN pip3 install -r requirements.txt
 
-            spark = SparkSession.builder.appName("nexus-analysis").config(
-                "spark.scheduler.allocation.file", scheduler_path
-            ).config(
-                "spark.scheduler.mode", "FAIR"
-            ).getOrCreate()
-            cls.spark_context = spark.sparkContext
-
-        return cls.spark_context
-
+ENTRYPOINT ["/bin/bash", "/domspurge/entrypoint.sh"]
