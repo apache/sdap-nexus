@@ -16,7 +16,7 @@
 import logging
 from nexustiles.backends.nexusproto.dao.SolrProxy import SolrProxy as SolrProxyBase
 from datetime import datetime
-from shapely import Polygon
+from shapely.geometry import Polygon
 from typing import Union, Optional, Dict
 
 

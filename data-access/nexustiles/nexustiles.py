@@ -110,7 +110,6 @@ def catch_not_implemented(func):
 
 
 SOLR_LOCK = threading.Lock()
-DS_LOCK = threading.Lock()
 thread_local = threading.local()
 
 
@@ -129,12 +128,14 @@ class NexusTileService:
 
     ds_config = None
 
+    DS_LOCK = threading.Lock()
+
     __update_thread = None
 
     @staticmethod
     def __update_datasets_loop():
         while True:
-            with DS_LOCK:
+            with NexusTileService.DS_LOCK:
                 NexusTileService._update_datasets()
             sleep(3600)
 
@@ -168,11 +169,15 @@ class NexusTileService:
             NexusTileService.__update_thread.start()
 
     @staticmethod
+    def is_update_tread_alive():
+        return NexusTileService.__update_thread is not None and NexusTileService.__update_thread.is_alive()
+
+    @staticmethod
     def _get_backend(dataset_s) -> AbstractTileService:
         if dataset_s is not None:
             dataset_s = dataset_s
 
-        with DS_LOCK:
+        with NexusTileService.DS_LOCK:
             if dataset_s not in NexusTileService.backends:
                 logger.warning(f'Dataset {dataset_s} not currently loaded. Checking to see if it was recently'
                                f'added')
@@ -270,11 +275,17 @@ class NexusTileService:
                         ds_config = json.loads(dataset['config'][0])
 
                         solr_config_str = io.StringIO()
+
+                        print({section: dict(NexusTileService.ds_config[section]) for section in NexusTileService.ds_config.sections()})
+
                         NexusTileService.ds_config.write(solr_config_str)
 
                         solr_config_str.seek(0)
                         solr_config = configparser.ConfigParser()
-                        solr_config.read(solr_config_str)
+                        solr_config.read_file(solr_config_str)
+
+                        print({section: dict(solr_config[section]) for section in solr_config.sections()})
+
                         solr_config.set('solr', 'core', 'nexusgranules')
 
                         try:
@@ -336,7 +347,7 @@ class NexusTileService:
 
         logger.info(f'Updated dataset {name} in Solr. Updating backends')
 
-        with DS_LOCK:
+        with NexusTileService.DS_LOCK:
             NexusTileService._update_datasets()
 
         return {'success': True}
@@ -368,7 +379,7 @@ class NexusTileService:
 
         logger.info(f'Added dataset {name} to Solr. Updating backends')
 
-        with DS_LOCK:
+        with NexusTileService.DS_LOCK:
             NexusTileService._update_datasets()
 
         return {'success': True}
@@ -393,7 +404,7 @@ class NexusTileService:
 
         logger.info(f'Removed dataset {name} from Solr. Updating backends')
 
-        with DS_LOCK:
+        with NexusTileService.DS_LOCK:
             NexusTileService._update_datasets()
 
         return {'success': True}
@@ -716,6 +727,54 @@ class NexusTileService:
             tiles[:] = [tile for tile in tiles if not tile.data.mask.all()]
 
         return tiles
+
+    def mask_tiles_to_elevation(self, min_e, max_e, tiles):
+        """
+        Masks data in tiles to specified time range.
+        :param start_time: The start time to search for tiles
+        :param end_time: The end time to search for tiles
+        :param tiles: List of tiles
+        :return: A list tiles with data masked to specified time range
+        """
+        for tile in tiles:
+            tile.elevation = ma.masked_outside(tile.elevation, min_e, max_e)
+
+            # Or together the masks of the individual arrays to create the new mask
+            data_mask = ma.getmaskarray(tile.times)[:, np.newaxis, np.newaxis] \
+                        | ma.getmaskarray(tile.elevation)[np.newaxis, :, :] \
+
+            # If this is multi-var, need to mask each variable separately.
+            if tile.is_multi:
+                # Combine space/time mask with existing mask on data
+                data_mask = reduce(np.logical_or, [tile.data[0].mask, data_mask])
+
+                num_vars = len(tile.data)
+                multi_data_mask = np.repeat(data_mask[np.newaxis, ...], num_vars, axis=0)
+                multi_data_mask = np.broadcast_to(multi_data_mask, tile.data.shape)
+
+                tile.data = ma.masked_where(multi_data_mask, tile.data)
+            else:
+                print(data_mask.shape)
+                print(tile.data.shape)
+
+                data_mask = np.broadcast_to(data_mask, tile.data.shape)
+                tile.data = ma.masked_where(data_mask, tile.data)
+
+        tiles[:] = [tile for tile in tiles if not tile.data.mask.all()]
+
+        return tiles
+
+    def get_tile_count(self, ds, bounding_polygon=None, start_time=0, end_time=-1, metadata=None, **kwargs):
+        """
+        Return number of tiles that match search criteria.
+        :param ds: The dataset name to search
+        :param bounding_polygon: The polygon to search for tiles
+        :param start_time: The start time to search for tiles
+        :param end_time: The end time to search for tiles
+        :param metadata: List of metadata values to search for tiles e.g ["river_id_i:1", "granule_s:granule_name"]
+        :return: number of tiles that match search criteria
+        """
+        return self._metadatastore.get_tile_count(ds, bounding_polygon, start_time, end_time, metadata, **kwargs)
 
     def fetch_data_for_tiles(self, *tiles):
         dataset = tiles[0].dataset

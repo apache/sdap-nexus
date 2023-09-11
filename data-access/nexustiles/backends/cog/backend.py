@@ -68,8 +68,12 @@ class CoGBackend(AbstractTileService):
         if not simple:
             min_date, max_date = self.__solr.date_range_for_dataset(self._name)
 
-            ds['iso_start'] = datetime.utcfromtimestamp(min_date).strftime(ISO_8601)
-            ds['iso_end'] = datetime.utcfromtimestamp(max_date).strftime(ISO_8601)
+            ds['start'] = (min_date - EPOCH).total_seconds()
+            ds['end'] = (max_date - EPOCH).total_seconds()
+            ds['iso_start'] = min_date.strftime(ISO_8601)
+            ds['iso_end'] = max_date.strftime(ISO_8601)
+
+        return [ds]
 
     def find_tile_by_id(self, tile_id, **kwargs):
         return [tile_id]

@@ -38,7 +38,7 @@ class SolrProxy(object):
         self.solrCore = config.get("solr", "core")
         solr_kargs = {}
         if config.has_option("solr", "time_out"):
-            solr_kargs["timeout"] = config.get("solr", "time_out")
+            solr_kargs["timeout"] = float(config.get("solr", "time_out"))
         self.logger = logging.getLogger('nexus')
 
         with SOLR_CON_LOCK:
