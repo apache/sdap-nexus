@@ -17,6 +17,7 @@ import logging
 import re
 from datetime import datetime
 from decimal import Decimal
+from typing import Tuple
 
 from pytz import UTC
 from shapely.geometry import Polygon
@@ -107,6 +108,37 @@ class NexusRequestObject(StatsComputeOptions):
 
     def get_min_lon(self, default=Decimal(-180)):
         return self.get_decimal_arg("minLon", default)
+
+    def get_elevation_args(self) -> Tuple[float, float]:
+        min_depth = self.get_float_arg('minDepth', None)
+        max_depth = self.get_float_arg('minDepth')
+        min_height = self.get_float_arg('minHeight')
+        max_height = self.get_float_arg('minHeight')
+        min_elevation = self.get_float_arg('minHeight')
+        max_elevation = self.get_float_arg('minHeight')
+
+        ret_min = None
+        ret_max = None
+
+        if min_elevation:
+            ret_min = min_elevation
+        elif min_height:
+            ret_min = min_height
+        elif min_depth:
+            ret_min = -1 * min_depth
+
+        if max_elevation:
+            ret_max = max_elevation
+        elif max_height:
+            ret_max = max_height
+        elif max_depth:
+            ret_max = -1 * max_depth
+
+        if ret_max < ret_min:
+            (ret_min, ret_max) = ret_max, ret_min
+
+        return ret_min, ret_max
+
 
     # added to fit the simplified version of TimeAvgMapSpark parse_argumemt
     def get_bounding_box(self):

@@ -302,38 +302,38 @@ class SolrProxy(object):
                           )
             additionalparams['fq'].append(time_clause)
             
-        min_depth = kwargs['min_depth'] if 'min_depth' in kwargs else None
-        max_depth = kwargs['max_depth'] if 'max_depth' in kwargs else None
+        min_elevation = kwargs['min_elevation'] if 'min_elevation' in kwargs else None
+        max_elevation = kwargs['max_elevation'] if 'max_elevation' in kwargs else None
         
-        if min_depth and max_depth:
-            depth_clause = "(" \
-                          "tile_min_depth:[%s TO %s] " \
-                          "OR tile_max_depth:[%s TO %s] " \
-                          "OR (tile_min_depth:[* TO %s] AND tile_max_depth:[%s TO *])" \
+        if min_elevation and max_elevation:
+            elevation_clause = "(" \
+                          "tile_min_elevation:[%s TO %s] " \
+                          "OR tile_max_elevation:[%s TO %s] " \
+                          "OR (tile_min_elevation:[* TO %s] AND tile_max_elevation:[%s TO *])" \
                           ")" % (
-                              min_depth, max_depth,
-                              min_depth, max_depth,
-                              min_depth, max_depth
+                              min_elevation, max_elevation,
+                              min_elevation, max_elevation,
+                              min_elevation, max_elevation
                           )
-            additionalparams['fq'].append(depth_clause)
-        elif min_depth:
-            depth_clause = "(" \
-                           "tile_min_depth:[%s TO *] " \
-                           "OR tile_max_depth:[%s TO *] " \
+            additionalparams['fq'].append(elevation_clause)
+        elif min_elevation:
+            elevation_clause = "(" \
+                           "tile_min_elevation:[%s TO *] " \
+                           "OR tile_max_elevation:[%s TO *] " \
                            ")" % (
-                               min_depth,
-                               min_depth
+                               min_elevation,
+                               min_elevation
                            )
-            additionalparams['fq'].append(depth_clause)
-        elif max_depth:
-            depth_clause = "(" \
-                           "tile_min_depth:[* TO %s] " \
-                           "OR tile_max_depth:[* TO %s] " \
+            additionalparams['fq'].append(elevation_clause)
+        elif max_elevation:
+            elevation_clause = "(" \
+                           "tile_min_elevation:[* TO %s] " \
+                           "OR tile_max_elevation:[* TO %s] " \
                            ")" % (
-                               max_depth,
-                               max_depth
+                               max_elevation,
+                               max_elevation
                            )
-            additionalparams['fq'].append(depth_clause)
+            additionalparams['fq'].append(elevation_clause)
 
         self._merge_kwargs(additionalparams, **kwargs)
 
