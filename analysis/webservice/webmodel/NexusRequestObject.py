@@ -111,11 +111,11 @@ class NexusRequestObject(StatsComputeOptions):
 
     def get_elevation_args(self) -> Tuple[float, float]:
         min_depth = self.get_float_arg('minDepth', None)
-        max_depth = self.get_float_arg('minDepth')
+        max_depth = self.get_float_arg('maxDepth')
         min_height = self.get_float_arg('minHeight')
-        max_height = self.get_float_arg('minHeight')
-        min_elevation = self.get_float_arg('minHeight')
-        max_elevation = self.get_float_arg('minHeight')
+        max_height = self.get_float_arg('maxHeight')
+        min_elevation = self.get_float_arg('minElevation')
+        max_elevation = self.get_float_arg('maxElevation')
 
         ret_min = None
         ret_max = None
@@ -138,7 +138,6 @@ class NexusRequestObject(StatsComputeOptions):
             (ret_min, ret_max) = ret_max, ret_min
 
         return ret_min, ret_max
-
 
     # added to fit the simplified version of TimeAvgMapSpark parse_argumemt
     def get_bounding_box(self):

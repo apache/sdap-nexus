@@ -450,9 +450,7 @@ class NexusTileService(object):
         for tile in tiles:
             tile.elevation = ma.masked_outside(tile.elevation, min_e, max_e)
 
-            # Or together the masks of the individual arrays to create the new mask
-            data_mask = ma.getmaskarray(tile.times)[:, np.newaxis, np.newaxis] \
-                        | ma.getmaskarray(tile.elevation)[np.newaxis, :, :] \
+            data_mask = ma.getmaskarray(tile.elevation)
 
             # If this is multi-var, need to mask each variable separately.
             if tile.is_multi:
