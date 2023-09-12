@@ -263,7 +263,7 @@ class ResultsStorage(AbstractResultsContainer):
             result["platform"] if "platform" in result else None,
             result["device"] if "device" in result else None,
             json.dumps(data, cls=DomsEncoder),
-            1 if primaryId is None else 0,
+            1 if primaryId is 'PRIMARY' else 0,
             result["depth"],
             result['fileurl']
         )
