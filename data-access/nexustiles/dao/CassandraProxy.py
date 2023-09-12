@@ -213,6 +213,9 @@ class NexusTileData(Model):
         tile_type = self._get_nexus_tile().WhichOneof("tile_type")
         tile_data = getattr(self._get_nexus_tile(), tile_type)
 
+        if not tile_data.HasField('elevation'):
+            return None
+
         elevation_data = np.ma.masked_invalid(from_shaped_array(tile_data.elevation))
 
         if tile_type in ['swath_tile', 'swath_multi_variable_tile']:
