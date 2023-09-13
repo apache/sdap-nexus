@@ -166,7 +166,7 @@ class DomsInitializer:
               measurement_values_json text,
               depth decimal,
               file_url text,
-              PRIMARY KEY (execution_id, is_primary, id)
+              PRIMARY KEY ((execution_id, is_primary), primary_value_id, id)
             );
         """
         session.execute(cql)
