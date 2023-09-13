@@ -263,7 +263,7 @@ class ResultsStorage(AbstractResultsContainer):
             result["platform"] if "platform" in result else None,
             result["device"] if "device" in result else None,
             json.dumps(data, cls=DomsEncoder),
-            1 if primaryId is None else 0,
+            1 if primaryId is 'PRIMARY' else 0,
             result["depth"],
             result['fileurl']
         )
@@ -315,7 +315,7 @@ class ResultsRetrieval(AbstractResultsContainer):
                     dataMap[row.primary_value_id]["matches"].append(entry)
 
     def __retrievePrimaryData(self, id, trim_data=False, page_num=2, page_size=10):
-        cql = "SELECT * FROM doms_data_temp where execution_id = %s and is_primary = true limit %s"
+        cql = "SELECT * FROM doms_data where execution_id = %s and is_primary = true limit %s"
         rows = self._session.execute(cql, [id, page_num * page_size])
 
         dataMap = {}
