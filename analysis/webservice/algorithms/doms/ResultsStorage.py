@@ -314,15 +314,6 @@ class ResultsRetrieval(AbstractResultsContainer):
                         dataMap[row.primary_value_id]["matches"] = []
                     dataMap[row.primary_value_id]["matches"].append(entry)
 
-        # rows = self._session.execute(cql, (id,))
-        #
-        # for row in rows:
-        #     entry = self.__rowToDataEntry(row, trim_data=trim_data)
-        #     if row.primary_value_id in dataMap:
-        #         if not "matches" in dataMap[row.primary_value_id]:
-        #             dataMap[row.primary_value_id]["matches"] = []
-        #         dataMap[row.primary_value_id]["matches"].append(entry)
-
     def __retrievePrimaryData(self, id, trim_data=False, page_num=2, page_size=10):
         cql = "SELECT * FROM doms_data_temp where execution_id = %s and is_primary = true limit %s"
         rows = self._session.execute(cql, [id, page_num * page_size])
@@ -377,7 +368,7 @@ class ResultsRetrieval(AbstractResultsContainer):
             }
             return stats
 
-        raise NexusProcessingException(reason=f'Execution not found with id {str(execution_id)}', code=404)
+        raise NexusProcessingException(reason=f'No stats found for id {str(id)}', code=404)
 
     def retrieveParams(self, id):
         cql = "SELECT * FROM doms_params where execution_id = %s limit 1"
@@ -403,7 +394,7 @@ class ResultsRetrieval(AbstractResultsContainer):
             }
             return params
 
-        raise NexusProcessingException(reason=f'Execution not found with id {str(execution_id)}', code=404)
+        raise NexusProcessingException(reason=f'No params found for id {str(id)}', code=404)
 
     def retrieveExecution(self, execution_id):
         """

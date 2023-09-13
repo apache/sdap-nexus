@@ -188,19 +188,6 @@ def main():
 
                         return len(rows)
 
-                    # if args.action == 'move' and can_delete:
-                    #     log.info(f'Deleting rows from {dst_t}')
-                    #     rows = [(r[1], r[11], r[0]) for r in rows]
-                    #
-                    #     full_delete = True
-                    #
-                    #     for (success, result) in execute_concurrent_with_args(session, delete_statement, rows, concurrency=50):
-                    #         if not success:
-                    #             full_delete = False
-                    #
-                    #     if not full_delete:
-                    #         log.error('Not all deletes were successful')
-
                 for row in data_rows:
                     pvid = row.primary_value_id
 
