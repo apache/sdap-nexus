@@ -13,18 +13,22 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+"""
+Script to transition doms.doms_data table to new schema with a primary key that will
+enable faster execution retrieval for large matchOnce=false matchups. Due to the nature
+of Cassandra, this will necessitate creating a temporary table, copying the data over,
+dropping the old table, recreating the table with the adjusted schema, copying the data
+back, and dropping the temporary table. This script does those steps, with the added
+option to stop after the initial copy for testing purposes.
+"""
+
 import argparse
-import configparser
-import decimal
-import json
 import logging
-from time import sleep
 import sys
 
 from cassandra.auth import PlainTextAuthProvider
 from cassandra.cluster import Cluster, NoHostAvailable, ExecutionProfile, EXEC_PROFILE_DEFAULT
-from cassandra.policies import RoundRobinPolicy, TokenAwarePolicy, RetryPolicy
-from cassandra.concurrent import execute_concurrent_with_args
+from cassandra.policies import RoundRobinPolicy, TokenAwarePolicy
 
 BATCH_SIZE = 10000
 logging.basicConfig(
@@ -274,13 +278,11 @@ def main():
             log.info('Disconnecting from Cassandra')
             session.shutdown()
 
-
         log.info('Done')
-
-
     except NoHostAvailable as ne:
         log.exception(ne)
         exit(1)
+
 
 if __name__ == '__main__':
     main()
