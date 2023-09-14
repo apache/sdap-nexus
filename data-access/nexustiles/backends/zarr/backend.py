@@ -100,6 +100,13 @@ class ZarrBackend(AbstractTileService):
             logger.error(f'Failed to open zarr dataset at {self.__path}, ignoring it. Cause: {e}')
             raise NexusTileServiceException(f'Cannot open dataset ({e})')
 
+        lats = self.__ds[self.__latitude].to_numpy()
+        delta = lats[1] - lats[0]
+
+        if delta < 0:
+            logger.warning(f'Latitude coordinate for {self._name} is in descending order. Flipping it to ascending')
+            self.__ds = self.__ds.isel({self.__latitude: slice(None, None, -1)})
+
     def get_dataseries_list(self, simple=False):
         ds = {
             "shortName": self._name,
