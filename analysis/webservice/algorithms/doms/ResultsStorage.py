@@ -16,22 +16,22 @@
 import configparser
 import json
 import logging
-from time import sleep
-import math
 import uuid
 from datetime import datetime
+from time import sleep
 
-import numpy as np
 import pkg_resources
 from cassandra.auth import PlainTextAuthProvider
 from cassandra.cluster import Cluster
+from cassandra.concurrent import execute_concurrent_with_args
 from cassandra.policies import TokenAwarePolicy, DCAwareRoundRobinPolicy
-from cassandra.query import BatchStatement, SimpleStatement
 from pytz import UTC
 from webservice.algorithms.doms.BaseDomsHandler import DomsEncoder
 from webservice.webmodel import NexusProcessingException
 
 BATCH_SIZE = 1024
+
+logger = logging.getLogger(__name__)
 
 
 class ResultInsertException(IOError):
@@ -192,7 +192,9 @@ class ResultsStorage(AbstractResultsContainer):
         inserts = []
 
         for result in results:
-            inserts.extend(self.__prepare_result(execution_id, None, result, insertStatement))
+            # 'PRIMARY' arg since primary values cannot have primary_value_id be null anymore
+            # Secondary matches are prepped recursively from this call
+            inserts.extend(self.__prepare_result(execution_id, 'PRIMARY', result, insertStatement))
 
         for i in range(5):
             success, failed_entries = self.__insert_result_batches(inserts, insertStatement)
@@ -261,7 +263,7 @@ class ResultsStorage(AbstractResultsContainer):
             result["platform"] if "platform" in result else None,
             result["device"] if "device" in result else None,
             json.dumps(data, cls=DomsEncoder),
-            1 if primaryId is None else 0,
+            1 if primaryId is 'PRIMARY' else 0,
             result["depth"],
             result['fileurl']
         )
@@ -273,8 +275,6 @@ class ResultsStorage(AbstractResultsContainer):
                 params_list.extend(self.__prepare_result(execution_id, result["id"], match, insertStatement))
 
         return params_list
-
-
 
 
 class ResultsRetrieval(AbstractResultsContainer):
@@ -297,15 +297,22 @@ class ResultsRetrieval(AbstractResultsContainer):
         return data
 
     def __enrichPrimaryDataWithMatches(self, id, dataMap, trim_data=False):
-        cql = "SELECT * FROM doms_data where execution_id = %s and is_primary = false"
-        rows = self._session.execute(cql, (id,))
+        cql = f"SELECT * FROM doms_data where execution_id = {str(id)} and is_primary = false and primary_value_id = ?"
+        statement = self._session.prepare(cql)
 
-        for row in rows:
-            entry = self.__rowToDataEntry(row, trim_data=trim_data)
-            if row.primary_value_id in dataMap:
-                if not "matches" in dataMap[row.primary_value_id]:
-                    dataMap[row.primary_value_id]["matches"] = []
-                dataMap[row.primary_value_id]["matches"].append(entry)
+        primary_ids = list(dataMap.keys())
+
+        logger.info(f'Getting secondary data for {len(primary_ids)} primaries of {str(id)}')
+
+        for (success, rows) in execute_concurrent_with_args(
+            self._session, statement, [(i,) for i in primary_ids], concurrency=50, results_generator=True
+        ):
+            for row in rows:
+                entry = self.__rowToDataEntry(row, trim_data=trim_data)
+                if row.primary_value_id in dataMap:
+                    if not "matches" in dataMap[row.primary_value_id]:
+                        dataMap[row.primary_value_id]["matches"] = []
+                    dataMap[row.primary_value_id]["matches"].append(entry)
 
     def __retrievePrimaryData(self, id, trim_data=False, page_num=2, page_size=10):
         cql = "SELECT * FROM doms_data where execution_id = %s and is_primary = true limit %s"
@@ -361,7 +368,7 @@ class ResultsRetrieval(AbstractResultsContainer):
             }
             return stats
 
-        raise Exception("Execution not found with id '%s'" % id)
+        raise NexusProcessingException(reason=f'No stats found for id {str(id)}', code=404)
 
     def retrieveParams(self, id):
         cql = "SELECT * FROM doms_params where execution_id = %s limit 1"
@@ -387,7 +394,7 @@ class ResultsRetrieval(AbstractResultsContainer):
             }
             return params
 
-        raise Exception("Execution not found with id '%s'" % id)
+        raise NexusProcessingException(reason=f'No params found for id {str(id)}', code=404)
 
     def retrieveExecution(self, execution_id):
         """
