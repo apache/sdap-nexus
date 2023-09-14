@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - SDAP-461: Added 4 remaining Saildrone insitu datasets.
 - SDAP-473: Added support for matchup job prioritization
 - SDAP-483: Added `.asf.yaml` to configure Jira auto-linking.
+- SDAP-487: Added script to migrate existing `doms.doms_data` data to new schema.
 ### Changed
 - SDAP-453: Updated results storage and retrieval to support output JSON from `/cdmsresults` that matches output from `/match_spark`.
   - **NOTE:** Deploying these changes to an existing SDAP deployment will require modifying the Cassandra database with stored results. There is a script to do so at `/tools/update-doms-data-schema/update.py`
@@ -22,6 +23,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - SDAP-468: Updated matchup output filename
 - SDAP-482: Updated Saildrone in situ endpoint in config file
 - SDAP-485: Improved behavior for retrying failed Cassandra inserts when saving matchup results.
+- SDAP-487: Improved result fetch speed for large matchup results by tweaking `doms.doms_data` schema to support querying by primary value id.
 ### Deprecated
 ### Removed
 - SDAP-465: Removed `climatology` directory. 
