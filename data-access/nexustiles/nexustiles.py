@@ -179,8 +179,16 @@ class NexusTileService(object):
 
     @tile_data()
     def find_all_tiles_in_polygon_at_time(self, bounding_polygon, dataset, time, **kwargs):
-        return self._metadatastore.find_all_tiles_in_polygon_at_time(bounding_polygon, dataset, time, rows=5000,
-                                                                     **kwargs)
+        bounds = bounding_polygon.bounds
+
+        min_lon = bounds[0]
+        min_lat = bounds[1]
+        max_lon = bounds[2]
+        max_lat = bounds[3]
+
+        return self.find_all_tiles_in_box_at_time(min_lat, max_lat, min_lon, max_lon, dataset, time, **kwargs)
+        # return self._metadatastore.find_all_tiles_in_polygon_at_time(bounding_polygon, dataset, time, rows=5000,
+        #                                                              **kwargs)
 
     @tile_data()
     def find_tiles_in_box(self, min_lat, max_lat, min_lon, max_lon, ds=None, start_time=0, end_time=-1, **kwargs):
@@ -195,13 +203,23 @@ class NexusTileService(object):
     @tile_data()
     def find_tiles_in_polygon(self, bounding_polygon, ds=None, start_time=0, end_time=-1, **kwargs):
         # Find tiles that fall within the polygon in the Solr index
-        if 'sort' in list(kwargs.keys()):
-            tiles = self._metadatastore.find_all_tiles_in_polygon(bounding_polygon, ds, start_time, end_time, **kwargs)
-        else:
-            tiles = self._metadatastore.find_all_tiles_in_polygon_sorttimeasc(bounding_polygon, ds, start_time,
-                                                                              end_time,
-                                                                              **kwargs)
-        return tiles
+
+        bounds = bounding_polygon.bounds
+
+        min_lon = bounds[0]
+        min_lat = bounds[1]
+        max_lon = bounds[2]
+        max_lat = bounds[3]
+
+        return self.find_tiles_in_box(min_lat, max_lat, min_lon, max_lon, ds, start_time, end_time, **kwargs)
+
+        # if 'sort' in list(kwargs.keys()):
+        #     tiles = self._metadatastore.find_all_tiles_in_polygon(bounding_polygon, ds, start_time, end_time, **kwargs)
+        # else:
+        #     tiles = self._metadatastore.find_all_tiles_in_polygon_sorttimeasc(bounding_polygon, ds, start_time,
+        #                                                                       end_time,
+        #                                                                       **kwargs)
+        # return tiles
 
     @tile_data()
     def find_tiles_by_metadata(self, metadata, ds=None, start_time=0, end_time=-1, **kwargs):
