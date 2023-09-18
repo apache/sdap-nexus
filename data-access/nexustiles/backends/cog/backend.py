@@ -155,6 +155,8 @@ class CoGBackend(AbstractTileService):
         return[CoGBackend.__to_url(
             self._name,
             tiff['path_s'],
+            min_time=tiff.get('min_time_dt'),
+            max_time=tiff.get('max_time_dt'),
             **params) for tiff in tiffs]
 
     def find_tiles_in_polygon(self, bounding_polygon, ds=None, start_time=None, end_time=None, **kwargs):
@@ -184,6 +186,8 @@ class CoGBackend(AbstractTileService):
         return [CoGBackend.__to_url(
             self._name,
             tiff['path_s'],
+            min_time=tiff.get('min_time_dt'),
+            max_time=tiff.get('max_time_dt'),
             **params) for tiff in tiffs]
 
     def find_tiles_by_metadata(self, metadata, ds=None, start_time=0, end_time=-1, **kwargs):
@@ -315,7 +319,7 @@ class CoGBackend(AbstractTileService):
         url = urlparse(url)
 
         if url.scheme in ['file', '']:
-            tiff = rioxarray.open_rasterio(url.path, mask_and_scale=True)
+            tiff = rioxarray.open_rasterio(url.path, mask_and_scale=True).to_dataset('band')
         else:
             raise NotImplementedError(f'Support not yet added for tiffs with {url.scheme} URLs')
 
@@ -331,10 +335,8 @@ class CoGBackend(AbstractTileService):
         for band in bands:
             band_num = bands[band]
 
-            key = f'band_{band_num}'
-
-            rename[key] = band
-            drop.discard(key)
+            rename[band_num] = band
+            drop.discard(band_num)
 
         drop.discard('spatial_ref')
 
@@ -400,7 +402,7 @@ class CoGBackend(AbstractTileService):
             TileVariable(v, v) for v in variables
         ]
 
-        matched = self.__ds.sel(sel_g)
+        matched = ds.sel(sel_g)
 
         if sel_t is not None:
             matched = matched.sel(sel_t, method=method)
@@ -452,12 +454,16 @@ class CoGBackend(AbstractTileService):
         try:
             # tile.min_time = int(url.query['min_time'])
             tile.min_time = datetime.utcfromtimestamp(int(url.query['min_time']))
+        except ValueError:
+            tile.min_time = datetime.strptime(url.query['min_time'], '%Y-%m-%dT%H:%M:%SZ')
         except KeyError:
             pass
 
         try:
             # tile.max_time = int(url.query['max_time'])
             tile.max_time = datetime.utcfromtimestamp(int(url.query['max_time']))
+        except ValueError:
+            tile.max_time = datetime.strptime(url.query['max_time'], '%Y-%m-%dT%H:%M:%SZ')
         except KeyError:
             pass
 

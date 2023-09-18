@@ -276,15 +276,11 @@ class NexusTileService:
 
                         solr_config_str = io.StringIO()
 
-                        print({section: dict(NexusTileService.ds_config[section]) for section in NexusTileService.ds_config.sections()})
-
                         NexusTileService.ds_config.write(solr_config_str)
 
                         solr_config_str.seek(0)
                         solr_config = configparser.ConfigParser()
                         solr_config.read_file(solr_config_str)
-
-                        print({section: dict(solr_config[section]) for section in solr_config.sections()})
 
                         solr_config.set('solr', 'core', 'nexusgranules')
 
