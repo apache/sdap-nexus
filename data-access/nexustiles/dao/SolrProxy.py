@@ -232,10 +232,7 @@ class SolrProxy(object):
 
         bounds = bounding_polygon.bounds
 
-        min_lon = bounds[0]
-        min_lat = bounds[1]
-        max_lon = bounds[2]
-        max_lat = bounds[3]
+        min_lon, min_lat, max_lon, max_lat = bounding_polygon.bounds
 
         params = {
             'fq': [
