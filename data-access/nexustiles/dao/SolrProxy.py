@@ -230,8 +230,6 @@ class SolrProxy(object):
 
         search = 'dataset_s:%s' % ds
 
-        bounds = bounding_polygon.bounds
-
         min_lon, min_lat, max_lon, max_lat = bounding_polygon.bounds
 
         params = {
