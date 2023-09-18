@@ -31,6 +31,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - SDAP-474: Fixed bug in CSV attributes where secondary dataset would be rendered as comma separated characters
 - SDAP-475: Bug fixes for `/timeSeriesSpark` and `/timeAvgMapSpark`
 - SDAP-479: Fixed `/cdmssubset` failure for variables without specified standard_name. 
+- SDAP-39: When querying for tiles by polygon, use the poly's bounding box with the bbox methods instead of using Solr's polygon search
 - Status code for results endpoint if execution id is not found fixed to be `404` instead of `500`.
 ### Security
 
