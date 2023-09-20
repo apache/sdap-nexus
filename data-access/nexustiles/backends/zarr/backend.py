@@ -68,6 +68,8 @@ class ZarrBackend(AbstractTileService):
         else:
             raise TypeError(f'Improper type for variables config: {type(data_vars)}')
 
+        self.__variables = [v.strip('\"\'') for v in self.__variables]
+
         self.__longitude = config['coords']['longitude']
         self.__latitude = config['coords']['latitude']
         self.__time = config['coords']['time']
