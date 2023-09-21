@@ -53,7 +53,7 @@ class SolrProxy(SolrProxyBase):
 
         params = {
             'fq': [time_clause],
-            # 'fl': ['path_s', 'granule_s']
+            'sort': ['min_time_dt asc']
         }
 
         if bounds is not None:

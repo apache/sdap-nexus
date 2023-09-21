@@ -179,7 +179,7 @@ class NexusTileService:
         else:
             logger.warning('_get_backend called with dataset_s=None')
 
-        print(f'Getting backend for {dataset_s}')
+        logger.debug(f'Getting backend for {dataset_s}')
 
         with NexusTileService.DS_LOCK:
             if dataset_s not in NexusTileService.backends:

@@ -726,7 +726,8 @@ class SolrProxy(object):
             s = None
 
         try:
-            additionalparams['sort'].extend(s)
+            if s is not None:
+                additionalparams['sort'].extend(s)
         except KeyError:
             if s is not None:
                 additionalparams['sort'] = s
