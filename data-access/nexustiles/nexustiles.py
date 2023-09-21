@@ -176,6 +176,10 @@ class NexusTileService:
     def _get_backend(dataset_s) -> AbstractTileService:
         if dataset_s is not None:
             dataset_s = dataset_s
+        else:
+            logger.warning('_get_backend called with dataset_s=None')
+
+        print(f'Getting backend for {dataset_s}')
 
         with NexusTileService.DS_LOCK:
             if dataset_s not in NexusTileService.backends:
@@ -429,7 +433,7 @@ class NexusTileService:
     def find_tile_by_id(self, tile_id, **kwargs):
         tile = URL(tile_id)
 
-        if tile.scheme == 'nts':
+        if tile.scheme != '':
             return NexusTileService._get_backend(tile.path).find_tile_by_id(tile_id)
         else:
             return NexusTileService._get_backend('__nexusproto__').find_tile_by_id(tile_id)
