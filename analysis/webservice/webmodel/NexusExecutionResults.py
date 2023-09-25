@@ -44,7 +44,8 @@ def construct_job_status(job_state, created, updated, execution_id, params, host
     }
 
 
-def construct_done(status, created, completed, execution_id, params, host):
+def construct_done(status, created, completed, execution_id, params, host,
+                   num_primary_matched, num_secondary_matched):
     job_body = construct_job_status(
         status,
         created,
@@ -53,6 +54,9 @@ def construct_done(status, created, completed, execution_id, params, host):
         params,
         host
     )
+    # Add stats to body
+    job_body['totalPrimaryMatched'] = num_primary_matched
+    job_body['averageSecondaryMatched'] = round(num_secondary_matched/num_primary_matched)
 
     # Construct urls
     formats = [
@@ -112,7 +116,8 @@ def construct_cancelled(status, created, completed, execution_id, params, host):
 
 class NexusExecutionResults:
     def __init__(self, status=None, created=None, completed=None, execution_id=None, message='',
-                 params=None, host=None, status_code=200):
+                 params=None, host=None, status_code=200, num_primary_matched=None,
+                 num_secondary_matched=None):
         self.status_code = status_code
         self.status = status
         self.created = created
@@ -121,6 +126,8 @@ class NexusExecutionResults:
         self.message = message
         self.execution_params = params
         self.host = host
+        self.num_primary_matched = num_primary_matched
+        self.num_secondary_matched = num_secondary_matched
 
     def toJson(self):
         params = {
@@ -132,6 +139,8 @@ class NexusExecutionResults:
         }
         if self.status == ExecutionStatus.SUCCESS:
             params['completed'] = self.completed
+            params['num_primary_matched'] = self.num_primary_matched
+            params['num_secondary_matched'] = self.num_secondary_matched
             construct = construct_done
         elif self.status == ExecutionStatus.RUNNING:
             construct = construct_running
