@@ -462,8 +462,10 @@ class NexusTileService(object):
 
                 num_vars = len(tile.data)
                 multi_data_mask = np.repeat(data_mask[np.newaxis, ...], num_vars, axis=0)
+                multi_data_mask = np.broadcast_arrays(multi_data_mask, tile.data)[0]
                 tile.data = ma.masked_where(multi_data_mask, tile.data)
             else:
+                data_mask = np.broadcast_arrays(data_mask, tile.data)[0]
                 tile.data = ma.masked_where(data_mask, tile.data)
 
         tiles[:] = [tile for tile in tiles if not tile.data.mask.all()]
