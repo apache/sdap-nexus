@@ -166,17 +166,18 @@ class ResultsStorage(AbstractResultsContainer):
     def __insertStats(self, execution_id, stats):
         cql = """
            INSERT INTO doms_execution_stats
-                (execution_id, num_gridded_matched, num_gridded_checked, num_insitu_matched, num_insitu_checked, time_to_complete)
+                (execution_id, num_gridded_matched, num_gridded_checked, num_insitu_matched, num_insitu_checked, time_to_complete, num_unique_secondaries)
            VALUES
-                (%s, %s, %s, %s, %s, %s)
+                (%s, %s, %s, %s, %s, %s, %s)
         """
         self._session.execute(cql, (
             execution_id,
-            stats["numPrimaryMatched"],
+            stats['numPrimaryMatched'],
             None,
-            stats["numSecondaryMatched"],
+            stats['numSecondaryMatched'],
             None,
-            stats["timeToComplete"]
+            stats['timeToComplete'],
+            stats['numUniqueSecondaries']
         ))
 
     def __insertResults(self, execution_id, results):
@@ -358,13 +359,14 @@ class ResultsRetrieval(AbstractResultsContainer):
         return entry
 
     def retrieveStats(self, id):
-        cql = "SELECT num_gridded_matched, num_insitu_matched, time_to_complete FROM doms_execution_stats where execution_id = %s limit 1"
+        cql = "SELECT num_gridded_matched, num_insitu_matched, time_to_complete, num_unique_secondaries FROM doms_execution_stats where execution_id = %s limit 1"
         rows = self._session.execute(cql, (id,))
         for row in rows:
             stats = {
-                "timeToComplete": row.time_to_complete,
-                "numSecondaryMatched": row.num_insitu_matched,
-                "numPrimaryMatched": row.num_gridded_matched,
+                'timeToComplete': row.time_to_complete,
+                'numSecondaryMatched': row.num_insitu_matched,
+                'numPrimaryMatched': row.num_gridded_matched,
+                'numUniqueSecondaries': row.num_unique_secondaries
             }
             return stats
 

@@ -73,5 +73,6 @@ class ExecutionStatusHandler(BaseDomsHandler.BaseDomsQueryCalcHandler):
             params=execution_params,
             host=host,
             num_primary_matched=execution_stats.get('numPrimaryMatched'),
-            num_secondary_matched=execution_stats.get('numSecondaryMatched')
+            num_secondary_matched=execution_stats.get('numSecondaryMatched'),
+            num_unique_secondaries=execution_stats.get('numUniqueSecondaries')
         )
