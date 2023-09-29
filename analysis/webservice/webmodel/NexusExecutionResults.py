@@ -56,6 +56,7 @@ def construct_done(status, created, completed, execution_id, params, host,
     )
     # Add stats to body
     job_body['totalPrimaryMatched'] = num_primary_matched
+    job_body['totalSecondaryMatched'] = num_secondary_matched
     job_body['averageSecondaryMatched'] = round(num_secondary_matched/num_primary_matched)
 
     # Construct urls
