@@ -57,20 +57,18 @@ class SolrProxy(SolrProxyBase):
         }
 
         if bounds is not None:
-            self.logger.warning('Subsetting GeoTIFF granule by bbox not yet implemented')
+            if type(bounds) in [dict, str]:
+                if isinstance(bounds, dict):
+                    max_lat = bounds['max_lat']
+                    max_lon = bounds['max_lon']
+                    min_lat = bounds['min_lat']
+                    min_lon = bounds['min_lon']
+                else:
+                    min_lon, min_lat, max_lon, max_lat = tuple([float(p) for p in bounds.split(',')])
 
-            # if type(bounds) in [dict, str]:
-            #     if isinstance(bounds, dict):
-            #         max_lat = bounds['max_lat']
-            #         max_lon = bounds['max_lon']
-            #         min_lat = bounds['min_lat']
-            #         min_lon = bounds['min_lon']
-            #     else:
-            #         min_lon, min_lat, max_lon, max_lat = tuple([float(p) for p in bounds.split(',')])
-            #
-            #     params['fq'].append("geo:[%s,%s TO %s,%s]" % (min_lat, min_lon, max_lat, max_lon))
-            # elif isinstance(bounds, Polygon):
-            #     params['fq'].append('{!field f=geo}Intersects(%s)' % bounds.wkt)
+                params['fq'].append("geo:[%s,%s TO %s,%s]" % (min_lat, min_lon, max_lat, max_lon))
+            elif isinstance(bounds, Polygon):
+                params['fq'].append('{!field f=geo}Intersects(%s)' % bounds.wkt)
 
         self._merge_kwargs(params, **kwargs)
 
@@ -159,7 +157,7 @@ class SolrProxy(SolrProxyBase):
 
         additionalparams = {
             'fq': [
-                # "geo:[%s,%s TO %s,%s]" % (min_lat, min_lon, max_lat, max_lon),
+                "geo:[%s,%s TO %s,%s]" % (min_lat, min_lon, max_lat, max_lon),
                 "{!frange l=0 u=0}ms(min_time_dt,max_time_dt)",
                 time_clause
             ],
