@@ -309,9 +309,9 @@ class SolrProxy(object):
         
         if min_elevation and max_elevation:
             elevation_clause = "(" \
-                          "tile_min_elevation:[%s TO %s] " \
-                          "OR tile_max_elevation:[%s TO %s] " \
-                          "OR (tile_min_elevation:[* TO %s] AND tile_max_elevation:[%s TO *])" \
+                          "tile_min_elevation_d:[%s TO %s] " \
+                          "OR tile_max_elevation_d:[%s TO %s] " \
+                          "OR (tile_min_elevation_d:[* TO %s] AND tile_max_elevation_d:[%s TO *])" \
                           ")" % (
                               min_elevation, max_elevation,
                               min_elevation, max_elevation,
@@ -320,8 +320,8 @@ class SolrProxy(object):
             additionalparams['fq'].append(elevation_clause)
         elif min_elevation:
             elevation_clause = "(" \
-                           "tile_min_elevation:[%s TO *] " \
-                           "OR tile_max_elevation:[%s TO *] " \
+                           "tile_min_elevation_d:[%s TO *] " \
+                           "OR tile_max_elevation_d:[%s TO *] " \
                            ")" % (
                                min_elevation,
                                min_elevation
@@ -329,8 +329,8 @@ class SolrProxy(object):
             additionalparams['fq'].append(elevation_clause)
         elif max_elevation:
             elevation_clause = "(" \
-                           "tile_min_elevation:[* TO %s] " \
-                           "OR tile_max_elevation:[* TO %s] " \
+                           "tile_min_elevation_d:[* TO %s] " \
+                           "OR tile_max_elevation_d:[* TO %s] " \
                            ")" % (
                                max_elevation,
                                max_elevation
