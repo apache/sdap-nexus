@@ -230,9 +230,11 @@ class SolrProxy(object):
 
         search = 'dataset_s:%s' % ds
 
+        min_lon, min_lat, max_lon, max_lat = bounding_polygon.bounds
+
         params = {
             'fq': [
-                "{!field f=geo}Intersects(%s)" % bounding_polygon.wkt,
+                "geo:[%s,%s TO %s,%s]" % (min_lat, min_lon, max_lat, max_lon),
                 "tile_count_i:[1 TO *]",
                 "day_of_year_i:[* TO %s]" % day_of_year
             ],
@@ -345,9 +347,11 @@ class SolrProxy(object):
 
         search = 'dataset_s:%s' % ds
 
+        min_lon, min_lat, max_lon, max_lat = bounding_polygon.bounds
+
         additionalparams = {
             'fq': [
-                "{!field f=geo}Intersects(%s)" % bounding_polygon.wkt,
+                "geo:[%s,%s TO %s,%s]" % (min_lat, min_lon, max_lat, max_lon),
                 "tile_count_i:[1 TO *]"
             ]
         }
@@ -377,9 +381,11 @@ class SolrProxy(object):
 
         search = 'dataset_s:%s' % ds
 
+        min_lon, min_lat, max_lon, max_lat = bounding_polygon.bounds
+
         additionalparams = {
             'fq': [
-                "{!field f=geo}Intersects(%s)" % bounding_polygon.wkt,
+                "geo:[%s,%s TO %s,%s]" % (min_lat, min_lon, max_lat, max_lon),
                 "tile_count_i:[1 TO *]"
             ]
         }
@@ -409,9 +415,11 @@ class SolrProxy(object):
 
         search = 'dataset_s:%s' % ds
 
+        min_lon, min_lat, max_lon, max_lat = bounding_polygon.bounds
+
         additionalparams = {
             'fq': [
-                "{!field f=geo}Intersects(%s)" % bounding_polygon.wkt,
+                "geo:[%s,%s TO %s,%s]" % (min_lat, min_lon, max_lat, max_lon),
                 "tile_count_i:[1 TO *]"
             ],
             'rows': 0,
@@ -513,9 +521,11 @@ class SolrProxy(object):
                           the_time, the_time
                       )
 
+        min_lon, min_lat, max_lon, max_lat = bounding_polygon.bounds
+
         additionalparams = {
             'fq': [
-                "{!field f=geo}Intersects(%s)" % bounding_polygon.wkt,
+                "geo:[%s,%s TO %s,%s]" % (min_lat, min_lon, max_lat, max_lon),
                 "tile_count_i:[1 TO *]",
                 time_clause
             ]
