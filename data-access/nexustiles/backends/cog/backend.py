@@ -381,6 +381,13 @@ class CoGBackend(AbstractTileService):
         ds: xr.Dataset = CoGBackend.__open_granule_at_url(granule, np.datetime64(min_time.isoformat()), self.__bands)
         variables = list(ds.data_vars)
 
+        lats = ds[self.__latitude].to_numpy()
+        delta = lats[1] - lats[0]
+
+        if delta < 0:
+            logger.warning(f'Latitude coordinate for {self._name} is in descending order. Flipping it to ascending')
+            ds = ds.isel({self.__latitude: slice(None, None, -1)})
+
         sel_g = {
             self.__latitude: slice(min_lat, max_lat),
             self.__longitude: slice(min_lon, max_lon),
