@@ -41,7 +41,7 @@ from .model.nexusmodel import Tile, BBox, TileStats, TileVariable
 
 from nexustiles.backends import *
 
-from .exception import NexusTileServiceException
+from .exception import NexusTileServiceException, AlgorithmUnsupportedForDatasetException
 
 from requests.structures import CaseInsensitiveDict
 
@@ -104,7 +104,7 @@ def catch_not_implemented(func):
         try:
             return func(*args, **kwargs)
         except NotImplementedError:
-            raise NexusTileServiceException('Action unsupported by backend')
+            raise AlgorithmUnsupportedForDatasetException('Action unsupported by backend')
 
     return wrapper
 
@@ -593,6 +593,7 @@ class NexusTileService:
             min_lat, max_lat, min_lon, max_lon, dataset, time, **kwargs
         )
 
+    @catch_not_implemented
     def get_bounding_box(self, tile_ids, ds=None):
         """
         Retrieve a bounding box that encompasses all of the tiles represented by the given tile ids.
@@ -601,6 +602,7 @@ class NexusTileService:
         """
         return NexusTileService._get_backend(ds).get_bounding_box(tile_ids)
 
+    @catch_not_implemented
     def get_min_time(self, tile_ids, ds=None):
         """
         Get the minimum tile date from the list of tile ids
@@ -608,8 +610,9 @@ class NexusTileService:
         :param ds: Filter by a specific dataset. Defaults to None (queries all datasets)
         :return: long time in seconds since epoch
         """
-        return NexusTileService._get_backend(ds).get_min_time(tile_ids, ds)
+        return int(NexusTileService._get_backend(ds).get_min_time(tile_ids, ds))
 
+    @catch_not_implemented
     def get_max_time(self, tile_ids, ds=None):
         """
         Get the maximum tile date from the list of tile ids
@@ -619,6 +622,7 @@ class NexusTileService:
         """
         return int(NexusTileService._get_backend(ds).get_max_time(tile_ids))
 
+    @catch_not_implemented
     def get_distinct_bounding_boxes_in_polygon(self, bounding_polygon, ds, start_time, end_time):
         """
         Get a list of distinct tile bounding boxes from all tiles within the given polygon and time range.
@@ -631,6 +635,7 @@ class NexusTileService:
         bounds = self._metadatastore.find_distinct_bounding_boxes_in_polygon(bounding_polygon, ds, start_time, end_time)
         return [box(*b) for b in bounds]
 
+    @catch_not_implemented
     def get_tile_count(self, ds, bounding_polygon=None, start_time=0, end_time=-1, metadata=None, **kwargs):
         """
         Return number of tiles that match search criteria.
@@ -754,9 +759,6 @@ class NexusTileService:
 
                 tile.data = ma.masked_where(multi_data_mask, tile.data)
             else:
-                print(data_mask.shape)
-                print(tile.data.shape)
-
                 data_mask = np.broadcast_to(data_mask, tile.data.shape)
                 tile.data = ma.masked_where(data_mask, tile.data)
 

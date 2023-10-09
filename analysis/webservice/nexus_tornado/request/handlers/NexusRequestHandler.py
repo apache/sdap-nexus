@@ -22,6 +22,9 @@ from webservice.nexus_tornado.request.renderers import NexusRendererFactory
 from webservice.webmodel import NexusRequestObjectTornadoFree, NexusRequestObject, NexusProcessingException
 from webservice.algorithms_spark.NexusCalcSparkTornadoHandler import NexusCalcSparkTornadoHandler
 
+from nexustiles.exception import AlgorithmUnsupportedForDatasetException
+
+from py4j.protocol import Py4JJavaError
 
 class NexusRequestHandler(tornado.web.RequestHandler):
     def initialize(self, thread_pool, clazz=None, **kargs):
@@ -72,7 +75,28 @@ class NexusRequestHandler(tornado.web.RequestHandler):
         except NexusProcessingException as e:
             self.async_onerror_callback(e.reason, e.code)
 
+        # except pyspark
+
+        except AlgorithmUnsupportedForDatasetException as e:
+            self.logger.exception(e)
+            self.async_onerror_callback(
+                reason='Algorithm unsupported for dataset (backend has yet to implement functionality)',
+                code=400
+            )
+
+        except Py4JJavaError as e:
+            self.logger.exception(e)
+
+            if 'AlgorithmUnsupportedForDatasetException' in str(e):
+                self.async_onerror_callback(
+                    reason='Algorithm unsupported for dataset (backend has yet to implement functionality)',
+                    code=400
+                )
+            else:
+                self.async_onerror_callback(str(e), 500)
+
         except Exception as e:
+            print(type(e))
             self.async_onerror_callback(str(e), 500)
 
     @tornado.gen.coroutine

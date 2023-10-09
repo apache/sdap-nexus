@@ -16,3 +16,9 @@
 class NexusTileServiceException(Exception):
     def __init__(self, reason):
         Exception.__init__(self, reason)
+
+
+class AlgorithmUnsupportedForDatasetException(Exception):
+    def __init__(self, reason):
+        Exception.__init__(self, reason)
+
