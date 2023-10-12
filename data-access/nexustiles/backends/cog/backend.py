@@ -21,6 +21,9 @@ from urllib.parse import urlparse
 import numpy as np
 import numpy.ma as ma
 import rioxarray
+import rasterio as rio
+from rasterio.session import AWSSession
+import boto3
 import xarray as xr
 from nexustiles.AbstractTileService import AbstractTileService
 from nexustiles.exception import NexusTileServiceException
@@ -315,18 +318,48 @@ class CoGBackend(AbstractTileService):
         return tiles
 
     @staticmethod
-    def __open_granule_at_url(url, time: np.datetime64, bands, **kwargs):
+    def __open_granule_at_url(url, time: np.datetime64, bands, config, **kwargs):
         url = urlparse(url)
 
         if url.scheme in ['file', '']:
             tiff = rioxarray.open_rasterio(url.path, mask_and_scale=True).to_dataset('band')
+        elif url.scheme == 's3':
+            try:
+                aws_cfg = config['aws']
+
+                key_id = aws_cfg['accessKeyID']
+                secret = aws_cfg['secretAccessKey']
+            except KeyError:
+                raise NexusTileServiceException(f'AWS config not provided for dataset {url.path}')
+
+            session = boto3.Session(
+                aws_access_key_id=key_id,
+                aws_secret_access_key=secret,
+                region_name=aws_cfg.get('region', 'us-west-2')
+            )
+
+            with rio.Env(
+                AWSSession(session),
+                GDAL_DISABLE_READDIR_ON_OPEN='EMPTY_DIR'
+            ):
+                tiff = rioxarray.open_rasterio(url, mask_and_scale=True)
+
+                #####
+                # NOTE: This will likely be inefficient so leaving it disabled for now. I don't know how it will
+                # handle accessing data when the rio.Env context exits so maybe we want to pull it into memory before
+                # it does???
+                #
+                # tiff = tiff.load()
+
+                tiff = tiff.to_dataset('band')
         else:
             raise NotImplementedError(f'Support not yet added for tiffs with {url.scheme} URLs')
 
         try:
-            tiff.rio.reproject(dst_crs='EPSG:4326', nodata=np.nan)
+            tiff = tiff.rio.reproject(dst_crs='EPSG:4326', nodata=np.nan)
         except MissingCRS:
-            tiff.rio.write_crs('EPSG:4326').rio.reproject(dst_crs='EPSG:4326', nodata=np.nan)
+            # tiff.rio.write_crs('EPSG:4326').rio.reproject(dst_crs='EPSG:4326', nodata=np.nan)
+            pass
 
         rename = dict(x='longitude', y='latitude')
 
@@ -378,7 +411,7 @@ class CoGBackend(AbstractTileService):
 
         granule = tile.granule
 
-        ds: xr.Dataset = CoGBackend.__open_granule_at_url(granule, np.datetime64(min_time.isoformat()), self.__bands)
+        ds: xr.Dataset = CoGBackend.__open_granule_at_url(granule, np.datetime64(min_time.isoformat()), self.__bands, self.__config)
         variables = list(ds.data_vars)
 
         lats = ds[self.__latitude].to_numpy()
