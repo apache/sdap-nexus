@@ -139,8 +139,7 @@ paths:
           required: false
           schema:
             type: string
-            default: sea_surface_temperature
-          example: sea_surface_temperature
+          example: sea_water_temperature
         - in: query
           name: matchOnce
           description: |
