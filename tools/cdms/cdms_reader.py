@@ -72,7 +72,7 @@ def assemble_matches(filename):
                     match_dict[group][group + 'ID'] = ID
                     for var in cdms_nc.groups[group].variables.keys():
                         match_dict[group][var] = cdms_nc.groups[group][var][ID]
-
+    
                     # Create a UTC datetime field from timestamp
                     dt = num2date(match_dict[group]['time'],
                                   cdms_nc.groups[group]['time'].units)
@@ -84,77 +84,92 @@ def assemble_matches(filename):
     except (OSError, IOError) as err:
         LOGGER.exception("Error reading netCDF file " + filename)
         raise err
+
+def assemble_matches_by_primary(filename):
+    """
+    Read a CDMS netCDF file and return a list of matches, in which secondary data
+    points are grouped together by their primary data point match.
+    
+    Parameters
+    ----------
+    filename : str
+        The CDMS netCDF file name.
+    
+    Returns
+    -------
+    matches : list
+        List of matches. Each list element is a dictionary.
+        For match m, netCDF group GROUP (PrimaryData or SecondaryData), and
+        group variable VARIABLE:
+
+        matches[m][GROUP]['matchID']: MatchedRecords dimension ID for the match
+        matches[m][GROUP]['GROUPID']: GROUP dim dimension ID for the record
+        matches[m][GROUP][VARIABLE]: variable value
+
+        Each VARIABLE is returned as a masked array. 
+
+    """
    
-def return_matches_array(filename):
-     """
-        Read a CDMS netCDF file and return a list of matches in a more rudimentary format.
-    
-        Parameters
-        ----------
-        filename : str
-            The CDMS netCDF file name.
-    
-        Returns
-        -------
-        matches : list
-            List of matches.
-            For match m:
-                matches[m][0 - 8]: Contains either floats or arrays representing data for
-                PrimaryData and its associated SecondaryData.
+    try:
+        # Open the netCDF file
+        with Dataset(filename, 'r') as cdms_nc:
+            # Check that the number of groups is consistent w/ the MatchedGroups
+            # dimension
+            assert len(cdms_nc.groups) == cdms_nc.dimensions['MatchedGroups'].size,\
+                ("Number of groups isn't the same as MatchedGroups dimension.")
+           
+            matched_records = cdms_nc.dimensions['MatchedRecords'].size
+            primary_matches = cdms_nc.groups['PrimaryData'].dimensions['dim'].size
+            matches = [OrderedDict()] * primary_matches
 
-            Please refer to the code in this function as well as the README to obtain information
-            regarding the ordering of this data. 
-     """
+            for match in range(matched_records):
+                PID = int(cdms_nc.variables['matchIDs'][match][0])
+        
+                if len(matches[PID]) == 0: #establishes ordered dictionary for first match[PID]
+                    matches[PID] = OrderedDict()
 
-    match_ids = xr.open_dataset(filename)
-    primary = xr.open_dataset(filename, group= "PrimaryData")
-    secondary = xr.open_dataset(filename, group= "SecondaryData")
+                for group_num, group in enumerate(cdms_nc.groups):
+                    
+                    if group_num == 0: #primary
+                        
+                        if group not in matches[PID].keys(): #initialization
+                                matches[PID][group] = OrderedDict()
+                                matches[PID][group]['matchID'] = []
 
-    #set up primary arrays
-    matches = [[0.0, 0.0, 0.0, 0.0, [], [], [], [], []] for x in range(primary.sizes['dim'])]
+                        matches[PID][group]['matchID'].append(match)
+                        ID = cdms_nc.variables['matchIDs'][match][group_num]
+                        matches[PID][group][group + 'ID'] = ID
 
-    #set up secondary arrays
-    sec_lon = []
-    sec_lat = []
-    sec_time = []
-    sec_speed = []
-    sec_dir = []
-    prev_x = 0
-    
-    #load values into the arrays 
-    matches[0][0] = float(primary.lon[0].values)
-    matches[0][1] = float(primary.lat[0].values)
-    matches[0][2] = float(primary.time[0].values)
-    matches[0][3] = float(primary.sea_surface_foundation_temperature[0].values)
+                        for var in cdms_nc.groups[group].variables.keys():
+                            matches[PID][group][var] = cdms_nc.groups[group][var][ID]
+                        
+                        dt = num2date(matches[PID][group]['time'], cdms_nc.groups[group]['time'].units)
+                        matches[PID][group]['datetime'] = dt
 
-    for x, y in match_ids.matchIDs.values:
-        if prev_x != int(x):
-            matches[prev_x][4] = (sec_lon)
-            matches[prev_x][5] = (sec_lat)
-            matches[prev_x][6] = (sec_time)
-            matches[prev_x][7] = (sec_speed)
-            matches[prev_x][8] = (sec_dir)
+                    elif group_num == 1: #secondary
 
-            matches[int(x)][0] = float(primary.lon[int(x)].values)
-            matches[int(x)][1] = float(primary.lat[int(x)].values)
-            matches[int(x)][2] = float(primary.time[int(x)].values)
-            matches[int(x)][3] = float(primary.sea_surface_foundation_temperature[int(x)].values)
-                
-            sec_lon = []
-            sec_lat = []
-            sec_time = []
-            sec_speed = []
-            sec_dir = []
+                        if group not in matches[PID].keys(): #initialization
+                            matches[PID][group] = OrderedDict()
+                            matches[PID][group]['matchID'] = []
+                            matches[PID][group][group + 'ID'] = []
+                            matches[PID][group]['datetime'] = []
+                        
+                        matches[PID][group]['matchID'].append(match)
+                        ID = cdms_nc.variables['matchIDs'][match][group_num]
+                        matches[PID][group][group + 'ID'].append(ID)
+                        
+                        for var in cdms_nc.groups[group].variables.keys():
+                            if var not in matches[PID][group].keys():
+                                matches[PID][group][var] = []
+                            matches[PID][group][var].append(cdms_nc.groups[group][var][ID])
 
-        sec_lon.append(float(secondary.lon[int(y)].values))
-        sec_lat.append(float(secondary.lat[int(y)].values))
-        sec_time.append(float(secondary.time[int(y)].values))
-        sec_speed.append(float(secondary.wind_speed[int(y)].values))
-        sec_dir.append(float(secondary.wind_to_direction[int(y)].values))
-
-        prev_x = int(x)
-
-    return matches
+                        dt = num2date(matches[PID][group]['time'], cdms_nc.groups[group]['time'].units)
+                        matches[PID][group]['datetime'].append(dt[0])
+                 
+            return matches
+    except (OSError, IOError) as err:
+        LOGGER.exception("Error reading netCDF file " + filename)
+        raise err
 
 def matches_to_csv(matches, csvfile):
     """

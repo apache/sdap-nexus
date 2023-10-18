@@ -42,33 +42,29 @@ matches[0]['PrimaryData']['PrimaryDataID']
 matches[0]['SecondaryData']['SecondaryDataID']
 ```
 
-### Function: `return_matches_array(filename)`
-Read a CDMS netCDF file into memory and return a list of matches from the file.
-This format returns the matches in a more primitive array structure, where each element corresponds to a set of PrimaryData and all its associated SecondaryData.
+### Function: `assemble_matches_by_primary(filename)`
+Read a CDMS netCDF file and return a list of matches, in which secondary data points are grouped together by their primary data point match.
 
 #### Parameters 
 - `filename` (str): the CDMS netCDF file name.
     
 #### Returns
-- `matches` (list): Two dimensional array of matches. 
+- `matches` (list): Three dimensional array of matches. 
 
 Each list element in `matches` is an array that contains the following sub-elements:
-	For match `m`, all information can be accessed by the following indices (ex. matches[m][0-8]):
+	For match `m` (indexed on the number of 'PrimaryData' points), netCDF group `GROUP` ('PrimaryData' or 'SecondaryData'), and netCDF group vraiable `VARIABLE`: 
 
-`matches[m][0]`: longitude for the PrimaryData (float) 
-`matches[m][1]`: latitude for the PrimaryData (float)
-`matches[m][2]`: time for the PrimaryData (float)
-`matches[m][3]`: sea surface foundation temperature for the PrimaryData (float)
-`matches[m][4]`: longitude for the SecondaryData (array of floats)
-`matches[m][5]`: latitude for the SecondaryData (array of floats)
-`matches[m][6]`: time for the SecondaryData (array of floats)
-`matches[m][7]`: wind speed for the SecondaryData (array of floats)
-`matches[m][8]`: wind direction for the SecondaryData (array of floats)
+`matches[m][GROUP]['matchID']`: netCDF `MatchedRecords` dimension ID for each match. Returned as an ordered array.
+`matches[m][GROUP]['GROUPID']`: GROUP netCDF `dim` dimension ID for each record. Returned as a single element for 'PrimaryData' and an ordered array for 'SecondaryData'
+`matches[m][GROUP][VARIABLE]`: variable value. Returned as an ordered array. 
 
-For example, to access the timestamps of the primary data and the secondary data of the first match in the list:
+For example, to access the timestamps of the primary data and the secondary data of the first match in the list, along with the `MatchedRecords` dimension ID and the groups' `dim` dimension ID:
 ```python
-matches[0][2] #returns PrimaryData time as a float
-matches[0][6] #returns SecondaryData time as an array
+matches[0]['PrimaryData']['time']
+matches[0]['SecondaryData']['time']
+matches[0]['PrimaryData']['matchID']
+matches[0]['PrimaryData']['PrimaryDataID']
+matches[0]['SecondaryData']['SecondaryDataID']
 ```
 
 ### Function: `matches_to_csv(matches, csvfile)`
