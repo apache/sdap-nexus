@@ -28,7 +28,9 @@ from pytz import timezone
 from itertools import zip_longest, chain
 from functools import partial
 import json
+import pandas as pd
 from tempfile import NamedTemporaryFile
+import zipfile
 
 
 logger = logging.getLogger(__name__)
@@ -312,7 +314,7 @@ class LidarResults(NexusResults):
                     if all([np.isnan(v) for v in [zg, rh50, rh98, cc]]):
                         continue
 
-                    point_ts = (t.data - NP_EPOCH) / np.timedelta64(1, 's')
+                    point_ts = int((t.data - NP_EPOCH) / np.timedelta64(1, 's'))
 
                     points.append(dict(
                         latitude=lat.item(),
@@ -405,12 +407,23 @@ class LidarResults(NexusResults):
         return buf.read()
 
     def toCSV(self):
-        pass
+        df = pd.DataFrame(self.points_list())
+
+        buffer = BytesIO()
+
+        df.to_csv(buffer, index=False)
+
+        buffer.seek(0)
+        return buffer.read()
 
     def toZip(self):
-        pass
+        csv_results = self.toCSV()
 
+        buffer = BytesIO()
 
-# TODO. Subset style return: ground elevation (ZG), canopy height(ZG + RH098), mean veg height(ZG + RH050),
-#  canopy cover (CC). Renderers for CSV, NetCDF, and PNG
+        with zipfile.ZipFile(buffer, 'w', zipfile.ZIP_DEFLATED) as zip:
+            zip.writestr('lidar_subset.csv', csv_results)
+
+        buffer.seek(0)
+        return buffer.read()
 
