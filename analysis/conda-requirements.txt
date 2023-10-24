@@ -33,4 +33,5 @@ gdal==3.2.1
 mock==4.0.3
 importlib_metadata==4.11.4
 #singledispatch==3.4.0.3
-
+xarray
+matplotlib
