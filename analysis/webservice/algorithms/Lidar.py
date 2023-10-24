@@ -328,7 +328,51 @@ class LidarResults(NexusResults):
         return points
 
     def toImage(self):
-        pass
+        ds = self.results()
+        meta = self.meta()
+
+        min_lon, min_lat, max_lon, max_lat = [float(c) for c in meta['b'].split(',')]
+
+        lat_len = max_lat - min_lat
+        lon_len = max_lon - min_lon
+
+        if lat_len >= lon_len:
+            diff = lat_len - lon_len
+
+            min_lon -= (diff / 2)
+            max_lon += (diff / 2)
+        else:
+            diff = lon_len - lat_len
+
+            min_lat -= (diff / 2)
+            max_lat += (diff / 2)
+
+        extent = [min_lon, max_lon, min_lat, max_lat]
+
+        fig, ((rh50_ax, rh98_ax), (zg_ax, cc_ax)) = plt.subplots(2, 2, figsize=(10, 10))
+
+        rh50_im = rh50_ax.imshow(np.squeeze(ds['mean_veg_height']).data, extent=extent, aspect='equal', cmap='viridis')
+        rh98_im = rh98_ax.imshow(np.squeeze(ds['canopy_height']).data, extent=extent, aspect='equal', cmap='viridis')
+        zg_im = zg_ax.imshow(np.squeeze(ds['ground_height']).data, extent=extent, aspect='equal', cmap='viridis')
+        cc_im = cc_ax.imshow(np.squeeze(ds['canopy_coverage']).data, extent=extent, aspect='equal', cmap='viridis')
+
+        rh50_cb = plt.colorbar(rh50_im, ax=rh50_ax, label='Height above terrain [m]')
+        rh98_cb = plt.colorbar(rh98_im, ax=rh98_ax, label='Height above terrain [m]')
+        zg_cb = plt.colorbar(zg_im, ax=zg_ax, label='Height above ellipsoid [m]')
+        cc_cb = plt.colorbar(cc_im, ax=cc_ax, label='Coverage [%]')
+
+        rh50_ax.set_title('Mean Vegetation Height')
+        rh98_ax.set_title('Canopy Height')
+        zg_ax.set_title('Terrain Height')
+        cc_ax.set_title('Canopy Coverage')
+
+        plt.tight_layout()
+
+        buffer = BytesIO()
+
+        plt.savefig(buffer, format='png', facecolor='white')
+        buffer.seek(0)
+        return buffer.read()
 
     def toJson(self):
         points = self.points_list()
