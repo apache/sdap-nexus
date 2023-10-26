@@ -13,23 +13,30 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
 set -e
 
-APACHE_NEXUSPROTO="https://github.com/apache/incubator-sdap-nexusproto.git"
-MASTER="master"
+if [ ! -z ${BUILD_NEXUSPROTO+x} ]; then
+  echo 'Building nexusproto from source...'
 
-GIT_REPO=${1:-$APACHE_NEXUSPROTO}
-GIT_BRANCH=${2:-$MASTER}
+  APACHE_NEXUSPROTO="https://github.com/apache/incubator-sdap-nexusproto.git"
+  MASTER="master"
 
-mkdir nexusproto
-pushd nexusproto
-git init
-git pull ${GIT_REPO} ${GIT_BRANCH}
+  GIT_REPO=${1:-$APACHE_NEXUSPROTO}
+  GIT_BRANCH=${2:-$MASTER}
 
-./gradlew pythonInstall --info
+  mkdir nexusproto
+  pushd nexusproto
+  git init
+  git pull ${GIT_REPO} ${GIT_BRANCH}
 
-./gradlew install --info
+  ./gradlew pythonInstall --info
 
-rm -rf /root/.gradle
-popd
-rm -rf nexusproto
+  ./gradlew install --info
+
+  rm -rf /root/.gradle
+  popd
+  rm -rf nexusproto
+else
+  pip install nexusproto
+fi
