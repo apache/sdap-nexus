@@ -89,6 +89,16 @@ From the ingester root directory, run:
 
   docker build . -f granule_ingester/docker/Dockerfile -t sdap-local/sdap-granule-ingester:${INGESTER_VERSION}
 
+.. note::
+
+  The granule ingester installs `nexusproto <https://github.com/apache/incubator-sdap-nexusproto>`_ as part of its build process. By default, it installs from `PyPI <https://pypi.org/project/nexusproto/>`_.
+
+  It is possible to build and install directly from source by defining ``--build-arg BUILD_NEXUSPROTO=...`` in the command line.
+  (The value you set is irrelevant; it just needs to be set). You can further define the source repository and branch to build from by
+  defining ``--build-arg APACHE_NEXUSPROTO=...`` and ``--build-arg APACHE_NEXUSPROTO_BRANCH=...``
+
+  Note: Building does not currently work on Apple Silicon (M1/M2). (`SDAP-488 <https://issues.apache.org/jira/browse/SDAP-488>`_)
+
 Build the Solr & Webapp Components
 ======
 
@@ -136,6 +146,16 @@ Now we can build the webapp with:
 .. code-block:: bash
 
   docker build . -f docker/nexus-webapp/Dockerfile -t sdap-local/sdap-nexus-webapp:${NEXUS_VERSION}
+
+.. note::
+
+  The webapp installs `nexusproto <https://github.com/apache/incubator-sdap-nexusproto>`_ as part of its build process. By default, it installs from `PyPI <https://pypi.org/project/nexusproto/>`_.
+
+  It is possible to build and install directly from source by defining ``--build-arg BUILD_NEXUSPROTO=...`` in the command line.
+  (The value you set is irrelevant; it just needs to be set). You can further define the source repository and branch to build from by
+  defining ``--build-arg APACHE_NEXUSPROTO=...`` and ``--build-arg APACHE_NEXUSPROTO_BRANCH=...``
+
+  Note: Building does not currently work on Apple Silicon (M1/M2). (`SDAP-488 <https://issues.apache.org/jira/browse/SDAP-488>`_)
 
 Verify Successful Build
 ====
