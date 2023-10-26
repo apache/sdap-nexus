@@ -71,6 +71,16 @@ class LidarVegetation(NexusCalcHandler):
             "type": "string",
             "description": "Ending time in format YYYY-MM-DDTHH:mm:ssZ or seconds since EPOCH. Required"
         },
+        "latSlice": {
+            "name": "Latitude slice",
+            "type": "string",
+            "description": "Comma separated values: latitude to slice on[,min lon of slice,max lon of slice]"
+        },
+        "lonSlice": {
+            "name": "Longitude slice",
+            "type": "string",
+            "description": "Comma separated values: longitude to slice on[,min lat of slice,max lat of slice]"
+        },
     }
     singleton = True
 
