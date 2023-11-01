@@ -62,7 +62,7 @@ class ExecutionStatusHandler(BaseDomsHandler.BaseDomsQueryCalcHandler):
                 execution_stats = {}
 
         job_status = NexusExecutionResults.ExecutionStatus(execution_details['status'])
-        host = f'{request.requestHandler.request.protocol}://{request.requestHandler.request.host}'
+        host = f'https://{request.requestHandler.request.host}'
 
         return NexusExecutionResults.NexusExecutionResults(
             status=job_status,
