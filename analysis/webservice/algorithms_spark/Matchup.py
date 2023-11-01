@@ -276,7 +276,7 @@ class Matchup(NexusCalcSparkTornadoHandler):
 
         total_keys = len(list(spark_result.keys()))
         total_values = sum(len(v) for v in spark_result.values())
-        unique_values = len(set([point.data_id for point in spark_result.values()]))
+        unique_values = len(set([point.data_id for v in spark_result.values() for point in v]))
         details = {
             'timeToComplete': int((end - start).total_seconds()),
             'numSecondaryMatched': total_values,
