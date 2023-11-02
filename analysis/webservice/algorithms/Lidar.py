@@ -31,6 +31,7 @@ import json
 import pandas as pd
 from tempfile import NamedTemporaryFile
 import zipfile
+from mpl_toolkits.axes_grid1 import make_axes_locatable
 
 
 logger = logging.getLogger(__name__)
@@ -123,10 +124,55 @@ class LidarVegetation(NexusCalcHandler):
                                                   "formatted as Minimum (Western) Longitude, Minimum (Southern) "
                                                   "Latitude, Maximum (Eastern) Longitude, Maximum (Northern) Latitude.")
 
-        return ds, start_time, end_time, bounding_polygon
+        lat_slice = request.get_argument('latSlice', None)
+        lon_slice = request.get_argument('lonSlice', None)
+
+        if lat_slice is not None:
+            parts = lat_slice.split(',')
+
+            if len(parts) not in [1, 3]:
+                raise NexusProcessingException(
+                    reason='latSlice must consist of either one number (lat to slice on), or 3 numbers separated by '
+                           'commas (lat to slice on, min lon of slice, max lon of slice)', code=400
+                )
+
+            try:
+                if len(parts) == 1:
+                    lat_slice = (float(parts[0]), None, None)
+                else:
+                    lat_slice = tuple([float(p) for p in parts])
+            except ValueError:
+                raise NexusProcessingException(
+                    reason='Invalid numerical component provided. latSlice must consist of either one number (lat to '
+                           'slice on), or 3 numbers separated by commas (lon to slice on, min lat of slice, max lat of '
+                           'slice)', code=400
+                )
+
+        if lon_slice is not None:
+            parts = lon_slice.split(',')
+
+            if len(parts) not in [1, 3]:
+                raise NexusProcessingException(
+                    reason='lonSlice must consist of either one number (lon to slice on), or 3 numbers separated by '
+                           'commas (lon to slice on, min lat of slice, max lat of slice)', code=400
+                )
+
+            try:
+                if len(parts) == 1:
+                    lon_slice = (float(parts[0]), None, None)
+                else:
+                    lon_slice = tuple([float(p) for p in parts])
+            except ValueError:
+                raise NexusProcessingException(
+                    reason='Invalid numerical component provided. lonSlice must consist of either one number (lon to '
+                           'slice on), or 3 numbers separated by commas (lon to slice on, min lat of slice, max lat of '
+                           'slice)', code=400
+                )
+
+        return ds, start_time, end_time, bounding_polygon, lon_slice, lat_slice
 
     def calc(self, computeOptions, **args):
-        dataset, start_time, end_time, bounding_polygon = self.parse_arguments(computeOptions)
+        dataset, start_time, end_time, bounding_polygon, lon_slice, lat_slice = self.parse_arguments(computeOptions)
 
         tile_service = self._get_tile_service()
 
@@ -155,69 +201,85 @@ class LidarVegetation(NexusCalcHandler):
         for tile_zg, tile_50, tile_98, tile_cc in zip_longest(tiles_zg, tiles_rh50, tiles_rh98, tiles_cc):
             if tile_zg:
                 logger.info(f'Processing ground height tile {tile_zg.tile_id}')
+                npg_zg = tile_zg.nexus_point_generator()
+            else:
+                npg_zg = []
 
             if tile_50:
                 logger.info(f'Processing mean vegetation height tile {tile_50.tile_id}')
+                npg_50 = tile_50.nexus_point_generator()
+            else:
+                npg_50 = []
 
             if tile_98:
                 logger.info(f'Processing canopy height tile {tile_98.tile_id}')
+                npg_98 = tile_98.nexus_point_generator()
+            else:
+                npg_98 = []
 
             if tile_cc:
                 logger.info(f'Processing canopy coverage tile {tile_cc.tile_id}')
+                npg_cc = tile_cc.nexus_point_generator()
+            else:
+                npg_cc = []
 
             for np_zg, np_50, np_98, np_cc in zip_longest(
-                    tile_zg.nexus_point_generator(),
-                    tile_50.nexus_point_generator(),
-                    tile_98.nexus_point_generator(),
-                    tile_cc.nexus_point_generator()
+                    npg_zg,
+                    npg_50,
+                    npg_98,
+                    npg_cc
             ):
-                p_zg = dict(
-                    latitude=np_zg.latitude,
-                    longitude=np_zg.longitude,
-                    time=np_zg.time,
-                    data=np_zg.data_vals
-                )
+                if npg_zg:
+                    p_zg = dict(
+                        latitude=np_zg.latitude,
+                        longitude=np_zg.longitude,
+                        time=np_zg.time,
+                        data=np_zg.data_vals
+                    )
 
-                if isinstance(p_zg['data'], list):
-                    p_zg['data'] = p_zg['data'][0]
+                    if isinstance(p_zg['data'], list):
+                        p_zg['data'] = p_zg['data'][0]
 
-                points_zg.append(p_zg)
+                    points_zg.append(p_zg)
 
-                p_50 = dict(
-                    latitude=np_50.latitude,
-                    longitude=np_50.longitude,
-                    time=np_50.time,
-                    data=np_50.data_vals
-                )
+                if npg_50:
+                    p_50 = dict(
+                        latitude=np_50.latitude,
+                        longitude=np_50.longitude,
+                        time=np_50.time,
+                        data=np_50.data_vals
+                    )
 
-                if isinstance(p_50['data'], list):
-                    p_50['data'] = p_50['data'][0]
+                    if isinstance(p_50['data'], list):
+                        p_50['data'] = p_50['data'][0]
 
-                points_50.append(p_50)
+                    points_50.append(p_50)
 
-                p_98 = dict(
-                    latitude=np_98.latitude,
-                    longitude=np_98.longitude,
-                    time=np_98.time,
-                    data=np_98.data_vals
-                )
+                if npg_98:
+                    p_98 = dict(
+                        latitude=np_98.latitude,
+                        longitude=np_98.longitude,
+                        time=np_98.time,
+                        data=np_98.data_vals
+                    )
 
-                if isinstance(p_98['data'], list):
-                    p_98['data'] = p_98['data'][0]
+                    if isinstance(p_98['data'], list):
+                        p_98['data'] = p_98['data'][0]
 
-                points_98.append(p_98)
+                    points_98.append(p_98)
 
-                p_cc = dict(
-                    latitude=np_cc.latitude,
-                    longitude=np_cc.longitude,
-                    time=np_cc.time,
-                    data=np_cc.data_vals
-                )
+                if npg_cc:
+                    p_cc = dict(
+                        latitude=np_cc.latitude,
+                        longitude=np_cc.longitude,
+                        time=np_cc.time,
+                        data=np_cc.data_vals
+                    )
 
-                if isinstance(p_cc['data'], list):
-                    p_cc['data'] = p_cc['data'][0]
+                    if isinstance(p_cc['data'], list):
+                        p_cc['data'] = p_cc['data'][0]
 
-                points_cc.append(p_cc)
+                    points_cc.append(p_cc)
 
         lats = np.unique([p['latitude'] for p in chain(points_zg, points_50, points_98, points_cc)])
         lons = np.unique([p['longitude'] for p in chain(points_zg, points_50, points_98, points_cc)])
@@ -274,13 +336,47 @@ class LidarVegetation(NexusCalcHandler):
                 lon=(['lon'], lons),
                 var=(['var'], ['ground_height', 'mean_veg_height', 'canopy_height', 'canopy_coverage'])
             )
-        )
+        ).to_dataset('var')
 
-        ds = ds.to_dataset('var')
+        slice_lat, slice_lon = None, None
+        slice_min_lat, slice_max_lat = None, None
+        slice_min_lon, slice_max_lon = None, None
 
-        return LidarResults(
-            results=ds,
-            meta=dict(
+        if lat_slice is not None:
+            slice_lat, slice_min_lon, slice_max_lon = lat_slice
+
+            if slice_min_lon is None:
+                slice_min_lon = ds.lon.min().item()
+
+            if slice_max_lon is None:
+                slice_max_lon = ds.lon.max().item()
+
+            if len(ds['time']) > 1:
+                slice_ds = ds.mean(dim='time', skipna=True)
+            else:
+                slice_ds = ds
+
+            lat_slice = slice_ds.sel(lat=slice_lat, method='nearest').sel(lon=slice(slice_min_lon, slice_max_lon))
+
+        if lon_slice is not None:
+            slice_lon, slice_min_lat, slice_max_lat = lon_slice
+
+            if slice_min_lat is None:
+                slice_min_lat = ds.lat.min().item()
+
+            if slice_max_lat is None:
+                slice_max_lat = ds.lat.max().item()
+
+            if len(ds['time']) > 1:
+                slice_ds = ds.mean(dim='time', skipna=True)
+            else:
+                slice_ds = ds
+
+            lon_slice = slice_ds.sel(lon=slice_lon, method='nearest').sel(lat=slice(slice_min_lat, slice_max_lat))
+
+        slices = (lat_slice, lon_slice)
+
+        result_meta = dict(
                 ground_height_dataset=ds_zg,
                 vegetation_mean_height_dataset=ds_rh50,
                 canopy_height_dataset=ds_rh98,
@@ -289,6 +385,16 @@ class LidarVegetation(NexusCalcHandler):
                 end_time=times[-1].strftime(ISO_8601),
                 b=f'{lons[0]},{lats[0]},{lons[-1]},{lats[-1]}'
             )
+
+        if lat_slice is not None:
+            result_meta['slice_lat'] = (slice_lat, slice_min_lon, slice_max_lon)
+
+        if lon_slice is not None:
+            result_meta['slice_lon'] = (slice_lon, slice_min_lat, slice_max_lat)
+
+        return LidarResults(
+            results=(ds, slices),
+            meta=result_meta
         )
 
 
@@ -304,10 +410,19 @@ class LidarResults(NexusResults):
 
         return m
 
+    def results(self, reduce_time=False):
+        ds, (lat_slice, lon_slice) = NexusResults.results(self)
+
+        if reduce_time and len(ds['time']) > 1:
+            ds = ds.mean(dim='time', skipna=True)
+
+        return ds, (lat_slice, lon_slice)
+
     def points_list(self):
         points = []
+        slice_points = {}
 
-        ds = self.results()
+        ds, (lat_slice, lon_slice) = self.results()
 
         logger.info('Generating non-NaN points list')
 
@@ -337,67 +452,216 @@ class LidarResults(NexusResults):
                         canopy_coverage=cc
                     ))
 
-        return points
+        if lat_slice is not None:
+            if len(lat_slice['time']) > 1:
+                lat_slice = lat_slice.mean(dim='time', skipna=True)
+            else:
+                lat_slice = lat_slice.squeeze(dim='time')
+
+            pts = [dict(
+                longitude=lat_slice.isel(lon=l).lon.item(),
+                ground_height=lat_slice.ground_height.isel(lon=l).item(),
+                mean_vegetation_height=lat_slice.mean_veg_height.isel(lon=l).item(),
+                canopy_height=lat_slice.canopy_height.isel(lon=l).item(),
+                canopy_coverage=lat_slice.canopy_coverage.isel(lon=l).item()
+            ) for l in range(len(ds['lon']))]
+
+            slice_points['latitude'] = dict(latitude=lat_slice.lat.item(), slice=pts)
+
+        if lon_slice is not None:
+            if len(lon_slice['time']) > 1:
+                lon_slice = lon_slice.mean(dim='time', skipna=True)
+            else:
+                lon_slice = lon_slice.squeeze(dim='time')
+
+            pts = [dict(
+                latitude=lon_slice.isel(lat=l).lat.item(),
+                ground_height=lon_slice.ground_height.isel(lat=l).item(),
+                mean_vegetation_height=lon_slice.mean_veg_height.isel(lat=l).item(),
+                canopy_height=lon_slice.canopy_height.isel(lat=l).item(),
+                canopy_coverage=lon_slice.canopy_coverage.isel(lat=l).item()
+            ) for l in range(len(ds['lat']))]
+
+            slice_points['longitude'] = dict(longitude=lat_slice.lon.item(), slice=pts)
+
+        return points, slice_points
+
+    @staticmethod
+    def slice_point_list(ds, s, coord):
+        if len(ds['time']) > 1:
+            s = s.mean(dim='time', skipna=True)
+        else:
+            s = s.squeeze(dim='time')
+
+        if coord == 'latitude':
+            pts = [dict(
+                s=s.isel(lon=l).lon.item(),
+                ground_height=s.ground_height.isel(lon=l).item(),
+                mean_vegetation_height=s.mean_veg_height.isel(lon=l).item(),
+                canopy_height=s.canopy_height.isel(lon=l).item(),
+                canopy_coverage=s.canopy_coverage.isel(lon=l).item()
+            ) for l in range(len(s['lon']))]
+
+            return s.lat.item(), pts
+        else:
+            pts = [dict(
+                s=s.isel(lat=l).lat.item(),
+                ground_height=s.ground_height.isel(lat=l).item(),
+                mean_vegetation_height=s.mean_veg_height.isel(lat=l).item(),
+                canopy_height=s.canopy_height.isel(lat=l).item(),
+                canopy_coverage=s.canopy_coverage.isel(lat=l).item()
+            ) for l in range(len(s['lat']))]
+
+            return s.lon.item(), pts
 
     def toImage(self):
-        ds = self.results()
+        ds, (lat_slice, lon_slice) = self.results()
         meta = self.meta()
 
-        min_lon, min_lat, max_lon, max_lat = [float(c) for c in meta['b'].split(',')]
+        slice_lat, slice_lon = meta.get('slice_lat'), meta.get('slice_lon')
 
-        lat_len = max_lat - min_lat
-        lon_len = max_lon - min_lon
+        n_rows = 2
+        
+        if lat_slice is not None:
+            n_rows += 2
+        if lon_slice is not None:
+            n_rows += 2
 
-        if lat_len >= lon_len:
-            diff = lat_len - lon_len
+        min_lon, min_lat, max_lon, max_lat = (
+            ds.lon.min().item(),
+            ds.lat.min().item(),
+            ds.lon.max().item(),
+            ds.lat.max().item(),
+        )
 
-            min_lon -= (diff / 2)
-            max_lon += (diff / 2)
-        else:
-            diff = lon_len - lat_len
-
-            min_lat -= (diff / 2)
-            max_lat += (diff / 2)
+        # lat_len = max_lat - min_lat
+        # lon_len = max_lon - min_lon
+        #
+        # if lat_len >= lon_len:
+        #     diff = lat_len - lon_len
+        #
+        #     min_lon -= (diff / 2)
+        #     max_lon += (diff / 2)
+        # else:
+        #     diff = lon_len - lat_len
+        #
+        #     min_lat -= (diff / 2)
+        #     max_lat += (diff / 2)
 
         extent = [min_lon, max_lon, min_lat, max_lat]
 
-        fig, ((rh50_ax, rh98_ax), (zg_ax, cc_ax)) = plt.subplots(2, 2, figsize=(10, 10))
+        fig = plt.figure(
+            figsize=(8, 10 + (max(0, n_rows - 2) * 4)), constrained_layout=True
+        )
 
-        rh50_im = rh50_ax.imshow(np.squeeze(ds['mean_veg_height']).data, extent=extent, aspect='equal', cmap='viridis')
-        rh98_im = rh98_ax.imshow(np.squeeze(ds['canopy_height']).data, extent=extent, aspect='equal', cmap='viridis')
-        zg_im = zg_ax.imshow(np.squeeze(ds['ground_height']).data, extent=extent, aspect='equal', cmap='viridis')
-        cc_im = cc_ax.imshow(np.squeeze(ds['canopy_coverage']).data, extent=extent, aspect='equal', cmap='viridis')
+        gs = fig.add_gridspec(n_rows, 2)
 
-        rh50_cb = plt.colorbar(rh50_im, ax=rh50_ax, label='Height above terrain [m]')
-        rh98_cb = plt.colorbar(rh98_im, ax=rh98_ax, label='Height above terrain [m]')
-        zg_cb = plt.colorbar(zg_im, ax=zg_ax, label='Height above ellipsoid [m]')
-        cc_cb = plt.colorbar(cc_im, ax=cc_ax, label='Coverage [%]')
+        rh50_ax = fig.add_subplot(gs[0, 0])
+        rh98_ax = fig.add_subplot(gs[0, 1])
+        zg_ax = fig.add_subplot(gs[1, 0])
+        cc_ax = fig.add_subplot(gs[1, 1])
+
+        rh50_im = rh50_ax.imshow(np.flipud(np.squeeze(ds['mean_veg_height'])), extent=extent, aspect='equal', cmap='viridis')
+        rh98_im = rh98_ax.imshow(np.flipud(np.squeeze(ds['canopy_height'])), extent=extent, aspect='equal', cmap='viridis')
+        zg_im = zg_ax.imshow(np.flipud(np.squeeze(ds['ground_height'])), extent=extent, aspect='equal', cmap='viridis')
+        cc_im = cc_ax.imshow(np.flipud(np.squeeze(ds['canopy_coverage'])) * 100, extent=extent, aspect='equal', cmap='viridis', vmin=0, vmax=100)
+
+        if slice_lat is not None:
+            rh50_ax.plot([slice_lat[1], slice_lat[2]], [slice_lat[0], slice_lat[0]], 'r--')
+            rh98_ax.plot([slice_lat[1], slice_lat[2]], [slice_lat[0], slice_lat[0]], 'r--')
+            zg_ax.plot([slice_lat[1], slice_lat[2]], [slice_lat[0], slice_lat[0]], 'r--')
+            cc_ax.plot([slice_lat[1], slice_lat[2]], [slice_lat[0], slice_lat[0]], 'r--')
+
+        if slice_lon is not None:
+            rh50_ax.plot([slice_lon[0], slice_lon[0]], [slice_lon[1], slice_lon[2]], 'r--')
+            rh98_ax.plot([slice_lon[0], slice_lon[0]], [slice_lon[1], slice_lon[2]], 'r--')
+            zg_ax.plot([slice_lon[0], slice_lon[0]], [slice_lon[1], slice_lon[2]], 'r--')
+            cc_ax.plot([slice_lon[0], slice_lon[0]], [slice_lon[1], slice_lon[2]], 'r--')
+
+        divider_50 = make_axes_locatable(rh50_ax)
+        divider_98 = make_axes_locatable(rh98_ax)
+        divider_zg = make_axes_locatable(zg_ax)
+        divider_cc = make_axes_locatable(cc_ax)
+
+        cax_50 = divider_50.append_axes("right", size="5%", pad=0.05)
+        cax_98 = divider_98.append_axes("right", size="5%", pad=0.05)
+        cax_zg = divider_zg.append_axes("right", size="5%", pad=0.05)
+        cax_cc = divider_cc.append_axes("right", size="5%", pad=0.05)
+
+        rh50_cb = plt.colorbar(rh50_im, cax=cax_50, label='Height above terrain [m]', use_gridspec=True)
+        rh98_cb = plt.colorbar(rh98_im, cax=cax_98, label='Height above terrain [m]', use_gridspec=True)
+        zg_cb = plt.colorbar(zg_im, cax=cax_zg, label='Height above ellipsoid [m]', use_gridspec=True)
+        cc_cb = plt.colorbar(cc_im, cax=cax_cc, label='Coverage [%]', use_gridspec=True)
 
         rh50_ax.set_title('Mean Vegetation Height')
         rh98_ax.set_title('Canopy Height')
         zg_ax.set_title('Terrain Height')
         cc_ax.set_title('Canopy Coverage')
 
-        plt.tight_layout()
+        row = 2
+
+        for s, coord in zip([lat_slice, lon_slice], ['latitude', 'longitude']):
+            if s is None:
+                continue
+
+            slice_ax = fig.add_subplot(gs[row, :])
+
+            slice_point, pts = LidarResults.slice_point_list(ds, s, coord)
+
+            x_pts = [p['s'] for p in pts]
+            rh50_pts = np.array([p['mean_vegetation_height'] for p in pts])
+            rh98_pts = np.array([p['canopy_height'] for p in pts])
+            zg_pts = np.array([p['ground_height'] for p in pts])
+            cc_pts = np.array([p['canopy_coverage'] for p in pts]) * 100
+
+            slice_ax.plot(
+                x_pts, rh98_pts + zg_pts,
+                x_pts, rh50_pts + zg_pts,
+                x_pts, zg_pts,
+            )
+
+            slice_ax.set_title(f'Slice at {coord}={slice_point}\nHeights w.r.t. to reference ellipsoid (m)')
+            slice_ax.ticklabel_format(useOffset=False)
+
+            slice_ax.legend([
+                'Canopy Height',
+                'Mean Vegetation Height',
+                'Ground Height',
+            ])
+
+            cc_slice_ax = fig.add_subplot(gs[row + 1, :])
+
+            cc_slice_ax.plot(x_pts, cc_pts)
+            cc_slice_ax.ticklabel_format(useOffset=False)
+            cc_slice_ax.set_ylim([0, 100])
+
+            cc_slice_ax.set_title(f'Slice at {coord}={slice_point}\nCanopy coverage (%)')
+
+            cc_slice_ax.legend(['Canopy Coverage'])
+
+            row += 2
 
         buffer = BytesIO()
 
         plt.savefig(buffer, format='png', facecolor='white')
         buffer.seek(0)
+
+        plt.close(fig)
         return buffer.read()
 
     def toJson(self):
-        points = self.points_list()
+        points, slice_points = self.points_list()
 
         logger.info('Dumping to JSON string')
 
         return json.dumps(dict(
             meta=self.meta(),
-            data=points
+            data=points,
+            slices=slice_points
         ), indent=4)
 
     def toNetCDF(self):
-        ds: xr.Dataset = self.results()
+        ds, (lat_slice, lon_slice) = self.results()
         meta = self.meta()
 
         ds.attrs.update(meta)
