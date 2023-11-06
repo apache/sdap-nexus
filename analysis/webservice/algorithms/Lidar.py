@@ -534,20 +534,6 @@ class LidarResults(NexusResults):
             ds.lat.max().item(),
         )
 
-        # lat_len = max_lat - min_lat
-        # lon_len = max_lon - min_lon
-        #
-        # if lat_len >= lon_len:
-        #     diff = lat_len - lon_len
-        #
-        #     min_lon -= (diff / 2)
-        #     max_lon += (diff / 2)
-        # else:
-        #     diff = lon_len - lat_len
-        #
-        #     min_lat -= (diff / 2)
-        #     max_lat += (diff / 2)
-
         extent = [min_lon, max_lon, min_lat, max_lat]
 
         fig = plt.figure(
@@ -608,6 +594,8 @@ class LidarResults(NexusResults):
 
             slice_point, pts = LidarResults.slice_point_list(ds, s, coord)
 
+            x_lim = [min_lon, max_lon] if coord == 'latitude' else [min_lat, max_lat]
+
             x_pts = [p['s'] for p in pts]
             rh50_pts = np.array([p['mean_vegetation_height'] for p in pts])
             rh98_pts = np.array([p['canopy_height'] for p in pts])
@@ -622,6 +610,7 @@ class LidarResults(NexusResults):
 
             slice_ax.set_title(f'Slice at {coord}={slice_point}\nHeights w.r.t. to reference ellipsoid (m)')
             slice_ax.ticklabel_format(useOffset=False)
+            slice_ax.set_xlim(x_lim)
 
             slice_ax.legend([
                 'Canopy Height',
@@ -634,6 +623,7 @@ class LidarResults(NexusResults):
             cc_slice_ax.plot(x_pts, cc_pts)
             cc_slice_ax.ticklabel_format(useOffset=False)
             cc_slice_ax.set_ylim([0, 100])
+            cc_slice_ax.set_xlim(x_lim)
 
             cc_slice_ax.set_title(f'Slice at {coord}={slice_point}\nCanopy coverage (%)')
 
