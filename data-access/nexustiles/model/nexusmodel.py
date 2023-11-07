@@ -138,7 +138,13 @@ class Tile(object):
                     data_vals = [data[index] for data in self.data]
                 else:
                     data_vals = self.data[index]
-                point = NexusPoint(lat, lon, None, time, index, data_vals)
+
+                if self.elevation is not None:
+                    elevation = self.elevation[index]
+                else:
+                    elevation = np.nan
+
+                point = NexusPoint(lat, lon, elevation, time, index, data_vals)
                 yield point
         else:
             for index in indices:
@@ -150,7 +156,13 @@ class Tile(object):
                     data_vals = [data[index] for data in self.data]
                 else:
                     data_vals = self.data[index]
-                point = NexusPoint(lat, lon, None, time, index, data_vals)
+
+                if self.elevation is not None:
+                    elevation = self.elevation[index]
+                else:
+                    elevation = np.nan
+
+                point = NexusPoint(lat, lon, elevation, time, index, data_vals)
                 yield point
 
     def get_indices(self, include_nan=False):

@@ -504,7 +504,11 @@ class NexusTileService(object):
             a_tile.data = data
             a_tile.meta_data = meta
             a_tile.is_multi = is_multi_var
-            a_tile.elevation = tile_data_by_id[a_tile.tile_id].get_elevation_array()
+
+            elevation = tile_data_by_id[a_tile.tile_id].get_elevation_array()
+
+            if elevation is not None:
+                a_tile.elevation = np.broadcast_arrays(elevation, data)[0]
 
             del (tile_data_by_id[a_tile.tile_id])
 
