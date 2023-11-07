@@ -16,6 +16,7 @@
 import logging
 from io import BytesIO
 from typing import Dict, Literal, Union, Tuple
+from collections import namedtuple
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -119,6 +120,7 @@ class TomogramBaseClass(NexusCalcHandler):
                 data.append({
                     'latitude': nexus_point.latitude,
                     'longitude': nexus_point.longitude,
+                    'elevation': nexus_point.depth,
                     'data': data_val
                 })
 
@@ -144,6 +146,51 @@ class TomogramBaseClass(NexusCalcHandler):
             coords=dict(
                 latitude=(['latitude'], lats),
                 longitude=(['longitude'], lons)
+            )
+        )
+
+        return lats, lons, vals, ds
+
+    @staticmethod
+    def bin_subset_elevations_to_range(data_in_bounds: list, elevation_range: np.ndarray, margin):
+        binned_subset = []
+
+        for d in data_in_bounds:
+            elevation = d['elevation']
+            d_copy = dict(**d)
+
+            for e in elevation_range:
+                if abs(elevation - e) < margin:
+                    d_copy['elevation'] = e
+                    break
+
+            binned_subset.append(d_copy)
+
+        return binned_subset
+
+    @staticmethod
+    def data_subset_to_ds_with_elevation(data_in_bounds: list) -> Tuple[np.ndarray, np.ndarray, np.ndarray, xr.Dataset]:
+        lats = np.unique([d['latitude'] for d in data_in_bounds])
+        lons = np.unique([d['longitude'] for d in data_in_bounds])
+        elevations = np.unique([d['elevation'] for d in data_in_bounds])
+
+        vals = np.empty((len(elevations), len(lats), len(lons)))
+
+        data_dict = {(d['elevation'], d['latitude'], d['longitude']): d['data'] for d in data_in_bounds}
+
+        for i, elev in enumerate(elevations):
+            for j, lat in enumerate(lats):
+                for k, lon in enumerate(lons):
+                    vals[i, j, k] = data_dict.get((elev, lat, lon), np.nan)
+
+        ds = xr.Dataset(
+            data_vars=dict(
+                tomo=(('elevation', 'latitude', 'longitude'), vals)
+            ),
+            coords=dict(
+                latitude=(['latitude'], lats),
+                longitude=(['longitude'], lons),
+                elevation=(['elevation'], elevations)
             )
         )
 
@@ -332,63 +379,22 @@ class LongitudeTomogramImpl(TomogramBaseClass):
         slices = dict(
             lat=slice(min_lat, max_lat),
             lon=slice(longitude - horizontal_margin, longitude + horizontal_margin),
+            elevation=slice(min_elevation, max_elevation)
         )
 
-        slice_dict = {}
-        lats = []
-        n_points = 0
-        r = range(min_elevation, max_elevation, stride)
+        r = np.arange(min_elevation, max_elevation, elevation_margin)
 
-        logger.info(f'Fetching {len(r):,} elevation slices')
+        data_in_bounds = self.do_subset(dataset, parameter, slices, elevation_margin)
 
-        for e in r:
-            logger.info(f'Fetching elevation: {e}')
+        logger.info(f'Fetched {len(data_in_bounds):,} data points at this elevation')
 
-            slices['elevation'] = e
+        ds = TomogramBaseClass.data_subset_to_ds_with_elevation(
+            TomogramBaseClass.bin_subset_elevations_to_range(data_in_bounds, r, elevation_margin)
+        )[3]
 
-            data_in_bounds = self.do_subset(dataset, parameter, slices, elevation_margin)
-            logger.info(f'Fetched {len(data_in_bounds):,} data points at this elevation')
-            n_points += len(data_in_bounds)
+        lats = ds.latitude.to_numpy()
 
-            ds = TomogramBaseClass.data_subset_to_ds(data_in_bounds)[3]
-
-            if ds.tomo.shape == (0, 0):
-                continue
-
-            slice_dict[e] = ds
-            lats.extend(ds.latitude)
-
-        logger.info('Data fetch complete, organizing data to rows')
-
-        lats = np.unique(lats)
-        n_lats = len(lats)
-        rows = []
-
-        for e in r:
-            row = np.full((n_lats,), np.nan)
-
-            if e not in slice_dict:
-                rows.append(row)
-                continue
-
-            ds = slice_dict[e]
-
-            try:
-                ds = ds.sel(longitude=longitude)
-
-                for lat, vox in zip(ds.latitude, ds.tomo):
-                    lat, vox = lat.item(), vox.item()
-
-                    lat_i = np.where(lats == lat)[0][0]
-
-                    row[lat_i] = vox
-            except:
-                rows.append(row)
-                continue
-
-            rows.append(row)
-
-        rows = 10*np.log10(np.array(rows))
+        rows = 10*np.log10(np.array(ds.tomo.to_numpy()))
 
         return ProfileTomoResults(
             results=rows,
