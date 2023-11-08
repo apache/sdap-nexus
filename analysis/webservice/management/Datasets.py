@@ -93,7 +93,24 @@ class Response:
 class DatasetAdd(DatasetManagement):
     name = 'Add dataset'
     path = '/datasets/add'
-    description = "Add new dataset to running SDAP instance"
+    description = "Add new Zarr dataset to running SDAP instance"
+    params = {
+        "name": {
+            "name": "Dataset name",
+            "type": "string",
+            "description": "Name of new dataset to add"
+        },
+        "path": {
+            "name": "Path or URL",
+            "type": "string",
+            "description": "Path/URL of Zarr group"
+        },
+        "body": {
+            "name": "Request body",
+            "type": "application/json OR application/yaml",
+            "description": "POST request body. Config options for Zarr (variabe, coords, aws (if applicable))"
+        }
+    }
 
     def __init__(self, **args):
         pass
@@ -147,7 +164,19 @@ class DatasetAdd(DatasetManagement):
 class DatasetUpdate(DatasetManagement):
     name = 'Update dynamically added dataset'
     path = '/datasets/update'
-    description = "Update dataset in running SDAP instance"
+    description = "Update Zarr dataset in running SDAP instance"
+    params = {
+        "name": {
+            "name": "Dataset name",
+            "type": "string",
+            "description": "Name of dataset to update"
+        },
+        "body": {
+            "name": "Request body",
+            "type": "application/json OR application/yaml",
+            "description": "POST request body. Config options for Zarr (variabe, coords, aws (if applicable))"
+        }
+    }
 
     def __init__(self, **args):
         pass
@@ -182,7 +211,14 @@ class DatasetUpdate(DatasetManagement):
 class DatasetDelete(DatasetManagement):
     name = 'Remove dataset'
     path = '/datasets/remove'
-    description = "Remove dataset from running SDAP instance"
+    description = "Remove Zarr dataset from running SDAP instance"
+    params = {
+        "name": {
+            "name": "Dataset name",
+            "type": "string",
+            "description": "Name of dataset to remove"
+        }
+    }
 
     def __init__(self, **args):
         pass
