@@ -31,7 +31,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - SDAP-474: Fixed bug in CSV attributes where secondary dataset would be rendered as comma separated characters
 - SDAP-475: Bug fixes for `/timeSeriesSpark` and `/timeAvgMapSpark`
 - SDAP-479: Fixed `/cdmssubset` failure for variables without specified standard_name. 
+- SDAP-39: When querying for tiles by polygon, use the poly's bounding box with the bbox methods instead of using Solr's polygon search
 - Status code for results endpoint if execution id is not found fixed to be `404` instead of `500`.
+- Ensured links in the `/job` endpoint are https
+- SDAP-488: Workaround to build issue on Apple Silicon (M1/M2). Image build installs nexusproto through PyPI instead of building from source. A build arg `BUILD_NEXUSPROTO` was defined to allow building from source if desired
 ### Security
 
 ## [1.1.0] - 2023-04-26
