@@ -23,7 +23,7 @@ import numpy as np
 import xarray as xr
 from webservice.NexusHandler import nexus_handler
 from webservice.algorithms.NexusCalcHandler import NexusCalcHandler
-from webservice.webmodel import NexusResults, NexusProcessingException
+from webservice.webmodel import NexusResults, NexusProcessingException, NoDataException
 
 logger = logging.getLogger(__name__)
 
@@ -81,6 +81,9 @@ class TomogramBaseClass(NexusCalcHandler):
         )
 
         logger.info(f'Matched {len(tiles):,} tiles from Solr')
+
+        if len(tiles) == 0:
+            raise NoDataException(reason='No data was found within the selected parameters')
 
         data = []
 
@@ -344,7 +347,7 @@ class LongitudeTomogramImpl(TomogramBaseClass):
         ds, parameter = super().parse_args(compute_options)
 
         def get_required_float(name):
-            val = compute_options.get_float_arg(name)
+            val = compute_options.get_float_arg(name, None)
 
             if val is None:
                 raise NexusProcessingException(reason=f'Missing required parameter: {name}', code=400)
@@ -352,7 +355,7 @@ class LongitudeTomogramImpl(TomogramBaseClass):
             return val
 
         def get_required_int(name):
-            val = compute_options.get_int_arg(name)
+            val = compute_options.get_int_arg(name, None)
 
             if val is None:
                 raise NexusProcessingException(reason=f'Missing required parameter: {name}', code=400)
@@ -376,13 +379,16 @@ class LongitudeTomogramImpl(TomogramBaseClass):
         (dataset, parameter, longitude, min_lat, max_lat, min_elevation, max_elevation, elevation_margin,
          horizontal_margin, stride) = self.parse_args(compute_options)
 
+        print((dataset, parameter, longitude, min_lat, max_lat, min_elevation, max_elevation, elevation_margin,
+         horizontal_margin, stride))
+
         slices = dict(
             lat=slice(min_lat, max_lat),
             lon=slice(longitude - horizontal_margin, longitude + horizontal_margin),
             elevation=slice(min_elevation, max_elevation)
         )
 
-        r = np.arange(min_elevation, max_elevation, elevation_margin)
+        r = np.arange(min_elevation, max_elevation, stride)
 
         data_in_bounds = self.do_subset(dataset, parameter, slices, elevation_margin)
 
@@ -391,6 +397,9 @@ class LongitudeTomogramImpl(TomogramBaseClass):
         ds = TomogramBaseClass.data_subset_to_ds_with_elevation(
             TomogramBaseClass.bin_subset_elevations_to_range(data_in_bounds, r, elevation_margin)
         )[3]
+
+        if len(ds.longitude) > 1:
+            ds = ds.sel(longitude=longitude, method='nearest')
 
         lats = ds.latitude.to_numpy()
 
@@ -470,7 +479,7 @@ class LatitudeTomogramImpl(TomogramBaseClass):
         ds, parameter = super().parse_args(compute_options)
 
         def get_required_float(name):
-            val = compute_options.get_float_arg(name)
+            val = compute_options.get_float_arg(name, None)
 
             if val is None:
                 raise NexusProcessingException(reason=f'Missing required parameter: {name}', code=400)
@@ -478,7 +487,7 @@ class LatitudeTomogramImpl(TomogramBaseClass):
             return val
 
         def get_required_int(name):
-            val = compute_options.get_int_arg(name)
+            val = compute_options.get_int_arg(name, None)
 
             if val is None:
                 raise NexusProcessingException(reason=f'Missing required parameter: {name}', code=400)
@@ -505,63 +514,25 @@ class LatitudeTomogramImpl(TomogramBaseClass):
         slices = dict(
             lon=slice(min_lon, max_lon),
             lat=slice(latitude - horizontal_margin, latitude + horizontal_margin),
+            elevation=slice(min_elevation, max_elevation)
         )
 
-        slice_dict = {}
-        lons = []
-        n_points = 0
-        r = range(min_elevation, max_elevation, stride)
+        r = np.arange(min_elevation, max_elevation, stride)
 
-        logger.info(f'Fetching {len(r):,} elevation slices')
+        data_in_bounds = self.do_subset(dataset, parameter, slices, elevation_margin)
 
-        for e in r:
-            logger.info(f'Fetching elevation: {e}')
+        logger.info(f'Fetched {len(data_in_bounds):,} data points at this elevation')
 
-            slices['elevation'] = e
+        ds = TomogramBaseClass.data_subset_to_ds_with_elevation(
+            TomogramBaseClass.bin_subset_elevations_to_range(data_in_bounds, r, elevation_margin)
+        )[3]
 
-            data_in_bounds = self.do_subset(dataset, parameter, slices, elevation_margin)
-            logger.info(f'Fetched {len(data_in_bounds):,} data points at this elevation')
-            n_points += len(data_in_bounds)
+        if len(ds.latitude) > 1:
+            ds = ds.sel(latitude=latitude, method='nearest')
 
-            ds = TomogramBaseClass.data_subset_to_ds(data_in_bounds)[3]
+        lons = ds.longitude.to_numpy()
 
-            if ds.tomo.shape == (0, 0):
-                continue
-
-            slice_dict[e] = ds
-            lons.extend(ds.latitude)
-
-        logger.info('Data fetch complete, organizing data to rows')
-
-        lons = np.unique(lons)
-        n_lons = len(lons)
-        rows = []
-
-        for e in r:
-            row = np.full((n_lons,), np.nan)
-
-            if e not in slice_dict:
-                rows.append(row)
-                continue
-
-            ds = slice_dict[e]
-
-            try:
-                ds = ds.sel(latitude=latitude)
-
-                for lon, vox in zip(ds.longitude, ds.tomo):
-                    lon, vox = lon.item(), vox.item()
-
-                    lon_i = np.where(lons == lon)[0][0]
-
-                    row[lon_i] = vox
-            except:
-                rows.append(row)
-                continue
-
-            rows.append(row)
-
-        rows = 10*np.log10(np.array(rows))
+        rows = 10 * np.log10(np.array(ds.tomo.to_numpy()))
 
         return ProfileTomoResults(
             results=rows,
@@ -597,6 +568,8 @@ class ElevationTomoResults(NexusResults):
         yticks, ylabels = plt.yticks()
         ylabels = [f'{lats[int(t)]:.4f}' if int(t) in range(len(lats)) else '' for t in yticks]
         plt.yticks(yticks, ylabels, )
+
+        plt.ticklabel_format(useOffset=False)
 
         buffer = BytesIO()
 
