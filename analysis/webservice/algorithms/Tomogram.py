@@ -569,8 +569,6 @@ class ElevationTomoResults(NexusResults):
         ylabels = [f'{lats[int(t)]:.4f}' if int(t) in range(len(lats)) else '' for t in yticks]
         plt.yticks(yticks, ylabels, )
 
-        plt.ticklabel_format(useOffset=False)
-
         buffer = BytesIO()
 
         logger.info('Writing plot to buffer')
@@ -606,6 +604,8 @@ class ProfileTomoResults(NexusResults):
         plt.title(f'{self.meta()["dataset"]} tomogram slice\n{title_row}')
         plt.xlabel(xlabel)
         plt.ylabel('Height Relative to WGS84 ellipsoid (m)')
+
+        plt.ticklabel_format(useOffset=False)
 
         buffer = BytesIO()
 
