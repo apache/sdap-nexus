@@ -89,7 +89,11 @@ def assemble_matches_by_primary(filename):
     """
     Read a CDMS netCDF file and return a list of matches, in which secondary data
     points are grouped together by their primary data point match.
-    
+   
+    This function returns matches in a different order than the 'assemble_matches' function.
+    In this function, all secondary data is associated with its primary match without the need
+    to access multiple matches. 
+
     Parameters
     ----------
     filename : str
@@ -104,10 +108,10 @@ def assemble_matches_by_primary(filename):
 
         matches[m][GROUP]['matchID']: MatchedRecords dimension ID for the match
         matches[m][GROUP]['GROUPID']: GROUP dim dimension ID for the record
-        matches[m][GROUP][VARIABLE]: variable value
+        matches[m][GROUP][VARIABLE]: variable value. Each VARIABLE is returned as a masked array. 
 
-        Each VARIABLE is returned as a masked array. 
-
+        ex. To access the first secondary time value available for a given match:
+            matches[m]['SecondaryData']['time'][0]
     """
    
     try:
