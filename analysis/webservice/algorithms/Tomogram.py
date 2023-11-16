@@ -408,7 +408,7 @@ class LongitudeTomogramImpl(TomogramBaseClass):
         return ProfileTomoResults(
             results=rows,
             s={'longitude': longitude},
-            extent=[lats[0], lats[-1], min_elevation, max_elevation],
+            extent=[lats[0], lats[-1], ds.elevation.min(), ds.elevation.max()],
             meta=dict(dataset=dataset)
         )
 
@@ -537,7 +537,7 @@ class LatitudeTomogramImpl(TomogramBaseClass):
         return ProfileTomoResults(
             results=rows,
             s={'latitude': latitude},
-            extent=[lons[0], lons[-1], min_elevation, max_elevation],
+            extent=[lons[0], lons[-1], ds.elevation.min(), ds.elevation.max()],
             meta=dict(dataset=dataset)
         )
 
