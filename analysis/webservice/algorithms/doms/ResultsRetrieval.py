@@ -45,6 +45,8 @@ class DomsResultsRetrievalHandler(BaseDomsHandler.BaseDomsQueryCalcHandler):
 
         simple_results = computeOptions.get_boolean_arg("simpleResults", default=False)
 
+        filename = computeOptions.get_argument("filename", default=None)
+
         with ResultsStorage.ResultsRetrieval(self.config) as storage:
             params, stats, data = storage.retrieveResults(execution_id, trim_data=simple_results, page_num=page_num, page_size=page_size)
 
