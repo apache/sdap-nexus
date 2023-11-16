@@ -603,7 +603,7 @@ class ProfileTomoResults(NexusResults):
         plt.colorbar()
         plt.title(f'{self.meta()["dataset"]} tomogram slice\n{title_row}')
         plt.xlabel(xlabel)
-        plt.ylabel('Height Relative to WGS84 ellipsoid (m)')
+        plt.ylabel(f'Elevation w.r.t. {self.meta()["dataset"]} reference (m)')
 
         plt.ticklabel_format(useOffset=False)
 
