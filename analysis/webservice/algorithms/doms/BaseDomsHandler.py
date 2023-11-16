@@ -114,7 +114,7 @@ class DomsQueryResults(NexusResults):
         return DomsNetCDFFormatter.create(self.__executionId, self.results(), self.__args, self.__details)
 
     def filename(self):
-        return f'CDMS_{self.__executionId}'
+        return f'CDMS_{self.__executionId}_page{self.__details["pageNum"]}'
 
 
 class DomsCSVFormatter:
