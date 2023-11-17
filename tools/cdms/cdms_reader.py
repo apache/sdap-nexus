@@ -21,7 +21,6 @@ import datetime
 import csv
 from collections import OrderedDict
 import logging
-import xarray as xr
 
 
 #TODO: Get rid of numpy errors?
@@ -102,7 +101,7 @@ def assemble_matches_by_primary(filename):
     Returns
     -------
     matches : list
-        List of matches. Each list element is a dictionary.
+        List of matches. Each list element is a dictionary that maps a primary record to all of its associated secondary records.
         For match m, netCDF group GROUP (PrimaryData or SecondaryData), and
         group variable VARIABLE:
 

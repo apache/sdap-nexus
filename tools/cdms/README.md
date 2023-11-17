@@ -14,7 +14,6 @@ Imported packages:
 * csv
 * collections
 * logging
-* xarray   
 
 ## Functions
 ### Function: `assemble_matches(filename)`
@@ -52,7 +51,7 @@ This function is intended to return results in a similar fashion as the original
 - `filename` (str): the CDMS netCDF file name.
     
 #### Returns
-- `matches` (list): Three dimensional array of matches. 
+- `matches` (list): Three dimensional array of matches. Matches are returned as primary records grouped together with all associated secondary records.  
 
 Each list element in `matches` is an array that contains the following sub-elements:
 	For match `m` (indexed on the number of 'PrimaryData' points), netCDF group `GROUP` ('PrimaryData' or 'SecondaryData'), and netCDF group vraiable `VARIABLE`: 
