@@ -23,6 +23,7 @@ with open('../VERSION.txt', 'r') as f:
 
 try:
     check_call(['mamba', 'install', '-y', '-c', 'conda-forge', '--file', 'conda-requirements.txt'])
+    pass
 except (CalledProcessError, IOError) as e:
     print('Failed install with mamba; falling back to conda')
     try:
