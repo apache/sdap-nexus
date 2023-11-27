@@ -24,6 +24,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - SDAP-482: Updated Saildrone in situ endpoint in config file
 - SDAP-485: Improved behavior for retrying failed Cassandra inserts when saving matchup results.
 - SDAP-487: Improved result fetch speed for large matchup results by tweaking `doms.doms_data` schema to support querying by primary value id.
+- Support for deploying on k8s version 1.25:
+  - Upgraded Cassandra Helm chart dependency version
+  - Bumped default Cassandra protocol version 3 -> 4 in webapp and tools
 ### Deprecated
 ### Removed
 - SDAP-465: Removed `climatology` directory.
