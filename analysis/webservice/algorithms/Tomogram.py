@@ -162,12 +162,18 @@ class TomogramBaseClass(NexusCalcHandler):
             elevation = d['elevation']
             d_copy = dict(**d)
 
+            binned = False
+
             for e in elevation_range:
-                if abs(elevation - e) < margin:
+                if abs(elevation - e) <= margin:
                     d_copy['elevation'] = e
+                    binned = True
                     break
 
-            binned_subset.append(d_copy)
+            if binned:
+                binned_subset.append(d_copy)
+            else:
+                logger.warning(f'Could not bin point {d_copy}')
 
         return binned_subset
 
@@ -337,6 +343,11 @@ class LongitudeTomogramImpl(TomogramBaseClass):
             "type": "float",
             "description": "Margin +/- desired lat/lon slice to include in output. Default: 0.001m"
         },
+        "peaks": {
+            "name": "Calculate peaks",
+            "type": "boolean",
+            "description": "Calculate peaks along tomogram slice (currently uses simplest approach)"
+        }
     }
     singleton = True
 
@@ -372,15 +383,14 @@ class LongitudeTomogramImpl(TomogramBaseClass):
         horizontal_margin = compute_options.get_float_arg('horizontalMargin', 0.001)
         stride = compute_options.get_int_arg('stride', 1)
 
+        peaks = compute_options.get_boolean_arg('peaks')
+
         return (ds, parameter, longitude, min_lat, max_lat, min_elevation, max_elevation, elevation_margin,
-                horizontal_margin, stride)
+                horizontal_margin, stride, peaks)
 
     def calc(self, compute_options, **args):
         (dataset, parameter, longitude, min_lat, max_lat, min_elevation, max_elevation, elevation_margin,
-         horizontal_margin, stride) = self.parse_args(compute_options)
-
-        print((dataset, parameter, longitude, min_lat, max_lat, min_elevation, max_elevation, elevation_margin,
-         horizontal_margin, stride))
+         horizontal_margin, stride, calc_peaks) = self.parse_args(compute_options)
 
         slices = dict(
             lat=slice(min_lat, max_lat),
@@ -388,7 +398,7 @@ class LongitudeTomogramImpl(TomogramBaseClass):
             elevation=slice(min_elevation, max_elevation)
         )
 
-        r = np.arange(min_elevation, max_elevation, stride)
+        r = np.arange(min_elevation, max_elevation + stride, stride)
 
         data_in_bounds = self.do_subset(dataset, parameter, slices, elevation_margin)
 
@@ -403,10 +413,38 @@ class LongitudeTomogramImpl(TomogramBaseClass):
 
         lats = ds.latitude.to_numpy()
 
-        rows = 10*np.log10(np.array(ds.tomo.to_numpy()))
+        # rows = 10 * np.log10(np.array(ds.tomo.to_numpy()))
+        ds['tomo'] = xr.apply_ufunc(lambda a: 10 * np.log10(a), ds.tomo)
+
+        rows = ds.tomo.to_numpy()
+
+        if calc_peaks:
+            peaks = []
+
+            for i in range(len(ds.tomo.latitude)):
+                col = ds.isel(latitude=i)
+
+                lat = col.latitude.item()
+
+                try:
+                    idx = col.argmax(dim='elevation').tomo.item()
+
+                    peaks.append((lat, col.isel(elevation=idx).elevation.item()))
+
+                except ValueError:
+                    peaks.append((lat, np.nan))
+
+            peaks = (np.array([p[0] for p in peaks]),
+                     np.array([p[1] for p in peaks]))
+        else:
+            peaks = None
+
+        # print('writing debug nc4')
+        #
+        # ds.to_netcdf('/tmp/lontest.nc4')
 
         return ProfileTomoResults(
-            results=rows,
+            results=(rows, peaks),
             s={'longitude': longitude},
             extent=[lats[0], lats[-1], ds.elevation.min(), ds.elevation.max()],
             meta=dict(dataset=dataset)
@@ -469,6 +507,11 @@ class LatitudeTomogramImpl(TomogramBaseClass):
             "type": "float",
             "description": "Margin +/- desired lat/lon slice to include in output. Default: 0.001m"
         },
+        "peaks": {
+            "name": "Calculate peaks",
+            "type": "boolean",
+            "description": "Calculate peaks along tomogram slice (currently uses simplest approach)"
+        }
     }
     singleton = True
 
@@ -504,12 +547,14 @@ class LatitudeTomogramImpl(TomogramBaseClass):
         horizontal_margin = compute_options.get_float_arg('horizontalMargin', 0.001)
         stride = compute_options.get_int_arg('stride', 1)
 
+        peaks = compute_options.get_boolean_arg('peaks')
+
         return (ds, parameter, latitude, min_lon, max_lon, min_elevation, max_elevation, elevation_margin,
-                horizontal_margin, stride)
+                horizontal_margin, stride, peaks)
 
     def calc(self, compute_options, **args):
         (dataset, parameter, latitude, min_lon, max_lon, min_elevation, max_elevation, elevation_margin,
-         horizontal_margin, stride) = self.parse_args(compute_options)
+         horizontal_margin, stride, calc_peaks) = self.parse_args(compute_options)
 
         slices = dict(
             lon=slice(min_lon, max_lon),
@@ -517,7 +562,7 @@ class LatitudeTomogramImpl(TomogramBaseClass):
             elevation=slice(min_elevation, max_elevation)
         )
 
-        r = np.arange(min_elevation, max_elevation, stride)
+        r = np.arange(min_elevation, max_elevation + stride, stride)
 
         data_in_bounds = self.do_subset(dataset, parameter, slices, elevation_margin)
 
@@ -532,10 +577,34 @@ class LatitudeTomogramImpl(TomogramBaseClass):
 
         lons = ds.longitude.to_numpy()
 
-        rows = 10 * np.log10(np.array(ds.tomo.to_numpy()))
+        # rows = 10 * np.log10(np.array(ds.tomo.to_numpy()))
+        ds['tomo'] = xr.apply_ufunc(lambda a: 10 * np.log10(a), ds.tomo)
+
+        rows = ds.tomo.to_numpy()
+
+        if calc_peaks:
+            peaks = []
+
+            for i in range(len(ds.tomo.longitude)):
+                col = ds.isel(longitude=i)
+
+                lon = col.longitude.item()
+
+                try:
+                    idx = col.argmax(dim='elevation').tomo.item()
+
+                    peaks.append((lon, col.isel(elevation=idx).elevation.item()))
+
+                except ValueError:
+                    peaks.append((lon, np.nan))
+
+            peaks = (np.array([p[0] for p in peaks]),
+                     np.array([p[1] for p in peaks]))
+        else:
+            peaks = None
 
         return ProfileTomoResults(
-            results=rows,
+            results=(rows, peaks),
             s={'latitude': latitude},
             extent=[lons[0], lons[-1], ds.elevation.min(), ds.elevation.max()],
             meta=dict(dataset=dataset)
@@ -585,7 +654,7 @@ class ProfileTomoResults(NexusResults):
         self.__slice = s
 
     def toImage(self):
-        rows = self.results()
+        rows, peaks = self.results()
 
         if 'longitude' in self.__slice:
             lon = self.__slice['longitude']
@@ -600,10 +669,18 @@ class ProfileTomoResults(NexusResults):
 
         plt.figure(figsize=(11, 7))
         plt.imshow(np.flipud(rows), extent=self.__extent, vmin=-30, vmax=-10, aspect='auto')
+        # plt.imshow(rows, extent=self.__extent, vmin=-30, vmax=-10, aspect='auto')
         plt.colorbar()
         plt.title(f'{self.meta()["dataset"]} tomogram slice\n{title_row}')
         plt.xlabel(xlabel)
         plt.ylabel(f'Elevation w.r.t. {self.meta()["dataset"]} reference (m)')
+
+        if peaks is not None:
+            plt.plot(
+                peaks[0], peaks[1], color='red', alpha=0.75
+            )
+
+            plt.legend(['Peak value'])
 
         plt.ticklabel_format(useOffset=False)
 
