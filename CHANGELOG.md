@@ -4,7 +4,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [1.2.0] - 2023-11-22
 ### Added
 - SDAP-467: Added pagination to cdmsresults endpoint
 - SDAP-461: Added 4 remaining Saildrone insitu datasets.
@@ -24,15 +24,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - SDAP-482: Updated Saildrone in situ endpoint in config file
 - SDAP-485: Improved behavior for retrying failed Cassandra inserts when saving matchup results.
 - SDAP-487: Improved result fetch speed for large matchup results by tweaking `doms.doms_data` schema to support querying by primary value id.
+- Support for deploying on k8s version 1.25:
+  - Upgraded Cassandra Helm chart dependency version
+  - Bumped default Cassandra protocol version 3 -> 4 in webapp and tools
 ### Deprecated
 ### Removed
-- SDAP-465: Removed `climatology` directory. 
+- SDAP-465: Removed `climatology` directory.
+- SDAP-501: Updated dependencies to remove `chardet`
 ### Fixed
 - SDAP-474: Fixed bug in CSV attributes where secondary dataset would be rendered as comma separated characters
 - SDAP-475: Bug fixes for `/timeSeriesSpark` and `/timeAvgMapSpark`
 - SDAP-479: Fixed `/cdmssubset` failure for variables without specified standard_name. 
 - SDAP-39: When querying for tiles by polygon, use the poly's bounding box with the bbox methods instead of using Solr's polygon search
 - Status code for results endpoint if execution id is not found fixed to be `404` instead of `500`.
+- Ensured links in the `/job` endpoint are https
+- SDAP-488: Workaround to build issue on Apple Silicon (M1/M2). Image build installs nexusproto through PyPI instead of building from source. A build arg `BUILD_NEXUSPROTO` was defined to allow building from source if desired
+- SDAP-496: Fix `solr-cloud-init` image failing to run.
 ### Security
 
 ## [1.1.0] - 2023-04-26
