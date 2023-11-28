@@ -413,7 +413,6 @@ class LongitudeTomogramImpl(TomogramBaseClass):
 
         lats = ds.latitude.to_numpy()
 
-        # rows = 10 * np.log10(np.array(ds.tomo.to_numpy()))
         ds['tomo'] = xr.apply_ufunc(lambda a: 10 * np.log10(a), ds.tomo)
 
         rows = ds.tomo.to_numpy()
@@ -439,14 +438,10 @@ class LongitudeTomogramImpl(TomogramBaseClass):
         else:
             peaks = None
 
-        # print('writing debug nc4')
-        #
-        # ds.to_netcdf('/tmp/lontest.nc4')
-
         return ProfileTomoResults(
             results=(rows, peaks),
             s={'longitude': longitude},
-            extent=[lats[0], lats[-1], ds.elevation.min(), ds.elevation.max()],
+            coords=dict(x=lats, y=ds.elevation.to_numpy()),
             meta=dict(dataset=dataset)
         )
 
@@ -577,7 +572,6 @@ class LatitudeTomogramImpl(TomogramBaseClass):
 
         lons = ds.longitude.to_numpy()
 
-        # rows = 10 * np.log10(np.array(ds.tomo.to_numpy()))
         ds['tomo'] = xr.apply_ufunc(lambda a: 10 * np.log10(a), ds.tomo)
 
         rows = ds.tomo.to_numpy()
@@ -606,7 +600,7 @@ class LatitudeTomogramImpl(TomogramBaseClass):
         return ProfileTomoResults(
             results=(rows, peaks),
             s={'latitude': latitude},
-            extent=[lons[0], lons[-1], ds.elevation.min(), ds.elevation.max()],
+            coords=dict(x=lons, y=ds.elevation.to_numpy()),
             meta=dict(dataset=dataset)
         )
 
@@ -648,9 +642,9 @@ class ElevationTomoResults(NexusResults):
 
 
 class ProfileTomoResults(NexusResults):
-    def __init__(self, results=None, s=None, extent=None, meta=None, stats=None, computeOptions=None, status_code=200, **args):
+    def __init__(self, results=None, s=None, coords=None, meta=None, stats=None, computeOptions=None, status_code=200, **args):
         NexusResults.__init__(self, results, meta, stats, computeOptions, status_code, **args)
-        self.__extent = extent
+        self.__coords = coords
         self.__slice = s
 
     def toImage(self):
@@ -668,8 +662,7 @@ class ProfileTomoResults(NexusResults):
         logger.info('Building plot')
 
         plt.figure(figsize=(11, 7))
-        plt.imshow(np.flipud(rows), extent=self.__extent, vmin=-30, vmax=-10, aspect='auto')
-        # plt.imshow(rows, extent=self.__extent, vmin=-30, vmax=-10, aspect='auto')
+        plt.pcolormesh(self.__coords['x'], self.__coords['y'], rows, vmin=-30, vmax=-10)
         plt.colorbar()
         plt.title(f'{self.meta()["dataset"]} tomogram slice\n{title_row}')
         plt.xlabel(xlabel)
