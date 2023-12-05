@@ -162,15 +162,10 @@ class TomogramBaseClass(NexusCalcHandler):
             elevation = d['elevation']
             d_copy = dict(**d)
 
-            binned = False
+            a = np.argwhere(np.absolute(elevation_range - elevation) <= margin)
 
-            for e in elevation_range:
-                if abs(elevation - e) <= margin:
-                    d_copy['elevation'] = e
-                    binned = True
-                    break
-
-            if binned:
+            if a.shape[0] > 0:
+                d_copy['elevation'] = elevation_range[a[0][0]]
                 binned_subset.append(d_copy)
             else:
                 logger.warning(f'Could not bin point {d_copy}')
