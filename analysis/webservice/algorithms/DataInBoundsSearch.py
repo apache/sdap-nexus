@@ -224,6 +224,7 @@ class DataInBoundsSearchCalcHandlerImpl(NexusCalcHandler):
                     'latitude': nexus_point.latitude,
                     'longitude': nexus_point.longitude,
                     'time': nexus_point.time,
+                    'elevation': nexus_point.depth,
                     'data': point
                 })
 
