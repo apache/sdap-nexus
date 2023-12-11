@@ -265,29 +265,37 @@ class Tomogram3DResults(NexusResults):
     def __common(self):
         xyz = self.results()[['lon', 'lat', 'elevation']].values
 
-        plt.figure(figsize=(10,10))
-        return xyz, plt.axes(projection='3d')
+        fig = plt.figure(figsize=(10,7))
+        return xyz, (fig, fig.add_subplot(111, projection='3d'))
 
     def toImage(self):
         _, _, _, view_azim, view_elev = self.render_params
 
-        xyz, ax = self.__common()
+        xyz, (fig, ax) = self.__common()
 
         ax.view_init(elev=view_elev, azim=view_azim)
 
         logger.info('Plotting data')
 
-        ax.scatter(
+        s = ax.scatter(
             xyz[:, 0], xyz[:, 1], xyz[:, 2],
             marker='D',
             facecolors=self.results()[['red', 'green', 'blue']].values.astype(np.uint8) / 255,
+            c=self.results()[['tomo_value']].values,
             zdir='z',
-            depthshade=True
+            depthshade=True,
+            cmap=mpl.colormaps['viridis'],
+            vmin=-30, vmax=-10
         )
 
         ax.set_ylabel('Latitude')
         ax.set_xlabel('Longitude')
         ax.set_zlabel('Elevation w.r.t. dataset reference (m)')
+
+        cbar = fig.colorbar(s, ax=ax)
+        cbar.set_label('Tomogram (dB)')
+
+        plt.tight_layout()
 
         buffer = BytesIO()
 
@@ -300,23 +308,31 @@ class Tomogram3DResults(NexusResults):
     def toGif(self):
         orbit_elev, orbit_step, frame_duration, _, _ = self.render_params
 
-        xyz, ax = self.__common()
+        xyz, (fig, ax) = self.__common()
 
         ax.view_init(elev=orbit_elev, azim=0)
 
         logger.info('Plotting data')
 
-        ax.scatter(
+        s = ax.scatter(
             xyz[:, 0], xyz[:, 1], xyz[:, 2],
             marker='D',
             facecolors=self.results()[['red', 'green', 'blue']].values.astype(np.uint8) / 255,
+            c=self.results()[['tomo_value']].values,
             zdir='z',
-            depthshade=True
+            depthshade=True,
+            cmap=mpl.colormaps['viridis'],
+            vmin=-30, vmax=-10
         )
 
         ax.set_ylabel('Latitude')
         ax.set_xlabel('Longitude')
         ax.set_zlabel('Elevation w.r.t. dataset reference (m)')
+
+        cbar = fig.colorbar(s, ax=ax)
+        cbar.set_label('Tomogram (dB)')
+
+        plt.tight_layout()
 
         buffer = BytesIO()
 
