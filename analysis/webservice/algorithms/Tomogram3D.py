@@ -285,6 +285,10 @@ class Tomogram3DResults(NexusResults):
             depthshade=True
         )
 
+        ax.set_ylabel('Latitude')
+        ax.set_xlabel('Longitude')
+        ax.set_zlabel('Elevation w.r.t. dataset reference (m)')
+
         buffer = BytesIO()
 
         logger.info('Writing plot to buffer')
@@ -310,6 +314,10 @@ class Tomogram3DResults(NexusResults):
             depthshade=True
         )
 
+        ax.set_ylabel('Latitude')
+        ax.set_xlabel('Longitude')
+        ax.set_zlabel('Elevation w.r.t. dataset reference (m)')
+
         buffer = BytesIO()
 
         with TemporaryDirectory() as td:
@@ -318,8 +326,6 @@ class Tomogram3DResults(NexusResults):
 
                 ax.view_init(azim=azim)
 
-                # plt.draw()
-                # plt.pause(0.001)
                 plt.savefig(join(td, f'fr_{azim}.png'))
 
             with contextlib.ExitStack() as stack:
