@@ -31,3 +31,4 @@ from . import TimeAvgMap
 from . import TimeSeries
 from . import TimeSeriesSolr
 from . import Tomogram
+from . import Tomogram3D
