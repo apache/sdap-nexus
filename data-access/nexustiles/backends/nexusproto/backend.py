@@ -14,6 +14,7 @@
 # limitations under the License.
 
 import configparser
+import copy
 import logging
 import sys
 import json
@@ -550,6 +551,34 @@ class NexusprotoTileService(AbstractTileService):
             return True
         else:
             return False
+
+    def update_metadata(self, solr_doc):
+        variables = solr_doc.get('variables_s', None)
+
+        dataset = solr_doc['dataset_s']
+
+        if dataset not in self._ds_info:
+            self._ds_info[dataset] = {}
+
+        if variables is not None:
+            variables = json.loads(variables)
+
+            if isinstance(variables, dict):
+                variables = [variables]
+        else:
+            variables = []
+
+        self._ds_info[dataset]['variables'] = variables
+
+        # print(self._ds_info)
+
+    def get_metadata(self, dataset=None):
+        if dataset is None:
+            logger.error('Cannot pull metadata for nexusproto without specifying dataset name')
+            return {}
+        else:
+            return copy.deepcopy(self._ds_info[dataset])
+
 
     @staticmethod
     def _get_config_files(filename):

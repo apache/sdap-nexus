@@ -463,6 +463,9 @@ class ZarrBackend(AbstractTileService):
     def _metadata_store_docs_to_tiles(self, *store_docs):
         return [ZarrBackend.__nts_url_to_tile(d) for d in store_docs]
 
+    def update_metadata(self, solr_doc):
+        raise NotImplementedError()
+
     @staticmethod
     def __nts_url_to_tile(nts_url):
         tile = Tile()

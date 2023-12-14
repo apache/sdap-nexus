@@ -250,6 +250,7 @@ class NexusTileService:
                 if store_type == 'nexus_proto' or store_type == 'nexusproto':
                     update_logger.info(f"Detected new nexusproto dataset {d_id}, using default nexusproto backend")
                     NexusTileService.backends[d_id] = NexusTileService.backends[None]
+                    NexusTileService.backends[d_id]['backend'].update_metadata(dataset)
                 elif store_type == 'zarr':
                     update_logger.info(f"Detected new zarr dataset {d_id}, opening new zarr backend")
 
@@ -370,6 +371,14 @@ class NexusTileService:
             NexusTileService._update_datasets()
 
         return {'success': True}
+
+    @staticmethod
+    def get_metadata_for_dataset(ds_name):
+        try:
+            backend = NexusTileService._get_backend(ds_name)
+            return backend.get_metadata(ds_name)
+        except:
+            return None
 
     def override_config(self, config):
         for section in config.sections():

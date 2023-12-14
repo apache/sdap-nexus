@@ -18,6 +18,7 @@ from functools import reduce
 
 import numpy as np
 import numpy.ma as ma
+from copy import deepcopy
 
 
 class AbstractTileService(ABC):
@@ -32,6 +33,7 @@ class AbstractTileService(ABC):
 
     def __init__(self, dataset_name):
         self._name = dataset_name
+        self._ds_info = {}
 
     @abstractmethod
     def get_dataseries_list(self, simple=False):
@@ -199,4 +201,12 @@ class AbstractTileService(ABC):
     @abstractmethod
     def _metadata_store_docs_to_tiles(self, *store_docs):
         raise NotImplementedError()
+
+    @abstractmethod
+    def update_metadata(self, solr_doc):
+        raise NotImplementedError()
+
+    def get_metadata(self, dataset=None):  # ds as param for nexusproto backend
+        return deepcopy(self._ds_info)
+
 
