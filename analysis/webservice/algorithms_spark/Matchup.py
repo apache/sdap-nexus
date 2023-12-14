@@ -41,6 +41,8 @@ from webservice.algorithms.doms.insitu import query_insitu_schema
 from webservice.webmodel import NexusProcessingException
 from webservice.webmodel.NexusExecutionResults import ExecutionStatus
 
+from nexustiles.nexustiles import NexusTileService
+
 EPOCH = timezone('UTC').localize(datetime(1970, 1, 1))
 ISO_8601 = '%Y-%m-%dT%H:%M:%S%z'
 
@@ -494,14 +496,33 @@ class DomsPoint(object):
         else:
             data_vals = [nexus_point.data_vals]
 
+        ds_metadata = NexusTileService.get_metadata_for_dataset(tile.dataset)
+
+        if ds_metadata is not None:
+            ds_vars = ds_metadata.get('variables', [])
+        else:
+            ds_vars = []
+
+        variable_dict = {}
+
+        for v in ds_vars:
+            variable_dict[v['name']] = v
+
         data = []
         for data_val, variable in zip(data_vals, tile.variables):
             if data_val:
+                if variable.variable_name in variable_dict:
+                    standard_name = variable_dict[variable.variable_name]['cf_standard_name']
+                    unit = variable_dict[variable.variable_name]['unit']
+                else:
+                    standard_name = variable.standard_name
+                    unit = None
+
                 data.append(DataPoint(
                     variable_name=variable.variable_name,
                     variable_value=data_val,
-                    cf_variable_name=variable.standard_name,
-                    variable_unit=None
+                    cf_variable_name=standard_name,
+                    variable_unit=unit
                 ))
         point.data = data
 
