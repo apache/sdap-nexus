@@ -24,6 +24,8 @@ from webservice.NexusHandler import nexus_handler
 from webservice.algorithms.doms.insitu import query_insitu
 from webservice.webmodel import NexusProcessingException, NexusResults
 
+from nexustiles.nexustiles import NexusTileService
+
 from . import BaseDomsHandler
 
 ISO_8601 = '%Y-%m-%dT%H:%M:%S%z'
@@ -302,6 +304,20 @@ class SubsetResult(NexusResults):
         logging.info('Converting result to CSV')
 
         for dataset_name, results in dataset_results.items():
+            try:
+                ds_metadata = NexusTileService.get_metadata_for_dataset(dataset_name)
+            except:
+                ds_metadata = {}
+
+            ds_vars = ds_metadata.get('variables', [])
+
+            variable_dict = {}
+            variable_dict_cf = {}
+
+            for v in ds_vars:
+                variable_dict[v['name']] = v
+                variable_dict_cf[v['cf_standard_name']] = v
+
             rows = []
 
             headers = [
@@ -309,13 +325,25 @@ class SubsetResult(NexusResults):
                 'latitude',
                 'time'
             ]
-            data_variables = list(set([keys for result in results for keys in result['data'].keys()]))
-            data_variables.sort()
+
+            data_variables = []
+            data_variable_headers = []
+
+            for dv in sorted(list(set([keys for result in results for keys in result['data'].keys()]))):
+                data_variables.append(dv)
+
+                if dv in variable_dict_cf:
+                    data_variable_headers.append(f'{dv} ({variable_dict_cf[dv]["unit"]})')
+                elif dv in variable_dict:
+                    data_variable_headers.append(f'{dv} ({variable_dict[dv]["unit"]})')
+                else:
+                    data_variable_headers.append(dv)
 
             if 'id' in list(set([keys for result in results for keys in result.keys()])):
                 headers.append('id')
 
-            headers.extend(data_variables)
+            headers.extend(data_variable_headers)
+
             for i, result in enumerate(results):
                 cols = []
 
