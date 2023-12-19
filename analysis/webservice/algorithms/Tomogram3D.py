@@ -23,6 +23,8 @@ import matplotlib as mpl
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+import requests
+from mpl_toolkits.basemap import Basemap
 from PIL import Image
 from webservice.NexusHandler import nexus_handler
 from webservice.algorithms.NexusCalcHandler import NexusCalcHandler
@@ -170,6 +172,8 @@ class Tomogram3D(NexusCalcHandler):
         min_lon = bounding_poly.bounds[0]
         max_lon = bounding_poly.bounds[2]
 
+        bounds = (min_lat, min_lon, max_lat, max_lon)
+
         tile_service = self._get_tile_service()
 
         tiles = tile_service.find_tiles_in_box(
@@ -250,13 +254,14 @@ class Tomogram3D(NexusCalcHandler):
 
         logger.info(f'DataFrame:\n{df}')
 
-        return Tomogram3DResults(df, render_params)
+        return Tomogram3DResults(df, render_params, bounds=bounds)
 
 
 class Tomogram3DResults(NexusResults):
-    def __init__(self, results=None, render_params=None, meta=None, stats=None, computeOptions=None, status_code=200, **args):
+    def __init__(self, results=None, render_params=None, bounds=None, meta=None, stats=None, computeOptions=None, status_code=200, **args):
         NexusResults.__init__(self, results, meta, stats, computeOptions, status_code, **args)
         self.render_params = render_params
+        self.bounds = bounds
 
     def results(self):
         r: pd.DataFrame = NexusResults.results(self)
@@ -274,6 +279,49 @@ class Tomogram3DResults(NexusResults):
         xyz, (fig, ax) = self.__common()
 
         ax.view_init(elev=view_elev, azim=view_azim)
+
+        min_lat, min_lon, max_lat, max_lon = self.bounds
+
+        m = Basemap(llcrnrlon=min_lon, llcrnrlat=min_lat, urcrnrlat=max_lat, urcrnrlon=max_lon,)
+
+        basemap_size = 512
+
+        params = dict(
+            bbox=f'{min_lon},{min_lat},{max_lon},{max_lat}',
+            bboxSR=4326, imageSR=4326,
+            size=f'{basemap_size},{int(m.aspect * basemap_size)}',
+            dpi=2000,
+            format='png32',
+            transparent=True,
+            f='image'
+        )
+
+        url = 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/export'
+
+        logger.info('Pulling basemap')
+
+        try:
+            elevations = self.results()[['elevation']].values
+            z_range = np.nanmax(elevations) - np.nanmin(elevations)
+            z_coord = np.nanmin(elevations) - (0.1 * z_range)
+
+            r = requests.get(url, params=params)
+            r.raise_for_status()
+
+            buf = BytesIO(r.content)
+
+            img = Image.open(buf)
+            img_data = np.array(img)
+
+            lats = np.linspace(min_lat, max_lat, num=img.height)
+            lons = np.linspace(min_lon, max_lon, num=img.width)
+
+            X, Y = np.meshgrid(lons, lats)
+            Z = np.full(X.shape, z_coord)
+
+            ax.plot_surface(X, Y, Z, rstride=1, cstride=1, facecolors=img_data / 255)
+        except:
+            logger.error('Failed to pull basemap, will not draw it')
 
         logger.info('Plotting data')
 
@@ -311,6 +359,49 @@ class Tomogram3DResults(NexusResults):
         xyz, (fig, ax) = self.__common()
 
         ax.view_init(elev=orbit_elev, azim=0)
+
+        min_lat, min_lon, max_lat, max_lon = self.bounds
+
+        m = Basemap(llcrnrlon=min_lon, llcrnrlat=min_lat, urcrnrlat=max_lat, urcrnrlon=max_lon, )
+
+        basemap_size = 512
+
+        params = dict(
+            bbox=f'{min_lon},{min_lat},{max_lon},{max_lat}',
+            bboxSR=4326, imageSR=4326,
+            size=f'{basemap_size},{int(m.aspect * basemap_size)}',
+            dpi=2000,
+            format='png32',
+            transparent=True,
+            f='image'
+        )
+
+        url = 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/export'
+
+        logger.info('Pulling basemap')
+
+        try:
+            elevations = self.results()[['elevation']].values
+            z_range = np.nanmax(elevations) - np.nanmin(elevations)
+            z_coord = np.nanmin(elevations) - (0.1 * z_range)
+
+            r = requests.get(url, params=params)
+            r.raise_for_status()
+
+            buf = BytesIO(r.content)
+
+            img = Image.open(buf)
+            img_data = np.array(img)
+
+            lats = np.linspace(min_lat, max_lat, num=img.height)
+            lons = np.linspace(min_lon, max_lon, num=img.width)
+
+            X, Y = np.meshgrid(lons, lats)
+            Z = np.full(X.shape, z_coord)
+
+            ax.plot_surface(X, Y, Z, rstride=1, cstride=1, facecolors=img_data / 255)
+        except:
+            logger.error('Failed to pull basemap, will not draw it')
 
         logger.info('Plotting data')
 
