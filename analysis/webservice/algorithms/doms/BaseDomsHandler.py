@@ -142,7 +142,11 @@ class DomsCSVFormatter:
 
         name = variable['cf_variable_name']
 
-        return name if not is_empty(name) else variable['variable_name']
+        header_name = name if not is_empty(name) else variable['variable_name']
+
+        unit = variable.get('variable_unit', None)
+
+        return f'{header_name} ({unit})' if unit is not None else header_name
 
     @staticmethod
     def __packValues(csv_mem_file, results):
@@ -541,7 +545,8 @@ class DomsNetCDFValueWriter:
                 self.__enrichVariable(data_variable, min_data, max_data, has_depth=None, unit=units[variable])
                 data_variable[:] = np.ma.masked_invalid(variables[variable])
                 data_variable.long_name = name
-                data_variable.standard_name = cf_name
+                if cf_name:
+                    data_variable.standard_name = cf_name
 
     #
     # Lists may include 'None" values, to calc min these must be filtered out

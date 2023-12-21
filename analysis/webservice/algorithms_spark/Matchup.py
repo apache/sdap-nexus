@@ -518,6 +518,9 @@ class DomsPoint(object):
                     standard_name = variable.standard_name
                     unit = None
 
+                if standard_name is None or standard_name == '':
+                    standard_name = variable.standard_name
+
                 data.append(DataPoint(
                     variable_name=variable.variable_name,
                     variable_value=data_val,
