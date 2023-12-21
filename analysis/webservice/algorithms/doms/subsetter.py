@@ -332,9 +332,9 @@ class SubsetResult(NexusResults):
             for dv in sorted(list(set([keys for result in results for keys in result['data'].keys()]))):
                 data_variables.append(dv)
 
-                if dv in variable_dict_cf:
+                if dv in variable_dict_cf and variable_dict_cf[dv]["unit"] is not None:
                     data_variable_headers.append(f'{dv} ({variable_dict_cf[dv]["unit"]})')
-                elif dv in variable_dict:
+                elif dv in variable_dict and variable_dict[dv]["unit"] is not None:
                     data_variable_headers.append(f'{dv} ({variable_dict[dv]["unit"]})')
                 else:
                     data_variable_headers.append(dv)
