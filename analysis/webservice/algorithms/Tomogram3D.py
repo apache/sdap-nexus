@@ -69,7 +69,7 @@ class Tomogram3D(NexusCalcHandler):
         "output": {
             "name": "Output format",
             "type": "string",
-            "description": "Desired output format. Must be either \"PNG\" or \"GIF\". Required."
+            "description": "Desired output format. Must be one of \"PNG\", \"GIF\", or \"CSV\". Required."
         },
         "orbit": {
             "name": "Orbit settings",
@@ -144,7 +144,7 @@ class Tomogram3D(NexusCalcHandler):
 
         output = compute_options.get_argument('output', None)
 
-        if output not in ['PNG', 'GIF']:
+        if output not in ['PNG', 'GIF', 'CSV']:
             raise NexusProcessingException(reason=f'Missing or invalid required parameter: output = {output}', code=400)
 
         orbit_params = compute_options.get_argument('orbit', '30,10')
@@ -628,3 +628,13 @@ class Tomogram3DResults(NexusResults):
 
         buffer.seek(0)
         return buffer.read()
+
+    def toCSV(self):
+        df = self.results()[['lon', 'lat', 'elevation', 'tomo_value']]
+
+        buf = BytesIO()
+
+        df.to_csv(buf, header=False, index=False)
+
+        buf.seek(0)
+        return buf.read()
