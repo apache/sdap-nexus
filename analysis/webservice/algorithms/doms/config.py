@@ -103,7 +103,7 @@ INSITU_PROVIDER_MAP = [
 ENDPOINTS = [
     {
         "name": "samos",
-        "url": "https://doms.coaps.fsu.edu/ws/search/samos_cdms",
+        "url": "https://doms.coaps.fsu.edu/ws/search/samos",
         "fetchParallel": True,
         "fetchThreads": 8,
         "itemsPerPage": 1000,
@@ -150,7 +150,7 @@ try:
         ENDPOINTS = [
             {
                 "name": "samos",
-                "url": "https://doms.coaps.fsu.edu/ws/search/samos_cdms",
+                "url": "https://doms.coaps.fsu.edu/ws/search/samos",
                 "fetchParallel": True,
                 "fetchThreads": 8,
                 "itemsPerPage": 1000,

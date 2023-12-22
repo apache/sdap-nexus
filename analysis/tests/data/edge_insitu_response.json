@@ -1,0 +1,42 @@
+{
+  "last": "http://doms.coaps.fsu.edu/ws/search/samos_cdms?startIndex=4&endTime=2018-01-14T17%3A53%3A00Z&itemsPerPage=1&bbox=-89%2C29%2C-88%2C30&startTime=2018-01-14T17%3A00%3A00Z",
+  "next": "http://doms.coaps.fsu.edu/ws/search/samos_cdms?startIndex=1&endTime=2018-01-14T17%3A53%3A00Z&itemsPerPage=1&bbox=-89%2C29%2C-88%2C30&startTime=2018-01-14T17%3A00%3A00Z",
+  "first": "http://doms.coaps.fsu.edu/ws/search/samos_cdms?startIndex=0&endTime=2018-01-14T17%3A53%3A00Z&itemsPerPage=1&bbox=-89%2C29%2C-88%2C30&startTime=2018-01-14T17%3A00%3A00Z",
+  "results": [
+    {
+      "time": "2018-01-14T17:53:00Z",
+      "latitude": 30,
+      "longitude": -88.43,
+      "depth": -99999,
+      "air_pressure": null,
+      "air_pressure_quality": null,
+      "air_temperature": 4.81,
+      "air_temperature_quality": 1,
+      "dew_point_temperature": null,
+      "dew_point_temperature_quality": null,
+      "downwelling_shortwave_flux_in_air": null,
+      "downwelling_shortwave_flux_in_air_quality": null,
+      "downwelling_longwave_flux_in_air": null,
+      "sea_water_temperature": 17.3,
+      "sea_water_temperature_quality": 1,
+      "eastward_wind": null,
+      "northward_wind": null,
+      "relative_humidity": null,
+      "relative_humidity_quality": null,
+      "sea_water_salinity": 36.02,
+      "sea_water_salinity_quality": 1,
+      "surface_downwelling_photosynthetic_photon_flux_in_air": null,
+      "surface_downwelling_photosynthetic_photon_flux_in_air_quality": null,
+      "wind_speed": null,
+      "wind_speed_quality": null,
+      "wind_component_quality": null,
+      "platform": null,
+      "device": null,
+      "mission": null,
+      "metadata": "WTEO_20180114v30001_0048-99999.0"
+    }
+  ],
+  "totalResults": 4,
+  "startIndex": 0,
+  "itemsPerPage": 1
+}
