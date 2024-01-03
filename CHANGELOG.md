@@ -4,6 +4,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+### Added
+- SDAP-497: Added convenience script to download official source distributions and build images from them.
+### Changed
+### Deprecated
+### Removed
+### Fixed
+### Security
+
 ## [1.2.0] - 2023-11-22
 ### Added
 - SDAP-467: Added pagination to cdmsresults endpoint
@@ -11,7 +20,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - SDAP-473: Added support for matchup job prioritization
 - SDAP-483: Added `.asf.yaml` to configure Jira auto-linking.
 - SDAP-487: Added script to migrate existing `doms.doms_data` data to new schema.
-- SDAP-497: Added convenience script to download official source distributions and build images from them.
 ### Changed
 - SDAP-453: Updated results storage and retrieval to support output JSON from `/cdmsresults` that matches output from `/match_spark`.
   - **NOTE:** Deploying these changes to an existing SDAP deployment will require modifying the Cassandra database with stored results. There is a script to do so at `/tools/update-doms-data-schema/update.py`
