@@ -60,6 +60,12 @@ def construct_done(status, created, completed, execution_id, params, host):
         ('JSON', 'application/json'),
         ('NETCDF', 'binary/octet-stream')
     ]
+    job_body['links'].append({
+        'href': f'{host}/cdmscatalog/{execution_id}',
+        'title': 'STAC Catalog for execution results',
+        'type': 'application/json',
+        'rel': 'stac'
+    })
     data_links = [{
         'href': f'{host}/cdmsresults?id={execution_id}&output={output_format}',
         'title': 'Download results',

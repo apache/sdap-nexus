@@ -286,7 +286,7 @@ class ResultsRetrieval(AbstractResultsContainer):
             execution_id = uuid.UUID(execution_id)
 
         params = self.retrieveParams(execution_id)
-        stats = self.__retrieveStats(execution_id)
+        stats = self.retrieveStats(execution_id)
         data = self.__retrieveData(execution_id, trim_data=trim_data, page_num=page_num, page_size=page_size)
         return params, stats, data
 
@@ -357,18 +357,17 @@ class ResultsRetrieval(AbstractResultsContainer):
 
         return entry
 
-    def __retrieveStats(self, id):
-        cql = "SELECT num_gridded_matched, num_insitu_matched, time_to_complete FROM doms_execution_stats where execution_id = %s limit 1"
+    def retrieveStats(self, id):
+        cql = "SELECT num_gridded_matched, num_insitu_matched, time_to_complete, num_unique_secondaries FROM doms_execution_stats where execution_id = %s limit 1"
         rows = self._session.execute(cql, (id,))
         for row in rows:
             stats = {
-                "timeToComplete": row.time_to_complete,
-                "numSecondaryMatched": row.num_insitu_matched,
-                "numPrimaryMatched": row.num_gridded_matched,
+                'timeToComplete': row.time_to_complete,
+                'numSecondaryMatched': row.num_insitu_matched,
+                'numPrimaryMatched': row.num_gridded_matched,
+                'numUniqueSecondaries': row.num_unique_secondaries
             }
             return stats
-
-        raise NexusProcessingException(reason=f'No stats found for id {str(id)}', code=404)
 
     def retrieveParams(self, id):
         cql = "SELECT * FROM doms_params where execution_id = %s limit 1"
