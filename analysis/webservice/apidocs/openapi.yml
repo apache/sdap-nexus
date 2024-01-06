@@ -727,7 +727,7 @@ paths:
         Get STAC Catalog for execution
       operationId: cdmscatalog
       tags:
-        - Analytics
+        - Matchup
       description: "Get STAC catalog by execution id"
       parameters:
         - in: path
@@ -745,7 +745,7 @@ paths:
         Get STAC Catalog format catalog for execution
       operationId: cdmscatalogcollection
       tags:
-        - Analytics
+        - Matchup
       description: "Get STAC catalog by execution id"
       parameters:
         - in: path
