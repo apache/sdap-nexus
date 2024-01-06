@@ -721,6 +721,58 @@ paths:
             type: string
             format: uuid
           example: c864a51b-3d87-4872-9070-632820b1cae2
+  /cdmscatalog/{executionId}:
+    get:
+      summary: |
+        Get STAC Catalog for execution
+      operationId: cdmscatalog
+      tags:
+        - Analytics
+      description: "Get STAC catalog by execution id"
+      parameters:
+        - in: path
+          name: executionId
+          description: |
+            The job execution ID
+          required: true
+          schema:
+            type: string
+            format: uuid
+          example: c864a51b-3d87-4872-9070-632820b1cae2
+  /cdmscatalog/{executionId}/{format}:
+    get:
+      summary: |
+        Get STAC Catalog format catalog for execution
+      operationId: cdmscatalogcollection
+      tags:
+        - Analytics
+      description: "Get STAC catalog by execution id"
+      parameters:
+        - in: path
+          name: executionId
+          description: |
+            The job execution ID
+          required: true
+          schema:
+            type: string
+            format: uuid
+          example: c864a51b-3d87-4872-9070-632820b1cae2
+        - in: path
+          name: format
+          description: |
+            CDMS results format
+          required: true
+          schema:
+            type: string
+            enum: [JSON,CSV,NETCDF]
+          example: JSON
+        - in: query
+          name: pageSize
+          description: |
+            How many primary matches on each page of CDMS results
+          required: false
+          schema:
+            type: integer
 externalDocs:
   description: Documentation
   url: https://incubator-sdap-nexus.readthedocs.io/en/latest/index.html
