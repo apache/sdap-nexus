@@ -19,6 +19,11 @@ from . import BaseDomsHandler
 from . import ResultsStorage
 from webservice.NexusHandler import nexus_handler
 from webservice.webmodel import NexusProcessingException
+from nexustiles.nexustiles import NexusTileService
+
+import logging
+
+log = logging.getLogger(__name__)
 
 
 @nexus_handler
@@ -48,5 +53,22 @@ class DomsResultsRetrievalHandler(BaseDomsHandler.BaseDomsQueryCalcHandler):
         with ResultsStorage.ResultsRetrieval(self.config) as storage:
             params, stats, data = storage.retrieveResults(execution_id, trim_data=simple_results, page_num=page_num, page_size=page_size)
 
+        try:
+            ds_metadata = {}
+            ds_meta_primary_name = params['primary']
+
+            primary_metadata = NexusTileService.get_metadata_for_dataset(ds_meta_primary_name)
+
+            ds_metadata['primary'] = {ds_meta_primary_name: primary_metadata}
+
+            ds_metadata['secondary'] = {}
+
+            for secondary_ds_name in params['matchup'].split(','):
+                ds_metadata['secondary'][secondary_ds_name] = NexusTileService.get_metadata_for_dataset(secondary_ds_name)
+        except:
+            log.warning('Could not build dataset metadata dict due to an error')
+            ds_metadata = {}
+
         return BaseDomsHandler.DomsQueryResults(results=data, args=params, details=stats, bounds=None, count=len(data),
-                                                computeOptions=None, executionId=execution_id, page_num=page_num, page_size=page_size)
+                                                computeOptions=None, executionId=execution_id, page_num=page_num,
+                                                page_size=page_size, meta=dict(datasets=ds_metadata))

@@ -568,9 +568,17 @@ class NexusprotoTileService(AbstractTileService):
         else:
             variables = []
 
+        extra_meta = solr_doc.get('meta_s', None)
+
         self._ds_info[dataset]['variables'] = variables
 
-        # print(self._ds_info)
+        if extra_meta is not None:
+            try:
+                extra_meta = json.loads(extra_meta)
+            except json.JSONDecodeError:
+                pass
+
+        self._ds_info[dataset]['metadata'] = extra_meta
 
     def get_metadata(self, dataset=None):
         if dataset is None:

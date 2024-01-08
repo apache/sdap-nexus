@@ -85,14 +85,15 @@ class DomsEncoder(json.JSONEncoder):
 
 class DomsQueryResults(NexusResults):
     def __init__(self, results=None, args=None, bounds=None, count=None, details=None, computeOptions=None,
-                 executionId=None, status_code=200, page_num=None, page_size=None):
-        NexusResults.__init__(self, results=results, meta=None, stats=None, computeOptions=computeOptions,
+                 executionId=None, status_code=200, page_num=None, page_size=None, meta=None):
+        NexusResults.__init__(self, results=results, meta=meta, stats=None, computeOptions=computeOptions,
                               status_code=status_code)
         self.__args = args
         self.__bounds = bounds
         self.__count = count
         self.__details = details
         self.__executionId = str(executionId)
+        self.__meta = meta if meta is not None else {}
 
         if self.__details is None:
             self.__details = {}
@@ -105,13 +106,13 @@ class DomsQueryResults(NexusResults):
         bounds = self.__bounds.toMap() if self.__bounds is not None else {}
         return json.dumps(
             {"executionId": self.__executionId, "data": self.results(), "params": self.__args, "bounds": bounds,
-             "count": self.__count, "details": self.__details}, indent=4, cls=DomsEncoder)
+             "count": self.__count, "details": self.__details, "metadata": self.__meta}, indent=4, cls=DomsEncoder)
 
     def toCSV(self):
-        return DomsCSVFormatter.create(self.__executionId, self.results(), self.__args, self.__details)
+        return DomsCSVFormatter.create(self.__executionId, self.results(), self.__args, self.__details, self.__meta)
 
     def toNetCDF(self):
-        return DomsNetCDFFormatter.create(self.__executionId, self.results(), self.__args, self.__details)
+        return DomsNetCDFFormatter.create(self.__executionId, self.results(), self.__args, self.__details, self.__meta)
 
     def filename(self):
         return f'CDMS_{self.__executionId}'
@@ -119,12 +120,14 @@ class DomsQueryResults(NexusResults):
 
 class DomsCSVFormatter:
     @staticmethod
-    def create(executionId, results, params, details):
+    def create(executionId, results, params, details, metadata):
 
         csv_mem_file = io.StringIO()
         try:
             DomsCSVFormatter.__addConstants(csv_mem_file)
             DomsCSVFormatter.__addDynamicAttrs(csv_mem_file, executionId, results, params, details)
+            csv.writer(csv_mem_file).writerow([])
+            DomsCSVFormatter.__addMetadata(csv_mem_file, metadata)
             csv.writer(csv_mem_file).writerow([])
 
             DomsCSVFormatter.__packValues(csv_mem_file, results)
@@ -299,10 +302,31 @@ class DomsCSVFormatter:
 
         writer.writerows(global_attrs)
 
+    @staticmethod
+    def __addMetadata(csvfile, meta):
+        def meta_dict_to_list(meta_dict: dict, prefix='metadata') -> list:
+            attrs = []
+
+            for key in meta_dict:
+                new_key = key if prefix == '' else f'{prefix}.{key}'
+                value = meta_dict[key]
+
+                if isinstance(value, dict):
+                    attrs.extend(meta_dict_to_list(value, new_key))
+                else:
+                    attrs.append(dict(MetadataAttribute=new_key, Value=value))
+
+            return attrs
+
+        metadata_attrs = meta_dict_to_list(meta)
+
+        writer = csv.DictWriter(csvfile, sorted(next(iter(metadata_attrs)).keys()))
+        writer.writerows(metadata_attrs)
+
 
 class DomsNetCDFFormatter:
     @staticmethod
-    def create(executionId, results, params, details):
+    def create(executionId, results, params, details, metadata):
 
         t = tempfile.mkstemp(prefix="cdms_", suffix=".nc")
         tempFileName = t[1]
@@ -345,6 +369,30 @@ class DomsNetCDFFormatter:
         dataset.CDMS_time_to_complete_units = "seconds"
         dataset.CDMS_page_num = details["pageNum"]
         dataset.CDMS_page_size = details["pageSize"]
+
+        ####TEST
+
+        def meta_dict_to_list(meta_dict: dict, prefix='metadata') -> list:
+            attrs = []
+
+            for key in meta_dict:
+                new_key = key if prefix == '' else f'{prefix}.{key}'
+                value = meta_dict[key]
+
+                if value is None:
+                    value = 'NULL'
+                elif isinstance(value, list):
+                    value = json.dumps(value)
+
+                if isinstance(value, dict):
+                    attrs.extend(meta_dict_to_list(value, new_key))
+                else:
+                    attrs.append((new_key, value))
+
+            return attrs
+
+        for attr in meta_dict_to_list(metadata):
+            setattr(dataset, *attr)
 
         insituDatasets = params["matchup"]
         insituLinks = set()
