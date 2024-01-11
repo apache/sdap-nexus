@@ -18,7 +18,7 @@ import os
 import shutil
 import subprocess
 import tempfile
-import textwrap
+from tenacity import retry, stop_after_attempt, wait_fixed
 from urllib.parse import urljoin
 
 import requests
@@ -49,6 +49,7 @@ def build_cmd(tag, context, dockerfile='', cache=True):
     return command
 
 
+@retry(stop=stop_after_attempt(2), wait=wait_fixed(2))
 def run(cmd, suppress_output=False, err_on_fail=True):
     stdout = subprocess.DEVNULL if suppress_output else None
 
