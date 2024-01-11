@@ -26,7 +26,7 @@ class PlotTypes:
     HISTOGRAM = "histogram"
 
 
-@nexus_handler
+# @nexus_handler
 class DomsResultsPlotHandler(BaseDomsHandler.BaseDomsQueryCalcHandler):
     name = "DOMS Results Plotting"
     path = "/domsplot"

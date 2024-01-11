@@ -95,10 +95,10 @@ RUN python3 setup.py install clean
 WORKDIR /incubator-sdap-nexus/analysis
 RUN python3 setup.py install clean && mamba clean -afy
 
+RUN pip install shapely==1.7.1
 
 WORKDIR /incubator-sdap-nexus/tools/deletebyquery
-RUN pip3 install cassandra-driver==3.20.1
-RUN pip3 install pyspark py4j
+RUN pip3 install cassandra-driver==3.20.1 pyspark py4j
 RUN pip3 install -r requirements.txt
 RUN pip3 install cython
 RUN rm requirements.txt
