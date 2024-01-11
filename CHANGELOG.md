@@ -24,6 +24,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - SDAP-482: Updated Saildrone in situ endpoint in config file
 - SDAP-485: Improved behavior for retrying failed Cassandra inserts when saving matchup results.
 - SDAP-487: Improved result fetch speed for large matchup results by tweaking `doms.doms_data` schema to support querying by primary value id.
+- SDAP-507: Changes to remove `geos` sub-dependency from core image build:
+  - Removed `gdal` and `basemap` as core dependencies
+  - Moved `shapely` installation in docker build from conda install to pip install
+  - Disabled `/domsplot` endpoint & commented out references to its source file as it depends on `basemap` and raises `ImportError`s at startup
 ### Deprecated
 ### Removed
 - SDAP-465: Removed `climatology` directory. 
