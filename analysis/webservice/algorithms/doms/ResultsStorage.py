@@ -166,17 +166,18 @@ class ResultsStorage(AbstractResultsContainer):
     def __insertStats(self, execution_id, stats):
         cql = """
            INSERT INTO doms_execution_stats
-                (execution_id, num_gridded_matched, num_gridded_checked, num_insitu_matched, num_insitu_checked, time_to_complete)
+                (execution_id, num_gridded_matched, num_gridded_checked, num_insitu_matched, num_insitu_checked, time_to_complete, num_unique_secondaries)
            VALUES
-                (%s, %s, %s, %s, %s, %s)
+                (%s, %s, %s, %s, %s, %s, %s)
         """
         self._session.execute(cql, (
             execution_id,
-            stats["numPrimaryMatched"],
+            stats['numPrimaryMatched'],
             None,
-            stats["numSecondaryMatched"],
+            stats['numSecondaryMatched'],
             None,
-            stats["timeToComplete"]
+            stats['timeToComplete'],
+            stats['numUniqueSecondaries']
         ))
 
     def __insertResults(self, execution_id, results):
