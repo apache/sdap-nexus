@@ -139,14 +139,6 @@ class Matchup(NexusCalcSparkTornadoHandler):
                            + "If true, only the nearest point will be returned for each primary point. "
                            + "If false, all points within the tolerances will be returned for each primary point. Default: False"
         },
-        "resultSizeLimit": {
-            "name": "Result Size Limit",
-            "type": "int",
-            "description": "Optional integer value that limits the number of results returned from the matchup. "
-                           "If the number of primary matches is greater than this limit, the service will respond with "
-                           "(HTTP 202: Accepted) and an empty response body. A value of 0 means return all results. "
-                           "Default: 500"
-        },
         "prioritizeDistance": {
             "name": "Prioritize distance",
             "type": "boolean",
@@ -225,18 +217,17 @@ class Matchup(NexusCalcSparkTornadoHandler):
 
         match_once = request.get_boolean_arg("matchOnce", default=False)
 
-        result_size_limit = request.get_int_arg("resultSizeLimit", default=500)
-
         start_seconds_from_epoch = int((start_time - EPOCH).total_seconds())
         end_seconds_from_epoch = int((end_time - EPOCH).total_seconds())
 
         prioritize_distance = request.get_boolean_arg("prioritizeDistance", default=True)
+        filename = request.get_argument('filename', default=None)
 
 
         return bounding_polygon, primary_ds_name, secondary_ds_names, parameter_s, \
                start_time, start_seconds_from_epoch, end_time, end_seconds_from_epoch, \
                depth_min, depth_max, time_tolerance, radius_tolerance, \
-               platforms, match_once, result_size_limit, prioritize_distance
+               platforms, match_once, prioritize_distance, filename
 
     def get_job_pool(self, tile_ids):
         if len(tile_ids) > LARGE_JOB_THRESHOLD:
@@ -246,7 +237,7 @@ class Matchup(NexusCalcSparkTornadoHandler):
     def async_calc(self, execution_id, tile_ids, bounding_polygon, primary_ds_name,
                    secondary_ds_names, parameter_s, start_time, end_time, depth_min,
                    depth_max, time_tolerance, radius_tolerance, platforms, match_once,
-                   result_size_limit, start, prioritize_distance):
+                   start, prioritize_distance):
         # Call spark_matchup
         self.log.debug("Calling Spark Driver")
 
@@ -288,10 +279,12 @@ class Matchup(NexusCalcSparkTornadoHandler):
 
         total_keys = len(list(spark_result.keys()))
         total_values = sum(len(v) for v in spark_result.values())
+        unique_values = len(set([point.data_id for v in spark_result.values() for point in v]))
         details = {
-            "timeToComplete": int((end - start).total_seconds()),
-            "numSecondaryMatched": total_values,
-            "numPrimaryMatched": total_keys
+            'timeToComplete': int((end - start).total_seconds()),
+            'numSecondaryMatched': total_values,
+            'numPrimaryMatched': total_keys,
+            'numUniqueSecondaries': unique_values
         }
 
         matches = Matchup.convert_to_matches(spark_result)
@@ -312,7 +305,7 @@ class Matchup(NexusCalcSparkTornadoHandler):
         bounding_polygon, primary_ds_name, secondary_ds_names, parameter_s, \
         start_time, start_seconds_from_epoch, end_time, end_seconds_from_epoch, \
         depth_min, depth_max, time_tolerance, radius_tolerance, \
-        platforms, match_once, result_size_limit, prioritize_distance = self.parse_arguments(request)
+        platforms, match_once, prioritize_distance, filename = self.parse_arguments(request)
 
         args = {
             "primary": primary_ds_name,
@@ -382,13 +375,11 @@ class Matchup(NexusCalcSparkTornadoHandler):
             radius_tolerance=radius_tolerance,
             platforms=platforms,
             match_once=match_once,
-            result_size_limit=result_size_limit,
             start=start,
             prioritize_distance=prioritize_distance
         ))
-
-        request.requestHandler.redirect(f'/job?id={execution_id}')
-
+        filename_param = f'&filename={filename}' if filename else ''
+        request.requestHandler.redirect(f'/job?id={execution_id}{filename_param}')
 
     @classmethod
     def convert_to_matches(cls, spark_result):
