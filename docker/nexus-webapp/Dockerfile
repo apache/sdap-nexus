@@ -97,11 +97,11 @@ RUN python3 setup.py install clean && mamba clean -afy
 
 
 WORKDIR /incubator-sdap-nexus/tools/deletebyquery
+ARG CASS_DRIVER_BUILD_CONCURRENCY=8
 RUN pip3 install cassandra-driver==3.20.1
 RUN pip3 install pyspark py4j
 RUN pip3 install -r requirements.txt
 RUN pip3 install cython
-RUN rm requirements.txt
 
 WORKDIR /incubator-sdap-nexus
 
