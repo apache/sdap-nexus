@@ -195,8 +195,7 @@ cassandra:
   dbUser:
     user: cassandra
     password: cassandra
-  cluster:
-    replicaCount: 1
+  replicaCount: 1
   persistence:
     storageClass: hostpath
     size: 8Gi

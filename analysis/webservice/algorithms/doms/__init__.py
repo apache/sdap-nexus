@@ -22,7 +22,6 @@ from . import DomsInitialization
 from . import MatchupQuery
 from . import StacCatalog
 from . import MetadataQuery
-from . import ResultsPlotQuery
 from . import ResultsRetrieval
 from . import ResultsStorage
 from . import StatsQuery

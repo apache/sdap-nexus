@@ -65,6 +65,9 @@ class AbstractResultsContainer:
         dc_policy = DCAwareRoundRobinPolicy(cassDatacenter)
         token_policy = TokenAwarePolicy(dc_policy)
 
+        logger.info(f'Connecting to Cassandra cluster @ {[host for host in cassHost.split(",")]}; datacenter: '
+                    f'{cassDatacenter}; protocol version: {cassVersion}')
+
         self._cluster = Cluster([host for host in cassHost.split(',')], load_balancing_policy=token_policy,
                                 protocol_version=cassVersion, auth_provider=auth_provider)
 

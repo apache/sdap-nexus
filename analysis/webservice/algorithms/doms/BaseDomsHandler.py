@@ -35,13 +35,6 @@ from webservice.webmodel import NexusResults
 EPOCH = timezone('UTC').localize(datetime(1970, 1, 1))
 ISO_8601 = '%Y-%m-%dT%H:%M:%S%z'
 
-try:
-    from osgeo import gdal
-    from osgeo.gdalnumeric import *
-except ImportError:
-    import gdal
-    from gdalnumeric import *
-
 from netCDF4 import Dataset
 import netCDF4
 import tempfile
