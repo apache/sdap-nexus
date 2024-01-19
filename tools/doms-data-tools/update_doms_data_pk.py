@@ -114,7 +114,7 @@ def main():
                              request_timeout=60.0,
                          )
                      },
-                     protocol_version=4,
+                     protocol_version=3,
                      auth_provider=auth_provider) as cluster:
 
             session = cluster.connect('doms')

@@ -270,7 +270,7 @@ def parse_args():
                                 required=False,
                                 dest='pv',
                                 choices=['1', '2', '3', '4', '5'],
-                                default='4')
+                                default='3')
 
     time_before = purge_options.add_mutually_exclusive_group(required=True)
 
