@@ -4,7 +4,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [1.2.0] - 2023-11-22
 ### Added
 - SDAP-467: Added pagination to cdmsresults endpoint
 - SDAP-461: Added 4 remaining Saildrone insitu datasets.
@@ -30,7 +30,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - SDAP-500: Improvements to SDAP Asynchronous Jobs
 ### Deprecated
 ### Removed
-- SDAP-465: Removed `climatology` directory. 
+- SDAP-465: Removed `climatology` directory.
+- SDAP-501: Updated dependencies to remove `chardet`
 - SDAP-493: 
   - Removed `resultSizeLimit` from /match_spark endpoint 
 ### Fixed
