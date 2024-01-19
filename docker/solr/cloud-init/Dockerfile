@@ -14,7 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-FROM python:3
+FROM python:3.11
 MAINTAINER Apache SDAP "dev@sdap.apache.org"
 
 ENV MINIMUM_NODES="1" \
@@ -25,7 +25,7 @@ ENV MINIMUM_NODES="1" \
     CREATE_COLLECTION_PARAMS="name=nexustiles&collection.configName=nexustiles&numShards=1"
 
 
-RUN pip install kazoo==2.6.0 requests==2.21.0
+RUN pip install kazoo==2.6.0 'requests>=2.26.0'
 COPY ./cloud-init/create-collection.py /tmp/create-collection.py
 
 ENTRYPOINT ["/tmp/create-collection.py"]

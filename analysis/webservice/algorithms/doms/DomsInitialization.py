@@ -173,7 +173,7 @@ class DomsInitializer:
 
     def createDomsExecutionStatsTable(self, session):
         log = logging.getLogger(__name__)
-        log.info("Verifying doms_execuction_stats table")
+        log.info("Verifying doms_execution_stats table")
         cql = """
             CREATE TABLE IF NOT EXISTS doms_execution_stats (
               execution_id uuid PRIMARY KEY,
@@ -181,7 +181,8 @@ class DomsInitializer:
               num_gridded_checked int,
               num_insitu_matched int,
               num_insitu_checked int,
-              time_to_complete int
+              time_to_complete int,
+              num_unique_secondaries int
             );
         """
         session.execute(cql)
