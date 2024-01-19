@@ -262,7 +262,7 @@ def parse_args():
                         help='The version of the Cassandra protocol the driver should use.',
                         required=False,
                         choices=['1', '2', '3', '4', '5'],
-                        default='3')
+                        default='4')
 
     parser.add_argument('--solr-rows',
                         help='Number of rows to fetch with each Solr query to build the list of tiles to delete',
