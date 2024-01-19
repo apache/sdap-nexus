@@ -40,7 +40,6 @@ class HandlerArgsBuilder:
                 or issubclass(class_wrapper,
                               webservice.algorithms_spark.NexusCalcSparkTornadoHandler.NexusCalcSparkTornadoHandler)
                 or class_wrapper == webservice.algorithms.doms.ResultsRetrieval.DomsResultsRetrievalHandler
-            #                or class_wrapper == webservice.algorithms.doms.ResultsPlotQuery.DomsResultsPlotHandler
         )
 
     @staticmethod
