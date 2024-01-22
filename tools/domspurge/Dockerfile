@@ -1,4 +1,3 @@
-#!/usr/bin/env bash
 # Licensed to the Apache Software Foundation (ASF) under one or more
 # contributor license agreements.  See the NOTICE file distributed with
 # this work for additional information regarding copyright ownership.
@@ -14,29 +13,19 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-set -e
+FROM python:3.8.13
 
-if [ ! -z ${BUILD_NEXUSPROTO+x} ]; then
-  echo 'Building nexusproto from source...'
+COPY tools/domspurge/purge.py /domspurge/purge.py
+COPY tools/domspurge/requirements.txt /domspurge/requirements.txt
+COPY tools/domspurge/entrypoint.sh /domspurge/entrypoint.sh
+COPY analysis/webservice/algorithms/doms/DomsInitialization.py /domspurge/DomsInitialization.py
 
-  APACHE_NEXUSPROTO="https://github.com/apache/incubator-sdap-nexusproto.git"
-  MASTER="master"
+# We just need the keyspace & table initialization. Remove references to other SDAP modules.
+# Doing this because if the schemas change, we want it to be reflected in this utility
+RUN sed '/nexus_initializer/d' -i /domspurge/DomsInitialization.py
 
-  GIT_REPO=${1:-$APACHE_NEXUSPROTO}
-  GIT_BRANCH=${2:-$MASTER}
+WORKDIR /domspurge
 
-  mkdir nexusproto
-  pushd nexusproto
-  git init
-  git pull ${GIT_REPO} ${GIT_BRANCH}
+RUN pip3 install -r requirements.txt
 
-  ./gradlew pythonInstall --info
-
-  ./gradlew install --info
-
-  rm -rf /root/.gradle
-  popd
-  rm -rf nexusproto
-else
-  pip install nexusproto
-fi
+ENTRYPOINT ["/bin/bash", "/domspurge/entrypoint.sh"]

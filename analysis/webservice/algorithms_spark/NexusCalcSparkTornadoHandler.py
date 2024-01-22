@@ -1,4 +1,3 @@
-#!/usr/bin/env bash
 # Licensed to the Apache Software Foundation (ASF) under one or more
 # contributor license agreements.  See the NOTICE file distributed with
 # this work for additional information regarding copyright ownership.
@@ -14,29 +13,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-set -e
+import logging
+from webservice.algorithms_spark.NexusCalcSparkHandler import NexusCalcSparkHandler
 
-if [ ! -z ${BUILD_NEXUSPROTO+x} ]; then
-  echo 'Building nexusproto from source...'
+logger = logging.getLogger(__name__)
 
-  APACHE_NEXUSPROTO="https://github.com/apache/incubator-sdap-nexusproto.git"
-  MASTER="master"
 
-  GIT_REPO=${1:-$APACHE_NEXUSPROTO}
-  GIT_BRANCH=${2:-$MASTER}
-
-  mkdir nexusproto
-  pushd nexusproto
-  git init
-  git pull ${GIT_REPO} ${GIT_BRANCH}
-
-  ./gradlew pythonInstall --info
-
-  ./gradlew install --info
-
-  rm -rf /root/.gradle
-  popd
-  rm -rf nexusproto
-else
-  pip install nexusproto
-fi
+class NexusCalcSparkTornadoHandler(NexusCalcSparkHandler):
+    pass

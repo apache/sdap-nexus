@@ -16,22 +16,22 @@
 import configparser
 import json
 import logging
-from time import sleep
-import math
 import uuid
 from datetime import datetime
+from time import sleep
 
-import numpy as np
 import pkg_resources
 from cassandra.auth import PlainTextAuthProvider
 from cassandra.cluster import Cluster
+from cassandra.concurrent import execute_concurrent_with_args
 from cassandra.policies import TokenAwarePolicy, DCAwareRoundRobinPolicy
-from cassandra.query import BatchStatement
 from pytz import UTC
 from webservice.algorithms.doms.BaseDomsHandler import DomsEncoder
 from webservice.webmodel import NexusProcessingException
 
 BATCH_SIZE = 1024
+
+logger = logging.getLogger(__name__)
 
 
 class ResultInsertException(IOError):
@@ -106,24 +106,40 @@ class ResultsStorage(AbstractResultsContainer):
     def __init__(self, config=None):
         AbstractResultsContainer.__init__(self, config)
 
-    def insertResults(self, results, params, stats, startTime, completeTime, userEmail, execution_id=None):
-        self._log.info('Beginning results write')
+    def insertInitialExecution(self, params, startTime, status, userEmail='', execution_id=None):
+        """
+        Initial insert into database for CDMS matchup request. This
+        populates the execution and params table.
+        """
         if isinstance(execution_id, str):
             execution_id = uuid.UUID(execution_id)
 
-        execution_id = self.insertExecution(execution_id, startTime, completeTime, userEmail)
+        execution_id = self.__insertExecution(execution_id, startTime, None, userEmail, status)
         self.__insertParams(execution_id, params)
-        self.__insertStats(execution_id, stats)
-        self.__insertResults(execution_id, results)
-        self._log.info('Results write finished')
         return execution_id
 
-    def insertExecution(self, execution_id, startTime, completeTime, userEmail):
+    def updateExecution(self, execution_id, completeTime, status, message, stats, results):
+        if stats:
+            self.__insertStats(execution_id, stats)
+        if results:
+            self.__insertResults(execution_id, results)
+        self.__updateExecution(execution_id, completeTime, status, message)
+
+    def __insertExecution(self, execution_id, startTime, completeTime, userEmail, status):
+        """
+        Insert new entry into execution table
+        """
         if execution_id is None:
             execution_id = uuid.uuid4()
 
-        cql = "INSERT INTO doms_executions (id, time_started, time_completed, user_email) VALUES (%s, %s, %s, %s)"
-        self._session.execute(cql, (execution_id, startTime, completeTime, userEmail))
+        cql = "INSERT INTO doms_executions (id, time_started, time_completed, user_email, status) VALUES (%s, %s, %s, %s, %s)"
+        self._session.execute(cql, (execution_id, startTime, completeTime, userEmail, status))
+        return execution_id
+
+    def __updateExecution(self, execution_id, complete_time, status, message=None):
+        # Only update the status if it's "running". Any other state is immutable.
+        cql = "UPDATE doms_executions SET time_completed = %s, status = %s, message = %s WHERE id=%s IF status = 'running'"
+        self._session.execute(cql, (complete_time, status, message, execution_id))
         return execution_id
 
     def __insertParams(self, execution_id, params):
@@ -176,12 +192,17 @@ class ResultsStorage(AbstractResultsContainer):
         inserts = []
 
         for result in results:
-            inserts.extend(self.__prepare_result(execution_id, None, result, insertStatement))
+            # 'PRIMARY' arg since primary values cannot have primary_value_id be null anymore
+            # Secondary matches are prepped recursively from this call
+            inserts.extend(self.__prepare_result(execution_id, 'PRIMARY', result, insertStatement))
 
         for i in range(5):
-            if not self.__insert_result_batches(inserts, insertStatement):
+            success, failed_entries = self.__insert_result_batches(inserts, insertStatement)
+
+            if not success:
                 if i < 4:
                     self._log.warning('Some write attempts failed; retrying')
+                    inserts = failed_entries
                     sleep(10)
                 else:
                     self._log.error('Some write attempts failed; max retries exceeded')
@@ -197,6 +218,8 @@ class ResultsStorage(AbstractResultsContainer):
         n_inserts = len(insert_params)
         writing = 0
 
+        failed = []
+
         self._log.info(f'Inserting {n_inserts} matchup entries in JSON format')
 
         for batch in query_batches:
@@ -206,16 +229,17 @@ class ResultsStorage(AbstractResultsContainer):
                 f'Writing batch of {len(batch)} matchup entries | ({writing}/{n_inserts}) [{writing / n_inserts * 100:7.3f}%]')
 
             for entry in batch:
-                futures.append(self._session.execute_async(insertStatement, entry))
+                futures.append((entry, self._session.execute_async(insertStatement, entry)))
 
-            for future in futures:
+            for entry, future in futures:
                 try:
                     future.result()
                 except Exception:
                     move_successful = False
+                    failed.append(entry)
 
         self._log.info('Result data write attempt completed')
-        return move_successful
+        return move_successful, failed
 
     def __prepare_result(self, execution_id, primaryId, result, insertStatement):
         if 'primary' in result:
@@ -239,7 +263,7 @@ class ResultsStorage(AbstractResultsContainer):
             result["platform"] if "platform" in result else None,
             result["device"] if "device" in result else None,
             json.dumps(data, cls=DomsEncoder),
-            1 if primaryId is None else 0,
+            1 if primaryId is 'PRIMARY' else 0,
             result["depth"],
             result['fileurl']
         )
@@ -253,46 +277,49 @@ class ResultsStorage(AbstractResultsContainer):
         return params_list
 
 
-
-
 class ResultsRetrieval(AbstractResultsContainer):
     def __init__(self, config=None):
         AbstractResultsContainer.__init__(self, config)
 
-    def retrieveResults(self, execution_id, trim_data=False):
+    def retrieveResults(self, execution_id, trim_data=False, page_num=1, page_size=1000):
         if isinstance(execution_id, str):
             execution_id = uuid.UUID(execution_id)
 
-        params = self.__retrieveParams(execution_id)
+        params = self.retrieveParams(execution_id)
         stats = self.__retrieveStats(execution_id)
-        data = self.__retrieveData(execution_id, trim_data=trim_data)
+        data = self.__retrieveData(execution_id, trim_data=trim_data, page_num=page_num, page_size=page_size)
         return params, stats, data
 
-    def __retrieveData(self, id, trim_data=False):
-        dataMap = self.__retrievePrimaryData(id, trim_data=trim_data)
+    def __retrieveData(self, id, trim_data=False, page_num=1, page_size=1000):
+        dataMap = self.__retrievePrimaryData(id, trim_data=trim_data, page_num=page_num, page_size=page_size)
         self.__enrichPrimaryDataWithMatches(id, dataMap, trim_data=trim_data)
         data = [dataMap[name] for name in dataMap]
         return data
 
     def __enrichPrimaryDataWithMatches(self, id, dataMap, trim_data=False):
-        cql = "SELECT * FROM doms_data where execution_id = %s and is_primary = false"
-        rows = self._session.execute(cql, (id,))
+        cql = f"SELECT * FROM doms_data where execution_id = {str(id)} and is_primary = false and primary_value_id = ?"
+        statement = self._session.prepare(cql)
 
-        for row in rows:
-            entry = self.__rowToDataEntry(row, trim_data=trim_data)
-            if row.primary_value_id in dataMap:
-                if not "matches" in dataMap[row.primary_value_id]:
-                    dataMap[row.primary_value_id]["matches"] = []
-                dataMap[row.primary_value_id]["matches"].append(entry)
-            else:
-                print(row)
+        primary_ids = list(dataMap.keys())
 
-    def __retrievePrimaryData(self, id, trim_data=False):
-        cql = "SELECT * FROM doms_data where execution_id = %s and is_primary = true"
-        rows = self._session.execute(cql, (id,))
+        logger.info(f'Getting secondary data for {len(primary_ids)} primaries of {str(id)}')
+
+        for (success, rows) in execute_concurrent_with_args(
+            self._session, statement, [(i,) for i in primary_ids], concurrency=50, results_generator=True
+        ):
+            for row in rows:
+                entry = self.__rowToDataEntry(row, trim_data=trim_data)
+                if row.primary_value_id in dataMap:
+                    if not "matches" in dataMap[row.primary_value_id]:
+                        dataMap[row.primary_value_id]["matches"] = []
+                    dataMap[row.primary_value_id]["matches"].append(entry)
+
+    def __retrievePrimaryData(self, id, trim_data=False, page_num=2, page_size=10):
+        cql = "SELECT * FROM doms_data where execution_id = %s and is_primary = true limit %s"
+        rows = self._session.execute(cql, [id, page_num * page_size])
 
         dataMap = {}
-        for row in rows:
+        for row in rows[(page_num-1)*page_size:page_num*page_size]:
             entry = self.__rowToDataEntry(row, trim_data=trim_data)
             dataMap[row.value_id] = entry
         return dataMap
@@ -341,9 +368,9 @@ class ResultsRetrieval(AbstractResultsContainer):
             }
             return stats
 
-        raise Exception("Execution not found with id '%s'" % id)
+        raise NexusProcessingException(reason=f'No stats found for id {str(id)}', code=404)
 
-    def __retrieveParams(self, id):
+    def retrieveParams(self, id):
         cql = "SELECT * FROM doms_params where execution_id = %s limit 1"
         rows = self._session.execute(cql, (id,))
         for row in rows:
@@ -367,4 +394,24 @@ class ResultsRetrieval(AbstractResultsContainer):
             }
             return params
 
-        raise Exception("Execution not found with id '%s'" % id)
+        raise NexusProcessingException(reason=f'No params found for id {str(id)}', code=404)
+
+    def retrieveExecution(self, execution_id):
+        """
+        Retrieve execution details from database.
+
+        :param execution_id: Execution ID
+        :return: execution status dictionary
+        """
+
+        cql = "SELECT * FROM doms_executions where id = %s limit 1"
+        rows = self._session.execute(cql, (execution_id,))
+        for row in rows:
+            return {
+                'status': row.status,
+                'message': row.message,
+                'timeCompleted': row.time_completed,
+                'timeStarted': row.time_started
+            }
+
+        raise NexusProcessingException(reason=f'Execution not found with id {str(execution_id)}', code=404)

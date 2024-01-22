@@ -30,10 +30,9 @@ from webservice.NexusHandler import nexus_initializer
 @nexus_initializer
 class DomsInitializer:
     def __init__(self):
-        pass
+        self.log = logging.getLogger(__name__)
 
     def init(self, config):
-        self.log = logging.getLogger(__name__)
         self.log.info("*** STARTING DOMS INITIALIZATION ***")
 
         domsconfig = configparser.SafeConfigParser()
@@ -120,7 +119,8 @@ class DomsInitializer:
               id uuid PRIMARY KEY,
               time_started timestamp,
               time_completed timestamp,
-              user_email text
+              user_email text,
+              status text
             );
                 """
         session.execute(cql)
@@ -166,7 +166,7 @@ class DomsInitializer:
               measurement_values_json text,
               depth decimal,
               file_url text,
-              PRIMARY KEY (execution_id, is_primary, id)
+              PRIMARY KEY ((execution_id, is_primary), primary_value_id, id)
             );
         """
         session.execute(cql)
