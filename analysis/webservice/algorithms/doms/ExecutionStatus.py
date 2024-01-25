@@ -63,6 +63,9 @@ class ExecutionStatusHandler(BaseDomsHandler.BaseDomsQueryCalcHandler):
             except NexusProcessingException:
                 execution_stats = {}
 
+        if execution_stats is None:
+            execution_stats = {}
+
         job_status = NexusExecutionResults.ExecutionStatus(execution_details['status'])
         host = f'https://{request.requestHandler.request.host}'
 
