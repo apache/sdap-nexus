@@ -13,26 +13,25 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import json
 import logging
+import zipfile
+from datetime import datetime
+from functools import partial
 from io import BytesIO
-from typing import Dict, Literal, Union, Tuple
+from itertools import zip_longest, chain
+from tempfile import NamedTemporaryFile
 
 import matplotlib.pyplot as plt
 import numpy as np
+import pandas as pd
 import xarray as xr
+from mpl_toolkits.axes_grid1 import make_axes_locatable
+from pytz import timezone
+from scipy.interpolate import griddata
 from webservice.NexusHandler import nexus_handler
 from webservice.algorithms.NexusCalcHandler import NexusCalcHandler
 from webservice.webmodel import NexusResults, NexusProcessingException
-from datetime import datetime
-from pytz import timezone
-from itertools import zip_longest, chain
-from functools import partial
-import json
-import pandas as pd
-from tempfile import NamedTemporaryFile
-import zipfile
-from mpl_toolkits.axes_grid1 import make_axes_locatable
-
 
 logger = logging.getLogger(__name__)
 
@@ -44,6 +43,13 @@ logger = logging.getLogger(__name__)
 EPOCH = timezone('UTC').localize(datetime(1970, 1, 1))
 NP_EPOCH = np.datetime64('1970-01-01T00:00:00')
 ISO_8601 = '%Y-%m-%dT%H:%M:%S%z'
+
+# Precomputed resolutions of LIDAR data grids, computed over the entire ABoVE dataset
+# Temporary solution to use for grid mapping
+LAT_RES_AVG = 0.0005339746629669614
+LON_RES_AVG = 0.0005339746629670938
+LAT_RES_MIN = 0.0002819728712069036
+LON_RES_MIN = 0.0002819728712069036
 
 @nexus_handler
 class LidarVegetation(NexusCalcHandler):
@@ -82,6 +88,14 @@ class LidarVegetation(NexusCalcHandler):
             "type": "string",
             "description": "Comma separated values: longitude to slice on[,min lat of slice,max lat of slice]"
         },
+        "mapToGrid": {
+            "name": "Map scenes to grid",
+            "type": "boolean",
+            "description": "If multiple LIDAR captures are matched in the defined bounds, map their points to a shared "
+                           "lat/lon grid at a similar resolution to the source data. Otherwise, the data cannot be "
+                           "merged & rendered properly and will thus raise an error. NOTE: this option may take a long "
+                           "time to compute. Default: false"
+        }
     }
     singleton = True
 
@@ -169,10 +183,13 @@ class LidarVegetation(NexusCalcHandler):
                            'slice)', code=400
                 )
 
-        return ds, start_time, end_time, bounding_polygon, lon_slice, lat_slice
+        map_to_grid = request.get_boolean_arg('mapToGrid')
+
+        return ds, start_time, end_time, bounding_polygon, lon_slice, lat_slice, map_to_grid
 
     def calc(self, computeOptions, **args):
-        dataset, start_time, end_time, bounding_polygon, lon_slice, lat_slice = self.parse_arguments(computeOptions)
+        dataset, start_time, end_time, bounding_polygon, lon_slice, lat_slice, map_to_grid\
+            = self.parse_arguments(computeOptions)
 
         tile_service = self._get_tile_service()
 
@@ -198,28 +215,40 @@ class LidarVegetation(NexusCalcHandler):
 
         points_zg, points_50, points_98, points_cc = [], [], [], []
 
+        sources = set()
+
+        def source_name_from_granule(granule: str, end=-3) -> str:
+            return '_'.join(granule.split('_')[:end])
+
+        include_nan = map_to_grid  # If we may need to map to grid, get nans from source tiles so we can best estimate
+                                   # grid resolution
+
         for tile_zg, tile_50, tile_98, tile_cc in zip_longest(tiles_zg, tiles_rh50, tiles_rh98, tiles_cc):
             if tile_zg:
                 logger.info(f'Processing ground height tile {tile_zg.tile_id}')
-                npg_zg = tile_zg.nexus_point_generator()
+                npg_zg = tile_zg.nexus_point_generator(include_nan=include_nan)
+                sources.add(source_name_from_granule(tile_zg.granule))
             else:
                 npg_zg = []
 
             if tile_50:
                 logger.info(f'Processing mean vegetation height tile {tile_50.tile_id}')
-                npg_50 = tile_50.nexus_point_generator()
+                npg_50 = tile_50.nexus_point_generator(include_nan=include_nan)
+                sources.add(source_name_from_granule(tile_50.granule))
             else:
                 npg_50 = []
 
             if tile_98:
                 logger.info(f'Processing canopy height tile {tile_98.tile_id}')
-                npg_98 = tile_98.nexus_point_generator()
+                npg_98 = tile_98.nexus_point_generator(include_nan=include_nan)
+                sources.add(source_name_from_granule(tile_98.granule))
             else:
                 npg_98 = []
 
             if tile_cc:
                 logger.info(f'Processing canopy coverage tile {tile_cc.tile_id}')
-                npg_cc = tile_cc.nexus_point_generator()
+                npg_cc = tile_cc.nexus_point_generator(include_nan=include_nan)
+                sources.add(source_name_from_granule(tile_cc.granule, -4))
             else:
                 npg_cc = []
 
@@ -229,12 +258,13 @@ class LidarVegetation(NexusCalcHandler):
                     npg_98,
                     npg_cc
             ):
-                if npg_zg:
+                if np_zg:
                     p_zg = dict(
                         latitude=np_zg.latitude,
                         longitude=np_zg.longitude,
                         time=np_zg.time,
-                        data=np_zg.data_vals
+                        data=np_zg.data_vals,
+                        source=source_name_from_granule(tile_zg.granule)
                     )
 
                     if isinstance(p_zg['data'], list):
@@ -242,12 +272,13 @@ class LidarVegetation(NexusCalcHandler):
 
                     points_zg.append(p_zg)
 
-                if npg_50:
+                if np_50:
                     p_50 = dict(
                         latitude=np_50.latitude,
                         longitude=np_50.longitude,
                         time=np_50.time,
-                        data=np_50.data_vals
+                        data=np_50.data_vals,
+                        source=source_name_from_granule(tile_50.granule)
                     )
 
                     if isinstance(p_50['data'], list):
@@ -255,12 +286,13 @@ class LidarVegetation(NexusCalcHandler):
 
                     points_50.append(p_50)
 
-                if npg_98:
+                if np_98:
                     p_98 = dict(
                         latitude=np_98.latitude,
                         longitude=np_98.longitude,
                         time=np_98.time,
-                        data=np_98.data_vals
+                        data=np_98.data_vals,
+                        source=source_name_from_granule(tile_98.granule)
                     )
 
                     if isinstance(p_98['data'], list):
@@ -268,12 +300,13 @@ class LidarVegetation(NexusCalcHandler):
 
                     points_98.append(p_98)
 
-                if npg_cc:
+                if np_cc:
                     p_cc = dict(
                         latitude=np_cc.latitude,
                         longitude=np_cc.longitude,
                         time=np_cc.time,
-                        data=np_cc.data_vals
+                        data=np_cc.data_vals,
+                        source=source_name_from_granule(tile_cc.granule, -4)
                     )
 
                     if isinstance(p_cc['data'], list):
@@ -281,62 +314,146 @@ class LidarVegetation(NexusCalcHandler):
 
                     points_cc.append(p_cc)
 
-        lats = np.unique([p['latitude'] for p in chain(points_zg, points_50, points_98, points_cc)])
-        lons = np.unique([p['longitude'] for p in chain(points_zg, points_50, points_98, points_cc)])
-        times = np.unique([datetime.utcfromtimestamp(p['time']) for p in chain(points_zg, points_50, points_98, points_cc)])
+        if len(sources) == 1:
+            logger.info('Only one source LIDAR scene, using simple mapping to grid')
 
-        vals_4d = np.full((len(times), len(lats), len(lons), 4), np.nan)
+            lats = np.unique([p['latitude'] for p in chain(points_zg, points_50, points_98, points_cc)])
+            lons = np.unique([p['longitude'] for p in chain(points_zg, points_50, points_98, points_cc)])
+            times = np.unique([datetime.utcfromtimestamp(p['time']) for p in chain(points_zg, points_50, points_98, points_cc)])
 
-        data_dict = {}
+            vals_4d = np.full((len(times), len(lats), len(lons), 4), np.nan)
 
-        for zg, rh50, rh98, cc in zip_longest(points_zg, points_50, points_98, points_cc):
-            if zg is not None:
-                key = (datetime.utcfromtimestamp(zg['time']), zg['latitude'], zg['longitude'])
+            data_dict = {}
 
-                if key not in data_dict:
-                    data_dict[key] = [zg['data'], None, None, None]
-                else:
-                    data_dict[key][0] = zg['data']
+            for zg, rh50, rh98, cc in zip_longest(points_zg, points_50, points_98, points_cc):
+                if zg is not None:
+                    key = (datetime.utcfromtimestamp(zg['time']), zg['latitude'], zg['longitude'])
 
-            if rh50 is not None:
-                key = (datetime.utcfromtimestamp(rh50['time']), rh50['latitude'], rh50['longitude'])
+                    if key not in data_dict:
+                        data_dict[key] = [zg['data'], None, None, None]
+                    else:
+                        data_dict[key][0] = zg['data']
 
-                if key not in data_dict:
-                    data_dict[key] = [None, rh50['data'], None, None]
-                else:
-                    data_dict[key][1] = rh50['data']
+                if rh50 is not None:
+                    key = (datetime.utcfromtimestamp(rh50['time']), rh50['latitude'], rh50['longitude'])
 
-            if rh98 is not None:
-                key = (datetime.utcfromtimestamp(rh98['time']), rh98['latitude'], rh98['longitude'])
+                    if key not in data_dict:
+                        data_dict[key] = [None, rh50['data'], None, None]
+                    else:
+                        data_dict[key][1] = rh50['data']
 
-                if key not in data_dict:
-                    data_dict[key] = [None, None, rh98['data'], None]
-                else:
-                    data_dict[key][2] = rh98['data']
+                if rh98 is not None:
+                    key = (datetime.utcfromtimestamp(rh98['time']), rh98['latitude'], rh98['longitude'])
 
-            if cc is not None:
-                key = (datetime.utcfromtimestamp(cc['time']), cc['latitude'], cc['longitude'])
+                    if key not in data_dict:
+                        data_dict[key] = [None, None, rh98['data'], None]
+                    else:
+                        data_dict[key][2] = rh98['data']
 
-                if key not in data_dict:
-                    data_dict[key] = [None, None, None, cc['data']]
-                else:
-                    data_dict[key][3] = cc['data'] / 10000
+                if cc is not None:
+                    key = (datetime.utcfromtimestamp(cc['time']), cc['latitude'], cc['longitude'])
 
-        for i, t in enumerate(times):
-            for j, lat in enumerate(lats):
-                for k, lon in enumerate(lons):
-                    vals_4d[i, j, k, :] = data_dict.get((t, lat, lon), [np.nan] * 4)
+                    if key not in data_dict:
+                        data_dict[key] = [None, None, None, cc['data'] / 10000]
+                    else:
+                        data_dict[key][3] = cc['data'] / 10000
 
-        ds = xr.DataArray(
-            data=vals_4d,
-            dims=['time', 'lat', 'lon', 'var'],
-            coords=dict(
-                time=(['time'], times),
-                lat=(['lat'], lats),
-                lon=(['lon'], lons),
-                var=(['var'], ['ground_height', 'mean_veg_height', 'canopy_height', 'canopy_coverage'])
+            for i, t in enumerate(times):
+                for j, lat in enumerate(lats):
+                    for k, lon in enumerate(lons):
+                        vals_4d[i, j, k, :] = data_dict.get((t, lat, lon), [np.nan] * 4)
+
+            ds = xr.DataArray(
+                data=vals_4d,
+                dims=['time', 'lat', 'lon', 'var'],
+                coords=dict(
+                    time=(['time'], times),
+                    lat=(['lat'], lats),
+                    lon=(['lon'], lons),
+                    var=(['var'], ['ground_height', 'mean_veg_height', 'canopy_height', 'canopy_coverage'])
+                )
+            ).to_dataset('var')
+        elif map_to_grid:
+            logger.info('More than one scene matched, will align points to a common grid')
+
+            min_lat, max_lat = tuple(
+                np.unique([p['latitude'] for p in chain(points_zg, points_50, points_98, points_cc)])[[0, -1]]
             )
-        ).to_dataset('var')
+
+            min_lon, max_lon = tuple(
+                np.unique([p['longitude'] for p in chain(points_zg, points_50, points_98, points_cc)])[[0, -1]]
+            )
+
+            times = np.unique(
+                [datetime.utcfromtimestamp(p['time']) for p in chain(points_zg, points_50, points_98, points_cc)])
+
+            logger.debug('Building gridding coordinate meshes')
+
+            lons = np.arange(min_lon, max_lon + (LON_RES_MIN / 2), LON_RES_MIN)
+            lats = np.arange(min_lat, max_lat + (LAT_RES_MIN / 2), LAT_RES_MIN)
+
+            X, Y = np.meshgrid(lons, lats)
+
+            logger.info('Gridding ground heights')
+            gridded_zg = griddata(
+                list(zip([p['longitude'] for p in points_zg], [p['latitude'] for p in points_zg])),
+                np.array([p['data'] for p in points_zg]),
+                (X, Y),
+                method='nearest',
+                fill_value=np.nan
+            )
+
+            logger.info('Gridding mean vegetation heights')
+            gridded_50 = griddata(
+                list(zip([p['longitude'] for p in points_50], [p['latitude'] for p in points_50])),
+                np.array([p['data'] for p in points_50]),
+                (X, Y),
+                method='nearest',
+                fill_value=np.nan
+            )
+
+            logger.info('Gridding canopy heights')
+            gridded_98 = griddata(
+                list(zip([p['longitude'] for p in points_98], [p['latitude'] for p in points_98])),
+                np.array([p['data'] for p in points_98]),
+                (X, Y),
+                method='nearest',
+                fill_value=np.nan
+            )
+
+            logger.info('Gridding canopy coverage')
+            gridded_cc = griddata(
+                list(zip([p['longitude'] for p in points_cc], [p['latitude'] for p in points_cc])),
+                np.array([p['data'] / 10000 for p in points_cc]),
+                (X, Y),
+                method='nearest',
+                fill_value=np.nan
+            )
+
+            gridded_vals = np.array([
+                gridded_zg,
+                gridded_50,
+                gridded_98,
+                gridded_cc
+            ])
+
+            gridded_vals = np.moveaxis(gridded_vals, 0, -1)[np.newaxis, ...]
+
+            ds = xr.DataArray(
+                data=gridded_vals,
+                dims=['time', 'lat', 'lon', 'var'],
+                coords=dict(
+                    time=(['time'], [times[0]]),
+                    lat=(['lat'], lats),
+                    lon=(['lon'], lons),
+                    var=(['var'], ['ground_height', 'mean_veg_height', 'canopy_height', 'canopy_coverage'])
+                )
+            ).to_dataset('var')
+        else:
+            raise NexusProcessingException(
+                reason='Selected bounds match multiple scenes, there is no way to merge them to a shared grid',
+                code=400
+            )
 
         slice_lat, slice_lon = None, None
         slice_min_lat, slice_max_lat = None, None
@@ -351,7 +468,7 @@ class LidarVegetation(NexusCalcHandler):
             if slice_max_lon is None:
                 slice_max_lon = ds.lon.max().item()
 
-            if len(ds['time']) > 1:
+            if 'time' in ds.coords and len(ds['time']) > 1:
                 slice_ds = ds.mean(dim='time', skipna=True)
             else:
                 slice_ds = ds
@@ -367,7 +484,7 @@ class LidarVegetation(NexusCalcHandler):
             if slice_max_lat is None:
                 slice_max_lat = ds.lat.max().item()
 
-            if len(ds['time']) > 1:
+            if 'time' in ds.coords and len(ds['time']) > 1:
                 slice_ds = ds.mean(dim='time', skipna=True)
             else:
                 slice_ds = ds
