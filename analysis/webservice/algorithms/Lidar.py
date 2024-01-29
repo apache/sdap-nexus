@@ -15,6 +15,7 @@
 
 import json
 import logging
+import warnings
 import zipfile
 from datetime import datetime
 from functools import partial
@@ -188,6 +189,8 @@ class LidarVegetation(NexusCalcHandler):
         return ds, start_time, end_time, bounding_polygon, lon_slice, lat_slice, map_to_grid
 
     def calc(self, computeOptions, **args):
+        warnings.filterwarnings('ignore', category=UserWarning)
+
         dataset, start_time, end_time, bounding_polygon, lon_slice, lat_slice, map_to_grid\
             = self.parse_arguments(computeOptions)
 
@@ -450,6 +453,8 @@ class LidarVegetation(NexusCalcHandler):
                 )
             ).to_dataset('var')
         else:
+            warnings.filterwarnings('default', category=UserWarning)
+
             raise NexusProcessingException(
                 reason='Selected bounds match multiple scenes, there is no way to merge them to a shared grid',
                 code=400
@@ -508,6 +513,8 @@ class LidarVegetation(NexusCalcHandler):
 
         if lon_slice is not None:
             result_meta['slice_lon'] = (slice_lon, slice_min_lat, slice_max_lat)
+
+        warnings.filterwarnings('default', category=UserWarning)
 
         return LidarResults(
             results=(ds, slices),
