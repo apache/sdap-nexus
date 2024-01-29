@@ -119,7 +119,6 @@ class DomsCSVFormatter:
         try:
             DomsCSVFormatter.__addConstants(csv_mem_file)
             DomsCSVFormatter.__addDynamicAttrs(csv_mem_file, executionId, results, params, details)
-            csv.writer(csv_mem_file).writerow([])
             DomsCSVFormatter.__addMetadata(csv_mem_file, metadata)
             csv.writer(csv_mem_file).writerow([])
 
