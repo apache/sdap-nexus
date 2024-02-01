@@ -10,7 +10,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - SDAP-493: 
   - Updated /job endpoint to use `executionId` terminology for consistency with existing `/cdmsresults` endpoint
   - Updated /job endpoint with details about number of primary and secondary tiles.
-- - SDAP-499: Added page number to default filename for matchup output
+- SDAP-500: Improvements to SDAP Asynchronous Jobs
+- SDAP-499: Added page number to default filename for matchup output
 ### Deprecated
 ### Removed
 - SDAP-493: 
