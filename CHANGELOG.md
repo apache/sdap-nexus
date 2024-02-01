@@ -11,6 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - SDAP-472:
   - Support for Zarr backend (gridded data only)
   - Dataset management endpoints for Zarr datasets
+- SDAP-498: Support for satellite units & other dataset-level metadata
 ### Changed
 - SDAP-493: 
   - Updated /job endpoint to use `executionId` terminology for consistency with existing `/cdmsresults` endpoint
