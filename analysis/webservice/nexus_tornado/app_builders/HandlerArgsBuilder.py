@@ -37,9 +37,9 @@ class HandlerArgsBuilder:
                 class_wrapper == webservice.algorithms_spark.Matchup.Matchup
                 or class_wrapper == webservice.algorithms_spark.MatchupDoms.MatchupDoms
                 or issubclass(class_wrapper, webservice.algorithms.doms.BaseDomsHandler.BaseDomsQueryCalcHandler)
-                or issubclass(class_wrapper, webservice.algorithms_spark.NexusCalcSparkTornadoHandler.NexusCalcSparkTornadoHandler)
+                or issubclass(class_wrapper,
+                              webservice.algorithms_spark.NexusCalcSparkTornadoHandler.NexusCalcSparkTornadoHandler)
                 or class_wrapper == webservice.algorithms.doms.ResultsRetrieval.DomsResultsRetrievalHandler
-                or class_wrapper == webservice.algorithms.doms.ResultsPlotQuery.DomsResultsPlotHandler
         )
 
     @staticmethod
@@ -50,7 +50,7 @@ class HandlerArgsBuilder:
         args = dict(
             clazz=clazz_wrapper,
             tile_service_factory=self.tile_service_factory,
-            thread_pool=self. request_thread_pool
+            thread_pool=self.request_thread_pool
         )
 
         if issubclass(clazz_wrapper, webservice.algorithms_spark.NexusCalcSparkHandler.NexusCalcSparkHandler):

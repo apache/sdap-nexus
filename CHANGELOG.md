@@ -4,6 +4,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+### Added
+### Changed
+- SDAP-493: 
+  - Updated /job endpoint to use `executionId` terminology for consistency with existing `/cdmsresults` endpoint
+  - Updated /job endpoint with details about number of primary and secondary tiles.
+- - SDAP-499: Added page number to default filename for matchup output
+### Deprecated
+### Removed
+- SDAP-493: 
+  - Removed `resultSizeLimit` from /match_spark endpoint 
+### Fixed
+### Security
+
 ## [1.2.0] - 2023-11-22
 ### Added
 - SDAP-467: Added pagination to cdmsresults endpoint
@@ -24,17 +38,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - SDAP-482: Updated Saildrone in situ endpoint in config file
 - SDAP-485: Improved behavior for retrying failed Cassandra inserts when saving matchup results.
 - SDAP-487: Improved result fetch speed for large matchup results by tweaking `doms.doms_data` schema to support querying by primary value id.
-- SDAP-493: 
-  - Updated /job endpoint to use `executionId` terminology for consistency with existing `/cdmsresults` endpoint
-  - Updated /job endpoint with details about number of primary and secondary tiles.
-- SDAP-500: Improvements to SDAP Asynchronous Jobs
-- SDAP-499: Added page number to default filename for matchup output
 ### Deprecated
 ### Removed
 - SDAP-465: Removed `climatology` directory.
 - SDAP-501: Updated dependencies to remove `chardet`
-- SDAP-493: 
-  - Removed `resultSizeLimit` from /match_spark endpoint 
 ### Fixed
 - SDAP-474: Fixed bug in CSV attributes where secondary dataset would be rendered as comma separated characters
 - SDAP-475: Bug fixes for `/timeSeriesSpark` and `/timeAvgMapSpark`
