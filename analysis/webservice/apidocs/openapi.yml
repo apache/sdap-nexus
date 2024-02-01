@@ -166,6 +166,13 @@ paths:
             type: boolean
             default: true
           example: true
+        - in: query
+          name: filename
+          description: |
+            Optional filename. Will be passed into /job and results links
+          required: false
+          schema:
+            type: string
       responses:
         '200':
           description: Successful operation
@@ -689,6 +696,13 @@ paths:
             type: string
             format: uuid
           example: c864a51b-3d87-4872-9070-632820b1cae2
+        - in: query
+          name: filename
+          description: |
+            Optional filename. Will be passed into /job results links
+          required: false
+          schema:
+            type: string
   /job/cancel:
     get:
       summary: |
