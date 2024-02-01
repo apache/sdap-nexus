@@ -42,6 +42,8 @@ class ExecutionStatusHandler(BaseDomsHandler.BaseDomsQueryCalcHandler):
         except ValueError:
             raise NexusProcessingException(reason='"id" argument must be a valid uuid', code=400)
 
+        filename = request.get_argument('filename', None)
+
         # Check if the job is done
         with ResultsRetrieval(self.config) as retrieval:
             try:
@@ -74,5 +76,6 @@ class ExecutionStatusHandler(BaseDomsHandler.BaseDomsQueryCalcHandler):
             host=host,
             num_primary_matched=execution_stats.get('numPrimaryMatched'),
             num_secondary_matched=execution_stats.get('numSecondaryMatched'),
-            num_unique_secondaries=execution_stats.get('numUniqueSecondaries')
+            num_unique_secondaries=execution_stats.get('numUniqueSecondaries'),
+            filename=filename
         )
