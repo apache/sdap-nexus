@@ -6,6 +6,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 ### Added
+- SDAP-506:
+  - Added STAC Catalog endpoint for matchup outputs
 ### Changed
 - SDAP-493: 
   - Updated /job endpoint to use `executionId` terminology for consistency with existing `/cdmsresults` endpoint
@@ -46,17 +48,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Removed `gdal` and `basemap` as core dependencies
   - Moved `shapely` installation in docker build from conda install to pip install
   - Disabled `/domsplot` endpoint & commented out references to its source file as it depends on `basemap` and raises `ImportError`s at startup
-- SDAP-493: 
-  - Updated /job endpoint to use `executionId` terminology for consistency with existing `/cdmsresults` endpoint
-  - Updated /job endpoint with details about number of primary and secondary tiles.
-- SDAP-500: Improvements to SDAP Asynchronous Jobs
-- SDAP-499: Added page number to default filename for matchup output
 ### Deprecated
 ### Removed
 - SDAP-465: Removed `climatology` directory.
 - SDAP-501: Updated dependencies to remove `chardet`
-- SDAP-493: 
-  - Removed `resultSizeLimit` from /match_spark endpoint 
 ### Fixed
 - SDAP-474: Fixed bug in CSV attributes where secondary dataset would be rendered as comma separated characters
 - SDAP-475: Bug fixes for `/timeSeriesSpark` and `/timeAvgMapSpark`
