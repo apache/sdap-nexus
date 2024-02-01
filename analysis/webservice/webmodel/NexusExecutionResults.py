@@ -40,11 +40,12 @@ def construct_job_status(job_state, created, updated, execution_id, params, host
             'rel': 'self'
         }],
         'params': params,
-        'jobID': execution_id
+        'executionID': execution_id
     }
 
 
-def construct_done(status, created, completed, execution_id, params, host):
+def construct_done(status, created, completed, execution_id, params, host,
+                   num_primary_matched, num_secondary_matched, num_unique_secondaries):
     job_body = construct_job_status(
         status,
         created,
@@ -53,6 +54,12 @@ def construct_done(status, created, completed, execution_id, params, host):
         params,
         host
     )
+    # Add stats to body
+    job_body['totalPrimaryMatched'] = num_primary_matched
+    job_body['totalSecondaryMatched'] = num_secondary_matched
+    job_body['averageSecondaryMatched'] = round(num_secondary_matched/num_primary_matched) \
+        if num_primary_matched > 0 else 0
+    job_body['totalUniqueSecondaryMatched'] = num_unique_secondaries
 
     # Construct urls
     formats = [
@@ -112,7 +119,8 @@ def construct_cancelled(status, created, completed, execution_id, params, host):
 
 class NexusExecutionResults:
     def __init__(self, status=None, created=None, completed=None, execution_id=None, message='',
-                 params=None, host=None, status_code=200):
+                 params=None, host=None, status_code=200, num_primary_matched=None,
+                 num_secondary_matched=None, num_unique_secondaries=None):
         self.status_code = status_code
         self.status = status
         self.created = created
@@ -121,6 +129,9 @@ class NexusExecutionResults:
         self.message = message
         self.execution_params = params
         self.host = host
+        self.num_primary_matched = num_primary_matched
+        self.num_secondary_matched = num_secondary_matched
+        self.num_unique_secondaries = num_unique_secondaries
 
     def toJson(self):
         params = {
@@ -132,6 +143,9 @@ class NexusExecutionResults:
         }
         if self.status == ExecutionStatus.SUCCESS:
             params['completed'] = self.completed
+            params['num_primary_matched'] = self.num_primary_matched
+            params['num_secondary_matched'] = self.num_secondary_matched
+            params['num_unique_secondaries'] = self.num_unique_secondaries
             construct = construct_done
         elif self.status == ExecutionStatus.RUNNING:
             construct = construct_running
