@@ -42,7 +42,7 @@ def construct_job_status(job_state, created, updated, execution_id, params, host
             'rel': 'self'
         }],
         'params': params,
-        'executionID': execution_id
+        'jobID': execution_id
     }
 
 
