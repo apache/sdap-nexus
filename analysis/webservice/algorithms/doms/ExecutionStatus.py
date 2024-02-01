@@ -53,6 +53,14 @@ class ExecutionStatusHandler(BaseDomsHandler.BaseDomsQueryCalcHandler):
                     code=404
                 )
 
+        # Get execution stats. This call will raise an exception if the
+        # execution is not done.
+        with ResultsRetrieval(self.config) as retrieval:
+            try:
+                execution_stats = retrieval.retrieveStats(execution_id)
+            except NexusProcessingException:
+                execution_stats = {}
+
         job_status = NexusExecutionResults.ExecutionStatus(execution_details['status'])
         host = f'https://{request.requestHandler.request.host}'
 
@@ -63,5 +71,8 @@ class ExecutionStatusHandler(BaseDomsHandler.BaseDomsQueryCalcHandler):
             execution_id=execution_id,
             message=execution_details['message'],
             params=execution_params,
-            host=host
+            host=host,
+            num_primary_matched=execution_stats.get('numPrimaryMatched'),
+            num_secondary_matched=execution_stats.get('numSecondaryMatched'),
+            num_unique_secondaries=execution_stats.get('numUniqueSecondaries')
         )

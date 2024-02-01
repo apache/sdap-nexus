@@ -139,8 +139,7 @@ paths:
           required: false
           schema:
             type: string
-            default: sea_surface_temperature
-          example: sea_surface_temperature
+          example: sea_water_temperature
         - in: query
           name: matchOnce
           description: |
@@ -154,19 +153,6 @@ paths:
             type: boolean
             default: false
           example: false
-        - in: query
-          name: resultSizeLimit
-          description: |
-            Optional integer value that limits the number of results
-            returned from the matchup. If the number of primary matches
-            is greater than this limit, the service will respond with
-            (HTTP 202 Accepted) and an empty response body. A value of
-            0 means return all results.
-          required: false
-          schema:
-            type: integer
-            default: 500
-          example: 500
         - in: query
           name: prioritizeDistance
           description: |
@@ -697,7 +683,7 @@ paths:
         - in: query
           name: id
           description: |
-            The job execution ID
+            The execution ID
           required: true
           schema:
             type: string
@@ -715,7 +701,7 @@ paths:
         - in: query
           name: id
           description: |
-            The job execution ID
+            The execution ID
           required: true
           schema:
             type: string
