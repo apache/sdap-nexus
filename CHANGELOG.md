@@ -37,9 +37,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - SDAP-482: Updated Saildrone in situ endpoint in config file
 - SDAP-485: Improved behavior for retrying failed Cassandra inserts when saving matchup results.
 - SDAP-487: Improved result fetch speed for large matchup results by tweaking `doms.doms_data` schema to support querying by primary value id.
-- SDAP-493: 
-  - Updated /job endpoint to use `executionId` terminology for consistency with existing `/cdmsresults` endpoint
-  - Updated /job endpoint with details about number of primary and secondary tiles.
 ### Deprecated
 ### Removed
 - SDAP-465: Removed `climatology` directory.
