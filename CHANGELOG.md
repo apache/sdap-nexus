@@ -38,6 +38,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - SDAP-482: Updated Saildrone in situ endpoint in config file
 - SDAP-485: Improved behavior for retrying failed Cassandra inserts when saving matchup results.
 - SDAP-487: Improved result fetch speed for large matchup results by tweaking `doms.doms_data` schema to support querying by primary value id.
+- Support for deploying on k8s version 1.25:
+  - Upgraded Cassandra Helm chart dependency version
+  - Bumped default Cassandra protocol version 3 -> 4 in webapp and tools
+- SDAP-507: Changes to remove `geos` sub-dependency from core image build:
+  - Removed `gdal` and `basemap` as core dependencies
+  - Moved `shapely` installation in docker build from conda install to pip install
+  - Disabled `/domsplot` endpoint & commented out references to its source file as it depends on `basemap` and raises `ImportError`s at startup
 ### Deprecated
 ### Removed
 - SDAP-465: Removed `climatology` directory.
@@ -50,6 +57,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Status code for results endpoint if execution id is not found fixed to be `404` instead of `500`.
 - Ensured links in the `/job` endpoint are https
 - SDAP-488: Workaround to build issue on Apple Silicon (M1/M2). Image build installs nexusproto through PyPI instead of building from source. A build arg `BUILD_NEXUSPROTO` was defined to allow building from source if desired
+- SDAP-496: Fix `solr-cloud-init` image failing to run.
 ### Security
 
 ## [1.1.0] - 2023-04-26
