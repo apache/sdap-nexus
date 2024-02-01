@@ -373,8 +373,6 @@ class ResultsRetrieval(AbstractResultsContainer):
             }
             return stats
 
-        raise NexusProcessingException(reason=f'No stats found for id {str(id)}', code=404)
-
     def retrieveParams(self, id):
         cql = "SELECT * FROM doms_params where execution_id = %s limit 1"
         rows = self._session.execute(cql, (id,))

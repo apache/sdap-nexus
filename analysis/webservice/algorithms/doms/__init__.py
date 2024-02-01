@@ -20,6 +20,7 @@ from . import ExecutionCancel
 from . import DatasetListQuery
 from . import DomsInitialization
 from . import MatchupQuery
+from . import StacCatalog
 from . import MetadataQuery
 from . import ResultsRetrieval
 from . import ResultsStorage
