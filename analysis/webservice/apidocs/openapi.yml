@@ -751,7 +751,7 @@ paths:
         - in: path
           name: executionId
           description: |
-            The job execution ID
+            The execution ID
           required: true
           schema:
             type: string
