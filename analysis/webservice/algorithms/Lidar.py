@@ -116,7 +116,7 @@ class LidarVegetation(NexusCalcHandler):
             "name": "Static view angle",
             "type": "comma-delimited pair of ints",
             "description": "If renderType = 3D and output==PNG, specifies the angle to be used for the render. Format: "
-                           "azimuth,elevation angle. Default: 30,45; Ranges: [0,359],[-180,180]"
+                           "azimuth,elevation angle. Default: 300,30; Ranges: [0,359],[-180,180]"
         },
         "frameDuration": {
             "name": "Frame duration",
@@ -242,8 +242,11 @@ class LidarVegetation(NexusCalcHandler):
         orbit_elev, orbit_step, frame_duration, view_azim, view_elev = None, None, None, None, None
 
         if render_type == '3D':
+            lat_slice = (None, None, None)
+            lon_slice = (None, None, None)
+
             orbit_params = request.get_argument('orbit', '30,10')
-            view_params = request.get_argument('viewAngle', '30,45')
+            view_params = request.get_argument('viewAngle', '300,30')
 
             frame_duration = request.get_int_arg('frameDuration', 100)
 
@@ -272,7 +275,7 @@ class LidarVegetation(NexusCalcHandler):
                     assert 0 <= view_azim <= 359
                     assert -180 <= view_elev <= 180
                 except:
-                    raise NexusProcessingException(reason=f'Invalid view angle string: {orbit_params}', code=400)
+                    raise NexusProcessingException(reason=f'Invalid view angle string: {view_params}', code=400)
 
                 orbit_elev, orbit_step = None, None
 
