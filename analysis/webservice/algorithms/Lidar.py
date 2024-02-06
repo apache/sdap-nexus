@@ -26,13 +26,12 @@ from itertools import zip_longest, chain
 from tempfile import NamedTemporaryFile, TemporaryDirectory
 
 import matplotlib as mpl
+mpl.use('Qt5Agg')
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import xarray as xr
-from matplotlib.colors import XKCD_COLORS
 from mpl_toolkits.axes_grid1 import make_axes_locatable
-from mpl_toolkits.basemap import Basemap
 from PIL import Image
 from pytz import timezone
 from scipy.interpolate import griddata
@@ -491,6 +490,8 @@ class LidarVegetation(NexusCalcHandler):
             lats = np.arange(min_lat, max_lat + (LAT_RES_MIN / 2), LAT_RES_MIN)
 
             X, Y = np.meshgrid(lons, lats)
+
+            logger.info(f'Output grid shape: {X.shape}')
 
             logger.info('Gridding ground heights')
             gridded_zg = griddata(
@@ -965,7 +966,7 @@ class LidarResults3D(NexusResults):
 
         X, Y = np.meshgrid(lons, lats)
 
-        s = ax.plot_surface(X, Y, vals, rstride=1, cstride=1, color='xkcd:leaf')
+        s = ax.plot_surface(X, Y, vals, rstride=1, cstride=1, color='xkcd:dirt')
 
         results = results[results['mean_veg_height'].notnull()]
 
@@ -988,7 +989,7 @@ class LidarResults3D(NexusResults):
             xy[:, 0], xy[:, 1], results['canopy_height'].values + results['ground_height'].values,
             marker=',',
             alpha=results['canopy_coverage'].values,
-            facecolors='brown',
+            facecolors='xkcd:leaf',
             zdir='z',
             depthshade=True,
             s=MARKER_SIZE,
@@ -1035,18 +1036,19 @@ class LidarResults3D(NexusResults):
 
         X, Y = np.meshgrid(lons, lats)
 
-        s = ax.plot_surface(X, Y, vals, rstride=1, cstride=1, color='xkcd:leaf')
+        s = ax.plot_surface(X, Y, vals, rstride=1, cstride=1, color='xkcd:dirt')
 
         results = results[results['mean_veg_height'].notnull()]
 
         xy = results[['lon', 'lat']].values
 
         MARKER_SIZE = 1
+        ALPHA_SCALING = 1.0
 
         s1 = ax.scatter(
             xy[:, 0], xy[:, 1], results['mean_veg_height'].values + results['ground_height'].values,
             marker=',',
-            alpha=results['canopy_coverage'].values,
+            alpha=results['canopy_coverage'].values * ALPHA_SCALING,
             facecolors='brown',
             zdir='z',
             depthshade=True,
@@ -1057,8 +1059,8 @@ class LidarResults3D(NexusResults):
         s2 = ax.scatter(
             xy[:, 0], xy[:, 1], results['canopy_height'].values + results['ground_height'].values,
             marker=',',
-            alpha=results['canopy_coverage'].values,
-            facecolors='brown',
+            alpha=results['canopy_coverage'].values * ALPHA_SCALING,
+            facecolors='xkcd:leaf',
             zdir='z',
             depthshade=True,
             s=MARKER_SIZE,
