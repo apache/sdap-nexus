@@ -189,7 +189,8 @@ class SolrProxy(object):
             l.append({
                 "shortName": g,
                 "title": g,
-                "tileCount": v
+                "tileCount": v,
+                "type": 'nexusproto'
             })
         l = sorted(l, key=lambda entry: entry["title"])
         return l
