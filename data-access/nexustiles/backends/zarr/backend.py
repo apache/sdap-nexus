@@ -124,6 +124,8 @@ class ZarrBackend(AbstractTileService):
             ds['iso_start'] = datetime.utcfromtimestamp(min_date).strftime(ISO_8601)
             ds['iso_end'] = datetime.utcfromtimestamp(max_date).strftime(ISO_8601)
 
+            ds['metadata'] = dict(self.__ds.attrs)
+
         return [ds]
 
     def find_tile_by_id(self, tile_id, **kwargs):

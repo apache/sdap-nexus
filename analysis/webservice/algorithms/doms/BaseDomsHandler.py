@@ -35,13 +35,6 @@ from webservice.webmodel import NexusResults
 EPOCH = timezone('UTC').localize(datetime(1970, 1, 1))
 ISO_8601 = '%Y-%m-%dT%H:%M:%S%z'
 
-try:
-    from osgeo import gdal
-    from osgeo.gdalnumeric import *
-except ImportError:
-    import gdal
-    from gdalnumeric import *
-
 from netCDF4 import Dataset
 import netCDF4
 import tempfile
@@ -114,7 +107,7 @@ class DomsQueryResults(NexusResults):
         return DomsNetCDFFormatter.create(self.__executionId, self.results(), self.__args, self.__details)
 
     def filename(self):
-        return f'CDMS_{self.__executionId}'
+        return f'CDMS_{self.__executionId}_page{self.__details["pageNum"]}'
 
 
 class DomsCSVFormatter:
