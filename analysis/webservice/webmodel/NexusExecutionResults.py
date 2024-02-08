@@ -27,32 +27,44 @@ class ExecutionStatus(Enum):
     CANCELLED = 'cancelled'
 
 
-def construct_job_status(job_state, created, updated, execution_id, params, host, message=''):
+def construct_job_status(job_state, created, updated, execution_id, params, host, message='',
+                         filename=None):
+    filename_param = f'&filename={filename}' if filename else ''
     return {
         'status': job_state.value,
         'message': message,
         'createdAt': created,
         'updatedAt': updated,
         'links': [{
-            'href': f'{host}/job?id={execution_id}',
-            'title': 'The current page',
+            'href': f'{host}/job?id={execution_id}{filename_param}',
+            'title': 'Get job status - the current page',
             'type': 'application/json',
             'rel': 'self'
         }],
         'params': params,
-        'jobID': execution_id
+        'executionID': execution_id
     }
 
 
-def construct_done(status, created, completed, execution_id, params, host):
+def construct_done(status, created, completed, execution_id, params, host,
+                   num_primary_matched, num_secondary_matched, num_unique_secondaries, filename):
     job_body = construct_job_status(
         status,
         created,
         completed,
         execution_id,
         params,
-        host
+        host,
+        filename=filename
     )
+    # Add stats to body
+    job_body['totalPrimaryMatched'] = num_primary_matched
+    job_body['totalSecondaryMatched'] = num_secondary_matched
+    job_body['averageSecondaryMatched'] = round(num_secondary_matched/num_primary_matched) \
+        if num_primary_matched > 0 else 0
+    job_body['totalUniqueSecondaryMatched'] = num_unique_secondaries
+
+    filename_param = f'&filename={filename}' if filename else ''
 
     # Construct urls
     formats = [
@@ -60,9 +72,15 @@ def construct_done(status, created, completed, execution_id, params, host):
         ('JSON', 'application/json'),
         ('NETCDF', 'binary/octet-stream')
     ]
+    job_body['links'].append({
+        'href': f'{host}/cdmscatalog/{execution_id}',
+        'title': 'STAC Catalog for execution results',
+        'type': 'application/json',
+        'rel': 'stac'
+    })
     data_links = [{
-        'href': f'{host}/cdmsresults?id={execution_id}&output={output_format}',
-        'title': 'Download results',
+        'href': f'{host}/cdmsresults?id={execution_id}&output={output_format}{filename_param}',
+        'title': f'Download {output_format} results',
         'type': mime,
         'rel': 'data'
     } for output_format, mime in formats]
@@ -70,14 +88,15 @@ def construct_done(status, created, completed, execution_id, params, host):
     return job_body
 
 
-def construct_running(status, created, execution_id, params, host):
+def construct_running(status, created, execution_id, params, host, filename):
     job_body = construct_job_status(
         status,
         created,
         None,
         execution_id,
         params,
-        host
+        host,
+        filename=filename
     )
     job_body['links'].append({
         'href': f'{host}/job/cancel?id={execution_id}',
@@ -87,7 +106,7 @@ def construct_running(status, created, execution_id, params, host):
     return job_body
 
 
-def construct_error(status, created, completed, execution_id, message, params, host):
+def construct_error(status, created, completed, execution_id, message, params, host, filename):
     return construct_job_status(
         status,
         created,
@@ -95,24 +114,27 @@ def construct_error(status, created, completed, execution_id, message, params, h
         execution_id,
         params,
         host,
-        message
+        message,
+        filename=filename
     )
 
 
-def construct_cancelled(status, created, completed, execution_id, params, host):
+def construct_cancelled(status, created, completed, execution_id, params, host, filename):
     return construct_job_status(
         status,
         created,
         completed,
         execution_id,
         params,
-        host
+        host,
+        filename=filename
     )
 
 
 class NexusExecutionResults:
     def __init__(self, status=None, created=None, completed=None, execution_id=None, message='',
-                 params=None, host=None, status_code=200):
+                 params=None, host=None, status_code=200, num_primary_matched=None,
+                 num_secondary_matched=None, num_unique_secondaries=None, filename=None):
         self.status_code = status_code
         self.status = status
         self.created = created
@@ -121,6 +143,10 @@ class NexusExecutionResults:
         self.message = message
         self.execution_params = params
         self.host = host
+        self.num_primary_matched = num_primary_matched
+        self.num_secondary_matched = num_secondary_matched
+        self.num_unique_secondaries = num_unique_secondaries
+        self.filename = filename
 
     def toJson(self):
         params = {
@@ -128,10 +154,14 @@ class NexusExecutionResults:
             'created': self.created,
             'execution_id': self.execution_id,
             'params': self.execution_params,
-            'host': self.host
+            'host': self.host,
+            'filename': self.filename
         }
         if self.status == ExecutionStatus.SUCCESS:
             params['completed'] = self.completed
+            params['num_primary_matched'] = self.num_primary_matched
+            params['num_secondary_matched'] = self.num_secondary_matched
+            params['num_unique_secondaries'] = self.num_unique_secondaries
             construct = construct_done
         elif self.status == ExecutionStatus.RUNNING:
             construct = construct_running
