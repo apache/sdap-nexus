@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - SDAP-506:
   - Added STAC Catalog endpoint for matchup outputs
 - SDAP-508: Added spatial extents to the satellite dataset entries in `/list` and `/cdmslist`
+- SDAP-495: Added visualization endpoint `/stv/lidar` to produce 2d and 3d visualizations of the [ABoVE LVIS 2017 & 2019 L3 Vegetation Structure dataset](https://daac.ornl.gov/ABOVE/guides/ABoVE_LVIS_VegetationStructure.html). These endpoints provide visualization for ground height, mean vegetation height (RH050), canopy height (RH098) and canopy complexity (CC >= 03p00m)
 ### Changed
 - SDAP-493: 
   - Updated /job endpoint to use `executionId` terminology for consistency with existing `/cdmsresults` endpoint
