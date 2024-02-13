@@ -318,8 +318,10 @@ class CoGBackend(AbstractTileService):
         return tiles
 
     @staticmethod
-    def __open_granule_at_url(url, time: np.datetime64, bands, config, **kwargs):
-        url = urlparse(url)
+    def __open_granule_at_url(url_s, time: np.datetime64, bands, config, **kwargs):
+        url = urlparse(url_s)
+
+        logger.debug(f'Opening cog at {url_s}')
 
         if url.scheme in ['file', '']:
             tiff = rioxarray.open_rasterio(url.path, mask_and_scale=True).to_dataset('band')
@@ -342,7 +344,7 @@ class CoGBackend(AbstractTileService):
                 AWSSession(session),
                 GDAL_DISABLE_READDIR_ON_OPEN='EMPTY_DIR'
             ):
-                tiff = rioxarray.open_rasterio(url, mask_and_scale=True)
+                tiff = rioxarray.open_rasterio(url_s, mask_and_scale=True)
 
                 #####
                 # NOTE: This will likely be inefficient so leaving it disabled for now. I don't know how it will
@@ -358,7 +360,6 @@ class CoGBackend(AbstractTileService):
         try:
             tiff = tiff.rio.reproject(dst_crs='EPSG:4326', nodata=np.nan)
         except MissingCRS:
-            # tiff.rio.write_crs('EPSG:4326').rio.reproject(dst_crs='EPSG:4326', nodata=np.nan)
             pass
 
         rename = dict(x='longitude', y='latitude')
@@ -411,7 +412,7 @@ class CoGBackend(AbstractTileService):
 
         granule = tile.granule
 
-        ds: xr.Dataset = CoGBackend.__open_granule_at_url(granule, np.datetime64(min_time.isoformat()), self.__bands, self.__config)
+        ds: xr.Dataset = CoGBackend.__open_granule_at_url(granule, np.datetime64(min_time.isoformat(), 'ns'), self.__bands, self.__config)
         variables = list(ds.data_vars)
 
         lats = ds[self.__latitude].to_numpy()

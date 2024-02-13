@@ -26,12 +26,12 @@ ARG CONDA_DIR="/opt/conda"
 ENV  \
     PYTHONPATH=/opt/conda/share/py4j/py4j0.10.9.2.jar \
     NEXUS_SRC=/tmp/incubator-sdap-nexus \
-    PROJ_LIB=/opt/conda/lib/python3.8/site-packages/pyproj/data	\
+    PROJ_LIB=/opt/conda/share/proj \
     PATH="$CONDA_DIR/bin:$PATH" \
     PYTHONDONTWRITEBYTECODE=1 \
     SPARK_HOME=/opt/spark \
-    PYSPARK_DRIVER_PYTHON=/opt/conda/bin/python3.8 \
-    PYSPARK_PYTHON=/opt/conda/bin/python3.8 \
+    PYSPARK_DRIVER_PYTHON=/opt/conda/bin/python3.9 \
+    PYSPARK_PYTHON=/opt/conda/bin/python3.9 \
     LD_LIBRARY_PATH=/usr/lib \
     REQUESTS_CA_BUNDLE=/etc/ssl/certs/ca-certificates.crt
 
@@ -65,6 +65,7 @@ COPY docker/nexus-webapp/install_conda.sh ./install_conda.sh
 RUN /tmp/install_conda.sh 
 
 RUN conda install -c conda-forge python=3.8.15=h257c98d_0_cpython tqdm=4.64.1=py38h06a4308_0  mamba && conda clean -afy
+RUN mamba install -c conda-forge python=3.9.7 && mamba clean -afy
 
 RUN cd /usr/lib && ln -s libcom_err.so.2 libcom_err.so.3 && \
     cd /opt/conda/lib && \
@@ -99,7 +100,7 @@ RUN pip install shapely==1.7.1
 
 WORKDIR /incubator-sdap-nexus/tools/deletebyquery
 ARG CASS_DRIVER_BUILD_CONCURRENCY=8
-RUN pip3 install cassandra-driver==3.20.1 pyspark py4j
+RUN pip3 install cassandra-driver==3.29.0 pyspark py4j
 RUN pip3 install -r requirements.txt
 RUN pip3 install cython
 
