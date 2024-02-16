@@ -24,8 +24,8 @@ from functools import partial
 from io import BytesIO
 from itertools import zip_longest, chain
 from tempfile import NamedTemporaryFile, TemporaryDirectory
+from typing import Tuple
 
-import matplotlib as mpl
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
@@ -50,6 +50,7 @@ logger = logging.getLogger(__name__)
 
 EPOCH = timezone('UTC').localize(datetime(1970, 1, 1))
 NP_EPOCH = np.datetime64('1970-01-01T00:00:00')
+PD_EPOCH = pd.Timestamp('1970-01-01T00:00:00')
 ISO_8601 = '%Y-%m-%dT%H:%M:%S%z'
 
 # Precomputed resolutions of LIDAR data grids, computed over the entire ABoVE dataset
@@ -214,11 +215,11 @@ class LidarVegetation(NexusCalcHandler):
         slice_line = None
 
         if render_type == '2D':
-            if (lat_slice is not None or lon_slice is not None) and slice_wkt is not None:
-                raise NexusProcessingException(
-                    reason='Cannot define latSlice and/or lonSlice and sliceWKT at the same time',
-                    code=400
-                )
+            # if (lat_slice is not None or lon_slice is not None) and slice_wkt is not None:
+            #     raise NexusProcessingException(
+            #         reason='Cannot define latSlice and/or lonSlice and sliceWKT at the same time',
+            #         code=400
+            #     )
 
             if lat_slice is not None:
                 parts = lat_slice.split(',')
@@ -612,10 +613,10 @@ class LidarVegetation(NexusCalcHandler):
         slice_wkt = None
 
         # tmp
-        # try:
-        #     ds.to_netcdf('/tmp/lidar.nc')
-        # except:
-        #     print('failed to dump test netcdf :(')
+        try:
+            ds.to_netcdf('/tmp/lidar.nc')
+        except:
+            print('failed to dump test netcdf :(')
 
         if lat_slice is not None:
             slice_lat, slice_min_lon, slice_max_lon = lat_slice
@@ -760,7 +761,7 @@ class LidarResults(NexusResults):
 
         return m
 
-    def results(self, reduce_time=False):
+    def results(self, reduce_time=False) -> Tuple[xr.Dataset, tuple]:
         ds, (lat_slice, lon_slice, line_slice) = NexusResults.results(self)
 
         if reduce_time and len(ds['time']) > 1:
@@ -776,31 +777,28 @@ class LidarResults(NexusResults):
 
         logger.info('Generating non-NaN points list')
 
-        for i, t in enumerate(ds.time):
-            for j, lat in enumerate(ds.lat):
-                for k, lon in enumerate(ds.lon):
-                    ds_point = ds.isel(time=i, lat=j, lon=k)
+        for pt in ds.to_dataframe().reset_index(level=['lat', 'lon', 'time']).itertuples():
+            zg = getattr(pt, 'ground_height')
+            rh50 = getattr(pt, 'mean_veg_height')
+            rh98 = getattr(pt, 'canopy_height')
+            cc = getattr(pt, 'canopy_coverage')
 
-                    zg = ds_point['ground_height'].item()
-                    rh50 = ds_point['mean_veg_height'].item()
-                    rh98 = ds_point['canopy_height'].item()
-                    cc = ds_point['canopy_coverage'].item()
+            if all([np.isnan(v) for v in [zg, rh50, rh98, cc]]):
+                continue
 
-                    if all([np.isnan(v) for v in [zg, rh50, rh98, cc]]):
-                        continue
+            ts: pd.Timestamp = getattr(pt, 'time')
+            point_ts = int((ts - PD_EPOCH).total_seconds())
 
-                    point_ts = int((t.data - NP_EPOCH) / np.timedelta64(1, 's'))
-
-                    points.append(dict(
-                        latitude=lat.item(),
-                        longitude=lon.item(),
-                        time=point_ts,
-                        time_iso=datetime.utcfromtimestamp(point_ts).strftime(ISO_8601),
-                        ground_height=zg,
-                        mean_vegetation_height=rh50,
-                        canopy_height=rh98,
-                        canopy_coverage=cc
-                    ))
+            points.append(dict(
+                latitude=getattr(pt, 'lat'),
+                longitude=getattr(pt, 'lon'),
+                time=point_ts,
+                time_iso=datetime.utcfromtimestamp(point_ts).strftime(ISO_8601),
+                ground_height=zg,
+                mean_vegetation_height=rh50,
+                canopy_height=rh98,
+                canopy_coverage=cc
+            ))
 
         if lat_slice is not None:
             if len(lat_slice['time']) > 1:
@@ -1110,11 +1108,10 @@ class LidarResults(NexusResults):
         buf.seek(0)
         return buf.read()
 
-    def toCSV(self):
-        points, slice_points = self.points_list()
+    def toCSV(self, points=None):
+        if points is None:
+            points, _ = self.points_list()
         df = pd.DataFrame(points)
-
-        # print(df)
 
         buffer = BytesIO()
 
@@ -1124,12 +1121,30 @@ class LidarResults(NexusResults):
         return buffer.read()
 
     def toZip(self):
-        csv_results = self.toCSV()
+        points, slice_points = self.points_list()
+
+        csv_results = self.toCSV(points)
+
+        csv_slices = []
+
+        for slice_type in slice_points:
+            s = slice_points[slice_type]
+
+            if slice_type in ['latitude', 'longitude']:
+                filename = f'{slice_type}_slice.csv'
+            else:
+                filename = 'line_slice.csv'
+
+            slice_csv = self.toCSV(s['slice'])
+
+            csv_slices.append((filename, slice_csv))
 
         buffer = BytesIO()
 
         with zipfile.ZipFile(buffer, 'w', zipfile.ZIP_DEFLATED) as zip:
             zip.writestr('lidar_subset.csv', csv_results)
+            for s in csv_slices:
+                zip.writestr(*s)
 
         buffer.seek(0)
         return buffer.read()
@@ -1154,8 +1169,6 @@ class LidarResults3D(NexusResults):
         fig = plt.figure(figsize=(10, 7))
         ax = fig.add_subplot(111, projection='3d')
         ax.view_init(elev=view_elev, azim=view_azim)
-
-        # ZG
 
         lats = np.unique(results['lat'].values)
         lons = np.unique(results['lon'].values)
