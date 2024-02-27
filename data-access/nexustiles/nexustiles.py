@@ -264,6 +264,13 @@ class NexusTileService(object):
         if 0 <= start_time <= end_time:
             tiles = self.mask_tiles_to_time_range(start_time, end_time, tiles)
 
+        if 'min_elevation' in kwargs or 'max_elevation' in kwargs:
+            tiles = self.mask_tiles_to_elevation(
+                kwargs.get('min_elevation'),
+                kwargs.get('max_elevation'),
+                tiles
+            )
+
         return tiles
 
     def get_tiles_bounded_by_polygon(self, polygon, ds=None, start_time=0, end_time=-1, **kwargs):
@@ -272,6 +279,13 @@ class NexusTileService(object):
         tiles = self.mask_tiles_to_polygon(polygon, tiles)
         if 0 <= start_time <= end_time:
             tiles = self.mask_tiles_to_time_range(start_time, end_time, tiles)
+
+        if 'min_elevation' in kwargs or 'max_elevation' in kwargs:
+            tiles = self.mask_tiles_to_elevation(
+                kwargs.get('min_elevation'),
+                kwargs.get('max_elevation'),
+                tiles
+            )
 
         return tiles
 
@@ -287,17 +301,38 @@ class NexusTileService(object):
         tiles = self.find_all_tiles_in_box_at_time(min_lat, max_lat, min_lon, max_lon, dataset, time, **kwargs)
         tiles = self.mask_tiles_to_bbox_and_time(min_lat, max_lat, min_lon, max_lon, time, time, tiles)
 
+        if 'min_elevation' in kwargs or 'max_elevation' in kwargs:
+            tiles = self.mask_tiles_to_elevation(
+                kwargs.get('min_elevation'),
+                kwargs.get('max_elevation'),
+                tiles
+            )
+
         return tiles
 
     def get_tiles_bounded_by_polygon_at_time(self, polygon, dataset, time, **kwargs):
         tiles = self.find_all_tiles_in_polygon_at_time(polygon, dataset, time, **kwargs)
         tiles = self.mask_tiles_to_polygon_and_time(polygon, time, time, tiles)
 
+        if 'min_elevation' in kwargs or 'max_elevation' in kwargs:
+            tiles = self.mask_tiles_to_elevation(
+                kwargs.get('min_elevation'),
+                kwargs.get('max_elevation'),
+                tiles
+            )
+
         return tiles
 
     def get_boundary_tiles_at_time(self, min_lat, max_lat, min_lon, max_lon, dataset, time, **kwargs):
         tiles = self.find_all_boundary_tiles_at_time(min_lat, max_lat, min_lon, max_lon, dataset, time, **kwargs)
         tiles = self.mask_tiles_to_bbox_and_time(min_lat, max_lat, min_lon, max_lon, time, time, tiles)
+
+        if 'min_elevation' in kwargs or 'max_elevation' in kwargs:
+            tiles = self.mask_tiles_to_elevation(
+                kwargs.get('min_elevation'),
+                kwargs.get('max_elevation'),
+                tiles
+            )
 
         return tiles
 
@@ -447,6 +482,12 @@ class NexusTileService(object):
         :param tiles: List of tiles
         :return: A list tiles with data masked to specified time range
         """
+        if min_e is None:
+            min_e = -float('inf')
+
+        if max_e is None:
+            max_e = float('inf')
+
         for tile in tiles:
             if tile.elevation is None:
                 continue

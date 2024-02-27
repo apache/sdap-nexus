@@ -173,7 +173,7 @@ class DataInBoundsSearchCalcHandlerImpl(NexusCalcHandler):
                 tile = tile_service.mask_tiles_to_bbox(min_lat, max_lat, min_lon, max_lon, [tile])
                 tile = tile_service.mask_tiles_to_time_range(start_time, end_time, tile)
 
-                if min_elevation and max_elevation:
+                if min_elevation is not None and max_elevation is not None:
                     tile = tile_service.mask_tiles_to_elevation(min_elevation, max_elevation, tile)
 
                 if len(tile) == 0:
