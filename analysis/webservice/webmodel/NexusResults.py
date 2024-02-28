@@ -17,7 +17,7 @@ import json
 from datetime import datetime
 
 from pytz import timezone
-from webservice.webmodel.CustomEncoder import CustomEncoder
+from analysis.webservice.webmodel.CustomEncoder import CustomEncoder
 
 ISO_8601 = '%Y-%m-%dT%H:%M:%S%z'
 

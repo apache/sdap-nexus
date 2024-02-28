@@ -26,6 +26,9 @@ from tornado.options import define, options, parse_command_line
 from webservice.redirect import RemoteCollectionMatcher
 from webservice.nexus_tornado.app_builders import NexusAppBuilder
 from webservice.nexus_tornado.app_builders import RedirectAppBuilder
+from analysis.webservice.redirect import RemoteCollectionMatcher
+from analysis.webservice.nexus_tornado.app_builders import NexusAppBuilder
+from analysis.webservice.nexus_tornado.app_builders import RedirectAppBuilder
 
 
 def inject_args_in_config(args, config):
@@ -49,7 +52,6 @@ def inject_args_in_config(args, config):
 
 
 def main():
-
     logging.basicConfig(
         level=logging.DEBUG,
         format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
@@ -57,6 +59,9 @@ def main():
     )
 
     log = logging.getLogger(__name__)
+
+    for line in banner:
+        log.info(line)
 
     web_config = configparser.RawConfigParser()
     web_config.read_file(open(os.path.join(os.path.dirname(__file__), "config", "web.ini")))

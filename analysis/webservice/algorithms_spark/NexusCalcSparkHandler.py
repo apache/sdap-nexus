@@ -17,9 +17,9 @@ import logging
 
 import numpy as np
 from netCDF4._netCDF4 import Dataset
-from webservice.algorithms.NexusCalcHandler import NexusCalcHandler
-from webservice.metrics import MetricsRecord, SparkAccumulatorMetricsField, NumberMetricsField
-from webservice.webmodel import NexusProcessingException
+from analysis.webservice.algorithms.NexusCalcHandler import NexusCalcHandler
+from analysis.webservice.metrics import MetricsRecord, SparkAccumulatorMetricsField, NumberMetricsField
+from analysis.webservice.webmodel import NexusProcessingException
 
 logger = logging.getLogger(__name__)
 

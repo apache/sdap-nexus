@@ -22,9 +22,9 @@ from datetime import datetime
 import requests
 
 from . import BaseDomsHandler
-from webservice.NexusHandler import nexus_handler
-from webservice.algorithms.doms import config as edge_endpoints
-from webservice.webmodel import NexusProcessingException, NoDataException
+from analysis.webservice.NexusHandler import nexus_handler
+from analysis.webservice.algorithms.doms import config as edge_endpoints
+from analysis.webservice.webmodel import NexusProcessingException, NoDataException
 
 ISO_8601 = '%Y-%m-%dT%H:%M:%S%z'
 

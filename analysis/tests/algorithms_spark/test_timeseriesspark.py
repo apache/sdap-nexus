@@ -23,12 +23,12 @@ import itertools
 from random import uniform
 
 import pytest
-import webservice.algorithms_spark.TimeSeriesSpark as timeseries
+import analysis.webservice.algorithms_spark.TimeSeriesSpark as timeseries
 from nexustiles.model.nexusmodel import Tile
 from pyspark.sql import SparkSession
 from shapely import wkt
 from shapely.geometry import box
-from webservice.algorithms_spark.TimeSeriesSpark import TimeSeriesSparkHandlerImpl
+from analysis.webservice.algorithms_spark.TimeSeriesSpark import TimeSeriesSparkHandlerImpl
 
 class MockSparkParam:
     def __init__(self, value):

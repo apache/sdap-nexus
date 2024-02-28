@@ -20,9 +20,9 @@ import numpy
 from datetime import datetime
 from pytz import timezone
 
-from webservice.NexusHandler import nexus_handler
-from webservice.algorithms.NexusCalcHandler import NexusCalcHandler
-from webservice.webmodel import NexusResults, NexusProcessingException
+from analysis.webservice.NexusHandler import nexus_handler
+from analysis.webservice.algorithms.NexusCalcHandler import NexusCalcHandler
+from analysis.webservice.webmodel import NexusResults, NexusProcessingException
 
 EPOCH = timezone('UTC').localize(datetime(1970, 1, 1))
 ISO_8601 = '%Y-%m-%dT%H:%M:%S%z'

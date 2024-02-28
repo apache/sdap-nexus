@@ -20,9 +20,9 @@ import zipfile
 from datetime import datetime
 
 from pytz import timezone
-from webservice.NexusHandler import nexus_handler
-from webservice.algorithms.doms.insitu import query_insitu
-from webservice.webmodel import NexusProcessingException, NexusResults
+from analysis.webservice.NexusHandler import nexus_handler
+from analysis.webservice.algorithms.doms.insitu import query_insitu
+from analysis.webservice.webmodel import NexusProcessingException, NexusResults
 
 from . import BaseDomsHandler
 

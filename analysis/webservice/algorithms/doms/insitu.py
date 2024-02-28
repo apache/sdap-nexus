@@ -19,7 +19,7 @@ Module for querying CDMS In-Situ API
 import logging
 import requests
 from datetime import datetime
-from webservice.algorithms.doms import config as insitu_endpoints
+from analysis.webservice.algorithms.doms import config as insitu_endpoints
 
 
 def query_insitu_schema():

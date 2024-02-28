@@ -20,9 +20,9 @@ import numpy as np
 import shapely.geometry
 from pytz import timezone
 
-from webservice.NexusHandler import nexus_handler
-from webservice.algorithms_spark.NexusCalcSparkHandler import NexusCalcSparkHandler
-from webservice.webmodel import NexusResults, NexusProcessingException, NoDataException
+from analysis.webservice.NexusHandler import nexus_handler
+from analysis.webservice.algorithms_spark.NexusCalcSparkHandler import NexusCalcSparkHandler
+from analysis.webservice.webmodel import NexusResults, NexusProcessingException, NoDataException
 
 EPOCH = timezone('UTC').localize(datetime(1970, 1, 1))
 ISO_8601 = '%Y-%m-%dT%H:%M:%S%z'

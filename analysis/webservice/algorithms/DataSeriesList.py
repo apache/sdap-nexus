@@ -16,11 +16,11 @@
 
 import json
 
-from webservice.algorithms.NexusCalcHandler import NexusCalcHandler
-from webservice.redirect import RemoteSDAPCache
-from webservice.redirect import CollectionNotFound
-from webservice.NexusHandler import nexus_handler
-from webservice.webmodel import cached
+from analysis.webservice.algorithms.NexusCalcHandler import NexusCalcHandler
+from analysis.webservice.redirect import RemoteSDAPCache
+from analysis.webservice.redirect import CollectionNotFound
+from analysis.webservice.NexusHandler import nexus_handler
+from analysis.webservice.webmodel import cached
 
 import logging
 

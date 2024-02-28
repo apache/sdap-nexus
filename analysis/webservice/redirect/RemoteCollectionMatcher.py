@@ -15,7 +15,7 @@
 
 import yaml
 from tornado.routing import Matcher
-from webservice.webmodel.RequestParameters import RequestParameters
+from analysis.webservice.webmodel.RequestParameters import RequestParameters
 from tornado.httputil import HTTPServerRequest
 
 

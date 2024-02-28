@@ -16,9 +16,9 @@
 
 import json
 
-from webservice.NexusHandler import nexus_handler, AVAILABLE_HANDLERS
-from webservice.algorithms.NexusCalcHandler import NexusCalcHandler
-from webservice.webmodel import NexusResults
+from analysis.webservice.NexusHandler import nexus_handler, AVAILABLE_HANDLERS
+from analysis.webservice.algorithms.NexusCalcHandler import NexusCalcHandler
+from analysis.webservice.webmodel import NexusResults
 
 
 @nexus_handler

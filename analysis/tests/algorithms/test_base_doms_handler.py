@@ -19,7 +19,7 @@ import csv
 import pytest
 from netCDF4 import Dataset
 import io
-from webservice.algorithms.doms.BaseDomsHandler import DomsCSVFormatter, DomsNetCDFFormatter
+from analysis.webservice.algorithms.doms.BaseDomsHandler import DomsCSVFormatter, DomsNetCDFFormatter
 
 
 @pytest.fixture()
