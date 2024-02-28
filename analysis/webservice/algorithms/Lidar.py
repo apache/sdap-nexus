@@ -40,7 +40,7 @@ from shapely.geometry import LineString
 from shapely.errors import ShapelyError
 from webservice.NexusHandler import nexus_handler
 from webservice.algorithms.NexusCalcHandler import NexusCalcHandler
-from webservice.webmodel import NexusResults, NexusProcessingException
+from webservice.webmodel import NexusResults, NexusProcessingException, NoDataException
 
 logger = logging.getLogger(__name__)
 
@@ -358,6 +358,9 @@ class LidarVegetation(NexusCalcHandler):
         logger.info(f'Matched tile counts by variable: ZG={len(tiles_zg):,}, RH050={len(tiles_rh50):,}, '
                     f'RH098={len(tiles_rh98):,}, CC={len(tiles_cc):,}')
 
+        if all([len(t) == 0 for t in [tiles_zg, tiles_rh50, tiles_rh98, tiles_cc]]):
+            raise NoDataException(reason='No data was found within the selected parameters')
+
         points_zg, points_50, points_98, points_cc = [], [], [], []
 
         sources = set()
@@ -611,12 +614,6 @@ class LidarVegetation(NexusCalcHandler):
         slice_min_lat, slice_max_lat = None, None
         slice_min_lon, slice_max_lon = None, None
         slice_wkt = None
-
-        # tmp
-        try:
-            ds.to_netcdf('/tmp/lidar.nc')
-        except:
-            print('failed to dump test netcdf :(')
 
         if lat_slice is not None:
             slice_lat, slice_min_lon, slice_max_lon = lat_slice
