@@ -23,9 +23,9 @@ from nexustiles.nexustiles import NexusTileService
 from shapely import wkt
 from shapely.geometry import Polygon
 
-from webservice.NexusHandler import nexus_handler
-from webservice.algorithms_spark.NexusCalcSparkHandler import NexusCalcSparkHandler
-from webservice.webmodel import NexusResults, NexusProcessingException
+from analysis.webservice.NexusHandler import nexus_handler
+from analysis.webservice.algorithms_spark.NexusCalcSparkHandler import NexusCalcSparkHandler
+from analysis.webservice.webmodel import NexusResults, NexusProcessingException
 
 SENTINEL = 'STOP'
 

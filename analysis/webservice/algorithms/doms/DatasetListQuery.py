@@ -21,9 +21,9 @@ import requests
 from . import BaseDomsHandler
 from . import config
 from . import values
-from webservice.algorithms.NexusCalcHandler import NexusCalcHandler as BaseHandler
-from webservice.NexusHandler import nexus_handler
-from webservice.webmodel import cached, NexusResults
+from analysis.webservice.algorithms.NexusCalcHandler import NexusCalcHandler as BaseHandler
+from analysis.webservice.NexusHandler import nexus_handler
+from analysis.webservice.webmodel import cached, NexusResults
 
 
 @nexus_handler

@@ -20,9 +20,9 @@
 import sys
 import numpy as np
 from time import time
-from webservice.NexusHandler import DEFAULT_PARAMETERS_SPEC
-from webservice.algorithms.NexusCalcHandler import NexusCalcHandler
-from webservice.webmodel import NexusResults, NoDataException
+from analysis.webservice.NexusHandler import DEFAULT_PARAMETERS_SPEC
+from analysis.webservice.algorithms.NexusCalcHandler import NexusCalcHandler
+from analysis.webservice.webmodel import NexusResults, NoDataException
 from netCDF4 import Dataset
 
 

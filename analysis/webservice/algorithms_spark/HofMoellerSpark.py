@@ -26,10 +26,10 @@ from matplotlib import cm
 from matplotlib.ticker import FuncFormatter
 from pytz import timezone
 
-from webservice.NexusHandler import nexus_handler
-from webservice.algorithms_spark.NexusCalcSparkHandler import NexusCalcSparkHandler
-from webservice.algorithms_spark import utils
-from webservice.webmodel import NexusResults, NoDataException, NexusProcessingException
+from analysis.webservice.NexusHandler import nexus_handler
+from analysis.webservice.algorithms_spark.NexusCalcSparkHandler import NexusCalcSparkHandler
+from analysis.webservice.algorithms_spark import utils
+from analysis.webservice.webmodel import NexusResults, NoDataException, NexusProcessingException
 
 EPOCH = timezone('UTC').localize(datetime(1970, 1, 1))
 ISO_8601 = '%Y-%m-%dT%H:%M:%SZ'

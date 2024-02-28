@@ -34,13 +34,13 @@ from shapely.geometry import Point
 from shapely.geometry import box
 from shapely.geos import WKTReadingError
 
-from webservice.NexusHandler import nexus_handler
-from webservice.algorithms_spark.NexusCalcSparkHandler import NexusCalcSparkHandler
-from webservice.algorithms.doms import config as edge_endpoints
-from webservice.algorithms.doms import values as doms_values
-from webservice.algorithms.doms.BaseDomsHandler import DomsQueryResults
-from webservice.algorithms.doms.ResultsStorage import ResultsStorage
-from webservice.webmodel import NexusProcessingException
+from analysis.webservice.NexusHandler import nexus_handler
+from analysis.webservice.algorithms_spark.NexusCalcSparkHandler import NexusCalcSparkHandler
+from analysis.webservice.algorithms.doms import config as edge_endpoints
+from analysis.webservice.algorithms.doms import values as doms_values
+from analysis.webservice.algorithms.doms.BaseDomsHandler import DomsQueryResults
+from analysis.webservice.algorithms.doms.ResultsStorage import ResultsStorage
+from analysis.webservice.webmodel import NexusProcessingException
 
 EPOCH = timezone('UTC').localize(datetime(1970, 1, 1))
 ISO_8601 = '%Y-%m-%dT%H:%M:%S%z'

@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from webservice.webmodel.StandardNexusErrors import StandardNexusErrors
+from analysis.webservice.webmodel.StandardNexusErrors import StandardNexusErrors
 
 
 class NexusProcessingException(Exception):

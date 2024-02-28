@@ -19,8 +19,8 @@ from pytz import timezone
 
 from . import BaseDomsHandler
 from . import datafetch
-from webservice.algorithms.NexusCalcHandler import NexusCalcHandler as BaseHandler
-from webservice.NexusHandler import nexus_handler
+from analysis.webservice.algorithms.NexusCalcHandler import NexusCalcHandler as BaseHandler
+from analysis.webservice.NexusHandler import nexus_handler
 
 EPOCH = timezone('UTC').localize(datetime(1970, 1, 1))
 

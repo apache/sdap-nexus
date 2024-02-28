@@ -19,7 +19,7 @@ from os import listdir
 from os.path import dirname, join, realpath, abspath, isfile
 
 import pytest
-from webservice.algorithms.doms.subsetter import SubsetResult
+from analysis.webservice.algorithms.doms.subsetter import SubsetResult
 
 
 def test_to_csv(input_data):

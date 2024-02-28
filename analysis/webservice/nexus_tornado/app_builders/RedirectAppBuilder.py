@@ -13,8 +13,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from webservice.redirect import RedirectHandler
-from webservice.redirect import RemoteCollectionMatcher
+from analysis.webservice.redirect import RedirectHandler
+from analysis.webservice.redirect import RemoteCollectionMatcher
 import tornado
 
 

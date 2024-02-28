@@ -24,7 +24,7 @@ from cassandra.cluster import Cluster
 from cassandra.cluster import NoHostAvailable
 from cassandra.policies import (DCAwareRoundRobinPolicy, TokenAwarePolicy,
                                 WhiteListRoundRobinPolicy)
-from webservice.NexusHandler import nexus_initializer
+from analysis.webservice.NexusHandler import nexus_initializer
 
 
 @nexus_initializer

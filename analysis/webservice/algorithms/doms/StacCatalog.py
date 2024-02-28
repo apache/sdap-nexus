@@ -18,10 +18,10 @@ import re
 import uuid
 from typing import List
 
-from webservice.NexusHandler import nexus_handler
-from webservice.algorithms.doms.ResultsStorage import ResultsRetrieval
-from webservice.webmodel import NexusProcessingException
-from webservice.webmodel import NexusResults
+from analysis.webservice.NexusHandler import nexus_handler
+from analysis.webservice.algorithms.doms.ResultsStorage import ResultsRetrieval
+from analysis.webservice.webmodel import NexusProcessingException
+from analysis.webservice.webmodel import NexusResults
 
 from . import BaseDomsHandler
 

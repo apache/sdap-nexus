@@ -28,9 +28,9 @@ import numpy as np
 from matplotlib import cm
 from matplotlib.ticker import FuncFormatter
 
-from webservice.NexusHandler import nexus_handler, DEFAULT_PARAMETERS_SPEC
-from webservice.algorithms.NexusCalcHandler import NexusCalcHandler
-from webservice.webmodel import NexusProcessingException, NexusResults
+from analysis.webservice.NexusHandler import nexus_handler, DEFAULT_PARAMETERS_SPEC
+from analysis.webservice.algorithms.NexusCalcHandler import NexusCalcHandler
+from analysis.webservice.webmodel import NexusProcessingException, NexusResults
 
 SENTINEL = 'STOP'
 LATITUDE = 0

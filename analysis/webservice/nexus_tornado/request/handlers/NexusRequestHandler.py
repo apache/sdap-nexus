@@ -18,9 +18,9 @@ import logging
 import tornado.gen
 import tornado.ioloop
 
-from webservice.nexus_tornado.request.renderers import NexusRendererFactory
-from webservice.webmodel import NexusRequestObjectTornadoFree, NexusRequestObject, NexusProcessingException
-from webservice.algorithms_spark.NexusCalcSparkTornadoHandler import NexusCalcSparkTornadoHandler
+from analysis.webservice.nexus_tornado.request.renderers import NexusRendererFactory
+from analysis.webservice.webmodel import NexusRequestObjectTornadoFree, NexusRequestObject, NexusProcessingException
+from analysis.webservice.algorithms_spark.NexusCalcSparkTornadoHandler import NexusCalcSparkTornadoHandler
 
 
 class NexusRequestHandler(tornado.web.RequestHandler):
