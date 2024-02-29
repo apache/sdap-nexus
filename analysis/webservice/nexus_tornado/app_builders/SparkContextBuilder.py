@@ -26,7 +26,7 @@ class SparkContextBuilder:
         if cls.spark_context is None:
             from pyspark.sql import SparkSession
 
-            scheduler_path = pkg_resources.resource_filename('webservice', "config/scheduler.xml")
+            scheduler_path = pkg_resources.resource_filename('analysis.webservice', "config/scheduler.xml")
 
             spark = SparkSession.builder.appName("nexus-analysis").config(
                 "spark.scheduler.allocation.file", scheduler_path

@@ -739,7 +739,7 @@ def match_satellite_to_insitu(tile_ids, primary_b, secondary_b, parameter_b, tt_
 def match_tile_to_point_generator(tile_service, tile_id, m_tree, edge_results, search_domain_bounding_wkt,
                                   search_parameter, radius_tolerance, aeqd_proj):
     from nexustiles.model.nexusmodel import NexusPoint
-    from webservice.algorithms_spark.MatchupDoms import DomsPoint  # Must import DomsPoint or Spark complains
+    from analysis.webservice.algorithms_spark.MatchupDoms import DomsPoint  # Must import DomsPoint or Spark complains
 
     # Load tile
     try:

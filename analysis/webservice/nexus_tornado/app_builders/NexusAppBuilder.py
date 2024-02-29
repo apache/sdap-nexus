@@ -38,7 +38,7 @@ class NexusAppBuilder:
         self.handlers.append(
             (r'/apidocs', tornado.web.RedirectHandler, {"url": "/apidocs/"}))
 
-        apidocs_path = pkg_resources.resource_filename('webservice.apidocs', '')
+        apidocs_path = pkg_resources.resource_filename('analysis.webservice.apidocs', '')
         self.handlers.append(
             (
                 r'/apidocs/(.*)', tornado.web.StaticFileHandler,
