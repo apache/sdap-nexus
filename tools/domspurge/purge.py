@@ -30,8 +30,8 @@ from six.moves import input
 from tqdm import tqdm
 
 try:
-    logging.getLogger('analysis.webservice.NexusHandler').setLevel(logging.CRITICAL)
-    from analysis.webservice.algorithms.doms.DomsInitialization import DomsInitializer
+    logging.getLogger('webservice.NexusHandler').setLevel(logging.CRITICAL)
+    from webservice.algorithms.doms.DomsInitialization import DomsInitializer
 except ImportError:
     from DomsInitialization import DomsInitializer
 

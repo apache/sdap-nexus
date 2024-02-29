@@ -34,17 +34,17 @@ class HandlerArgsBuilder:
     @staticmethod
     def handler_needs_algorithm_config(class_wrapper):
         return (
-                class_wrapper == analysis.webservice.algorithms_spark.Matchup.Matchup
-                or class_wrapper == analysis.webservice.algorithms_spark.MatchupDoms.MatchupDoms
-                or issubclass(class_wrapper, analysis.webservice.algorithms.doms.BaseDomsHandler.BaseDomsQueryCalcHandler)
+                class_wrapper == webservice.algorithms_spark.Matchup.Matchup
+                or class_wrapper == webservice.algorithms_spark.MatchupDoms.MatchupDoms
+                or issubclass(class_wrapper, webservice.algorithms.doms.BaseDomsHandler.BaseDomsQueryCalcHandler)
                 or issubclass(class_wrapper,
-                              analysis.webservice.algorithms_spark.NexusCalcSparkTornadoHandler.NexusCalcSparkTornadoHandler)
-                or class_wrapper == analysis.webservice.algorithms.doms.ResultsRetrieval.DomsResultsRetrievalHandler
+                              webservice.algorithms_spark.NexusCalcSparkTornadoHandler.NexusCalcSparkTornadoHandler)
+                or class_wrapper == webservice.algorithms.doms.ResultsRetrieval.DomsResultsRetrievalHandler
         )
 
     @staticmethod
     def handler_needs_remote_collections(class_wrapper):
-        return class_wrapper == analysis.webservice.algorithms.DataSeriesList.DataSeriesListCalcHandlerImpl
+        return class_wrapper == webservice.algorithms.DataSeriesList.DataSeriesListCalcHandlerImpl
 
     def get_args(self, clazz_wrapper):
         args = dict(
@@ -53,7 +53,7 @@ class HandlerArgsBuilder:
             thread_pool=self.request_thread_pool
         )
 
-        if issubclass(clazz_wrapper, analysis.webservice.algorithms_spark.NexusCalcSparkHandler.NexusCalcSparkHandler):
+        if issubclass(clazz_wrapper, webservice.algorithms_spark.NexusCalcSparkHandler.NexusCalcSparkHandler):
             args['sc'] = SparkContextBuilder.get_spark_context()
 
         if self.handler_needs_algorithm_config(clazz_wrapper):
