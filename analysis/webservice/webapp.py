@@ -27,27 +27,6 @@ from analysis.webservice.redirect import RemoteCollectionMatcher
 from analysis.webservice.nexus_tornado.app_builders import NexusAppBuilder
 from analysis.webservice.nexus_tornado.app_builders import RedirectAppBuilder
 
-try:
-    from importlib.metadata import version as _version
-    from importlib.metadata import files as _files
-except ImportError:
-    from importlib_metadata import version as _version
-
-try:
-    __version__ = _version('nexusanalysis')
-except Exception:
-    __version__ = 'Cannot be determined'
-
-banner = [
-     '',
-     ' ____  ____    _    ____    | ',
-     '/ ___||  _ \\  / \\  |  _ \\   | Apache SDAP',
-     '\\___ \\| | | |/ _ \\ | |_) |  | Science Data Analytics Platform',
-     f' ___) | |_| / ___ \\|  __/   | Version: {__version__}',
-     '|____/|____/_/   \\_\\_|      | ',
-     ''
-]
-
 
 def inject_args_in_config(args, config):
     """
