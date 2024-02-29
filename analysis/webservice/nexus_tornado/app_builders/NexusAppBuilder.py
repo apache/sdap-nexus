@@ -19,8 +19,8 @@ from functools import partial
 import pkg_resources
 import tornado
 from nexustiles.nexustiles import NexusTileService
-from analysis.webservice.import NexusHandler
-from analysis.webservice.nexus_tornado.request.handlers import NexusRequestHandler
+from webservice import NexusHandler
+from webservice.nexus_tornado.request.handlers import NexusRequestHandler
 from .HandlerArgsBuilder import HandlerArgsBuilder
 
 

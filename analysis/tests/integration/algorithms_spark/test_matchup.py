@@ -17,7 +17,7 @@ import unittest
 
 import pytest
 from shapely import wkt
-from analysis.webservice.algorithms_spark.Matchup import *
+from webservice.algorithms_spark.Matchup import *
 
 
 @pytest.mark.integration

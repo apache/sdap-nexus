@@ -19,9 +19,9 @@ import logging
 import sys
 import os
 import pkg_resources
-from analysis.webservice.import nexus_tornado
+from webservice import nexus_tornado
 from .nexus_tornado.options import define, options, parse_command_line
-from analysis.webservice.NexusLivyHandler import LivyHandler
+from webservice.NexusLivyHandler import LivyHandler
 
 class RunFileHandler(nexus_tornado.web.RequestHandler):
 

@@ -23,9 +23,9 @@ from nexustiles.model.nexusmodel import get_approximate_value_for_lat_lon
 from scipy.stats import linregress
 from shapely.geometry import box
 
-from analysis.webservice.NexusHandler import nexus_handler, DEFAULT_PARAMETERS_SPEC
-from analysis.webservice.algorithms.NexusCalcHandler import NexusCalcHandler
-from analysis.webservice.webmodel import NexusProcessingException, NexusResults
+from webservice.NexusHandler import nexus_handler, DEFAULT_PARAMETERS_SPEC
+from webservice.algorithms.NexusCalcHandler import NexusCalcHandler
+from webservice.webmodel import NexusProcessingException, NexusResults
 
 
 @nexus_handler

@@ -19,9 +19,9 @@ import requests
 from datetime import datetime
 from datetime import timedelta
 
-from analysis.webservice.redirect import RemoteSDAPCache
-from analysis.webservice.redirect import CollectionNotFound
-from analysis.webservice.redirect.RemoteSDAPCache import RemoteSDAPList
+from webservice.redirect import RemoteSDAPCache
+from webservice.redirect import CollectionNotFound
+from webservice.redirect.RemoteSDAPCache import RemoteSDAPList
 
 class MockResponse:
     def __init__(self, json_data, status_code):

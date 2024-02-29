@@ -22,12 +22,12 @@ from datetime import datetime, timezone
 import mock
 import numpy as np
 import pytest
-import analysis.webservice.algorithms_spark.Matchup as matchup
+import webservice.algorithms_spark.Matchup as matchup
 from nexustiles.model.nexusmodel import Tile, TileVariable
 from pyspark.sql import SparkSession
 from shapely import wkt
 from shapely.geometry import box
-from analysis.webservice.algorithms_spark.Matchup import DomsPoint, Matchup, DataPoint, spark_matchup_driver
+from webservice.algorithms_spark.Matchup import DomsPoint, Matchup, DataPoint, spark_matchup_driver
 
 
 class MockSparkParam:

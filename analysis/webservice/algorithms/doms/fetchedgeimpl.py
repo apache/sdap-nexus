@@ -22,7 +22,7 @@ import requests
 
 from . import geo
 from . import values
-from analysis.webservice.webmodel import NexusProcessingException
+from webservice.webmodel import NexusProcessingException
 
 
 def __parseDatetime(dtString):

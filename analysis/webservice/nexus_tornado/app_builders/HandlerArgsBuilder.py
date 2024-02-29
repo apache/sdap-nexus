@@ -14,7 +14,7 @@
 # limitations under the License.
 
 import tornado
-import analysis.webservice.algorithms_spark.NexusCalcSparkHandler
+import webservice.algorithms_spark.NexusCalcSparkHandler
 from .SparkContextBuilder import SparkContextBuilder
 
 

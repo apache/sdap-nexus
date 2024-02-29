@@ -16,10 +16,10 @@
 import uuid
 
 from . import BaseDomsHandler
-from analysis.webservice.NexusHandler import nexus_handler
-from analysis.webservice.algorithms.doms.ResultsStorage import ResultsRetrieval
-from analysis.webservice.webmodel import NexusExecutionResults
-from analysis.webservice.webmodel import NexusProcessingException
+from webservice.NexusHandler import nexus_handler
+from webservice.algorithms.doms.ResultsStorage import ResultsRetrieval
+from webservice.webmodel import NexusExecutionResults
+from webservice.webmodel import NexusProcessingException
 
 
 @nexus_handler

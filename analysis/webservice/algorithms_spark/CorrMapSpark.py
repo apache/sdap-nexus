@@ -19,9 +19,9 @@ from functools import partial
 
 import numpy as np
 
-from analysis.webservice.NexusHandler import nexus_handler, DEFAULT_PARAMETERS_SPEC
-from analysis.webservice.algorithms_spark.NexusCalcSparkHandler import NexusCalcSparkHandler
-from analysis.webservice.webmodel import NexusProcessingException, NexusResults, NoDataException
+from webservice.NexusHandler import nexus_handler, DEFAULT_PARAMETERS_SPEC
+from webservice.algorithms_spark.NexusCalcSparkHandler import NexusCalcSparkHandler
+from webservice.webmodel import NexusProcessingException, NexusResults, NoDataException
 
 
 @nexus_handler

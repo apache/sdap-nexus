@@ -15,7 +15,7 @@
 
 import sys
 import traceback
-from analysis.webservice.webmodel import NexusProcessingException
+from webservice.webmodel import NexusProcessingException
 
 
 class NexusZIPRenderer(object):
