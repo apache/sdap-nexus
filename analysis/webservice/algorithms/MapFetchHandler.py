@@ -30,9 +30,9 @@ from PIL import ImageFont
 from dateutil.relativedelta import *
 
 from . import colortables
-import analysis.webservice.GenerateImageMRF as MRF
-from analysis.webservice.algorithms.NexusCalcHandler import NexusCalcHandler as BaseHandler
-from analysis.webservice.NexusHandler import nexus_handler
+import webservice.GenerateImageMRF as MRF
+from webservice.algorithms.NexusCalcHandler import NexusCalcHandler as BaseHandler
+from webservice.NexusHandler import nexus_handler
 
 
 @nexus_handler

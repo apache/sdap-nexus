@@ -22,9 +22,9 @@ from datetime import datetime
 import numpy as np
 from nexustiles.nexustiles import NexusTileService
 
-from analysis.webservice.NexusHandler import nexus_handler, DEFAULT_PARAMETERS_SPEC
-from analysis.webservice.algorithms_spark.NexusCalcSparkHandler import NexusCalcSparkHandler
-from analysis.webservice.webmodel import NexusResults, NexusProcessingException, NoDataException
+from webservice.NexusHandler import nexus_handler, DEFAULT_PARAMETERS_SPEC
+from webservice.algorithms_spark.NexusCalcSparkHandler import NexusCalcSparkHandler
+from webservice.webmodel import NexusResults, NexusProcessingException, NoDataException
 from functools import partial
 
 @nexus_handler

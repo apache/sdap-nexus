@@ -26,8 +26,8 @@ from cassandra.cluster import Cluster
 from cassandra.concurrent import execute_concurrent_with_args
 from cassandra.policies import TokenAwarePolicy, DCAwareRoundRobinPolicy
 from pytz import UTC
-from analysis.webservice.algorithms.doms.BaseDomsHandler import DomsEncoder
-from analysis.webservice.webmodel import NexusProcessingException
+from webservice.algorithms.doms.BaseDomsHandler import DomsEncoder
+from webservice.webmodel import NexusProcessingException
 
 BATCH_SIZE = 1024
 

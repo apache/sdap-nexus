@@ -30,7 +30,7 @@ try:
 except:
     pass
 
-from analysis.webservice.algorithms.doms.DomsInitialization import DomsInitializer
+from webservice.algorithms.doms.DomsInitialization import DomsInitializer
 
 BATCH_SIZE = 1024
 log = logging.getLogger(__name__)

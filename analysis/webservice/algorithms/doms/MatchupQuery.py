@@ -28,7 +28,7 @@ from . import datafetch
 from . import fetchedgeimpl
 from . import geo
 from . import workerthread
-from analysis.webservice.NexusHandler import nexus_handler
+from webservice.NexusHandler import nexus_handler
 
 
 @nexus_handler

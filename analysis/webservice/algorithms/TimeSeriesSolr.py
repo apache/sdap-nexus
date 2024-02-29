@@ -26,10 +26,10 @@ import numpy as np
 from nexustiles.nexustiles import NexusTileService
 from scipy import stats
 
-from analysis.webservice.import Filtering as filt
-from analysis.webservice.NexusHandler import nexus_handler, DEFAULT_PARAMETERS_SPEC
-from analysis.webservice.algorithms.NexusCalcHandler import NexusCalcHandler
-from analysis.webservice.webmodel import NexusResults, NexusProcessingException, NoDataException
+from webservice import Filtering as filt
+from webservice.NexusHandler import nexus_handler, DEFAULT_PARAMETERS_SPEC
+from webservice.algorithms.NexusCalcHandler import NexusCalcHandler
+from webservice.webmodel import NexusResults, NexusProcessingException, NoDataException
 
 SENTINEL = 'STOP'
 

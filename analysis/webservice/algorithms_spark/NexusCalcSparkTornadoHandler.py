@@ -14,7 +14,7 @@
 # limitations under the License.
 
 import logging
-from analysis.webservice.algorithms_spark.NexusCalcSparkHandler import NexusCalcSparkHandler
+from webservice.algorithms_spark.NexusCalcSparkHandler import NexusCalcSparkHandler
 
 logger = logging.getLogger(__name__)
 

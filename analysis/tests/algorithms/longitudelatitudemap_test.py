@@ -24,10 +24,10 @@ from shapely.geometry import box
 from tornado.testing import bind_unused_port
 from tornado.web import Application
 #from webapp import ModularNexusHandlerWrapper
-from analysis.webservice.webmodel import NexusRequestObject
-from analysis.webservice.nexus_tornado.request.handlers import NexusRequestHandler
+from webservice.webmodel import NexusRequestObject
+from webservice.nexus_tornado.request.handlers import NexusRequestHandler
 
-from analysis.webservice.algorithms import LongitudeLatitudeMap
+from webservice.algorithms import LongitudeLatitudeMap
 
 
 class TestLongitudeLatitudeMap(unittest.TestCase):

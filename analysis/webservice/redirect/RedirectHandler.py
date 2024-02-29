@@ -16,7 +16,7 @@
 import tornado.web
 import tornado.gen
 import logging
-from analysis.webservice.webmodel.RequestParameters import RequestParameters
+from webservice.webmodel.RequestParameters import RequestParameters
 
 logger = logging.getLogger(__name__)
 

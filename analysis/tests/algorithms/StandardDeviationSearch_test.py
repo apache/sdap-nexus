@@ -27,8 +27,8 @@ from nexustiles.nexustiles import NexusTileService
 from tornado.testing import AsyncHTTPTestCase, bind_unused_port
 import tornado.web
 
-from analysis.webservice.algorithms import StandardDeviationSearch
-from analysis.webservice.nexus_tornado.request.handlers.NexusRequestHandler import NexusRequestHandler
+from webservice.algorithms import StandardDeviationSearch
+from webservice.nexus_tornado.request.handlers.NexusRequestHandler import NexusRequestHandler
 
 
 class HttpParametersTest(AsyncHTTPTestCase):

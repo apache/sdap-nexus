@@ -14,8 +14,8 @@
 # limitations under the License.
 
 
-from analysis.webservice.NexusHandler import nexus_handler
-from analysis.webservice.algorithms.NexusCalcHandler import NexusCalcHandler
+from webservice.NexusHandler import nexus_handler
+from webservice.algorithms.NexusCalcHandler import NexusCalcHandler
 
 
 @nexus_handler

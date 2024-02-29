@@ -19,8 +19,8 @@ from datetime import datetime
 from decimal import Decimal
 
 from pytz import UTC
-from analysis.webservice.webmodel.RequestParameters import RequestParameters
-from analysis.webservice.webmodel.StatsComputeOptions import StatsComputeOptions
+from webservice.webmodel.RequestParameters import RequestParameters
+from webservice.webmodel.StatsComputeOptions import StatsComputeOptions
 
 
 class NexusRequestObjectTornadoFree(StatsComputeOptions):

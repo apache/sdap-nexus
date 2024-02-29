@@ -21,7 +21,7 @@ import os
 import logging
 import mock
 
-from analysis.webservice.webapp import inject_args_in_config
+from webservice.webapp import inject_args_in_config
 
 logging.basicConfig(
         level=logging.DEBUG,

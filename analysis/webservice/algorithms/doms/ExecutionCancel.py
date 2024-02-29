@@ -15,14 +15,14 @@
 
 import uuid
 
-from analysis.webservice.NexusHandler import nexus_handler
-from analysis.webservice.algorithms.doms.ResultsStorage import ResultsRetrieval
-from analysis.webservice.webmodel import NexusExecutionResults
-from analysis.webservice.algorithms_spark.NexusCalcSparkTornadoHandler import NexusCalcSparkTornadoHandler
+from webservice.NexusHandler import nexus_handler
+from webservice.algorithms.doms.ResultsStorage import ResultsRetrieval
+from webservice.webmodel import NexusExecutionResults
+from webservice.algorithms_spark.NexusCalcSparkTornadoHandler import NexusCalcSparkTornadoHandler
 from datetime import datetime
-from analysis.webservice.algorithms.doms.ResultsStorage import ResultsStorage
-from analysis.webservice.webmodel.NexusExecutionResults import ExecutionStatus
-from analysis.webservice.webmodel import NexusProcessingException
+from webservice.algorithms.doms.ResultsStorage import ResultsStorage
+from webservice.webmodel.NexusExecutionResults import ExecutionStatus
+from webservice.webmodel import NexusProcessingException
 
 
 @nexus_handler

@@ -15,7 +15,7 @@
 
 
 
-from analysis.webservice.NexusHandler import nexus_initializer
+from webservice.NexusHandler import nexus_initializer
 
 
 @nexus_initializer

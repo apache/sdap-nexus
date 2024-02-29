@@ -19,9 +19,9 @@ import requests
 
 from . import BaseDomsHandler
 from . import config
-from analysis.webservice.algorithms.NexusCalcHandler import NexusCalcHandler as BaseHandler
-from analysis.webservice.NexusHandler import nexus_handler
-from analysis.webservice.webmodel import DatasetNotFoundException
+from webservice.algorithms.NexusCalcHandler import NexusCalcHandler as BaseHandler
+from webservice.NexusHandler import nexus_handler
+from webservice.webmodel import DatasetNotFoundException
 
 
 @nexus_handler
