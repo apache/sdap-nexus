@@ -26,7 +26,7 @@ from cassandra.policies import (DCAwareRoundRobinPolicy, TokenAwarePolicy,
                                 WhiteListRoundRobinPolicy)
 
 try:
-    logging.getLogger('webservice.NexusHandler').setLevel(logging.CRITICAL)
+    logging.getLogger('analysis.webservice.NexusHandler').setLevel(logging.CRITICAL)
 except:
     pass
 
