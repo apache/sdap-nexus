@@ -29,7 +29,7 @@ import shapely.wkt
 from backports.functools_lru_cache import lru_cache
 from pytz import timezone
 from scipy import stats
-from analysis.webservice import Filtering as filtering
+from analysis.webservice.import Filtering as filtering
 from analysis.webservice.NexusHandler import nexus_handler
 from analysis.webservice.algorithms_spark.NexusCalcSparkHandler import NexusCalcSparkHandler
 from analysis.webservice.algorithms_spark import utils
