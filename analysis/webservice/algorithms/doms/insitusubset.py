@@ -211,7 +211,7 @@ class InSituSubsetResult(object):
 
 def query_edge(dataset, variable, startTime, endTime, bbox, platform, depth_min, depth_max, session, itemsPerPage=1000,
                startIndex=0, stats=True):
-    log = logging.getLogger('analysis.webservice.algorithms.doms.insitusubset.query_edge')
+    log = logging.getLogger('webservice.algorithms.doms.insitusubset.query_edge')
     try:
         startTime = datetime.utcfromtimestamp(startTime).strftime('%Y-%m-%dT%H:%M:%SZ')
     except TypeError:
