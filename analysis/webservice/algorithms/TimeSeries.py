@@ -32,7 +32,7 @@ from nexustiles.nexustiles import NexusTileService
 from pytz import timezone
 from scipy import stats
 
-from analysis.webservice.import Filtering as filtering
+from analysis.webservice import Filtering as filtering
 from analysis.webservice.NexusHandler import nexus_handler
 from analysis.webservice.algorithms.NexusCalcHandler import NexusCalcHandler
 from analysis.webservice.webmodel import NexusResults, NexusProcessingException, NoDataException
