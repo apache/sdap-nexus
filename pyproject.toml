@@ -7,7 +7,7 @@ license = "Apache-2.0"
 readme = "README.md"
 packages = [
     { include = "analysis/webservice" },
-    { include = "nexustiles", from = "data-access" }
+    { include = "data-access/nexustiles" }
 ]
 repository = "https://github.com/apache/incubator-sdap-nexus"
 exclude = ["docs", "tests"]
