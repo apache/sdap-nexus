@@ -23,9 +23,9 @@ import tornado.web
 from tornado.routing import Rule, RuleRouter, AnyMatches
 from tornado.options import define, options, parse_command_line
 
-from analysis.webservice.redirect import RemoteCollectionMatcher
-from analysis.webservice.nexus_tornado.app_builders import NexusAppBuilder
-from analysis.webservice.nexus_tornado.app_builders import RedirectAppBuilder
+from webservice.redirect import RemoteCollectionMatcher
+from webservice.nexus_tornado.app_builders import NexusAppBuilder
+from webservice.nexus_tornado.app_builders import RedirectAppBuilder
 
 try:
     from importlib.metadata import version as _version
