@@ -69,7 +69,7 @@ COPY docker/nexus-webapp/entrypoint.sh /opt/entrypoint.sh
 COPY README.md README DISCLAIMER LICENSE NOTICE ./
 
 RUN apt-get update && \
-    apt-get install --no-install-recommends -y proj-bin && \
+    apt-get install --no-install-recommends -y proj-bin tini && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
