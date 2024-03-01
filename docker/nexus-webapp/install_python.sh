@@ -16,29 +16,22 @@
 
 set -e
 
-if [ ! -z ${BUILD_NEXUSPROTO+x} ]; then
-  echo 'Building nexusproto from source...'
+apt-get update
+apt-get upgrade -y
+apt-get install --no-install-recommends -y make build-essential libssl-dev zlib1g-dev libbz2-dev libreadline-dev libsqlite3-dev wget curl llvm libncurses5-dev libncursesw5-dev xz-utils tk-dev liblzma-dev tk-dev libffi-dev
+apt-get clean
+rm -rf /var/lib/apt/lists/*
 
-  APACHE_NEXUSPROTO="https://github.com/apache/incubator-sdap-nexusproto.git"
-  MASTER="master"
+cd /tmp/
+wget https://www.python.org/ftp/python/3.9.7/Python-3.9.7.tgz
+tar xzf Python-3.9.7.tgz
+cd Python-3.9.7
 
-  GIT_REPO=${1:-$APACHE_NEXUSPROTO}
-  GIT_BRANCH=${2:-$MASTER}
+./configure --prefix=/opt/python/3.9.7/ --enable-optimizations --with-lto --with-computed-gotos --with-system-ffi
+make -j "$(nproc)"
+make altinstall
+rm /tmp/Python-3.9.7.tgz
+cd /tmp/
+rm -rf Python-3.9.7
 
-  mkdir nexusproto
-  pushd nexusproto
-  git init
-  git pull ${GIT_REPO} ${GIT_BRANCH}
-
-  ./gradlew pythonInstall --info
-
-  ./gradlew install --info
-
-  rm -rf /root/.gradle
-  popd
-  rm -rf nexusproto
-elif [ ! -z ${POETRY_BUILD+x} ]; then
-  poetry add nexusproto
-else
-  pip install nexusproto
-fi
+/opt/python/3.9.7/bin/python3.9 -m pip install --upgrade pip setuptools wheel

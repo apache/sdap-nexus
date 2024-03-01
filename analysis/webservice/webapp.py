@@ -36,12 +36,15 @@ except ImportError:
 try:
     __version__ = _version('nexusanalysis')
 except Exception:
-    __version__ = 'Cannot be determined'
+    try:
+        __version__ = _version('sdap-nexus')
+    except Exception:
+        __version__ = 'Cannot be determined'
 
 banner = [
      '',
      ' ____  ____    _    ____    | ',
-     '/ ___||  _ \\  / \\  |  _ \\   | Apache SDAP',
+     '/ ___||  _ \\  / \\  |  _ \\   | Apache SDAP (TM)',
      '\\___ \\| | | |/ _ \\ | |_) |  | Science Data Analytics Platform',
      f' ___) | |_| / ___ \\|  __/   | Version: {__version__}',
      '|____/|____/_/   \\_\\_|      | ',
