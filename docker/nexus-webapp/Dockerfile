@@ -48,7 +48,8 @@ ENV PYTHONUNBUFFERED=1 \
     \
     # VENV_PATH="/opt/pysetup/.venv" \
     VENV_PATH="/incubator-sdap-nexus/.venv" \
-    POETRY_BUILD="yes"
+    POETRY_BUILD="yes" \
+    POETRY_CACHE_DIR="/opt/.cache/poetry"
 
 RUN curl -sSL https://install.python-poetry.org -o /tmp/install_poetry.py && python /tmp/install_poetry.py
 
@@ -73,7 +74,7 @@ RUN apt-get update && \
     rm -rf /var/lib/apt/lists/*
 
 # install runtime deps - uses $POETRY_VIRTUALENVS_IN_PROJECT internally
-RUN poetry install --no-dev && poetry cache clear --all .
+RUN poetry install --no-dev && rm -rf $POETRY_CACHE_DIR
 
 ARG REBUILD_CODE=1
 
