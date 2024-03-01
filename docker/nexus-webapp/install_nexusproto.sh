@@ -39,7 +39,7 @@ if [ ! -z ${BUILD_NEXUSPROTO+x} ]; then
   rm -rf nexusproto
 elif [ ! -z ${POETRY_BUILD+x} ]; then
   poetry add nexusproto
-  ehco "Deleting poetry cache"
+  echo "Deleting poetry cache"
   rm -rf $POETRY_CACHE_DIR
 else
   pip install nexusproto
