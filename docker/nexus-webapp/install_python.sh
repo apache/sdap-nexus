@@ -16,22 +16,33 @@
 
 set -e
 
+echo "Installing build dependencies"
+
 apt-get update
 apt-get upgrade -y
 apt-get install --no-install-recommends -y make build-essential libssl-dev zlib1g-dev libbz2-dev libreadline-dev libsqlite3-dev wget curl llvm libncurses5-dev libncursesw5-dev xz-utils tk-dev liblzma-dev tk-dev libffi-dev
 apt-get clean
 rm -rf /var/lib/apt/lists/*
 
+echo "Downloading & extracting source tarball"
+
 cd /tmp/
 wget https://www.python.org/ftp/python/3.9.7/Python-3.9.7.tgz
 tar xzf Python-3.9.7.tgz
 cd Python-3.9.7
 
+echo "Running install"
+
 ./configure --prefix=/opt/python/3.9.7/ --enable-optimizations --with-lto --with-computed-gotos --with-system-ffi
 make -j "$(nproc)"
 make altinstall
+
+echo "Cleaning up install dir"
+
 rm /tmp/Python-3.9.7.tgz
 cd /tmp/
 rm -rf Python-3.9.7
+
+echo "Final steps..."
 
 /opt/python/3.9.7/bin/python3.9 -m pip install --upgrade pip setuptools wheel
