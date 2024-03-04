@@ -27,6 +27,27 @@ from webservice.redirect import RemoteCollectionMatcher
 from webservice.nexus_tornado.app_builders import NexusAppBuilder
 from webservice.nexus_tornado.app_builders import RedirectAppBuilder
 
+try:
+    from importlib.metadata import version as _version
+    from importlib.metadata import files as _files
+except ImportError:
+    from importlib_metadata import version as _version
+
+try:
+    __version__ = _version('sdap-nexus')
+except Exception:
+    __version__ = 'Cannot be determined'
+
+banner = [
+     '',
+     ' ____  ____    _    ____    | ',
+     '/ ___||  _ \\  / \\  |  _ \\   | Apache SDAP (TM)',
+     '\\___ \\| | | |/ _ \\ | |_) |  | Science Data Analytics Platform',
+     f' ___) | |_| / ___ \\|  __/   | Version: {__version__}',
+     '|____/|____/_/   \\_\\_|      | ',
+     ''
+]
+
 
 def inject_args_in_config(args, config):
     """
@@ -49,7 +70,6 @@ def inject_args_in_config(args, config):
 
 
 def main():
-
     logging.basicConfig(
         level=logging.DEBUG,
         format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
@@ -57,6 +77,9 @@ def main():
     )
 
     log = logging.getLogger(__name__)
+
+    for line in banner:
+        log.info(line)
 
     web_config = configparser.RawConfigParser()
     web_config.read_file(open(os.path.join(os.path.dirname(__file__), "config", "web.ini")))

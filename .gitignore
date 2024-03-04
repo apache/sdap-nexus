@@ -6,3 +6,5 @@
 analysis/webservice/algorithms/doms/domsconfig.ini
 data-access/nexustiles/config/datastores.ini
 venv/
+
+dist/
