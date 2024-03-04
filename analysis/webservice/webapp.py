@@ -34,12 +34,9 @@ except ImportError:
     from importlib_metadata import version as _version
 
 try:
-    __version__ = _version('nexusanalysis')
+    __version__ = _version('sdap-nexus')
 except Exception:
-    try:
-        __version__ = _version('sdap-nexus')
-    except Exception:
-        __version__ = 'Cannot be determined'
+    __version__ = 'Cannot be determined'
 
 banner = [
      '',
