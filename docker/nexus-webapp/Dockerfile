@@ -15,16 +15,15 @@
 
 FROM eclipse-temurin:8
 
-COPY --chmod=777 docker/nexus-webapp/install_python.sh /tmp/install_python.sh
+COPY --chmod=755 docker/nexus-webapp/install_python.sh /tmp/install_python.sh
 
+# Install python
 RUN /tmp/install_python.sh
 RUN ln -s /opt/python/3.9.7/bin/python3.9  /opt/python/3.9.7/bin/python
 
 ENV PATH="/opt/python/3.9.7/bin:$PATH"
 
-#FROM python:3.9.7-slim as py-base
-#FROM python:3.9.7-slim as builder-base
-
+# Python & Poetry env vars
 ENV PYTHONUNBUFFERED=1 \
     # prevents python creating .pyc files
     PYTHONDONTWRITEBYTECODE=1 \
@@ -46,15 +45,10 @@ ENV PYTHONUNBUFFERED=1 \
     POETRY_NO_INTERACTION=1 \
     PYSETUP_PATH="/opt/pysetup" \
     \
-    # VENV_PATH="/opt/pysetup/.venv" \
     VENV_PATH="/incubator-sdap-nexus/.venv" \
-    POETRY_BUILD="yes" \
     POETRY_CACHE_DIR="/opt/.cache/poetry"
 
-RUN curl -sSL https://install.python-poetry.org -o /tmp/install_poetry.py && python /tmp/install_poetry.py
-
-ENV PATH="$POETRY_HOME/bin:$VENV_PATH/bin:$PATH"
-
+# Edit this to rebuild everything from this point
 ARG REBUILD_CODE=0
 
 WORKDIR /incubator-sdap-nexus
@@ -68,13 +62,21 @@ COPY docker/nexus-webapp/entrypoint.sh /opt/entrypoint.sh
 # Copy readme + ASF legal files
 COPY README.md README DISCLAIMER LICENSE NOTICE ./
 
+ENV PATH="$POETRY_HOME/bin:$VENV_PATH/bin:$PATH"
+
+# Install additional dependencies for image
 RUN apt-get update && \
     apt-get install --no-install-recommends -y proj-bin tini && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
-# install runtime deps - uses $POETRY_VIRTUALENVS_IN_PROJECT internally
-RUN poetry install --no-dev && rm -rf $POETRY_CACHE_DIR
+# Install poetry, install project, cleanup, and remove poetry install from layer
+RUN curl -sSL https://install.python-poetry.org -o /tmp/install_poetry.py &&  \
+    python /tmp/install_poetry.py && \
+    poetry install --no-dev &&  \
+    rm -rf $POETRY_CACHE_DIR && \
+    python /tmp/install_poetry.py --uninstall && \
+    rm /tmp/install_poetry.py
 
 ARG REBUILD_CODE=1
 
@@ -85,6 +87,7 @@ ARG APACHE_NEXUSPROTO_BRANCH=master
 
 RUN /tmp/install_nexusproto.sh $APACHE_NEXUSPROTO $APACHE_NEXUSPROTO_BRANCH
 
+# Spark, Nexus, etc env vars
 ENV  \
     PYTHONPATH=/incubator-sdap-nexus/.venv/share/py4j/py4j0.10.9.3.jar \
     NEXUS_SRC=/tmp/incubator-sdap-nexus \
@@ -97,11 +100,8 @@ ENV  \
     LD_LIBRARY_PATH=/usr/lib \
     REQUESTS_CA_BUNDLE=/etc/ssl/certs/ca-certificates.crt
 
-
 # This image has k8s client jar version 5.4.1, idk if we should force-install 4.12.0 or if it's even needed anymore...
 #RUN rm $SPARK_HOME/jars/kubernetes-client-4.12.0.jar
 #ADD https://repo1.maven.org/maven2/io/fabric8/kubernetes-client/4.12.0/kubernetes-client-4.12.0.jar $SPARK_HOME/jars
 
-
 ENTRYPOINT ["/opt/entrypoint.sh"]
-
