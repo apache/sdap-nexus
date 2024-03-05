@@ -70,12 +70,66 @@ def yes_no(prompt):
     return do_continue in ['', 'y']
 
 
+def choice_prompt(prompt: str, choices: list, default: str = None) -> str:
+    assert len(choices) > 0
+
+    if len(choices) == 1:
+        return choices[0]
+
+    valid_choices = [str(i) for i in range(len(choices))]
+
+    if default is not None:
+        assert default in choices
+        valid_choices.append('')
+
+    print(prompt)
+
+    choice = None
+
+    while choice not in valid_choices:
+        for i, c in enumerate(choices):
+            print('[{:2d}] {}-> {}'.format(i, ''.ljust(10, '-'), c))
+
+        print()
+
+        if default is None:
+            choice = input('Selection: ')
+        else:
+            choice = input(f'Selection [{choices.index(default)}]: ')
+
+    if default is not None and choice == '':
+        return default
+    else:
+        return choices[int(choice)]
+
+
+
+
 def get_input(prompt):
     while True:
         response = input(prompt)
 
         if yes_no(f'Confirm: "{response}" [Y]/N '):
             return response
+
+
+def pull_source(dst_dir: tempfile.TemporaryDirectory, args: argparse.Namespace):
+    ASF = 'ASF subversion (dist.apache.org)'
+    GIT = 'GitHub'
+    LFS = 'Local Filesystem'
+
+    source_location = choice_prompt(
+        'Where is the source you\'re building from stored?',
+        [ASF, GIT, LFS],
+        ASF
+    )
+
+    if source_location == ASF:
+        ...
+    elif source_location == GIT:
+        ...
+    else:
+        ...
 
 
 def main():
@@ -170,6 +224,8 @@ def main():
 
     v_nexus, v_ingester, registry, cache, push = args.v_nexus, args.v_ingester, args.registry, args.cache, args.push
 
+    # TODO: Support pulling from any ASF release/stage location, OR git repo OR local FS. And make it more interactive
+
     root_url = args.url
 
     if root_url is None:
@@ -198,41 +254,43 @@ def main():
     nexus_tarball = os.path.join(extract_dir.name, NEXUS_TARBALL.format(v_nexus))
     ingester_tarball = os.path.join(extract_dir.name, INGESTER_TARBALL.format(v_ingester))
 
-    response = requests.get(urljoin(root_url, NEXUS_TARBALL.format(v_nexus)))
-    response.raise_for_status()
+    if not args.skip_nexus:
+        response = requests.get(urljoin(root_url, NEXUS_TARBALL.format(v_nexus)))
+        response.raise_for_status()
 
-    with open(nexus_tarball, 'wb') as fp:
-        fp.write(response.content)
-        fp.flush()
+        with open(nexus_tarball, 'wb') as fp:
+            fp.write(response.content)
+            fp.flush()
 
-    response = requests.get(urljoin(root_url, INGESTER_TARBALL.format(v_ingester)))
-    response.raise_for_status()
+    if not args.skip_ingester:
+        response = requests.get(urljoin(root_url, INGESTER_TARBALL.format(v_ingester)))
+        response.raise_for_status()
 
-    with open(ingester_tarball, 'wb') as fp:
-        fp.write(response.content)
-        fp.flush()
+        with open(ingester_tarball, 'wb') as fp:
+            fp.write(response.content)
+            fp.flush()
 
     print('Extracting release source files...')
 
-    run(
-        ['tar', 'xvf', nexus_tarball, '-C', extract_dir.name],
-        suppress_output=True
-    )
+    if not args.skip_nexus:
+        run(
+            ['tar', 'xvf', nexus_tarball, '-C', extract_dir.name],
+            suppress_output=True
+        )
+        shutil.move(
+            os.path.join(extract_dir.name, 'Apache-SDAP', NEXUS_DIR.format(v_nexus)),
+            os.path.join(extract_dir.name, 'nexus')
+        )
 
-    run(
-        ['tar', 'xvf', ingester_tarball, '-C', extract_dir.name],
-        suppress_output=True
-    )
-
-    shutil.move(
-        os.path.join(extract_dir.name, 'Apache-SDAP', NEXUS_DIR.format(v_nexus)),
-        os.path.join(extract_dir.name, 'nexus')
-    )
-
-    shutil.move(
-        os.path.join(extract_dir.name, 'Apache-SDAP', INGESTER_DIR.format(v_ingester)),
-        os.path.join(extract_dir.name, 'ingester')
-    )
+    if not args.skip_ingester:
+        run(
+            ['tar', 'xvf', ingester_tarball, '-C', extract_dir.name],
+            suppress_output=True
+        )
+        shutil.move(
+            os.path.join(extract_dir.name, 'Apache-SDAP', INGESTER_DIR.format(v_ingester)),
+            os.path.join(extract_dir.name, 'ingester')
+        )
 
     os.environ['DOCKER_DEFAULT_PLATFORM'] = 'linux/amd64'
 
