@@ -18,10 +18,12 @@ import os
 import shutil
 import subprocess
 import tempfile
+import hashlib
 from tenacity import retry, stop_after_attempt, wait_fixed
 from urllib.parse import urljoin
 
 import requests
+from bs4 import BeautifulSoup
 
 DOCKER = shutil.which('docker')
 
@@ -30,6 +32,8 @@ INGESTER_TARBALL = 'apache-sdap-ingester-{}-incubating-src.tar.gz'
 
 NEXUS_DIR = 'apache-sdap-nexus-{}-incubating-src'
 INGESTER_DIR = 'apache-sdap-ingester-{}-incubating-src'
+
+HAS_GRADUATED = False
 
 if DOCKER is None:
     raise OSError('docker command could not be found in PATH')
@@ -103,8 +107,6 @@ def choice_prompt(prompt: str, choices: list, default: str = None) -> str:
         return choices[int(choice)]
 
 
-
-
 def get_input(prompt):
     while True:
         response = input(prompt)
@@ -115,8 +117,8 @@ def get_input(prompt):
 
 def pull_source(dst_dir: tempfile.TemporaryDirectory, args: argparse.Namespace):
     ASF = 'ASF subversion (dist.apache.org)'
-    GIT = 'GitHub'
-    LFS = 'Local Filesystem'
+    GIT = 'GitHub (Not implemented yet)'
+    LFS = 'Local Filesystem (Not implemented yet)'
 
     source_location = choice_prompt(
         'Where is the source you\'re building from stored?',
@@ -125,11 +127,104 @@ def pull_source(dst_dir: tempfile.TemporaryDirectory, args: argparse.Namespace):
     )
 
     if source_location == ASF:
-        ...
+        area = 'dev' if yes_no('Is this a release candidate? (No = official release) [Y]/N: ') else 'release'
+        url = f'https://dist.apache.org/repos/dist/{area}/'
+
+        if HAS_GRADUATED:
+            raise NotImplementedError()
+        else:
+            url = url + 'incubator/sdap/'
+
+        response = requests.get(url)
+        response.raise_for_status()
+
+        soup = BeautifulSoup(response.text, 'html.parser')
+
+        version = choice_prompt(
+            'Choose a release/release candidate to build',
+            [node.text.rstrip('/') for node in soup.find_all('a') if node.get('href').rstrip('/') not in ['KEYS', '..']],
+        )
+
+        url = url + version + '/'
+
+        response = requests.get(url)
+        response.raise_for_status()
+
+        soup = BeautifulSoup(response.text, 'html.parser')
+
+        def remove_suffixes(s: str, suffixes):
+            for suffix in suffixes:
+                s = s.removesuffix(suffix)
+
+            return s
+
+        build_artifacts = list(set([remove_suffixes(node.text, ['.sha512', '.asc']) for node in soup.find_all('a') if node.get('href').rstrip('/') not in ['KEYS', '..']]))
+
+        nexus_tarball = None
+        ingester_tarball = None
+
+        for artifact in build_artifacts:
+            if '-nexus-' in artifact and not args.skip_nexus:
+                nexus_tarball = os.path.join(dst_dir.name, artifact)
+            elif '-ingester-' in artifact and not args.skip_ingester:
+                ingester_tarball = os.path.join(dst_dir.name, artifact)
+
+            for ext in ['', '.sha512', '.asc']:
+                filename = artifact + ext
+                dst = os.path.join(dst_dir.name, filename)
+
+                print(f'Downloading {url + artifact + ext}')
+
+                response = requests.get(url + artifact + ext)
+                response.raise_for_status()
+
+                with open(dst, 'wb') as fp:
+                    fp.write(response.content)
+                    fp.flush()
+
+            print(f'Verifying checksum for {artifact}')
+
+            m = hashlib.sha512()
+            m.update(open(os.path.join(dst_dir.name, artifact), 'rb').read())
+
+            if m.hexdigest() != open(os.path.join(dst_dir.name, artifact) + '.sha512', 'r').read().split(' ')[0]:
+                raise ValueError('Bad checksum!')
+
+            print(f'Verifying signature for {artifact}')
+
+            try:
+                run(
+                    ['gpg', '--verify', os.path.join(dst_dir.name, artifact) + '.asc', os.path.join(dst_dir.name, artifact)],
+                    True
+                )
+            except:
+                raise ValueError('Bad signature!')
+
+        print('Extracting release source files...')
+
+        if not args.skip_nexus:
+            run(
+                ['tar', 'xvf', nexus_tarball, '-C', dst_dir.name],
+                suppress_output=True
+            )
+            shutil.move(
+                os.path.join(dst_dir.name, 'Apache-SDAP', nexus_tarball.split('/')[-1].removesuffix('.tar.gz')),
+                os.path.join(dst_dir.name, 'nexus')
+            )
+
+        if not args.skip_ingester:
+            run(
+                ['tar', 'xvf', ingester_tarball, '-C', dst_dir.name],
+                suppress_output=True
+            )
+            shutil.move(
+                os.path.join(dst_dir.name, 'Apache-SDAP', ingester_tarball.split('/')[-1].removesuffix('.tar.gz')),
+                os.path.join(dst_dir.name, 'ingester')
+            )
     elif source_location == GIT:
-        ...
+        raise NotImplementedError()
     else:
-        ...
+        raise NotImplementedError()
 
 
 def main():
@@ -139,17 +234,9 @@ def main():
     )
 
     parser.add_argument(
-        '--nexus-version',
-        dest='v_nexus',
-        help='Version of Nexus to download and build',
-        metavar='VERSION'
-    )
-
-    parser.add_argument(
-        '--ingester-version',
-        dest='v_ingester',
-        help='Version of Ingester to download and build',
-        metavar='VERSION'
+        '-t', '--tag',
+        dest='tag',
+        help='Tag for built docker images',
     )
 
     parser.add_argument(
@@ -191,12 +278,6 @@ def main():
     )
 
     parser.add_argument(
-        '--dl-url',
-        dest='url',
-        help='Root url to download tarballs from. Eg: https://dist.apache.org/repos/dist/dev/incubator/sdap/apache-sdap-1.2.0-rc3/',
-    )
-
-    parser.add_argument(
         '--skip-nexus',
         dest='skip_nexus',
         action='store_true',
@@ -210,33 +291,16 @@ def main():
         help='Don\'t build Collection Manager & Granule Ingester images'
     )
 
-    parser.add_argument(
-        '--tag-suffix',
-        dest='tag_suffix',
-        help='Suffix to append to image tags. For example, if you want to build images with tags ending with "-rc0" '
-             'etc',
-        metavar='STRING'
-    )
-
     parser.set_defaults(cache=None, push=None)
 
     args = parser.parse_args()
 
-    v_nexus, v_ingester, registry, cache, push = args.v_nexus, args.v_ingester, args.registry, args.cache, args.push
+    tag, registry, cache, push = args.tag, args.registry, args.cache, args.push
 
     # TODO: Support pulling from any ASF release/stage location, OR git repo OR local FS. And make it more interactive
 
-    root_url = args.url
-
-    if root_url is None:
-        root_url = get_input('Enter URL to download release from\n'
-                             '(Eg: https://dist.apache.org/repos/dist/dev/incubator/sdap/apache-sdap-1.2.0-rc3/) : ')
-
-    if v_nexus is None and not args.skip_nexus:
-        v_nexus = get_input('Enter NEXUS version to build: ')
-
-    if v_ingester is None and not args.skip_ingester:
-        v_ingester = get_input('Enter Ingester version to build: ')
+    if tag is None:
+        tag = get_input('Enter the tag to use for built images: ')
 
     if registry is None:
         registry = get_input('Enter Docker image registry: ')
@@ -251,61 +315,16 @@ def main():
 
     extract_dir = tempfile.TemporaryDirectory()
 
-    nexus_tarball = os.path.join(extract_dir.name, NEXUS_TARBALL.format(v_nexus))
-    ingester_tarball = os.path.join(extract_dir.name, INGESTER_TARBALL.format(v_ingester))
-
-    if not args.skip_nexus:
-        response = requests.get(urljoin(root_url, NEXUS_TARBALL.format(v_nexus)))
-        response.raise_for_status()
-
-        with open(nexus_tarball, 'wb') as fp:
-            fp.write(response.content)
-            fp.flush()
-
-    if not args.skip_ingester:
-        response = requests.get(urljoin(root_url, INGESTER_TARBALL.format(v_ingester)))
-        response.raise_for_status()
-
-        with open(ingester_tarball, 'wb') as fp:
-            fp.write(response.content)
-            fp.flush()
-
-    print('Extracting release source files...')
-
-    if not args.skip_nexus:
-        run(
-            ['tar', 'xvf', nexus_tarball, '-C', extract_dir.name],
-            suppress_output=True
-        )
-        shutil.move(
-            os.path.join(extract_dir.name, 'Apache-SDAP', NEXUS_DIR.format(v_nexus)),
-            os.path.join(extract_dir.name, 'nexus')
-        )
-
-    if not args.skip_ingester:
-        run(
-            ['tar', 'xvf', ingester_tarball, '-C', extract_dir.name],
-            suppress_output=True
-        )
-        shutil.move(
-            os.path.join(extract_dir.name, 'Apache-SDAP', INGESTER_DIR.format(v_ingester)),
-            os.path.join(extract_dir.name, 'ingester')
-        )
+    pull_source(extract_dir, args)
 
     os.environ['DOCKER_DEFAULT_PLATFORM'] = 'linux/amd64'
 
     built_images = []
 
-    def tag(s):
-        if args.tag_suffix is not None:
-            return f'{s}-{args.tag_suffix}'
-        else:
-            return s
-
     if not args.skip_ingester:
         print('Building ingester images...')
 
-        cm_tag = tag(f'{registry}/sdap-collection-manager:{v_ingester}')
+        cm_tag = f'{registry}/sdap-collection-manager:{tag}'
 
         run(build_cmd(
             cm_tag,
@@ -316,7 +335,7 @@ def main():
 
         built_images.append(cm_tag)
 
-        gi_tag = tag(f'{registry}/sdap-granule-ingester:{v_ingester}')
+        gi_tag = f'{registry}/sdap-granule-ingester:{tag}'
 
         run(build_cmd(
             gi_tag,
@@ -328,7 +347,7 @@ def main():
         built_images.append(gi_tag)
 
     if not args.skip_nexus:
-        solr_tag = tag(f'{registry}/sdap-solr-cloud:{v_nexus}')
+        solr_tag = f'{registry}/sdap-solr-cloud:{tag}'
 
         run(build_cmd(
             solr_tag,
@@ -338,7 +357,7 @@ def main():
 
         built_images.append(solr_tag)
 
-        solr_init_tag = tag(f'{registry}/sdap-solr-cloud-init:{v_nexus}')
+        solr_init_tag = f'{registry}/sdap-solr-cloud-init:{tag}'
 
         run(build_cmd(
             solr_init_tag,
@@ -349,7 +368,7 @@ def main():
 
         built_images.append(solr_init_tag)
 
-        webapp_tag = tag(f'{registry}/sdap-nexus-webapp:{v_nexus}')
+        webapp_tag = f'{registry}/sdap-nexus-webapp:{tag}'
 
         run(build_cmd(
             webapp_tag,
