@@ -548,11 +548,11 @@ class DomsPoint(object):
             return key in d and d[key] is not None and d[key] != ''
 
         if is_defined('id', point.platform):
-            point.platform = edge_point.get('platform')['id']
+            point.platform = str(edge_point.get('platform')['id'])
         elif is_defined('code', point.platform):
-            point.platform = edge_point.get('platform')['code']
+            point.platform = str(edge_point.get('platform')['code'])
         elif is_defined('type', point.platform):
-            point.platform = edge_point.get('platform')['type']
+            point.platform = str(edge_point.get('platform')['type'])
 
         data_fields = [
             'air_pressure',
