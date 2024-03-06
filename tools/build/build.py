@@ -277,7 +277,7 @@ def pull_source(dst_dir: tempfile.TemporaryDirectory, args: argparse.Namespace):
 
 def main():
     parser = argparse.ArgumentParser(
-        epilog="With the exception of the --skip-nexus, --skip-ingester, and --tag-suffix options, the user will be "
+        epilog="With the exception of the --skip-nexus and --skip-ingester options, the user will be "
                "prompted to set options at runtime."
     )
 
@@ -344,8 +344,6 @@ def main():
     args = parser.parse_args()
 
     tag, registry, cache, push = args.tag, args.registry, args.cache, args.push
-
-    # TODO: Support pulling from any ASF release/stage location, OR git repo OR local FS. And make it more interactive
 
     if tag is None:
         tag = get_input('Enter the tag to use for built images: ')
