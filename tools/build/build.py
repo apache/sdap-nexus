@@ -33,6 +33,9 @@ INGESTER_TARBALL = 'apache-sdap-ingester-{}-incubating-src.tar.gz'
 NEXUS_DIR = 'apache-sdap-nexus-{}-incubating-src'
 INGESTER_DIR = 'apache-sdap-ingester-{}-incubating-src'
 
+ASF_NEXUS_REPO = 'https://github.com/apache/incubator-sdap-nexus.git'
+ASF_INGESTER_REPO = 'https://github.com/apache/incubator-sdap-ingester.git'
+
 HAS_GRADUATED = False
 
 if DOCKER is None:
@@ -54,10 +57,10 @@ def build_cmd(tag, context, dockerfile='', cache=True):
 
 
 @retry(stop=stop_after_attempt(2), wait=wait_fixed(2))
-def run(cmd, suppress_output=False, err_on_fail=True):
+def run(cmd, suppress_output=False, err_on_fail=True, **kwargs):
     stdout = subprocess.DEVNULL if suppress_output else None
 
-    p = subprocess.Popen(cmd, stdout=stdout, stderr=subprocess.STDOUT)
+    p = subprocess.Popen(cmd, stdout=stdout, stderr=subprocess.STDOUT, **kwargs)
 
     p.wait()
 
@@ -65,13 +68,16 @@ def run(cmd, suppress_output=False, err_on_fail=True):
         raise OSError(f'Subprocess returned nonzero: {p.returncode}')
 
 
-def yes_no(prompt):
+def yes_no(prompt, default=True):
     do_continue = input(prompt).lower()
 
     while do_continue not in ['', 'y', 'n']:
         do_continue = input(prompt).lower()
 
-    return do_continue in ['', 'y']
+    if do_continue == '':
+        return default
+    else:
+        return do_continue == 'y'
 
 
 def choice_prompt(prompt: str, choices: list, default: str = None) -> str:
@@ -117,7 +123,7 @@ def get_input(prompt):
 
 def pull_source(dst_dir: tempfile.TemporaryDirectory, args: argparse.Namespace):
     ASF = 'ASF subversion (dist.apache.org)'
-    GIT = 'GitHub (Not implemented yet)'
+    GIT = 'GitHub'
     LFS = 'Local Filesystem (Not implemented yet)'
 
     source_location = choice_prompt(
@@ -222,7 +228,49 @@ def pull_source(dst_dir: tempfile.TemporaryDirectory, args: argparse.Namespace):
                 os.path.join(dst_dir.name, 'ingester')
             )
     elif source_location == GIT:
-        raise NotImplementedError()
+        if not args.skip_nexus:
+            if not yes_no('Will you be using a fork for the Nexus repository? Y/[N]: ', False):
+                nexus_repo = ASF_NEXUS_REPO
+            else:
+                nexus_repo = get_input('Enter Nexus fork URL: ')
+
+            # TODO Maybe fetch list of branches?
+
+            nexus_branch = get_input('Enter Nexus branch to build: ')
+
+            print(f'Cloning Nexus repo {nexus_repo} at {nexus_branch}')
+
+            run(
+                ['git', 'clone', '--branch', nexus_branch, nexus_repo],
+                suppress_output=True,
+                cwd=dst_dir.name
+            )
+            shutil.move(
+                os.path.join(dst_dir.name, 'incubator-sdap-nexus'),
+                os.path.join(dst_dir.name, 'nexus')
+            )
+
+        if not args.skip_ingester:
+            if not yes_no('Will you be using a fork for the Ingester repository? Y/[N]: ', False):
+                ingester_repo = ASF_INGESTER_REPO
+            else:
+                ingester_repo = get_input('Enter Ingester fork URL: ')
+
+            # TODO Maybe fetch list of branches?
+
+            ingester_branch = get_input('Enter Ingester branch to build: ')
+
+            print(f'Cloning Nexus repo {ingester_repo} at {ingester_branch}')
+
+            run(
+                ['git', 'clone', '--branch', ingester_branch, ingester_repo],
+                suppress_output=True,
+                cwd=dst_dir.name
+            )
+            shutil.move(
+                os.path.join(dst_dir.name, 'incubator-sdap-ingester'),
+                os.path.join(dst_dir.name, 'ingester')
+            )
     else:
         raise NotImplementedError()
 
@@ -310,8 +358,6 @@ def main():
 
     if push is None:
         push = yes_no('Push built images? [Y]/N: ')
-
-    print('Downloading release tarballs...')
 
     extract_dir = tempfile.TemporaryDirectory()
 
