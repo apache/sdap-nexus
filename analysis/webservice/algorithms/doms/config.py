@@ -29,7 +29,7 @@ INSITU_PROVIDER_MAP = [
     },
     {
         'name': 'NCAR',
-        'endpoint': 'http://rda-work.ucar.edu:8890/ws/search/icoads',
+        'endpoint': 'https://rda-work.ucar.edu/ws/search/icoads',
         'projects': [
             {
                 'name': 'ICOADS Release 3.0',
