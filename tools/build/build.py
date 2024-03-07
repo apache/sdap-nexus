@@ -26,20 +26,25 @@ import requests
 from bs4 import BeautifulSoup
 
 DOCKER = shutil.which('docker')
+TAR = shutil.which('tar')
+GIT = shutil.which('git')
+GPG = shutil.which('gpg')
 
-NEXUS_TARBALL = 'apache-sdap-nexus-{}-incubating-src.tar.gz'
-INGESTER_TARBALL = 'apache-sdap-ingester-{}-incubating-src.tar.gz'
+if GPG is None:
+    raise OSError('git command could not be found in PATH')
 
-NEXUS_DIR = 'apache-sdap-nexus-{}-incubating-src'
-INGESTER_DIR = 'apache-sdap-ingester-{}-incubating-src'
+if any([req is None for req in [DOCKER, TAR, GPG, GIT]]):
+    raise OSError(f'Requirement(s) not found in PATH:\n'
+                  f'  docker: {DOCKER if DOCKER is not None else "MISSING"}\n'
+                  f'     tar: {TAR if TAR is not None else "MISSING"}\n'
+                  f'     git: {GIT if GIT is not None else "MISSING"}\n'
+                  f'     gpg: {GPG if GPG is not None else "MISSING"}')
+
 
 ASF_NEXUS_REPO = 'https://github.com/apache/incubator-sdap-nexus.git'
 ASF_INGESTER_REPO = 'https://github.com/apache/incubator-sdap-ingester.git'
 
 HAS_GRADUATED = False
-
-if DOCKER is None:
-    raise OSError('docker command could not be found in PATH')
 
 
 def build_cmd(tag, context, dockerfile='', cache=True):
@@ -57,7 +62,7 @@ def build_cmd(tag, context, dockerfile='', cache=True):
 
 
 @retry(stop=stop_after_attempt(2), wait=wait_fixed(2))
-def run(cmd, suppress_output=False, err_on_fail=True, **kwargs):
+def run_subprocess(cmd, suppress_output=False, err_on_fail=True, **kwargs):
     stdout = subprocess.DEVNULL if suppress_output else None
 
     p = subprocess.Popen(cmd, stdout=stdout, stderr=subprocess.STDOUT, **kwargs)
@@ -68,7 +73,7 @@ def run(cmd, suppress_output=False, err_on_fail=True, **kwargs):
         raise OSError(f'Subprocess returned nonzero: {p.returncode}')
 
 
-def yes_no(prompt, default=True):
+def yes_no_prompt(prompt, default=True):
     do_continue = input(prompt).lower()
 
     while do_continue not in ['', 'y', 'n']:
@@ -113,16 +118,16 @@ def choice_prompt(prompt: str, choices: list, default: str = None) -> str:
         return choices[int(choice)]
 
 
-def get_input(prompt):
+def basic_prompt(prompt):
     while True:
         response = input(prompt)
 
-        if yes_no(f'Confirm: "{response}" [Y]/N '):
+        if yes_no_prompt(f'Confirm: "{response}" [Y]/N '):
             return response
 
 
 def pull_source(dst_dir: tempfile.TemporaryDirectory, args: argparse.Namespace):
-    ASF = 'ASF subversion (dist.apache.org)'
+    ASF = 'ASF (dist.apache.org)'
     GIT = 'GitHub'
     LFS = 'Local Filesystem (Not implemented yet)'
 
@@ -133,7 +138,7 @@ def pull_source(dst_dir: tempfile.TemporaryDirectory, args: argparse.Namespace):
     )
 
     if source_location == ASF:
-        area = 'dev' if yes_no('Is this a release candidate? (No = official release) [Y]/N: ') else 'release'
+        area = 'dev' if yes_no_prompt('Is this a release candidate? (No = official release) [Y]/N: ') else 'release'
         url = f'https://dist.apache.org/repos/dist/{area}/'
 
         if HAS_GRADUATED:
@@ -199,8 +204,8 @@ def pull_source(dst_dir: tempfile.TemporaryDirectory, args: argparse.Namespace):
             print(f'Verifying signature for {artifact}')
 
             try:
-                run(
-                    ['gpg', '--verify', os.path.join(dst_dir.name, artifact) + '.asc', os.path.join(dst_dir.name, artifact)],
+                run_subprocess(
+                    [GPG, '--verify', os.path.join(dst_dir.name, artifact) + '.asc', os.path.join(dst_dir.name, artifact)],
                     True
                 )
             except:
@@ -209,8 +214,8 @@ def pull_source(dst_dir: tempfile.TemporaryDirectory, args: argparse.Namespace):
         print('Extracting release source files...')
 
         if not args.skip_nexus:
-            run(
-                ['tar', 'xvf', nexus_tarball, '-C', dst_dir.name],
+            run_subprocess(
+                [TAR, 'xvf', nexus_tarball, '-C', dst_dir.name],
                 suppress_output=True
             )
             shutil.move(
@@ -219,8 +224,8 @@ def pull_source(dst_dir: tempfile.TemporaryDirectory, args: argparse.Namespace):
             )
 
         if not args.skip_ingester:
-            run(
-                ['tar', 'xvf', ingester_tarball, '-C', dst_dir.name],
+            run_subprocess(
+                [TAR, 'xvf', ingester_tarball, '-C', dst_dir.name],
                 suppress_output=True
             )
             shutil.move(
@@ -229,19 +234,19 @@ def pull_source(dst_dir: tempfile.TemporaryDirectory, args: argparse.Namespace):
             )
     elif source_location == GIT:
         if not args.skip_nexus:
-            if not yes_no('Will you be using a fork for the Nexus repository? Y/[N]: ', False):
+            if not yes_no_prompt('Will you be using a fork for the Nexus repository? Y/[N]: ', False):
                 nexus_repo = ASF_NEXUS_REPO
             else:
-                nexus_repo = get_input('Enter Nexus fork URL: ')
+                nexus_repo = basic_prompt('Enter Nexus fork URL: ')
 
             # TODO Maybe fetch list of branches?
 
-            nexus_branch = get_input('Enter Nexus branch to build: ')
+            nexus_branch = basic_prompt('Enter Nexus branch to build: ')
 
             print(f'Cloning Nexus repo {nexus_repo} at {nexus_branch}')
 
-            run(
-                ['git', 'clone', '--branch', nexus_branch, nexus_repo],
+            run_subprocess(
+                [GIT, 'clone', '--branch', nexus_branch, nexus_repo],
                 suppress_output=True,
                 cwd=dst_dir.name
             )
@@ -251,19 +256,19 @@ def pull_source(dst_dir: tempfile.TemporaryDirectory, args: argparse.Namespace):
             )
 
         if not args.skip_ingester:
-            if not yes_no('Will you be using a fork for the Ingester repository? Y/[N]: ', False):
+            if not yes_no_prompt('Will you be using a fork for the Ingester repository? Y/[N]: ', False):
                 ingester_repo = ASF_INGESTER_REPO
             else:
-                ingester_repo = get_input('Enter Ingester fork URL: ')
+                ingester_repo = basic_prompt('Enter Ingester fork URL: ')
 
             # TODO Maybe fetch list of branches?
 
-            ingester_branch = get_input('Enter Ingester branch to build: ')
+            ingester_branch = basic_prompt('Enter Ingester branch to build: ')
 
             print(f'Cloning Nexus repo {ingester_repo} at {ingester_branch}')
 
-            run(
-                ['git', 'clone', '--branch', ingester_branch, ingester_repo],
+            run_subprocess(
+                [GIT, 'clone', '--branch', ingester_branch, ingester_repo],
                 suppress_output=True,
                 cwd=dst_dir.name
             )
@@ -346,16 +351,16 @@ def main():
     tag, registry, cache, push = args.tag, args.registry, args.cache, args.push
 
     if tag is None:
-        tag = get_input('Enter the tag to use for built images: ')
+        tag = basic_prompt('Enter the tag to use for built images: ')
 
     if registry is None:
-        registry = get_input('Enter Docker image registry: ')
+        registry = basic_prompt('Enter Docker image registry: ')
 
     if cache is None:
-        cache = yes_no('Use Docker build cache? [Y]/N: ')
+        cache = yes_no_prompt('Use Docker build cache? [Y]/N: ')
 
     if push is None:
-        push = yes_no('Push built images? [Y]/N: ')
+        push = yes_no_prompt('Push built images? [Y]/N: ')
 
     extract_dir = tempfile.TemporaryDirectory()
 
@@ -370,7 +375,7 @@ def main():
 
         cm_tag = f'{registry}/sdap-collection-manager:{tag}'
 
-        run(build_cmd(
+        run_subprocess(build_cmd(
             cm_tag,
             os.path.join(extract_dir.name, 'ingester'),
             dockerfile='collection_manager/docker/Dockerfile',
@@ -381,7 +386,7 @@ def main():
 
         gi_tag = f'{registry}/sdap-granule-ingester:{tag}'
 
-        run(build_cmd(
+        run_subprocess(build_cmd(
             gi_tag,
             os.path.join(extract_dir.name, 'ingester'),
             dockerfile='granule_ingester/docker/Dockerfile',
@@ -393,7 +398,7 @@ def main():
     if not args.skip_nexus:
         solr_tag = f'{registry}/sdap-solr-cloud:{tag}'
 
-        run(build_cmd(
+        run_subprocess(build_cmd(
             solr_tag,
             os.path.join(extract_dir.name, 'nexus/docker/solr'),
             cache=cache
@@ -403,7 +408,7 @@ def main():
 
         solr_init_tag = f'{registry}/sdap-solr-cloud-init:{tag}'
 
-        run(build_cmd(
+        run_subprocess(build_cmd(
             solr_init_tag,
             os.path.join(extract_dir.name, 'nexus/docker/solr'),
             dockerfile='cloud-init/Dockerfile',
@@ -414,7 +419,7 @@ def main():
 
         webapp_tag = f'{registry}/sdap-nexus-webapp:{tag}'
 
-        run(build_cmd(
+        run_subprocess(build_cmd(
             webapp_tag,
             os.path.join(extract_dir.name, 'nexus'),
             dockerfile='docker/nexus-webapp/Dockerfile',
@@ -427,7 +432,7 @@ def main():
 
     if push:
         for image in built_images:
-            run(
+            run_subprocess(
                 [DOCKER, 'push', image]
             )
 
