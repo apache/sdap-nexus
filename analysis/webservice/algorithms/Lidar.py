@@ -547,41 +547,74 @@ class LidarVegetation(NexusCalcHandler):
 
             logger.info(f'Output grid shape: {X.shape}')
 
-            logger.info('Gridding ground heights')
-            gridded_zg = griddata(
-                list(zip([p['longitude'] for p in points_zg], [p['latitude'] for p in points_zg])),
-                np.array([p['data'] for p in points_zg]),
-                (X, Y),
-                method='nearest',
-                fill_value=np.nan
-            )
+            gridded_zg, gridded_50, gridded_98, gridded_cc = [], [], [], []
 
-            logger.info('Gridding mean vegetation heights')
-            gridded_50 = griddata(
-                list(zip([p['longitude'] for p in points_50], [p['latitude'] for p in points_50])),
-                np.array([p['data'] for p in points_50]),
-                (X, Y),
-                method='nearest',
-                fill_value=np.nan
-            )
+            source_point_map = {}
 
-            logger.info('Gridding canopy heights')
-            gridded_98 = griddata(
-                list(zip([p['longitude'] for p in points_98], [p['latitude'] for p in points_98])),
-                np.array([p['data'] for p in points_98]),
-                (X, Y),
-                method='nearest',
-                fill_value=np.nan
-            )
+            for zg, rh50, rh98, cc in zip_longest(points_zg, points_50, points_98, points_cc):
+                if zg is not None:
+                    zg_source = zg['source']
+                    source_point_map.setdefault(zg_source, {}).setdefault('zg', []).append(zg)
 
-            logger.info('Gridding canopy coverage')
-            gridded_cc = griddata(
-                list(zip([p['longitude'] for p in points_cc], [p['latitude'] for p in points_cc])),
-                np.array([p['data'] / 10000 for p in points_cc]),
-                (X, Y),
-                method='nearest',
-                fill_value=np.nan
-            )
+                if rh50 is not None:
+                    rh50_source = rh50['source']
+                    source_point_map.setdefault(rh50_source, {}).setdefault('50', []).append(rh50)
+
+                if rh98 is not None:
+                    rh98_source = rh98['source']
+                    source_point_map.setdefault(rh98_source, {}).setdefault('98', []).append(rh98)
+
+                if cc is not None:
+                    cc_source = cc['source']
+                    source_point_map.setdefault(cc_source, {}).setdefault('cc', []).append(cc)
+
+            for src in source_point_map:
+                logger.info(f'Gridding ground heights for {src}')
+                source_points = source_point_map[src]
+                gridded_zg.append(griddata(
+                    list(zip([p['longitude'] for p in source_points['zg']], [p['latitude'] for p in source_points['zg']])),
+                    np.array([p['data'] for p in source_points['zg']]),
+                    (X, Y),
+                    method='nearest',
+                    fill_value=np.nan
+                ))
+
+                logger.info(f'Gridding mean vegetation heights for {src}')
+                gridded_50.append(griddata(
+                    list(zip([p['longitude'] for p in source_points['50']], [p['latitude'] for p in source_points['50']])),
+                    np.array([p['data'] for p in source_points['50']]),
+                    (X, Y),
+                    method='nearest',
+                    fill_value=np.nan
+                ))
+
+                logger.info(f'Gridding canopy heights for {src}')
+                gridded_98.append(griddata(
+                    list(zip([p['longitude'] for p in source_points['98']], [p['latitude'] for p in source_points['98']])),
+                    np.array([p['data'] for p in source_points['98']]),
+                    (X, Y),
+                    method='nearest',
+                    fill_value=np.nan
+                ))
+
+                logger.info(f'Gridding canopy coverage for {src}')
+                gridded_cc.append(griddata(
+                    list(zip([p['longitude'] for p in source_points['cc']], [p['latitude'] for p in source_points['cc']])),
+                    np.array([p['data'] / 10000 for p in source_points['cc']]),
+                    (X, Y),
+                    method='nearest',
+                    fill_value=np.nan
+                ))
+
+            with warnings.catch_warnings():
+                # Numpy will likely raise a warning for all NaN slices. This is expected due to the nature of the data
+                # being reduced here, so just suppress it for now
+                warnings.simplefilter("ignore", category=RuntimeWarning)
+
+                gridded_zg = np.nanmean(gridded_zg, axis=0)
+                gridded_50 = np.nanmean(gridded_50, axis=0)
+                gridded_98 = np.nanmean(gridded_98, axis=0)
+                gridded_cc = np.nanmean(gridded_cc, axis=0)
 
             gridded_vals = np.array([
                 gridded_zg,
