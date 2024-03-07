@@ -10,12 +10,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Added STAC Catalog endpoint for matchup outputs
 - SDAP-508: Added spatial extents to the satellite dataset entries in `/list` and `/cdmslist`
 - SDAP-505: Added support for DOMS insitu api 
+- SDAP-472:
+  - Support for Zarr backend (gridded data only)
+  - Dataset management endpoints for Zarr datasets
 ### Changed
 - SDAP-493: 
   - Updated /job endpoint to use `executionId` terminology for consistency with existing `/cdmsresults` endpoint
   - Updated /job endpoint with details about number of primary and secondary tiles.
 - SDAP-500: Improvements to SDAP Asynchronous Jobs
 - SDAP-499: Added page number to default filename for matchup output
+- SDAP-472: Overhauled `data-access` to support multiple backends for simultaneous support of multiple ARD formats
 ### Deprecated
 ### Removed
 - SDAP-493: 

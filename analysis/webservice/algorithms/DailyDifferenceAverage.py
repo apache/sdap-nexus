@@ -21,7 +21,8 @@ from multiprocessing.dummy import Pool, Manager
 
 import numpy as np
 import pytz
-from nexustiles.nexustiles import NexusTileService, NexusTileServiceException
+from nexustiles.nexustiles import NexusTileService
+from nexustiles.exception import NexusTileServiceException
 from shapely.geometry import box
 
 from webservice.NexusHandler import nexus_handler
