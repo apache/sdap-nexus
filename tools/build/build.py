@@ -30,9 +30,6 @@ TAR = shutil.which('tar')
 GIT = shutil.which('git')
 GPG = shutil.which('gpg')
 
-if GPG is None:
-    raise OSError('git command could not be found in PATH')
-
 if any([req is None for req in [DOCKER, TAR, GPG, GIT]]):
     raise OSError(f'Requirement(s) not found in PATH:\n'
                   f'  docker: {DOCKER if DOCKER is not None else "MISSING"}\n'
