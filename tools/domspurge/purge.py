@@ -131,8 +131,11 @@ def main(args, before, keep_completed, keep_failed, purge_all, recreate):
 
 
 def delete_execution(session, row_id):
-    cql_data = session.prepare("""
-    DELETE FROM doms_data WHERE execution_id=?;
+    cql_data_primary = session.prepare("""
+    DELETE FROM doms_data WHERE execution_id=? AND is_primary = true;
+    """)
+    cql_data_secondary = session.prepare("""
+    DELETE FROM doms_data WHERE execution_id=? AND is_primary = false;
     """)
     cql_execution_stats = session.prepare("""
     DELETE FROM doms_execution_stats WHERE execution_id=?;
@@ -144,7 +147,8 @@ def delete_execution(session, row_id):
     DELETE FROM doms_executions WHERE id=?;
     """)
 
-    session.execute(cql_data, (row_id,))
+    session.execute(cql_data_primary, (row_id,))
+    session.execute(cql_data_secondary, (row_id,))
     session.execute(cql_execution_stats, (row_id,))
     session.execute(cql_params, (row_id,))
     session.execute(cql_executions, (row_id,))
@@ -270,7 +274,7 @@ def parse_args():
                                 required=False,
                                 dest='pv',
                                 choices=['1', '2', '3', '4', '5'],
-                                default='3')
+                                default='4')
 
     time_before = purge_options.add_mutually_exclusive_group(required=True)
 
