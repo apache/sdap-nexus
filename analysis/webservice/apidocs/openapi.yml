@@ -16,7 +16,7 @@
 openapi: 3.0.3
 info:
   description: The next generation cloud-based science data service platform.
-  version: 1.1.0
+  version: 1.2.0
   title: Science Data Analytics Platform (SDAP)
   license:
     name: Apache 2.0
@@ -139,8 +139,7 @@ paths:
           required: false
           schema:
             type: string
-            default: sea_surface_temperature
-          example: sea_surface_temperature
+          example: sea_water_temperature
         - in: query
           name: matchOnce
           description: |
@@ -155,19 +154,6 @@ paths:
             default: false
           example: false
         - in: query
-          name: resultSizeLimit
-          description: |
-            Optional integer value that limits the number of results
-            returned from the matchup. If the number of primary matches
-            is greater than this limit, the service will respond with
-            (HTTP 202 Accepted) and an empty response body. A value of
-            0 means return all results.
-          required: false
-          schema:
-            type: integer
-            default: 500
-          example: 500
-        - in: query
           name: prioritizeDistance
           description: |
             If true, prioritize distance over time when computing matches. 
@@ -180,6 +166,13 @@ paths:
             type: boolean
             default: true
           example: true
+        - in: query
+          name: filename
+          description: |
+            Optional filename. Will be passed into /job and results links
+          required: false
+          schema:
+            type: string
       responses:
         '200':
           description: Successful operation
@@ -697,12 +690,19 @@ paths:
         - in: query
           name: id
           description: |
-            The job execution ID
+            The execution ID
           required: true
           schema:
             type: string
             format: uuid
           example: c864a51b-3d87-4872-9070-632820b1cae2
+        - in: query
+          name: filename
+          description: |
+            Optional filename. Will be passed into /job results links
+          required: false
+          schema:
+            type: string
   /job/cancel:
     get:
       summary: |
@@ -715,12 +715,64 @@ paths:
         - in: query
           name: id
           description: |
+            The execution ID
+          required: true
+          schema:
+            type: string
+            format: uuid
+          example: c864a51b-3d87-4872-9070-632820b1cae2
+  /cdmscatalog/{executionId}:
+    get:
+      summary: |
+        Get STAC Catalog for execution
+      operationId: cdmscatalog
+      tags:
+        - Matchup
+      description: "Get STAC catalog by execution id"
+      parameters:
+        - in: path
+          name: executionId
+          description: |
             The job execution ID
           required: true
           schema:
             type: string
             format: uuid
           example: c864a51b-3d87-4872-9070-632820b1cae2
+  /cdmscatalog/{executionId}/{format}:
+    get:
+      summary: |
+        Get STAC Catalog format catalog for execution
+      operationId: cdmscatalogcollection
+      tags:
+        - Matchup
+      description: "Get STAC catalog by execution id"
+      parameters:
+        - in: path
+          name: executionId
+          description: |
+            The execution ID
+          required: true
+          schema:
+            type: string
+            format: uuid
+          example: c864a51b-3d87-4872-9070-632820b1cae2
+        - in: path
+          name: format
+          description: |
+            CDMS results format
+          required: true
+          schema:
+            type: string
+            enum: [JSON,CSV,NETCDF]
+          example: JSON
+        - in: query
+          name: pageSize
+          description: |
+            How many primary matches on each page of CDMS results
+          required: false
+          schema:
+            type: integer
 externalDocs:
   description: Documentation
   url: https://incubator-sdap-nexus.readthedocs.io/en/latest/index.html

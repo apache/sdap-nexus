@@ -17,8 +17,11 @@
 import setuptools
 from subprocess import check_call, CalledProcessError
 
-with open('../VERSION.txt', 'r') as f:
-    __version__ = f.read()
+try:
+    with open('../VERSION.txt', 'r') as f:
+        __version__ = f.read()
+except:
+    __version__ = None
 
 
 try:

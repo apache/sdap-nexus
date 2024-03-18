@@ -498,9 +498,9 @@ def calc_average_on_day(tile_service_factory, metrics_callback, normalize_dates,
                                             rows=5000,
                                             min_elevation=min_elevation,
                                             max_elevation=max_elevation,
-                                            metrics_callback=metrics_callback)
-
-    logger.info(f'Fetched {len(ds1_nexus_tiles):,} tiles from Solr')
+                                            metrics_callback=metrics_callback,
+                                            distinct=True)
+    
     calculation_start = datetime.now()
 
     tile_dict = {}
