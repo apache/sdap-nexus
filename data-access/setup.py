@@ -12,11 +12,14 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
+import setuptools
 from setuptools import setup
 
-with open('../VERSION.txt', 'r') as f:
-    __version__ = f.read()
+try:
+    with open('../VERSION.txt', 'r') as f:
+        __version__ = f.read()
+except:
+    __version__ = None
 
 
 with open('requirements.txt') as f:
@@ -32,8 +35,13 @@ setup(
     description="NEXUS API.",
     long_description=open('README.md').read(),
 
-    packages=['nexustiles', 'nexustiles.model', 'nexustiles.dao'],
-    package_data={'nexustiles': ['config/datastores.ini.default', 'config/datastores.ini']},
+    packages=setuptools.find_packages(),  # ['nexustiles', 'nexustiles.model', 'nexustiles.dao'],
+    package_data={
+        'nexustiles':
+            ['config/datasets.ini.default', 'config/datasets.ini'],
+        'nexustiles.backends.nexusproto':
+            ['config/datastores.ini.default', 'config/datastores.ini']
+    },
     platforms='any',
     python_requires='~=3.8',
     install_requires=pip_requirements,
