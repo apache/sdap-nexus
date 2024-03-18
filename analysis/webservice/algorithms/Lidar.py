@@ -189,6 +189,11 @@ class LidarVegetation(NexusCalcHandler):
                                                   "formatted as Minimum (Western) Longitude, Minimum (Southern) "
                                                   "Latitude, Maximum (Eastern) Longitude, Maximum (Northern) Latitude.")
 
+        max_lat = bounding_polygon.bounds[3]
+        min_lon = bounding_polygon.bounds[0]
+        min_lat = bounding_polygon.bounds[1]
+        max_lon = bounding_polygon.bounds[2]
+
         render_type = request.get_argument('renderType', '2D').upper()
 
         if render_type not in ['2D', '3D']:
@@ -235,6 +240,11 @@ class LidarVegetation(NexusCalcHandler):
                         lat_slice = (float(parts[0]), None, None)
                     else:
                         lat_slice = tuple([float(p) for p in parts])
+
+                    if not (min_lat <= lat_slice[0] <= max_lat):
+                        raise NexusProcessingException(
+                            reason='Selected slice latitude is outside the selected bounding box', code=400
+                        )
                 except ValueError:
                     raise NexusProcessingException(
                         reason='Invalid numerical component provided. latSlice must consist of either one number (lat to '
@@ -256,6 +266,11 @@ class LidarVegetation(NexusCalcHandler):
                         lon_slice = (float(parts[0]), None, None)
                     else:
                         lon_slice = tuple([float(p) for p in parts])
+
+                    if not (min_lon <= lon_slice[0] <= max_lon):
+                        raise NexusProcessingException(
+                            reason='Selected slice longitude is outside the selected bounding box', code=400
+                        )
                 except ValueError:
                     raise NexusProcessingException(
                         reason='Invalid numerical component provided. lonSlice must consist of either one number (lon to '
@@ -283,6 +298,11 @@ class LidarVegetation(NexusCalcHandler):
                     raise NexusProcessingException(
                         reason='Slice samples must be > 0',
                         code=400
+                    )
+
+                if not bounding_polygon.intersects(slice_line):
+                    raise NexusProcessingException(
+                        reason='Selected line string is entirely outside the selected bounding box', code=400
                     )
 
         map_to_grid = request.get_boolean_arg('mapToGrid')
@@ -568,7 +588,7 @@ class LidarVegetation(NexusCalcHandler):
                     cc_source = cc['source']
                     source_point_map.setdefault(cc_source, {}).setdefault('cc', []).append(cc)
 
-            for src in source_point_map:
+            for src in sorted(source_point_map):
                 logger.info(f'Gridding ground heights for {src}')
                 source_points = source_point_map[src]
                 gridded_zg.append(griddata(
@@ -606,15 +626,21 @@ class LidarVegetation(NexusCalcHandler):
                     fill_value=np.nan
                 ))
 
-            with warnings.catch_warnings():
-                # Numpy will likely raise a warning for all NaN slices. This is expected due to the nature of the data
-                # being reduced here, so just suppress it for now
-                warnings.simplefilter("ignore", category=RuntimeWarning)
+            gridded_zg = np.array(gridded_zg)
+            gridded_50 = np.array(gridded_50)
+            gridded_98 = np.array(gridded_98)
+            gridded_cc = np.array(gridded_cc)
 
-                gridded_zg = np.nanmean(gridded_zg, axis=0)
-                gridded_50 = np.nanmean(gridded_50, axis=0)
-                gridded_98 = np.nanmean(gridded_98, axis=0)
-                gridded_cc = np.nanmean(gridded_cc, axis=0)
+            logger.info('Flattening gridded flightlines to single 2D view')
+
+            # Reduce 3D arrays of gridded flight lines to single 2D array, with each value being the most recent non-nan
+            # value along axis 0. In other words, stack the flight lines on top of each other, with more recent flight
+            # lines covering over previous ones
+
+            gridded_zg = np.choose((~np.isnan(gridded_zg)).cumsum(0).argmax(0), gridded_zg)
+            gridded_50 = np.choose((~np.isnan(gridded_50)).cumsum(0).argmax(0), gridded_50)
+            gridded_98 = np.choose((~np.isnan(gridded_98)).cumsum(0).argmax(0), gridded_98)
+            gridded_cc = np.choose((~np.isnan(gridded_cc)).cumsum(0).argmax(0), gridded_cc)
 
             gridded_vals = np.array([
                 gridded_zg,
@@ -930,15 +956,19 @@ class LidarResults(NexusResults):
         extent = [min_lon, max_lon, min_lat, max_lat]
 
         fig = plt.figure(
-            figsize=(8, 10 + (max(0, n_rows - 2) * 4)), constrained_layout=True
+            figsize=(10, 10 + (max(0, n_rows - 2) * 4)), constrained_layout=True
         )
 
-        gs = fig.add_gridspec(n_rows, 2)
+        gs = fig.add_gridspec(n_rows, 4, width_ratios=[1, 0.05, 1, 0.05])
 
         rh50_ax = fig.add_subplot(gs[0, 0])
-        rh98_ax = fig.add_subplot(gs[0, 1])
+        rh50_cax = fig.add_subplot(gs[0, 1])
+        rh98_ax = fig.add_subplot(gs[0, 2])
+        rh98_cax = fig.add_subplot(gs[0, 3])
         zg_ax = fig.add_subplot(gs[1, 0])
-        cc_ax = fig.add_subplot(gs[1, 1])
+        zg_cax = fig.add_subplot(gs[1, 1])
+        cc_ax = fig.add_subplot(gs[1, 2])
+        cc_cax = fig.add_subplot(gs[1, 3])
 
         rh50_im = rh50_ax.imshow(np.flipud(np.squeeze(ds['mean_veg_height'])), extent=extent, aspect='equal',
                                  cmap='viridis')
@@ -971,20 +1001,15 @@ class LidarResults(NexusResults):
             except:
                 ...
 
-        divider_50 = make_axes_locatable(rh50_ax)
-        divider_98 = make_axes_locatable(rh98_ax)
-        divider_zg = make_axes_locatable(zg_ax)
-        divider_cc = make_axes_locatable(cc_ax)
+        rh50_ax.tick_params(axis='x', labelrotation=90)
+        rh98_ax.tick_params(axis='x', labelrotation=90)
+        zg_ax.tick_params(axis='x', labelrotation=90)
+        cc_ax.tick_params(axis='x', labelrotation=90)
 
-        cax_50 = divider_50.append_axes("right", size="5%", pad=0.05)
-        cax_98 = divider_98.append_axes("right", size="5%", pad=0.05)
-        cax_zg = divider_zg.append_axes("right", size="5%", pad=0.05)
-        cax_cc = divider_cc.append_axes("right", size="5%", pad=0.05)
-
-        rh50_cb = plt.colorbar(rh50_im, cax=cax_50, label='Height above terrain [m]', use_gridspec=True)
-        rh98_cb = plt.colorbar(rh98_im, cax=cax_98, label='Height above terrain [m]', use_gridspec=True)
-        zg_cb = plt.colorbar(zg_im, cax=cax_zg, label='Height above ellipsoid [m]', use_gridspec=True)
-        cc_cb = plt.colorbar(cc_im, cax=cax_cc, label='Coverage [%]', use_gridspec=True)
+        rh50_cb = plt.colorbar(rh50_im, cax=rh50_cax, label='Height above terrain [m]', use_gridspec=True)
+        rh98_cb = plt.colorbar(rh98_im, cax=rh98_cax, label='Height above terrain [m]', use_gridspec=True)
+        zg_cb = plt.colorbar(zg_im, cax=zg_cax, label='Height above ellipsoid [m]', use_gridspec=True)
+        cc_cb = plt.colorbar(cc_im, cax=cc_cax, label='Coverage [%]', use_gridspec=True)
 
         rh50_ax.set_title('Mean Vegetation Height')
         rh98_ax.set_title('Canopy Height')
