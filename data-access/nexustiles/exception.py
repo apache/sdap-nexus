@@ -13,19 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-numpy==1.24.3
-cassandra-driver==3.24.0
-pysolr==3.9.0
-elasticsearch==8.3.1
-urllib3==1.26.2
-requests
-nexusproto
-Shapely
-s3fs==2022.5.0
-fsspec==2022.5.0
-botocore==1.24.21
-aiohttp==3.8.1
-xarray~=2022.3.0
-zarr>=2.11.3
-pandas<2.1.0rc0  # Temporary restriction because 2.1.0rc0 fails to build
-
+class NexusTileServiceException(Exception):
+    def __init__(self, reason):
+        Exception.__init__(self, reason)

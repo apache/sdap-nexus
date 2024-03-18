@@ -36,6 +36,12 @@ class NexusRequestObject(StatsComputeOptions):
         self.requestHandler = reqHandler
         StatsComputeOptions.__init__(self)
 
+    def get_headers(self):
+        return self.requestHandler.request.headers
+
+    def get_request_body(self):
+        return self.requestHandler.request.body
+
     def get_argument(self, name, default=None):
         return self.requestHandler.get_argument(name, default=default)
 

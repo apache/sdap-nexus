@@ -33,5 +33,5 @@ You can build an image for this script to run it in a Kubernetes CronJob.
 
 ```shell
 cd /incubator-sdap-nexus
-docker build . -f Dockerfile -t sdap-local/DomsPurge:<tag>
+docker build . -f tools/domspurge/Dockerfile -t sdap-local/DomsPurge:<tag>
 ```
