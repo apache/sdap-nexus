@@ -13,98 +13,95 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-FROM nexusjpl/alpine-pyspark:3.1.1
+FROM eclipse-temurin:8
 
+COPY --chmod=755 docker/nexus-webapp/install_python.sh /tmp/install_python.sh
 
-MAINTAINER Apache SDAP "dev@sdap.apache.org"
+# Install python
+RUN /tmp/install_python.sh
+RUN ln -s /opt/python/3.9.7/bin/python3.9  /opt/python/3.9.7/bin/python
 
+ENV PATH="/opt/python/3.9.7/bin:$PATH"
 
-ARG CONDA_VERSION="4.7.12.1"
-ARG CONDA_MD5="81c773ff87af5cfac79ab862942ab6b3"
-ARG CONDA_DIR="/opt/conda"
-
-ENV  \
-    PYTHONPATH=/opt/conda/share/py4j/py4j0.10.9.2.jar \
-    NEXUS_SRC=/tmp/incubator-sdap-nexus \
-    PROJ_LIB=/opt/conda/lib/python3.8/site-packages/pyproj/data	\
-    PATH="$CONDA_DIR/bin:$PATH" \
+# Python & Poetry env vars
+ENV PYTHONUNBUFFERED=1 \
+    # prevents python creating .pyc files
     PYTHONDONTWRITEBYTECODE=1 \
-    SPARK_HOME=/opt/spark \
-    PYSPARK_DRIVER_PYTHON=/opt/conda/bin/python3.8 \
-    PYSPARK_PYTHON=/opt/conda/bin/python3.8 \
-    LD_LIBRARY_PATH=/usr/lib \
-    REQUESTS_CA_BUNDLE=/etc/ssl/certs/ca-certificates.crt
+    \
+    # pip
+    PIP_NO_CACHE_DIR=off \
+    PIP_DISABLE_PIP_VERSION_CHECK=on \
+    PIP_DEFAULT_TIMEOUT=100 \
+    \
+    # poetry
+    # https://python-poetry.org/docs/configuration/#using-environment-variables
+    POETRY_VERSION=1.8.1 \
+    # make poetry install to this location
+    POETRY_HOME="/opt/poetry" \
+    # make poetry create the virtual environment in the project's root
+    # it gets named `.venv`
+    POETRY_VIRTUALENVS_IN_PROJECT=true \
+    # do not ask any interactive question
+    POETRY_NO_INTERACTION=1 \
+    PYSETUP_PATH="/opt/pysetup" \
+    \
+    VENV_PATH="/incubator-sdap-nexus/.venv" \
+    POETRY_CACHE_DIR="/opt/.cache/poetry"
 
-RUN apk add --update --no-cache \
-    bzip2 \
-    gcc \
-    git \
-    mesa-gl \
-    wget \
-    curl \
-    which \
-    python3 \
-    bash==4.4.19-r1 \
-    libc-dev \
-    libressl2.7-libcrypto
-
-RUN  apk upgrade musl
-
-WORKDIR /tmp
-
-RUN apk del libc6-compat
-RUN apk --no-cache add wget zlib && \
-    wget -q -O /etc/apk/keys/sgerrand.rsa.pub https://alpine-pkgs.sgerrand.com/sgerrand.rsa.pub && \
-    wget https://github.com/sgerrand/alpine-pkg-glibc/releases/download/2.30-r0/glibc-2.30-r0.apk && \
-    apk add glibc-2.30-r0.apk && \
-    ln -s /lib/libz.so.1 /usr/glibc-compat/lib/ && \
-    ln -s /lib/libc.musl-x86_64.so.1 /usr/glibc-compat/lib && \
-    ln -s /usr/lib/libgcc_s.so.1 /usr/glibc-compat/lib
-
-COPY docker/nexus-webapp/install_conda.sh ./install_conda.sh
-RUN /tmp/install_conda.sh 
-
-RUN conda install -c conda-forge python=3.8.15=h257c98d_0_cpython tqdm=4.64.1=py38h06a4308_0  mamba && conda clean -afy
-
-RUN cd /usr/lib && ln -s libcom_err.so.2 libcom_err.so.3 && \
-    cd /opt/conda/lib && \
-    ln -s libnetcdf.so.11 libnetcdf.so.7 && \
-    ln -s libkea.so.1.4.6 libkea.so.1.4.5 && \
-    ln -s libhdf5_cpp.so.12 libhdf5_cpp.so.10 && \
-    ln -s libjpeg.so.9 libjpeg.so.8
-
-# Change REBUILD_CODE if you want tell Docker not to use cached layers from this line on
+# Edit this to rebuild everything from this point
 ARG REBUILD_CODE=0
+
+WORKDIR /incubator-sdap-nexus
+COPY poetry.lock pyproject.toml ./
+COPY data-access /incubator-sdap-nexus/data-access
+COPY analysis /incubator-sdap-nexus/analysis
+COPY tools /incubator-sdap-nexus/tools
+COPY docker/nexus-webapp/install_nexusproto.sh /tmp/install_nexusproto.sh
+COPY docker/nexus-webapp/entrypoint.sh /opt/entrypoint.sh
+
+# Copy readme + ASF legal files
+COPY README.md README DISCLAIMER LICENSE NOTICE ./
+
+ENV PATH="$POETRY_HOME/bin:$VENV_PATH/bin:$PATH"
+
+# Install additional dependencies for image
+RUN apt-get update && \
+    apt-get install --no-install-recommends -y proj-bin tini && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
+
+# Install poetry, install project, cleanup, and remove poetry install from layer
+RUN curl -sSL https://install.python-poetry.org -o /tmp/install_poetry.py &&  \
+    python /tmp/install_poetry.py && \
+    poetry install --no-dev &&  \
+    rm -rf $POETRY_CACHE_DIR && \
+    python /tmp/install_poetry.py --uninstall && \
+    rm /tmp/install_poetry.py
+
+ARG REBUILD_CODE=1
 
 ARG BUILD_NEXUSPROTO
 
 ARG APACHE_NEXUSPROTO=https://github.com/apache/incubator-sdap-nexusproto.git
 ARG APACHE_NEXUSPROTO_BRANCH=master
 
-COPY docker/nexus-webapp/install_nexusproto.sh ./install_nexusproto.sh
 RUN /tmp/install_nexusproto.sh $APACHE_NEXUSPROTO $APACHE_NEXUSPROTO_BRANCH
 
-COPY VERSION.txt /incubator-sdap-nexus/VERSION.txt
-COPY data-access /incubator-sdap-nexus/data-access
-COPY analysis /incubator-sdap-nexus/analysis
-COPY tools /incubator-sdap-nexus/tools
+# Spark, Nexus, etc env vars
+ENV  \
+    PYTHONPATH=/incubator-sdap-nexus/.venv/share/py4j/py4j0.10.9.3.jar \
+    NEXUS_SRC=/tmp/incubator-sdap-nexus \
+    \
+#    PROJ_LIB=/opt/conda/lib/python3.8/site-packages/pyproj/data	\
+    PATH="$POETRY_HOME/bin:$VENV_PATH/bin:/opt/python/3.9.7/bin:$PATH" \
+    SPARK_HOME=/incubator-sdap-nexus/.venv/lib/python3.9/site-packages/pyspark \
+    PYSPARK_DRIVER_PYTHON=/incubator-sdap-nexus/.venv/bin/python3.9 \
+    PYSPARK_PYTHON=/incubator-sdap-nexus/.venv/bin/python3.9 \
+    LD_LIBRARY_PATH=/usr/lib \
+    REQUESTS_CA_BUNDLE=/etc/ssl/certs/ca-certificates.crt
 
-WORKDIR /incubator-sdap-nexus/data-access
-RUN python3 setup.py install clean
+# This image has k8s client jar version 5.4.1, idk if we should force-install 4.12.0 or if it's even needed anymore...
+#RUN rm $SPARK_HOME/jars/kubernetes-client-4.12.0.jar
+#ADD https://repo1.maven.org/maven2/io/fabric8/kubernetes-client/4.12.0/kubernetes-client-4.12.0.jar $SPARK_HOME/jars
 
-WORKDIR /incubator-sdap-nexus/analysis
-RUN python3 setup.py install clean && mamba clean -afy
-
-RUN pip install shapely==1.7.1
-
-WORKDIR /incubator-sdap-nexus/tools/deletebyquery
-ARG CASS_DRIVER_BUILD_CONCURRENCY=8
-RUN pip3 install cassandra-driver==3.20.1 pyspark py4j
-RUN pip3 install -r requirements.txt
-RUN pip3 install cython
-
-WORKDIR /incubator-sdap-nexus
-
-# Upgrade kubernetes client jar from the default version
-RUN rm /opt/spark/jars/kubernetes-client-4.12.0.jar
-ADD https://repo1.maven.org/maven2/io/fabric8/kubernetes-client/4.12.0/kubernetes-client-4.12.0.jar /opt/spark/jars
+ENTRYPOINT ["/opt/entrypoint.sh"]
