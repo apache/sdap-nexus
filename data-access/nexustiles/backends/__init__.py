@@ -13,12 +13,3 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-numpy==1.24.3
-cassandra-driver==3.24.0
-pysolr==3.9.0
-elasticsearch==8.3.1
-urllib3==1.26.2
-requests
-nexusproto
-Shapely
-numpy==1.24.3

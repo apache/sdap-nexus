@@ -162,6 +162,27 @@ class SolrProxy(object):
 
         datasets = self.get_data_series_list_simple()
 
+        def get_spatial_bound(dataset, lat_lon, min_max):
+            search = f'dataset_s:{dataset}'
+
+            field = f'tile_{min_max}_{lat_lon}'
+
+            order = 'ASC' if min_max == 'min' else 'DESC'
+
+            params = dict(
+                rows=1,
+                sort=[f'{field} {order}']
+            )
+
+            results = self.do_query_raw(*(search, None, None, False, None), **params)
+
+            v = results.docs[0][field]
+
+            if isinstance(v, list):
+                v = v[0]
+
+            return v
+
         for dataset in datasets:
             min_date = self.find_min_date_from_tiles([], ds=dataset['title'])
             max_date = self.find_max_date_from_tiles([], ds=dataset['title'])
@@ -169,6 +190,13 @@ class SolrProxy(object):
             dataset['end'] = (max_date - EPOCH).total_seconds()
             dataset['iso_start'] = min_date.strftime(ISO_8601)
             dataset['iso_end'] = max_date.strftime(ISO_8601)
+
+            min_lat = get_spatial_bound(dataset['title'], 'lat', 'min')
+            max_lat = get_spatial_bound(dataset['title'], 'lat', 'max')
+            min_lon = get_spatial_bound(dataset['title'], 'lon', 'min')
+            max_lon = get_spatial_bound(dataset['title'], 'lon', 'max')
+
+            dataset['spatial_extent'] = '{:0.2f},{:0.2f},{:0.2f},{:0.2f}'.format(min_lon, min_lat, max_lon, max_lat)
 
         return datasets
 
@@ -189,7 +217,8 @@ class SolrProxy(object):
             l.append({
                 "shortName": g,
                 "title": g,
-                "tileCount": v
+                "tileCount": v,
+                "type": 'nexusproto'
             })
         l = sorted(l, key=lambda entry: entry["title"])
         return l

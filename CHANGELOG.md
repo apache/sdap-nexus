@@ -6,9 +6,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 ### Added
+- SDAP-506:
+  - Added STAC Catalog endpoint for matchup outputs
+- SDAP-508: Added spatial extents to the satellite dataset entries in `/list` and `/cdmslist`
+- SDAP-505: Added support for DOMS insitu api 
+- SDAP-472:
+  - Support for Zarr backend (gridded data only)
+  - Dataset management endpoints for Zarr datasets
+- SDAP-497: Added tool to ease building of releases. Can build from ASF distributions, git repos, and local
 ### Changed
+- SDAP-493: 
+  - Updated /job endpoint to use `executionId` terminology for consistency with existing `/cdmsresults` endpoint
+  - Updated /job endpoint with details about number of primary and secondary tiles.
+- SDAP-500: Improvements to SDAP Asynchronous Jobs
+- SDAP-499: Added page number to default filename for matchup output
+- SDAP-472: Overhauled `data-access` to support multiple backends for simultaneous support of multiple ARD formats
 ### Deprecated
 ### Removed
+- SDAP-493: 
+  - Removed `resultSizeLimit` from /match_spark endpoint 
 ### Fixed
 ### Security
 
@@ -19,7 +35,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - SDAP-473: Added support for matchup job prioritization
 - SDAP-483: Added `.asf.yaml` to configure Jira auto-linking.
 - SDAP-487: Added script to migrate existing `doms.doms_data` data to new schema.
-- SDAP-497: Added convenience script to download official source distributions and build images from them.
 ### Changed
 - SDAP-453: Updated results storage and retrieval to support output JSON from `/cdmsresults` that matches output from `/match_spark`.
   - **NOTE:** Deploying these changes to an existing SDAP deployment will require modifying the Cassandra database with stored results. There is a script to do so at `/tools/update-doms-data-schema/update.py`
@@ -36,6 +51,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Support for deploying on k8s version 1.25:
   - Upgraded Cassandra Helm chart dependency version
   - Bumped default Cassandra protocol version 3 -> 4 in webapp and tools
+- SDAP-507: Changes to remove `geos` sub-dependency from core image build (partially superseded by SDAP-511 changes):
+  - Removed `gdal` and `basemap` as core dependencies
+  - Moved `shapely` installation in docker build from conda install to pip install
+  - Disabled `/domsplot` endpoint & commented out references to its source file as it depends on `basemap` and raises `ImportError`s at startup
+- SDAP-511: Switched package management to use Poetry instead of conda/mamba
 ### Deprecated
 ### Removed
 - SDAP-465: Removed `climatology` directory.

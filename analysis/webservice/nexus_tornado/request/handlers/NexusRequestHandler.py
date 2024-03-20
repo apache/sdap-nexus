@@ -75,6 +75,35 @@ class NexusRequestHandler(tornado.web.RequestHandler):
         except Exception as e:
             self.async_onerror_callback(str(e), 500)
 
+    @tornado.gen.coroutine
+    def post(self):
+        self.logger.info("Received %s" % self._request_summary())
+
+        request = NexusRequestObject(self)
+
+        # create NexusCalcHandler which will process the request
+        instance = self.__clazz(**self._clazz_init_args)
+
+        try:
+            # process the request asynchronously on a different thread,
+            # the current tornado handler is still available to get other user requests
+            results = yield tornado.ioloop.IOLoop.current().run_in_executor(self.executor, instance.calc, request)
+
+            if results:
+                try:
+                    self.set_status(results.status_code)
+                except AttributeError:
+                    pass
+
+                renderer = NexusRendererFactory.get_renderer(request)
+                renderer.render(self, results)
+
+        except NexusProcessingException as e:
+            self.async_onerror_callback(e.reason, e.code)
+
+        except Exception as e:
+            self.async_onerror_callback(str(e), 500)
+
     def async_onerror_callback(self, reason, code=500):
         self.logger.error("Error processing request", exc_info=True)
 

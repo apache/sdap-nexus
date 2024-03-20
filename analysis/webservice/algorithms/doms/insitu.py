@@ -29,6 +29,9 @@ def query_insitu_schema():
     metadata
     """
     schema_endpoint = insitu_endpoints.getSchemaEndpoint()
+    if schema_endpoint is None:
+        logging.warning('No insitu schema endpoint defined. Skipping.')
+        return {}
     logging.info("Querying schema")
     response = requests.get(schema_endpoint)
     response.raise_for_status()

@@ -137,14 +137,6 @@ class Matchup(NexusCalcSparkTornadoHandler):
                            + "If true, only the nearest point will be returned for each primary point. "
                            + "If false, all points within the tolerances will be returned for each primary point. Default: False"
         },
-        "resultSizeLimit": {
-            "name": "Result Size Limit",
-            "type": "int",
-            "description": "Optional integer value that limits the number of results returned from the matchup. "
-                           "If the number of primary matches is greater than this limit, the service will respond with "
-                           "(HTTP 202: Accepted) and an empty response body. A value of 0 means return all results. "
-                           "Default: 500"
-        },
         "prioritizeDistance": {
             "name": "Prioritize distance",
             "type": "boolean",
@@ -223,18 +215,17 @@ class Matchup(NexusCalcSparkTornadoHandler):
 
         match_once = request.get_boolean_arg("matchOnce", default=False)
 
-        result_size_limit = request.get_int_arg("resultSizeLimit", default=500)
-
         start_seconds_from_epoch = int((start_time - EPOCH).total_seconds())
         end_seconds_from_epoch = int((end_time - EPOCH).total_seconds())
 
         prioritize_distance = request.get_boolean_arg("prioritizeDistance", default=True)
+        filename = request.get_argument('filename', default=None)
 
 
         return bounding_polygon, primary_ds_name, secondary_ds_names, parameter_s, \
                start_time, start_seconds_from_epoch, end_time, end_seconds_from_epoch, \
                depth_min, depth_max, time_tolerance, radius_tolerance, \
-               platforms, match_once, result_size_limit, prioritize_distance
+               platforms, match_once, prioritize_distance, filename
 
     def get_job_pool(self, tile_ids):
         if len(tile_ids) > LARGE_JOB_THRESHOLD:
@@ -244,7 +235,7 @@ class Matchup(NexusCalcSparkTornadoHandler):
     def async_calc(self, execution_id, tile_ids, bounding_polygon, primary_ds_name,
                    secondary_ds_names, parameter_s, start_time, end_time, depth_min,
                    depth_max, time_tolerance, radius_tolerance, platforms, match_once,
-                   result_size_limit, start, prioritize_distance):
+                   start, prioritize_distance):
         # Call spark_matchup
         self.log.debug("Calling Spark Driver")
 
@@ -286,10 +277,12 @@ class Matchup(NexusCalcSparkTornadoHandler):
 
         total_keys = len(list(spark_result.keys()))
         total_values = sum(len(v) for v in spark_result.values())
+        unique_values = len(set([point.data_id for v in spark_result.values() for point in v]))
         details = {
-            "timeToComplete": int((end - start).total_seconds()),
-            "numSecondaryMatched": total_values,
-            "numPrimaryMatched": total_keys
+            'timeToComplete': int((end - start).total_seconds()),
+            'numSecondaryMatched': total_values,
+            'numPrimaryMatched': total_keys,
+            'numUniqueSecondaries': unique_values
         }
 
         matches = Matchup.convert_to_matches(spark_result)
@@ -310,7 +303,7 @@ class Matchup(NexusCalcSparkTornadoHandler):
         bounding_polygon, primary_ds_name, secondary_ds_names, parameter_s, \
         start_time, start_seconds_from_epoch, end_time, end_seconds_from_epoch, \
         depth_min, depth_max, time_tolerance, radius_tolerance, \
-        platforms, match_once, result_size_limit, prioritize_distance = self.parse_arguments(request)
+        platforms, match_once, prioritize_distance, filename = self.parse_arguments(request)
 
         args = {
             "primary": primary_ds_name,
@@ -380,13 +373,11 @@ class Matchup(NexusCalcSparkTornadoHandler):
             radius_tolerance=radius_tolerance,
             platforms=platforms,
             match_once=match_once,
-            result_size_limit=result_size_limit,
             start=start,
             prioritize_distance=prioritize_distance
         ))
-
-        request.requestHandler.redirect(f'/job?id={execution_id}')
-
+        filename_param = f'&filename={filename}' if filename else ''
+        request.requestHandler.redirect(f'/job?id={execution_id}{filename_param}')
 
     @classmethod
     def convert_to_matches(cls, spark_result):
@@ -557,11 +548,11 @@ class DomsPoint(object):
             return key in d and d[key] is not None and d[key] != ''
 
         if is_defined('id', point.platform):
-            point.platform = edge_point.get('platform')['id']
+            point.platform = str(edge_point.get('platform')['id'])
         elif is_defined('code', point.platform):
-            point.platform = edge_point.get('platform')['code']
+            point.platform = str(edge_point.get('platform')['code'])
         elif is_defined('type', point.platform):
-            point.platform = edge_point.get('platform')['type']
+            point.platform = str(edge_point.get('platform')['type'])
 
         data_fields = [
             'air_pressure',
@@ -850,9 +841,9 @@ def match_satellite_to_insitu(tile_ids, primary_b, secondary_b, parameter_b, tt_
     tile_service = tile_service_factory()
 
     # Determine the spatial temporal extents of this partition of tiles
-    tiles_bbox = tile_service.get_bounding_box(tile_ids)
-    tiles_min_time = tile_service.get_min_time(tile_ids)
-    tiles_max_time = tile_service.get_max_time(tile_ids)
+    tiles_bbox = tile_service.get_bounding_box(tile_ids, ds=primary_b.value)
+    tiles_min_time = tile_service.get_min_time(tile_ids, ds=primary_b.value)
+    tiles_max_time = tile_service.get_max_time(tile_ids, ds=primary_b.value)
 
     # Increase spatial extents by the radius tolerance
     matchup_min_lon, matchup_min_lat = add_meters_to_lon_lat(tiles_bbox.bounds[0], tiles_bbox.bounds[1],
@@ -931,7 +922,7 @@ def match_satellite_to_insitu(tile_ids, primary_b, secondary_b, parameter_b, tt_
         edge_results = []
         for tile in matchup_tiles:
             # Retrieve tile data and convert to lat/lon projection
-            tiles = tile_service.find_tile_by_id(tile.tile_id, fetch_data=True)
+            tiles = tile_service.find_tile_by_id(tile.tile_id, fetch_data=True, ds=secondary_b.value)
             tile = tiles[0]
 
             valid_indices = tile.get_indices()
@@ -957,14 +948,14 @@ def match_satellite_to_insitu(tile_ids, primary_b, secondary_b, parameter_b, tt_
 
     # The actual matching happens in the generator. This is so that we only load 1 tile into memory at a time
     match_generators = [match_tile_to_point_generator(tile_service, tile_id, m_tree, edge_results, bounding_wkt_b.value,
-                                                      parameter_b.value, rt_b.value, aeqd_proj) for tile_id
-                        in tile_ids]
+                                                      parameter_b.value, rt_b.value, aeqd_proj, primary_b.value)
+                        for tile_id in tile_ids]
 
     return chain(*match_generators)
 
 
 def match_tile_to_point_generator(tile_service, tile_id, m_tree, edge_results, search_domain_bounding_wkt,
-                                  search_parameter, radius_tolerance, aeqd_proj):
+                                  search_parameter, radius_tolerance, aeqd_proj, primary_ds):
     from nexustiles.model.nexusmodel import NexusPoint
     from webservice.algorithms_spark.Matchup import DomsPoint  # Must import DomsPoint or Spark complains
 
@@ -972,7 +963,7 @@ def match_tile_to_point_generator(tile_service, tile_id, m_tree, edge_results, s
     try:
         the_time = datetime.now()
         tile = tile_service.mask_tiles_to_polygon(wkt.loads(search_domain_bounding_wkt),
-                                                  tile_service.find_tile_by_id(tile_id))[0]
+                                                  tile_service.find_tile_by_id(tile_id, ds=primary_ds))[0]
         print("%s Time to load tile %s" % (str(datetime.now() - the_time), tile_id))
     except IndexError:
         # This should only happen if all measurements in a tile become masked after applying the bounding polygon
