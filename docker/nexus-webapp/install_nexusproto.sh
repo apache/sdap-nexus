@@ -37,6 +37,10 @@ if [ ! -z ${BUILD_NEXUSPROTO+x} ]; then
   rm -rf /root/.gradle
   popd
   rm -rf nexusproto
+elif [ ! -z ${POETRY_BUILD+x} ]; then
+  poetry add nexusproto
+  echo "Deleting poetry cache"
+  rm -rf $POETRY_CACHE_DIR
 else
   pip install nexusproto
 fi
