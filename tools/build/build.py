@@ -135,8 +135,22 @@ def pull_source(dst_dir: tempfile.TemporaryDirectory, args: argparse.Namespace):
     )
 
     if source_location == ASF:
-        area = 'dev' if yes_no_prompt('Is this a release candidate? (No = official release) [Y]/N: ') else 'release'
-        url = f'https://dist.apache.org/repos/dist/{area}/'
+        DEV = 'Dev area (release candidates)'
+        REL = 'Most recent release area'
+        ARC = 'Archive (full release history)'
+
+        url_map = {
+            DEV: 'https://dist.apache.org/repos/dist/dev/',
+            REL: 'https://dist.apache.org/repos/dist/release/',
+            ARC: 'https://archive.apache.org/dist/'
+        }
+
+        release_area = choice_prompt(
+            'Where is the release you\'re looking for?',
+            [DEV, REL, ARC]
+        )
+
+        url = url_map[release_area]
 
         if HAS_GRADUATED:
             raise NotImplementedError()
@@ -148,9 +162,22 @@ def pull_source(dst_dir: tempfile.TemporaryDirectory, args: argparse.Namespace):
 
         soup = BeautifulSoup(response.text, 'html.parser')
 
+        versions = [
+            node.text.rstrip('/') for node in soup.find_all('a') if node.get('href').rstrip('/') not in ['KEYS', '..']
+        ]
+
+        # Extra filtering to remove some special values in archive HTML page
+        versions = [
+            v for v in versions if v not in ['Parent Directory', 'Name', 'Last modified', 'Size', 'Description']
+        ]
+
+        if len(versions) == 0:
+            print('There is nothing in this area to build...')
+            exit(0)
+
         version = choice_prompt(
             'Choose a release/release candidate to build',
-            [node.text.rstrip('/') for node in soup.find_all('a') if node.get('href').rstrip('/') not in ['KEYS', '..']],
+            versions,
         )
 
         url = url + version + '/'
@@ -437,4 +464,8 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
+    try:
+        main()
+    except KeyboardInterrupt:
+        print('\nBuild cancelled by user')
+        exit(0)
