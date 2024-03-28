@@ -20,7 +20,6 @@ import subprocess
 import tempfile
 import hashlib
 from tenacity import retry, stop_after_attempt, wait_fixed
-from urllib.parse import urljoin
 
 import requests
 from bs4 import BeautifulSoup
@@ -43,6 +42,10 @@ ASF_INGESTER_REPO = 'https://github.com/apache/incubator-sdap-ingester.git'
 
 HAS_GRADUATED = False
 
+#
+# dry_run = False
+#
+
 
 def build_cmd(tag, context, dockerfile='', cache=True):
     command = [DOCKER, 'build', context]
@@ -60,14 +63,22 @@ def build_cmd(tag, context, dockerfile='', cache=True):
 
 @retry(stop=stop_after_attempt(2), wait=wait_fixed(2))
 def run_subprocess(cmd, suppress_output=False, err_on_fail=True, **kwargs):
-    stdout = subprocess.DEVNULL if suppress_output else None
+    if not kwargs.pop('dryrun', False):
+        stdout = subprocess.DEVNULL if suppress_output else None
 
-    p = subprocess.Popen(cmd, stdout=stdout, stderr=subprocess.STDOUT, **kwargs)
+        p = subprocess.Popen(cmd, stdout=stdout, stderr=subprocess.STDOUT, **kwargs)
 
-    p.wait()
+        p.wait()
 
-    if err_on_fail and p.returncode != 0:
-        raise OSError(f'Subprocess returned nonzero: {p.returncode}')
+        if err_on_fail and p.returncode != 0:
+            raise OSError(f'Subprocess returned nonzero: {p.returncode}')
+    else:
+        cmd_str = ' '.join(cmd)
+
+        if suppress_output:
+            cmd_str += ' > /dev/null'
+
+        print(cmd_str)
 
 
 def yes_no_prompt(prompt, default=True):
@@ -125,12 +136,12 @@ def basic_prompt(prompt):
 
 def pull_source(dst_dir: tempfile.TemporaryDirectory, args: argparse.Namespace):
     ASF = 'ASF (dist.apache.org)'
-    GIT = 'GitHub'
+    GHB = 'GitHub'
     LFS = 'Local Filesystem (Not implemented yet)'
 
     source_location = choice_prompt(
         'Where is the source you\'re building from stored?',
-        [ASF, GIT, LFS],
+        [ASF, GHB, LFS],
         ASF
     )
 
@@ -195,6 +206,10 @@ def pull_source(dst_dir: tempfile.TemporaryDirectory, args: argparse.Namespace):
 
         build_artifacts = list(set([remove_suffixes(node.text, ['.sha512', '.asc']) for node in soup.find_all('a') if node.get('href').rstrip('/') not in ['KEYS', '..']]))
 
+        build_artifacts = [
+            a for a in build_artifacts if a not in ['Parent Directory', 'Name', 'Last modified', 'Size', 'Description']
+        ]
+
         nexus_tarball = None
         ingester_tarball = None
 
@@ -256,7 +271,7 @@ def pull_source(dst_dir: tempfile.TemporaryDirectory, args: argparse.Namespace):
                 os.path.join(dst_dir.name, 'Apache-SDAP', ingester_tarball.split('/')[-1].removesuffix('.tar.gz')),
                 os.path.join(dst_dir.name, 'ingester')
             )
-    elif source_location == GIT:
+    elif source_location == GHB:
         if not args.skip_nexus:
             if not yes_no_prompt('Will you be using a fork for the Nexus repository? Y/[N]: ', False):
                 nexus_repo = ASF_NEXUS_REPO
@@ -355,6 +370,13 @@ def main():
     )
 
     parser.add_argument(
+        '--dry-run',
+        dest='dry',
+        action='store_true',
+        help="Don't execute build/push commands, but print them"
+    )
+
+    parser.add_argument(
         '--skip-nexus',
         dest='skip_nexus',
         action='store_true',
@@ -366,6 +388,15 @@ def main():
         dest='skip_ingester',
         action='store_true',
         help='Don\'t build Collection Manager & Granule Ingester images'
+    )
+
+    parser.add_argument(
+        '--skip',
+        dest='skip',
+        nargs='*',
+        choices=['webapp', 'solr', 'solr-init', 'gi', 'cm'],
+        help='List of individual images to not build',
+        default=[],
     )
 
     parser.set_defaults(cache=None, push=None)
@@ -399,65 +430,71 @@ def main():
 
         cm_tag = f'{registry}/sdap-collection-manager:{tag}'
 
-        run_subprocess(build_cmd(
-            cm_tag,
-            os.path.join(extract_dir.name, 'ingester'),
-            dockerfile='collection_manager/docker/Dockerfile',
-            cache=cache
-        ))
+        if 'cm' not in args.skip:
+            run_subprocess(build_cmd(
+                cm_tag,
+                os.path.join(extract_dir.name, 'ingester'),
+                dockerfile='collection_manager/docker/Dockerfile',
+                cache=cache
+            ), dryrun=args.dry)
 
-        built_images.append(cm_tag)
+            built_images.append(cm_tag)
 
         gi_tag = f'{registry}/sdap-granule-ingester:{tag}'
 
-        run_subprocess(build_cmd(
-            gi_tag,
-            os.path.join(extract_dir.name, 'ingester'),
-            dockerfile='granule_ingester/docker/Dockerfile',
-            cache=cache
-        ))
+        if 'gi' not in args.skip:
+            run_subprocess(build_cmd(
+                gi_tag,
+                os.path.join(extract_dir.name, 'ingester'),
+                dockerfile='granule_ingester/docker/Dockerfile',
+                cache=cache
+            ), dryrun=args.dry)
 
-        built_images.append(gi_tag)
+            built_images.append(gi_tag)
 
     if not args.skip_nexus:
         solr_tag = f'{registry}/sdap-solr-cloud:{tag}'
 
-        run_subprocess(build_cmd(
-            solr_tag,
-            os.path.join(extract_dir.name, 'nexus/docker/solr'),
-            cache=cache
-        ))
+        if 'solr' not in args.skip:
+            run_subprocess(build_cmd(
+                solr_tag,
+                os.path.join(extract_dir.name, 'nexus/docker/solr'),
+                cache=cache
+            ), dryrun=args.dry)
 
-        built_images.append(solr_tag)
+            built_images.append(solr_tag)
 
         solr_init_tag = f'{registry}/sdap-solr-cloud-init:{tag}'
 
-        run_subprocess(build_cmd(
-            solr_init_tag,
-            os.path.join(extract_dir.name, 'nexus/docker/solr'),
-            dockerfile='cloud-init/Dockerfile',
-            cache=cache
-        ))
+        if 'solr-init' not in args.skip:
+            run_subprocess(build_cmd(
+                solr_init_tag,
+                os.path.join(extract_dir.name, 'nexus/docker/solr'),
+                dockerfile='cloud-init/Dockerfile',
+                cache=cache
+            ), dryrun=args.dry)
 
-        built_images.append(solr_init_tag)
+            built_images.append(solr_init_tag)
 
         webapp_tag = f'{registry}/sdap-nexus-webapp:{tag}'
 
-        run_subprocess(build_cmd(
-            webapp_tag,
-            os.path.join(extract_dir.name, 'nexus'),
-            dockerfile='docker/nexus-webapp/Dockerfile',
-            cache=cache
-        ))
+        if 'webapp' not in args.skip:
+            run_subprocess(build_cmd(
+                webapp_tag,
+                os.path.join(extract_dir.name, 'nexus'),
+                dockerfile='docker/nexus-webapp/Dockerfile',
+                cache=cache
+            ), dryrun=args.dry)
 
-        built_images.append(webapp_tag)
+            built_images.append(webapp_tag)
 
-    print('Image builds completed')
+    if not args.dry:
+        print('Image builds completed')
 
     if push:
         for image in built_images:
             run_subprocess(
-                [DOCKER, 'push', image]
+                [DOCKER, 'push', image], dryrun=args.dry
             )
 
     print('done')
