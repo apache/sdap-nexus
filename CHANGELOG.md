@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - SDAP-506:
   - Added STAC Catalog endpoint for matchup outputs
 - SDAP-508: Added spatial extents to the satellite dataset entries in `/list` and `/cdmslist`
+- SDAP-505: Added support for DOMS insitu api 
 - SDAP-472:
   - Support for Zarr backend (gridded data only)
   - Dataset management endpoints for Zarr datasets
