@@ -324,7 +324,7 @@ class CoGBackend(AbstractTileService):
         logger.debug(f'Opening cog at {url_s}')
 
         if url.scheme in ['file', '']:
-            tiff = rioxarray.open_rasterio(url.path, mask_and_scale=True).to_dataset('band')
+            tiff = rioxarray.open_rasterio(url.path, mask_and_scale=False).to_dataset('band')
         elif url.scheme == 's3':
             try:
                 aws_cfg = config['aws']
@@ -344,7 +344,7 @@ class CoGBackend(AbstractTileService):
                 AWSSession(session),
                 GDAL_DISABLE_READDIR_ON_OPEN='EMPTY_DIR'
             ):
-                tiff = rioxarray.open_rasterio(url_s, mask_and_scale=True)
+                tiff = rioxarray.open_rasterio(url_s, mask_and_scale=False)
 
                 #####
                 # NOTE: This will likely be inefficient so leaving it disabled for now. I don't know how it will
@@ -357,8 +357,10 @@ class CoGBackend(AbstractTileService):
         else:
             raise NotImplementedError(f'Support not yet added for tiffs with {url.scheme} URLs')
 
+        tiff = xr.decode_cf(tiff)
+
         try:
-            tiff = tiff.rio.reproject(dst_crs='EPSG:4326', nodata=np.nan)
+            tiff = tiff.rio.reproject(dst_crs='EPSG:4326')
         except MissingCRS:
             pass
 
