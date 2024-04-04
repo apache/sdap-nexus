@@ -1253,7 +1253,7 @@ class LidarResults3D(NexusResults):
         s1 = ax.scatter(
             xy[:, 0], xy[:, 1], results['mean_veg_height'].values + results['ground_height'].values,
             marker=',',
-            alpha=results['canopy_coverage'].values,
+            alpha=results['canopy_coverage'].values / 100,
             facecolors='brown',
             zdir='z',
             depthshade=True,
@@ -1264,7 +1264,7 @@ class LidarResults3D(NexusResults):
         s2 = ax.scatter(
             xy[:, 0], xy[:, 1], results['canopy_height'].values + results['ground_height'].values,
             marker=',',
-            alpha=results['canopy_coverage'].values,
+            alpha=results['canopy_coverage'].values / 100,
             facecolors='xkcd:leaf',
             zdir='z',
             depthshade=True,
@@ -1324,7 +1324,7 @@ class LidarResults3D(NexusResults):
         s1 = ax.scatter(
             xy[:, 0], xy[:, 1], results['mean_veg_height'].values + results['ground_height'].values,
             marker=',',
-            alpha=results['canopy_coverage'].values * ALPHA_SCALING,
+            alpha=(results['canopy_coverage'].values / 100) * ALPHA_SCALING,
             facecolors='brown',
             zdir='z',
             depthshade=True,
@@ -1335,7 +1335,7 @@ class LidarResults3D(NexusResults):
         s2 = ax.scatter(
             xy[:, 0], xy[:, 1], results['canopy_height'].values + results['ground_height'].values,
             marker=',',
-            alpha=results['canopy_coverage'].values * ALPHA_SCALING,
+            alpha=(results['canopy_coverage'].values / 100) * ALPHA_SCALING,
             facecolors='xkcd:leaf',
             zdir='z',
             depthshade=True,
