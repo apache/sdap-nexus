@@ -357,7 +357,19 @@ class CoGBackend(AbstractTileService):
         else:
             raise NotImplementedError(f'Support not yet added for tiffs with {url.scheme} URLs')
 
+        # Broadcast the dataset attributes to the vars for decoding
+        for var in tiff.data_vars:
+            tiff[var].attrs.update(tiff.attrs)
+
+        # Save the dtypes of the vars cause they will be lost to float32 on decode
+        var_dtypes = {var: tiff[var].dtype for var in tiff.data_vars}
+
+        # Decode
         tiff = xr.decode_cf(tiff)
+
+        # Cast variables back to original dtypes
+        for var in tiff.data_vars:
+            tiff[var] = tiff[var].astype(var_dtypes[var])
 
         try:
             tiff = tiff.rio.reproject(dst_crs='EPSG:4326')
