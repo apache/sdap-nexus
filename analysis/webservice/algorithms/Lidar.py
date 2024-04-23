@@ -19,6 +19,7 @@ import logging
 import os.path
 import warnings
 import zipfile
+from copy import copy
 from datetime import datetime
 from functools import partial
 from io import BytesIO
@@ -357,11 +358,13 @@ class LidarVegetation(NexusCalcHandler):
          render_type, params_3d) = self.parse_arguments(computeOptions)
 
         tile_service = self._get_tile_service()
+        points_zg, points_50, points_98, points_cc = [], [], [], []
+        sources = set()
 
-        ds_zg = f'{dataset}_ZG'
-        ds_rh50 = f'{dataset}_RH050'
-        ds_rh98 = f'{dataset}_RH098'
-        ds_cc = f'{dataset}_CC'
+        def source_name_from_granule(granule: str, end=-3) -> str:
+            return '_'.join(granule.split('_')[:end])
+
+        include_nan = map_to_grid  # If we may need to map to grid, get nans from source tiles so we can best estimate
 
         get_tiles = partial(
             tile_service.find_tiles_in_polygon,
@@ -370,119 +373,220 @@ class LidarVegetation(NexusCalcHandler):
             end_time=end_time
         )
 
-        tiles_zg = get_tiles(ds=ds_zg)
-        tiles_rh50 = get_tiles(ds=ds_rh50)
-        tiles_rh98 = get_tiles(ds=ds_rh98)
-        tiles_cc = get_tiles(ds=ds_cc)
+        single_collection = tile_service.dataset_exists(dataset)
 
-        logger.info(f'Matched tile counts by variable: ZG={len(tiles_zg):,}, RH050={len(tiles_rh50):,}, '
-                    f'RH098={len(tiles_rh98):,}, CC={len(tiles_cc):,}')
+        if single_collection:
+            tiles = get_tiles(ds=dataset)
+            (ds_zg, ds_rh50, ds_rh98, ds_cc) = [dataset] * 4
+            variable_indices = None
+            logger.info(f'Matched {len(tiles):,} tiles')
 
-        if all([len(t) == 0 for t in [tiles_zg, tiles_rh50, tiles_rh98, tiles_cc]]):
-            raise NoDataException(reason='No data was found within the selected parameters')
+            for tile in tiles:
+                logger.info(f'Processing tile {tile.tile_id}')
 
-        points_zg, points_50, points_98, points_cc = [], [], [], []
+                if variable_indices is None:
+                    variable_indices = {}
 
-        sources = set()
+                    for i, var in enumerate(tile.variables):
+                        if var.variable_name.lower() in ['zg', 'ground_height']:
+                            if 'zg' in variable_indices:
+                                logger.warning('Ground height variable found more than once in the collection')
+                            variable_indices['zg'] = i
+                            continue
 
-        def source_name_from_granule(granule: str, end=-3) -> str:
-            return '_'.join(granule.split('_')[:end])
+                        if var.variable_name.lower() in ['rh50', 'rh050', 'mean_veg_height', 'mean_vegetation_height']:
+                            if 'rh50' in variable_indices:
+                                logger.warning('Mean vegetation height variable found more than once in the collection')
+                            variable_indices['rh50'] = i
+                            continue
 
-        include_nan = map_to_grid  # If we may need to map to grid, get nans from source tiles so we can best estimate
-        # grid resolution
+                        if var.variable_name.lower() in ['rh98', 'rh098', 'canopy_height']:
+                            if 'rh98' in variable_indices:
+                                logger.warning('Canopy height variable found more than once in the collection')
+                            variable_indices['rh98'] = i
+                            continue
 
-        for tile_zg, tile_50, tile_98, tile_cc in zip_longest(tiles_zg, tiles_rh50, tiles_rh98, tiles_cc):
-            if tile_zg:
-                logger.info(f'Processing ground height tile {tile_zg.tile_id}')
-                npg_zg = tile_zg.nexus_point_generator(include_nan=include_nan)
-                sources.add(source_name_from_granule(tile_zg.granule))
-            else:
-                npg_zg = []
+                        if var.variable_name.lower() in ['cc', 'canopy_coverage', 'canopy_cover']:
+                            if 'zg' in variable_indices:
+                                logger.warning('Canopy cover variable found more than once in the collection')
+                            variable_indices['cc'] = i
+                            continue
 
-            if tile_50:
-                logger.info(f'Processing mean vegetation height tile {tile_50.tile_id}')
-                npg_50 = tile_50.nexus_point_generator(include_nan=include_nan)
-                sources.add(source_name_from_granule(tile_50.granule))
-            else:
-                npg_50 = []
+                    if len(variable_indices) != 4:
+                        required = {'zg', 'rh50', 'rh98', 'cc'}
+                        raise NexusProcessingException(
+                            code=400,
+                            reason=f'Could find some needed variables in the selected collection:'
+                                   f' {list(required - set(variable_indices.keys()))}'
+                        )
 
-            if tile_98:
-                logger.info(f'Processing canopy height tile {tile_98.tile_id}')
-                npg_98 = tile_98.nexus_point_generator(include_nan=include_nan)
-                sources.add(source_name_from_granule(tile_98.granule))
-            else:
-                npg_98 = []
+                npg = tile.nexus_point_generator(include_nan=include_nan)
+                source = tile.granule
+                sources.add(source)
 
-            if tile_cc:
-                logger.info(f'Processing canopy coverage tile {tile_cc.tile_id}')
-                npg_cc = tile_cc.nexus_point_generator(include_nan=include_nan)
-                sources.add(source_name_from_granule(tile_cc.granule, -4))
-            else:
-                npg_cc = []
-
-            for np_zg, np_50, np_98, np_cc in zip_longest(
-                    npg_zg,
-                    npg_50,
-                    npg_98,
-                    npg_cc
-            ):
-                if np_zg:
-                    p_zg = dict(
-                        latitude=np_zg.latitude,
-                        longitude=np_zg.longitude,
-                        time=np_zg.time,
-                        data=np_zg.data_vals,
-                        source=source_name_from_granule(tile_zg.granule)
+                for nexus_point in npg:
+                    point = dict(
+                        latitude=nexus_point.latitude,
+                        longitude=nexus_point.longitude,
+                        time=nexus_point.time,
+                        source=source
                     )
 
+                    p_zg = copy(point)
+                    p_50 = copy(point)
+                    p_98 = copy(point)
+                    p_cc = copy(point)
+
+                    p_zg['data'] = nexus_point.data_vals[variable_indices['zg']]
                     if isinstance(p_zg['data'], list):
                         p_zg['data'] = p_zg['data'][0]
 
                     points_zg.append(p_zg)
 
-                if np_50:
-                    p_50 = dict(
-                        latitude=np_50.latitude,
-                        longitude=np_50.longitude,
-                        time=np_50.time,
-                        data=np_50.data_vals,
-                        source=source_name_from_granule(tile_50.granule)
-                    )
-
+                    p_50['data'] = nexus_point.data_vals[variable_indices['rh50']]
                     if isinstance(p_50['data'], list):
                         p_50['data'] = p_50['data'][0]
-
                     points_50.append(p_50)
 
-                if np_98:
-                    p_98 = dict(
-                        latitude=np_98.latitude,
-                        longitude=np_98.longitude,
-                        time=np_98.time,
-                        data=np_98.data_vals,
-                        source=source_name_from_granule(tile_98.granule)
-                    )
-
+                    p_98['data'] = nexus_point.data_vals[variable_indices['rh98']]
                     if isinstance(p_98['data'], list):
                         p_98['data'] = p_98['data'][0]
-
                     points_98.append(p_98)
 
-                if np_cc:
-                    p_cc = dict(
-                        latitude=np_cc.latitude,
-                        longitude=np_cc.longitude,
-                        time=np_cc.time,
-                        data=np_cc.data_vals,
-                        source=source_name_from_granule(tile_cc.granule, -4)
-                    )
-
+                    p_cc['data'] = nexus_point.data_vals[variable_indices['cc']]
                     if isinstance(p_cc['data'], list):
                         p_cc['data'] = p_cc['data'][0]
-
                     p_cc['data'] = p_cc['data'] * 100
-
                     points_cc.append(p_cc)
+        else:
+            ds_zg = f'{dataset}_ZG'
+            ds_rh50 = f'{dataset}_RH050'
+            ds_rh98 = f'{dataset}_RH098'
+            ds_cc = f'{dataset}_CC'
+
+            if len([d for d in [ds_zg, ds_rh50, ds_rh98, ds_cc] if not tile_service.dataset_exists(d)]) > 0:
+                raise NexusProcessingException(
+                    code=404,
+                    reason=f'Some datasets are missing: '
+                           f'{[d for d in [ds_zg, ds_rh50, ds_rh98, ds_cc] if not tile_service.dataset_exists(d)]}'
+                )
+
+            tiles_zg = get_tiles(ds=ds_zg)
+            tiles_rh50 = get_tiles(ds=ds_rh50)
+            tiles_rh98 = get_tiles(ds=ds_rh98)
+            tiles_cc = get_tiles(ds=ds_cc)
+
+            logger.info(f'Matched tile counts by variable: ZG={len(tiles_zg):,}, RH050={len(tiles_rh50):,}, '
+                        f'RH098={len(tiles_rh98):,}, CC={len(tiles_cc):,}')
+
+            if all([len(t) == 0 for t in [tiles_zg, tiles_rh50, tiles_rh98, tiles_cc]]):
+                raise NoDataException(reason='No data was found within the selected parameters')
+
+            for tile_zg, tile_50, tile_98, tile_cc in zip_longest(tiles_zg, tiles_rh50, tiles_rh98, tiles_cc):
+                if tile_zg:
+                    logger.info(f'Processing ground height tile {tile_zg.tile_id}')
+                    npg_zg = tile_zg.nexus_point_generator(include_nan=include_nan)
+                    sources.add(source_name_from_granule(tile_zg.granule))
+                else:
+                    npg_zg = []
+
+                if tile_50:
+                    logger.info(f'Processing mean vegetation height tile {tile_50.tile_id}')
+                    npg_50 = tile_50.nexus_point_generator(include_nan=include_nan)
+                    sources.add(source_name_from_granule(tile_50.granule))
+                else:
+                    npg_50 = []
+
+                if tile_98:
+                    logger.info(f'Processing canopy height tile {tile_98.tile_id}')
+                    npg_98 = tile_98.nexus_point_generator(include_nan=include_nan)
+                    sources.add(source_name_from_granule(tile_98.granule))
+                else:
+                    npg_98 = []
+
+                if tile_cc:
+                    logger.info(f'Processing canopy coverage tile {tile_cc.tile_id}')
+                    npg_cc = tile_cc.nexus_point_generator(include_nan=include_nan)
+                    sources.add(source_name_from_granule(tile_cc.granule, -4))
+                else:
+                    npg_cc = []
+
+                for np_zg, np_50, np_98, np_cc in zip_longest(
+                        npg_zg,
+                        npg_50,
+                        npg_98,
+                        npg_cc
+                ):
+                    if np_zg:
+                        p_zg = dict(
+                            latitude=np_zg.latitude,
+                            longitude=np_zg.longitude,
+                            time=np_zg.time,
+                            data=np_zg.data_vals,
+                            source=source_name_from_granule(tile_zg.granule)
+                        )
+
+                        if isinstance(p_zg['data'], list):
+                            p_zg['data'] = p_zg['data'][0]
+
+                        points_zg.append(p_zg)
+
+                    if np_50:
+                        p_50 = dict(
+                            latitude=np_50.latitude,
+                            longitude=np_50.longitude,
+                            time=np_50.time,
+                            data=np_50.data_vals,
+                            source=source_name_from_granule(tile_50.granule)
+                        )
+
+                        if isinstance(p_50['data'], list):
+                            p_50['data'] = p_50['data'][0]
+
+                        points_50.append(p_50)
+
+                    if np_98:
+                        p_98 = dict(
+                            latitude=np_98.latitude,
+                            longitude=np_98.longitude,
+                            time=np_98.time,
+                            data=np_98.data_vals,
+                            source=source_name_from_granule(tile_98.granule)
+                        )
+
+                        if isinstance(p_98['data'], list):
+                            p_98['data'] = p_98['data'][0]
+
+                        points_98.append(p_98)
+
+                    if np_cc:
+                        p_cc = dict(
+                            latitude=np_cc.latitude,
+                            longitude=np_cc.longitude,
+                            time=np_cc.time,
+                            data=np_cc.data_vals,
+                            source=source_name_from_granule(tile_cc.granule, -4)
+                        )
+
+                        if isinstance(p_cc['data'], list):
+                            p_cc['data'] = p_cc['data'][0]
+
+                        p_cc['data'] = p_cc['data'] * 100
+
+                        points_cc.append(p_cc)
+
+        # include_nan messes up masking to bbox, so filter out manually here
+        if include_nan:
+            min_lon, min_lat, max_lon, max_lat = bounding_polygon.bounds
+
+            points_zg = [p for p in points_zg if min_lon <= p['longitude'] <= max_lon and
+                         min_lat <= p['latitude'] <= max_lat]
+            points_50 = [p for p in points_50 if min_lon <= p['longitude'] <= max_lon and
+                         min_lat <= p['latitude'] <= max_lat]
+            points_98 = [p for p in points_98 if min_lon <= p['longitude'] <= max_lon and
+                         min_lat <= p['latitude'] <= max_lat]
+            points_cc = [p for p in points_cc if min_lon <= p['longitude'] <= max_lon and
+                         min_lat <= p['latitude'] <= max_lat]
 
         if len(sources) == 1:
             logger.info('Only one source LIDAR scene, using simple mapping to grid')
@@ -490,7 +594,9 @@ class LidarVegetation(NexusCalcHandler):
             lats = np.unique([p['latitude'] for p in chain(points_zg, points_50, points_98, points_cc)])
             lons = np.unique([p['longitude'] for p in chain(points_zg, points_50, points_98, points_cc)])
             times = np.unique(
-                [datetime.utcfromtimestamp(p['time']) for p in chain(points_zg, points_50, points_98, points_cc)])
+                [datetime.utcfromtimestamp(p['time'])
+                 for p in chain(points_zg, points_50, points_98, points_cc)]
+            )
 
             vals_4d = np.full((len(times), len(lats), len(lons), 4), np.nan)
 
@@ -556,7 +662,9 @@ class LidarVegetation(NexusCalcHandler):
             )
 
             times = np.unique(
-                [datetime.utcfromtimestamp(p['time']) for p in chain(points_zg, points_50, points_98, points_cc)])
+                [datetime.utcfromtimestamp(p['time'])
+                 for p in chain(points_zg, points_50, points_98, points_cc)]
+            )
 
             logger.debug('Building gridding coordinate meshes')
 
@@ -592,7 +700,9 @@ class LidarVegetation(NexusCalcHandler):
                 logger.info(f'Gridding ground heights for {src}')
                 source_points = source_point_map[src]
                 gridded_zg.append(griddata(
-                    list(zip([p['longitude'] for p in source_points['zg']], [p['latitude'] for p in source_points['zg']])),
+                    list(zip(
+                        [p['longitude'] for p in source_points['zg']], [p['latitude'] for p in source_points['zg']]
+                    )),
                     np.array([p['data'] for p in source_points['zg']]),
                     (X, Y),
                     method='nearest',
@@ -601,7 +711,9 @@ class LidarVegetation(NexusCalcHandler):
 
                 logger.info(f'Gridding mean vegetation heights for {src}')
                 gridded_50.append(griddata(
-                    list(zip([p['longitude'] for p in source_points['50']], [p['latitude'] for p in source_points['50']])),
+                    list(zip(
+                        [p['longitude'] for p in source_points['50']], [p['latitude'] for p in source_points['50']]
+                    )),
                     np.array([p['data'] for p in source_points['50']]),
                     (X, Y),
                     method='nearest',
@@ -610,7 +722,9 @@ class LidarVegetation(NexusCalcHandler):
 
                 logger.info(f'Gridding canopy heights for {src}')
                 gridded_98.append(griddata(
-                    list(zip([p['longitude'] for p in source_points['98']], [p['latitude'] for p in source_points['98']])),
+                    list(zip(
+                        [p['longitude'] for p in source_points['98']], [p['latitude'] for p in source_points['98']]
+                    )),
                     np.array([p['data'] for p in source_points['98']]),
                     (X, Y),
                     method='nearest',
@@ -619,7 +733,9 @@ class LidarVegetation(NexusCalcHandler):
 
                 logger.info(f'Gridding canopy coverage for {src}')
                 gridded_cc.append(griddata(
-                    list(zip([p['longitude'] for p in source_points['cc']], [p['latitude'] for p in source_points['cc']])),
+                    list(zip(
+                        [p['longitude'] for p in source_points['cc']], [p['latitude'] for p in source_points['cc']]
+                    )),
                     np.array([p['data'] / 10000 for p in source_points['cc']]),
                     (X, Y),
                     method='nearest',
@@ -633,9 +749,9 @@ class LidarVegetation(NexusCalcHandler):
 
             logger.info('Flattening gridded flightlines to single 2D view')
 
-            # Reduce 3D arrays of gridded flight lines to single 2D array, with each value being the most recent non-nan
-            # value along axis 0. In other words, stack the flight lines on top of each other, with more recent flight
-            # lines covering over previous ones
+            # Reduce 3D arrays of gridded flight lines to single 2D array, with each value being the most recent
+            # non-nan value along axis 0. In other words, stack the flight lines on top of each other, with more
+            # recent flight lines covering over previous ones
 
             gridded_zg = np.choose((~np.isnan(gridded_zg)).cumsum(0).argmax(0), gridded_zg)
             gridded_50 = np.choose((~np.isnan(gridded_50)).cumsum(0).argmax(0), gridded_50)
@@ -1043,7 +1159,8 @@ class LidarResults(NexusResults):
 
                 slice_ax.set_title(f'Slice at {coord}={slice_point}\nHeights w.r.t. to reference ellipsoid (m)')
                 slice_ax.ticklabel_format(useOffset=False)
-                slice_ax.set_xlim(x_lim)
+                # Commented out = plot is focused on the actual slice rather than the full subset bounds
+                # slice_ax.set_xlim(x_lim)
 
                 slice_ax.legend([
                     'Canopy Height',
@@ -1056,7 +1173,8 @@ class LidarResults(NexusResults):
                 cc_slice_ax.plot(x_pts, cc_pts)
                 cc_slice_ax.ticklabel_format(useOffset=False)
                 cc_slice_ax.set_ylim([0, 100])
-                cc_slice_ax.set_xlim(x_lim)
+                # Commented out = plot is focused on the actual slice rather than the full subset bounds
+                # cc_slice_ax.set_xlim(x_lim)
 
                 cc_slice_ax.set_title(f'Slice at {coord}={slice_point}\nCanopy coverage (%)')
 
@@ -1362,7 +1480,9 @@ class LidarResults3D(NexusResults):
             with contextlib.ExitStack() as stack:
                 logger.info('Combining frames into final GIF')
 
-                imgs = (stack.enter_context(Image.open(os.path.join(td, f'fr_{a}.png'))) for a in range(0, 360, orbit_step))
+                imgs = (
+                    stack.enter_context(Image.open(os.path.join(td, f'fr_{a}.png'))) for a in range(0, 360, orbit_step)
+                )
                 img = next(imgs)
                 img.save(buffer, format='GIF', append_images=imgs, save_all=True, duration=frame_duration, loop=0)
 
