@@ -38,7 +38,10 @@ class RemoteSDAPCache:
     def _add(self, url, timeout=2, max_age=3600*24):
         list_url = f"{url}/list"
         try:
-            r = requests.get(list_url, timeout=timeout)
+            try:
+                r = requests.get(list_url, timeout=timeout)
+            except Exception as e:
+                raise CollectionNotFound(f'URL {list_url} was not reachable')
             if r.status_code == 200:
                 logger.info("Caching list for sdap %s: %s", list_url, r.text)
                 self.sdap_lists[url] = RemoteSDAPList(
@@ -47,16 +50,16 @@ class RemoteSDAPCache:
                 )
             else:
                 raise CollectionNotFound(f"url {list_url} was not reachable, responded with status {r.status_code}")
-        except (requests.exceptions.ConnectTimeout, requests.exceptions.ReadTimeout) as e:
-            raise CollectionNotFound(f"url {list_url} was not reachable in {timeout} s")
+        except CollectionNotFound as e:
+            logger.warning(e)
 
     def get(self, url, short_name):
         stripped_url = url.strip('/')
         if stripped_url not in self.sdap_lists or self.sdap_lists[stripped_url].outdated_at>datetime.now():
             self._add(stripped_url)
-
-        for collection in self.sdap_lists[stripped_url].list:
-            if 'shortName' in collection and collection['shortName'] == short_name:
-                return collection
+        if stripped_url in self.sdap_lists:
+            for collection in self.sdap_lists[stripped_url].list:
+                if 'shortName' in collection and collection['shortName'] == short_name:
+                    return collection
 
         raise CollectionNotFound(f"collection {short_name} has not been found in url {stripped_url}")
