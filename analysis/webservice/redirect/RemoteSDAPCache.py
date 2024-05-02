@@ -57,9 +57,9 @@ class RemoteSDAPCache:
         stripped_url = url.strip('/')
         if stripped_url not in self.sdap_lists or self.sdap_lists[stripped_url].outdated_at>datetime.now():
             self._add(stripped_url)
-
-        for collection in self.sdap_lists[stripped_url].list:
-            if 'shortName' in collection and collection['shortName'] == short_name:
-                return collection
-
+        if stripped_url in self.sdap_lists:
+            for collection in self.sdap_lists[stripped_url].list:
+                if 'shortName' in collection and collection['shortName'] == short_name:
+                    return collection
+        
         raise CollectionNotFound(f"collection {short_name} has not been found in url {stripped_url}")
