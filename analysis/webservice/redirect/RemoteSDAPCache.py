@@ -51,7 +51,7 @@ class RemoteSDAPCache:
             else:
                 raise CollectionNotFound(f"url {list_url} was not reachable, responded with status {r.status_code}")
         except CollectionNotFound as e:
-            logger.info(f'URL {url} is unreachable. Skipping. {e}')
+            logger.warning(e)
 
     def get(self, url, short_name):
         stripped_url = url.strip('/')
@@ -61,5 +61,5 @@ class RemoteSDAPCache:
             for collection in self.sdap_lists[stripped_url].list:
                 if 'shortName' in collection and collection['shortName'] == short_name:
                     return collection
-        
+
         raise CollectionNotFound(f"collection {short_name} has not been found in url {stripped_url}")
