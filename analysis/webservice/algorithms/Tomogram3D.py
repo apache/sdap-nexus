@@ -489,6 +489,7 @@ class Tomogram3DResults(NexusResults):
         plt.savefig(buffer, format='png', facecolor='white')
 
         buffer.seek(0)
+        plt.close(fig)
         return buffer.read()
 
     def toGif(self):
@@ -627,6 +628,7 @@ class Tomogram3DResults(NexusResults):
                 img.save(buffer, format='GIF', append_images=imgs, save_all=True, duration=frame_duration, loop=0)
 
         buffer.seek(0)
+        plt.close(fig)
         return buffer.read()
 
     def toCSV(self):

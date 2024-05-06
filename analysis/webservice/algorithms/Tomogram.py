@@ -633,6 +633,7 @@ class ElevationTomoResults(NexusResults):
         plt.savefig(buffer, format='png', facecolor='white')
 
         buffer.seek(0)
+        plt.close()
         return buffer.read()
 
 
@@ -678,4 +679,5 @@ class ProfileTomoResults(NexusResults):
         plt.savefig(buffer, format='png', facecolor='white')
 
         buffer.seek(0)
+        plt.close()
         return buffer.read()
