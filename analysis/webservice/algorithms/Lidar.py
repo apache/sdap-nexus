@@ -92,7 +92,8 @@ class LidarVegetation(NexusCalcHandler):
         "renderType": {
             "name": "Rendering type",
             "type": "string",
-            "description": "Type of rendering to perform. Must be either 2D or 3D. Default: 2D"
+            "description": "NOTE: 3D rendering has been disabled for now due to poor ablility of rendering library to "
+                           "handle the data. Type of rendering to perform. Must be either 2D or 3D. Default: 2D"
         },
         "output": {
             "name": "Output format",
@@ -167,14 +168,16 @@ class LidarVegetation(NexusCalcHandler):
             start_time = int((start_time - EPOCH).total_seconds())
         except:
             raise NexusProcessingException(
-                reason="'startTime' argument is required. Can be int value seconds from epoch or string format YYYY-MM-DDTHH:mm:ssZ",
+                reason="'startTime' argument is required. Can be int value seconds from epoch or string format "
+                       "YYYY-MM-DDTHH:mm:ssZ",
                 code=400)
         try:
             end_time = request.get_end_datetime()
             end_time = int((end_time - EPOCH).total_seconds())
         except:
             raise NexusProcessingException(
-                reason="'endTime' argument is required. Can be int value seconds from epoch or string format YYYY-MM-DDTHH:mm:ssZ",
+                reason="'endTime' argument is required. Can be int value seconds from epoch or string format "
+                       "YYYY-MM-DDTHH:mm:ssZ",
                 code=400)
 
         if start_time > end_time:
@@ -200,6 +203,13 @@ class LidarVegetation(NexusCalcHandler):
         if render_type not in ['2D', '3D']:
             raise NexusProcessingException(
                 reason=f'Missing or invalid required parameter: renderType = {render_type}',
+                code=400
+            )
+
+        # Disable 3D support until we can find a better way to render the data in 3d than by using MPL
+        if render_type == '3D':
+            raise NexusProcessingException(
+                reason='3D rendering of LIDAR data is temporarily disabled due to poor backend support',
                 code=400
             )
 
@@ -407,7 +417,7 @@ class LidarVegetation(NexusCalcHandler):
                             continue
 
                         if var.variable_name.lower() in ['cc', 'canopy_coverage', 'canopy_cover']:
-                            if 'zg' in variable_indices:
+                            if 'cc' in variable_indices:
                                 logger.warning('Canopy cover variable found more than once in the collection')
                             variable_indices['cc'] = i
                             continue
@@ -1402,6 +1412,7 @@ class LidarResults3D(NexusResults):
         plt.savefig(buffer, format='png', facecolor='white')
 
         buffer.seek(0)
+        plt.close(fig)
         return buffer.read()
 
     def toGif(self):
@@ -1487,4 +1498,5 @@ class LidarResults3D(NexusResults):
                 img.save(buffer, format='GIF', append_images=imgs, save_all=True, duration=frame_duration, loop=0)
 
         buffer.seek(0)
+        plt.close(fig)
         return buffer.read()
