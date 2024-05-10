@@ -68,10 +68,8 @@ class DataSeriesListCalcHandlerImpl(NexusCalcHandler):
                     )
                     del remote_collection['shortName']
                     current_collection.update(remote_collection)
-
-                except CollectionNotFound as e:
-                    logger.warning(e)
-                finally:
                     collection_list.append(current_collection)
+                except CollectionNotFound as e:
+                    logger.warning(e)                    
 
         return SimpleResult(collection_list)
