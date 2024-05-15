@@ -994,7 +994,7 @@ class LidarResults(NexusResults):
                 mean_vegetation_height=lat_slice.mean_veg_height.isel(lon=l).item(),
                 canopy_height=lat_slice.canopy_height.isel(lon=l).item(),
                 canopy_coverage=lat_slice.canopy_coverage.isel(lon=l).item()
-            ) for l in range(len(ds['lon']))]
+            ) for l in range(len(lat_slice['lon']))]
 
             slice_points['latitude'] = dict(latitude=lat_slice.lat.item(), slice=pts)
 
@@ -1010,7 +1010,7 @@ class LidarResults(NexusResults):
                 mean_vegetation_height=lon_slice.mean_veg_height.isel(lat=l).item(),
                 canopy_height=lon_slice.canopy_height.isel(lat=l).item(),
                 canopy_coverage=lon_slice.canopy_coverage.isel(lat=l).item()
-            ) for l in range(len(ds['lat']))]
+            ) for l in range(len(lon_slice['lat']))]
 
             slice_points['longitude'] = dict(longitude=lon_slice.lon.item(), slice=pts)
 
