@@ -24,7 +24,6 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import requests
-from matplotlib.colors import XKCD_COLORS
 from mpl_toolkits.basemap import Basemap
 from PIL import Image
 from webservice.NexusHandler import nexus_handler
@@ -288,12 +287,6 @@ class Tomogram3D(NexusCalcHandler):
                     'data': data_val
                 })
 
-        cmap = mpl.colormaps['viridis']
-        normalizer = mpl.colors.Normalize(vmin=-30, vmax=-10)
-
-        def c(v):
-            return cmap(normalizer(v))
-
         logger.info('Building dataframe')
 
         lats = np.array([p['latitude'] for p in data])
@@ -303,11 +296,19 @@ class Tomogram3D(NexusCalcHandler):
         tomo = np.array([p['data'] for p in data])
         tomo = 10 * np.log10(tomo)
 
-        tomo_rgb = np.array([list(c(v))[0:3] for v in tomo]) * 256
-
         df = pd.DataFrame(
-            np.hstack((lats[:, np.newaxis], lons[:, np.newaxis], elevs[:, np.newaxis], tomo_rgb, tomo[:, np.newaxis])),
-            columns=['lat', 'lon', 'elevation', 'red', 'green', 'blue', 'tomo_value']
+            np.hstack((
+                lats[:, np.newaxis],
+                lons[:, np.newaxis],
+                elevs[:, np.newaxis],
+                tomo[:, np.newaxis]
+            )),
+            columns=[
+                'lat',
+                'lon',
+                'elevation',
+                'tomo_value'
+            ]
         )
 
         logger.info(f'DataFrame:\n{df}')
@@ -426,7 +427,6 @@ class Tomogram3DResults(NexusResults):
             s = ax.scatter(
                 xyz[:, 0], xyz[:, 1], xyz[:, 2],
                 marker='D',
-                facecolors=results[['red', 'green', 'blue']].values.astype(np.uint8) / 255,
                 c=results[['tomo_value']].values,
                 zdir='z',
                 depthshade=True,
@@ -553,7 +553,6 @@ class Tomogram3DResults(NexusResults):
             s = ax.scatter(
                 xyz[:, 0], xyz[:, 1], xyz[:, 2],
                 marker='D',
-                facecolors=results[['red', 'green', 'blue']].values.astype(np.uint8) / 255,
                 c=results[['tomo_value']].values,
                 zdir='z',
                 depthshade=True,
