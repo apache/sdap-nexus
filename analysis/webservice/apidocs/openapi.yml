@@ -28,6 +28,8 @@ tags:
     description: Data Analytics API
   - name: Subsetting
     description: Data Subsetting API
+  - name: Mapping Analytics
+    description: Data Mapping API
 paths:
   /match_spark:
     get:
@@ -463,6 +465,71 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
+  /datainbounds:
+    get:
+      summary: Fetches point values for a given dataset and geographical area
+      operationId: datainbounds
+      tags:
+        - Subsetting
+      parameters:
+        - in: query
+          name: ds
+          description: |
+            The Dataset shortname to use in calculation
+          required: true
+          schema:
+            type: string
+            x-dspopulate:
+              - satellite
+          example: avhrr-l4-glob-v2-daily-ncei-ghrsst-sstblend-avhrr-oi-glob-v020-fv020
+        - in: query
+          name: startTime
+          description: |
+            Starting time in format YYYY-MM-DDTHH:mm:ssZ or seconds
+            since epoch
+          required: true
+          schema:
+            type: string
+            format: date-time
+          example: "2012-09-28T00:00:00Z"
+        - in: query
+          name: endTime
+          description: |
+            Ending time in format YYYY-MM-DDTHH:mm:ssZ or seconds
+            since epoch
+          required: true
+          schema:
+            type: string
+            format: date-time
+          example: "2012-09-28T00:01:00Z"
+        - in: query
+          name: b
+          description: |
+            Minimum (Western) Longitude, Minimum (Southern) Latitude,
+            Maximum (Eastern) Longitude, Maximum (Northern) Latitude
+          required: true
+          schema:
+            type: string
+          example: -45,15,-30,30
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MatchupResponse"
+        "400":
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
   /version:
     get:
       summary: List the version of the API
@@ -577,107 +644,438 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
-  /stats:
+  /timeAvgMapSpark:
     get:
-      summary: |
-        Computes time series statistics
-      operationId: stats
+      summary: Compute map of Lat/Lon time average
+      operationId: "timeAvgMapSpark"
+      description: Compute a Lat/Lon time average analysis given an arbitrary geographical area and time range
       tags:
-        - Analytics
-      description: "NOTE: Only supports satellite datasets."
+        - Mapping Analytics
       parameters:
         - in: query
           name: ds
-          description: |
-            The dataset on which to generate the statistics
+          description: The dataset used to generate the analysis.
           required: true
           schema:
             type: string
             x-dspopulate:
-             - satellite
-             - insitu
-          example: MUR25-JPL-L4-GLOB-v04.2
-        - in: query
-          name: minLat
-          description: |
-            Minimum latitude on which to generate statistics
-          required: true
-          schema:
-            type: string
-          example: -90
-        - in: query
-          name: maxLat
-          description: |
-            Maximum latitude on which to generate statistics
-          required: true
-          schema:
-            type: string
-          example: 90
-        - in: query
-          name: minLon
-          description: |
-            Minimum longitude on which to generate statistics
-          required: true
-          schema:
-            type: string
-          example: -180
-        - in: query
-          name: maxLon
-          description: |
-            Maximum longitude on which to generate statistics
-          required: true
-          schema:
-            type: string
-          example: 180
+              - satellite
+          example: TELLUS_GRAC-GRFO_MASCON_CRI_GRID_RL06_V2_LAND
         - in: query
           name: startTime
-          description: |
-            Starting time in format YYYY-MM-DDTHH:mm:ssZ or seconds
-            since epoch
+          description: Starting time in format YYYY-MM-DDTHH:mm:ssZ or seconds since epoch
           required: true
           schema:
             type: string
             format: date-time
-          example: '2013-10-21T00:00:00Z'
+          example: "2013-10-21T00:00:00Z"
         - in: query
           name: endTime
-          description: |
-            Ending time in format YYYY-MM-DDTHH:mm:ssZ or seconds
-            since epoch
+          description: Ending time in format YYYY-MM-DDTHH:mm:ssZ or seconds since epoch
           required: true
           schema:
             type: string
             format: date-time
-          example: '2013-10-31T23:59:59Z'
+          example: "2013-10-21T01:00:00Z"
         - in: query
-          name: output
-          description: |
-            Data formatting for results. Default is ‘JSON’. Alternative
-            is ‘CSV’ for comma-seperated values.
-          required: false
+          name: b
+          description: Minimum (Western) Longitude, Minimum (Southern) Latitude, Maximum (Eastern) Longitude, Maximum (Northern) Latitude.
+          required: true
           schema:
             type: string
-            enum: ['JSON', 'CSV']
-          example: JSON
+          example: "-180,-90,180,90"
       responses:
-        '200':
+        "200":
           description: Successful operation
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Stats'
-        '400':
+                $ref: "#/components/schemas/TimeAvgMapSpark"
+        "400":
           description: Bad request
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
-        '500':
+                $ref: "#/components/schemas/Error"
+        "500":
           description: Server error
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
+  /timeSeriesSpark:
+    get:
+      summary: Compute time series analysis (Spark)
+      operationId: "timeSeriesSpark"
+      description: Compute a time series analysis between one or more datasets given an arbitrary geographical area and time range
+      tags:
+        - Analytics
+      parameters:
+        - in: query
+          name: ds
+          description: The dataset(s) used to generate the time series. Comma seperated for two datasets.
+          required: true
+          schema:
+            type: string
+            x-dspopulate:
+              - satellite
+          example: TELLUS_GRAC-GRFO_MASCON_CRI_GRID_RL06_V2_LAND
+        - in: query
+          name: startTime
+          description: Starting time in format YYYY-MM-DDTHH:mm:ssZ or seconds since epoch
+          required: true
+          schema:
+            type: string
+            format: date-time
+          example: "2013-10-21T00:00:00Z"
+        - in: query
+          name: endTime
+          description: Ending time in format YYYY-MM-DDTHH:mm:ssZ or seconds since epoch
+          required: true
+          schema:
+            type: string
+            format: date-time
+          example: "2013-10-21T01:00:00Z"
+        - in: query
+          name: b
+          description: Minimum (Western) Longitude, Minimum (Southern) Latitude, Maximum (Eastern) Longitude, Maximum (Northern) Latitude.
+          required: true
+          schema:
+            type: string
+          example: "-180,-90,180,90"
+        - in: query
+          name: seasonalFilter
+          description: Include time series analysis with seasonal cycle removed
+          required: false
+          schema:
+            type: boolean
+            default: false
+        - in: query
+          name: lowPassFilter
+          description: Include time series analysis with low pass filter applied
+          required: false
+          schema:
+            type: boolean
+            default: true
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TimeSeriesSpark"
+        "400":
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          description: Server error
+          content:
+            application/json:
+              schema:
+                  $ref: "#/components/schemas/Error"
+  /dailydifferenceaverage_spark:
+    get:
+      summary: Compute daily difference average
+      operationId: "dailydifferenceaverage_spark"
+      description: Averages the difference per day in data in an arbitrary geographical area and time range in dataset 1 from dataset 2 or in dataset from climatology
+      tags:
+        - Analytics
+      parameters:
+        - in: query
+          name: dataset or ds1
+          description: The primary dataset used in calculation
+          required: true
+          schema:
+            type: string
+          example: TELLUS_GRAC-GRFO_MASCON_CRI_GRID_RL06_V2_LAND
+        - in: query
+          name: climatology or ds2
+          description: The dataset's climatology shortname or the second dataset's shortname
+          required: true
+          schema:
+            type: string
+          example: TELLUS_GRAC-GRFO_MASCON_CRI_GRID_RL06_V2_LAND_clim
+        - in: query
+          name: startTime
+          description: Starting time in format YYYY-MM-DDTHH:mm:ssZ or seconds since epoch
+          required: true
+          schema:
+            type: string
+            format: date-time
+          example: "2013-10-21T00:00:00Z"
+        - in: query
+          name: endTime
+          description: Ending time in format YYYY-MM-DDTHH:mm:ssZ or seconds since epoch
+          required: true
+          schema:
+            type: string
+            format: date-time
+          example: "2013-10-21T01:00:00Z"
+        - in: query
+          name: b
+          description: Minimum (Western) Longitude, Minimum (Southern) Latitude, Maximum (Eastern) Longitude, Maximum (Northern) Latitude.
+          required: true
+          schema:
+            type: string
+          example: "-180,-90,180,90"
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DailyDifferenceAverageSpark"
+        "400":
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /latitudeTimeHofMoellerSpark:
+    get:
+      summary: Compute a latitude/time HofMoeller analysis
+      operationId: "latitudeTimeHofMoellerSpark"
+      description: Compute a latitude/time HofMoeller analysis given an arbitrary geographical area and time range
+      tags:
+        - Analytics
+      parameters:
+        - in: query
+          name: ds
+          description: The dataset used to generate the analysis.
+          required: true
+          schema:
+            type: string
+            x-dspopulate:
+              - satellite
+          example: TELLUS_GRAC-GRFO_MASCON_CRI_GRID_RL06_V2_LAND
+        - in: query
+          name: startTime
+          description: Starting time in format YYYY-MM-DDTHH:mm:ssZ or seconds since epoch
+          required: true
+          schema:
+            type: string
+            format: date-time
+          example: "2013-10-21T00:00:00Z"
+        - in: query
+          name: endTime
+          description: Ending time in format YYYY-MM-DDTHH:mm:ssZ or seconds since epoch
+          required: true
+          schema:
+            type: string
+            format: date-time
+          example: "2013-10-21T01:00:00Z"
+        - in: query
+          name: b
+          description: Minimum (Western) Longitude, Minimum (Southern) Latitude, Maximum (Eastern) Longitude, Maximum (Northern) Latitude.
+          required: true
+          schema:
+            type: string
+          example: "-180,-90,180,90"
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HofMoellerSpark"
+        "400":
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /longitudeTimeHofMoellerSpark:
+    get:
+      summary: Compute a longitude/time HofMoeller analysis
+      operationId: "longitudeTimeHofMoellerSpark"
+      description: Compute a longitude/time HofMoeller analysis given an arbitrary geographical area and time range
+      tags:
+        - Analytics
+      parameters:
+        - in: query
+          name: ds
+          description: The dataset used to generate the analysis.
+          required: true
+          schema:
+            type: string
+            x-dspopulate:
+              - satellite
+          example: TELLUS_GRAC-GRFO_MASCON_CRI_GRID_RL06_V2_LAND
+        - in: query
+          name: startTime
+          description: Starting time in format YYYY-MM-DDTHH:mm:ssZ or seconds since epoch
+          required: true
+          schema:
+            type: string
+            format: date-time
+          example: "2013-10-21T00:00:00Z"
+        - in: query
+          name: endTime
+          description: Ending time in format YYYY-MM-DDTHH:mm:ssZ or seconds since epoch
+          required: true
+          schema:
+            type: string
+            format: date-time
+          example: "2013-10-21T01:00:00Z"
+        - in: query
+          name: b
+          description: Minimum (Western) Longitude, Minimum (Southern) Latitude, Maximum (Eastern) Longitude, Maximum (Northern) Latitude.
+          required: true
+          schema:
+            type: string
+          example: "-180,-90,180,90"
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HofMoellerSpark"
+        "400":
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /maxMinMapSpark:
+    get:
+      summary: Compute map of maxima and minima
+      operationId: "maxMinMapSpark"
+      description: Compute a map of maxmima and minima of a field given an arbitrary geographical area and time range
+      tags:
+        - Mapping Analytics
+      parameters:
+        - in: query
+          name: ds
+          description: The dataset used to generate the analysis.
+          required: true
+          schema:
+            type: string
+            x-dspopulate:
+              - satellite
+          example: TELLUS_GRAC-GRFO_MASCON_CRI_GRID_RL06_V2_LAND
+        - in: query
+          name: startTime
+          description: Starting time in format YYYY-MM-DDTHH:mm:ssZ or seconds since epoch
+          required: true
+          schema:
+            type: string
+            format: date-time
+          example: "2013-10-21T00:00:00Z"
+        - in: query
+          name: endTime
+          description: Ending time in format YYYY-MM-DDTHH:mm:ssZ or seconds since epoch
+          required: true
+          schema:
+            type: string
+            format: date-time
+          example: "2013-10-21T01:00:00Z"
+        - in: query
+          name: b
+          description: Minimum (Western) Longitude, Minimum (Southern) Latitude, Maximum (Eastern) Longitude, Maximum (Northern) Latitude.
+          required: true
+          schema:
+            type: string
+          example: "-180,-90,180,90"
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MaxMinMapSpark"
+        "400":
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /varianceSpark:
+    get:
+      summary: Compute map of temporal variance
+      operationId: "varianceSpark"
+      description: Compute map of temporal variance given an arbitrary geographical area and time range
+      tags:
+        - Mapping Analytics
+      parameters:
+        - in: query
+          name: ds
+          description: The dataset used to generate the analysis.
+          required: true
+          schema:
+            type: string
+            x-dspopulate:
+              - satellite
+          example: TELLUS_GRAC-GRFO_MASCON_CRI_GRID_RL06_V2_LAND
+        - in: query
+          name: startTime
+          description: Starting time in format YYYY-MM-DDTHH:mm:ssZ or seconds since epoch
+          required: true
+          schema:
+            type: string
+            format: date-time
+          example: "2013-10-21T00:00:00Z"
+        - in: query
+          name: endTime
+          description: Ending time in format YYYY-MM-DDTHH:mm:ssZ or seconds since epoch
+          required: true
+          schema:
+            type: string
+            format: date-time
+          example: "2013-10-21T01:00:00Z"
+        - in: query
+          name: b
+          description: Minimum (Western) Longitude, Minimum (Southern) Latitude, Maximum (Eastern) Longitude, Maximum (Northern) Latitude.
+          required: true
+          schema:
+            type: string
+          example: "-180,-90,180,90"
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/VarianceSpark"
+        "400":
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
   /job:
     get:
       summary: |
@@ -775,7 +1173,7 @@ paths:
             type: integer
 externalDocs:
   description: Documentation
-  url: https://incubator-sdap-nexus.readthedocs.io/en/latest/index.html
+  url: https://sdap-nexus.readthedocs.io/en/latest/index.html
 components:
   parameters:
     Platforms:
@@ -981,7 +1379,7 @@ components:
                   depth:
                     type: number
                     nullable: true
-    Stats:
+    SparkMeta:
       type: object
       properties:
         meta:
@@ -989,7 +1387,7 @@ components:
           items:
             type: object
             properties:
-              shortname:
+              shortName:
                 type: string
               bounds:
                 type: object
@@ -1011,58 +1409,190 @@ components:
                     type: integer
                   iso_start:
                     type: string
-                    format: date
+                    format: date-time
                   iso_stop:
                     type: string
-                    format: date
-        data:
-          type: array
-          items:
-            type: object
-            properties:
-              min:
-                type: number
-              max:
-                type: number
-              mean:
-                type: number
-              cnt:
-                type: integer
-              std:
-                type: number
-              time:
-                type: integer
-              meanSeasonal:
-                type: number
-              minSeasonal:
-                type: number
-              maxSeasonal:
-                type: number
-              meanLowPass:
-                type: number
-              maxLowPass:
-                type: number
-              meanSeasonalLowPass:
-                type: number
-              minSeasonalLowPass:
-                type: number
-              maxSeasonalLowPass:
-                type: number
-              ds:
-                type: integer
-        stats:
-          type: object
+                    format: date-time
+    TimeAvgMapSpark:
+      allOf:
+        - $ref: "#/components/schemas/SparkMeta"
+        - type: object
           properties:
-            slope:
-              type: number
-            intercept:
-              type: number
-            r:
-              type: number
-            p:
-              type: number
-            err:
-              type: string
+            data:
+              type: array
+              items:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    mean:
+                      type: number
+                    cnt:
+                      type: integer
+                    lat:
+                      type: number
+                    lon:
+                      type: number
+            stats:
+              type: object
+    TimeSeriesSpark:
+      allOf:
+        - $ref: "#/components/schemas/SparkMeta"
+        - type: object
+          properties:
+            data:
+              type: array
+              items:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    min:
+                      type: number
+                    max:
+                      type: number
+                    mean:
+                      type: number
+                    cnt:
+                      type: integer
+                    std:
+                      type: number
+                    time:
+                      type: integer
+                    iso_time:
+                      type: string
+                      format: date-time
+                    meanSeasonal:
+                      type: number
+                    minSeasonal:
+                      type: number
+                    maxSeasonal:
+                      type: number
+                    meanLowPass:
+                      type: number
+                    minLowPass:
+                      type: number
+                    maxLowPass:
+                      type: number
+                    meanSeasonalLowPass:
+                      type: number
+                    minSeasonalLowPass:
+                      type: number
+                    maxSeasonalLowPass:
+                      type: number
+                    ds:
+                      type: integer
+            stats:
+              type: object
+    DailyDifferenceAverageSpark:
+      allOf:
+        - $ref: "#/components/schemas/SparkMeta"
+        - type: object
+          properties:
+            meta:
+              type: array
+              items:
+                type: object
+                properties:
+                  title:
+                    type: string
+                  description:
+                    type: string
+                  units:
+                    type: string
+                  label:
+                    type: string
+                  climatology:
+                    type: string
+            data:
+              type: array
+              items:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    time:
+                      type: integer
+                    mean:
+                      type: number
+                    std:
+                      type: number
+                    ds:
+                      type: integer
+            stats:
+              type: object
+    HofMoellerSpark:
+      allOf:
+        - $ref: "#/components/schemas/SparkMeta"
+        - type: object
+          properties:
+            data:
+              type: array
+              items:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    mean:
+                      type: number
+                    cnt:
+                      type: integer
+                    lat:
+                      type: number
+                    lon:
+                      type: number
+            stats:
+              type: object
+    MaxMinMapSpark:
+      allOf:
+        - $ref: "#/components/schemas/SparkMeta"
+        - type: object
+          properties:
+            data:
+              type: array
+              items:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    maxima:
+                      type: number
+                    minima:
+                      type: number
+                    absolute_maxima:
+                      type: number
+                    absolute_minima:
+                      type: number
+                    cnt:
+                      type: integer
+                    lat:
+                      type: number
+                    lon:
+                      type: number
+            stats:
+              type: object
+    VarianceSpark:
+      allOf:
+        - $ref: "#/components/schemas/SparkMeta"
+        - type: object
+          properties:
+            data:
+              type: array
+              items:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    variance:
+                      type: number
+                    cnt:
+                      type: integer
+                    lat:
+                      type: number
+                    lon:
+                      type: number
+            stats:
+              type: object
     Error:
       type: object
       properties:
