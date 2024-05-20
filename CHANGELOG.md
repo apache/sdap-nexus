@@ -15,6 +15,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Dataset management endpoints for Zarr datasets
 - SDAP-513: Added helm chart value `solr.initImage` to specify Solr init pod image. If omitted, defaults to `apache/sdap-solr-cloud-init:1.1.0`
 ### Changed
+- Updates to `openapi` spec to include additional algorithms
 - SDAP-493: 
   - Updated /job endpoint to use `executionId` terminology for consistency with existing `/cdmsresults` endpoint
   - Updated /job endpoint with details about number of primary and secondary tiles.
