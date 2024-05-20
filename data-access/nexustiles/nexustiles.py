@@ -29,18 +29,15 @@ import pkg_resources
 import pysolr
 from pytz import timezone, UTC
 from shapely.geometry import box
-from webservice.webmodel import DatasetNotFoundException, NexusProcessingException
-from webservice.NexusHandler import nexus_initializer
 from yarl import URL
 
+from webservice.NexusHandler import nexus_initializer
+from webservice.webmodel import DatasetNotFoundException
 from .AbstractTileService import AbstractTileService
 from .backends.nexusproto.backend import NexusprotoTileService
 from .backends.zarr.backend import ZarrBackend
-from .model.nexusmodel import Tile, BBox, TileStats, TileVariable
-
 from .exception import NexusTileServiceException
-
-from requests.structures import CaseInsensitiveDict
+from .model.nexusmodel import Tile, BBox, TileStats, TileVariable
 
 EPOCH = timezone('UTC').localize(datetime(1970, 1, 1))
 
@@ -165,10 +162,7 @@ class NexusTileService:
             NexusTileService.__update_thread.start()
 
     @staticmethod
-    def _get_backend(dataset_s) -> AbstractTileService:
-        if dataset_s is not None:
-            dataset_s = dataset_s
-
+    def _get_backend(dataset_s, check=True) -> AbstractTileService:
         with DS_LOCK:
             if dataset_s not in NexusTileService.backends:
                 logger.warning(f'Dataset {dataset_s} not currently loaded. Checking to see if it was recently'
@@ -179,13 +173,8 @@ class NexusTileService:
 
             b = NexusTileService.backends[dataset_s]
 
-            # if not b['up']:
-            #     success = b['backend'].try_connect()
-            #
-            #     if not success:
-            #         raise NexusProcessingException(reason=f'Dataset {dataset_s} is currently unavailable')
-            #     else:
-            #         NexusTileService.backends[dataset_s]['up'] = True
+            if check and not b['backend'].update():
+                raise DatasetNotFoundException(reason=f'Dataset {dataset_s} is currently inaccessible')
 
             return b['backend']
 
@@ -242,8 +231,10 @@ class NexusTileService:
                 present_datasets.add(d_id)
 
                 if d_id in NexusTileService.backends:
+                    if not NexusTileService.backends[d_id]['backend'].update(True):
+                        logger.info(f'Dataset {d_id} of type {store_type} is no longer accessible and will be removed')
+                        present_datasets.remove(d_id)
                     continue
-                    # is_up = NexusTileService.backends[d_id]['backend'].try_connect()
 
                 added_datasets += 1
 

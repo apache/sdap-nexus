@@ -22,12 +22,14 @@ import numpy as np
 import numpy.ma as ma
 import s3fs
 import xarray as xr
-from nexustiles.AbstractTileService import AbstractTileService
-from nexustiles.exception import NexusTileServiceException
-from nexustiles.model.nexusmodel import Tile, BBox, TileVariable
 from pytz import timezone
 from shapely.geometry import MultiPolygon, box
 from yarl import URL
+
+from nexustiles.AbstractTileService import AbstractTileService
+from nexustiles.backends import get_cred_handler
+from nexustiles.exception import NexusTileServiceException
+from nexustiles.model.nexusmodel import Tile, BBox, TileVariable
 
 EPOCH = timezone('UTC').localize(datetime(1970, 1, 1))
 ISO_8601 = '%Y-%m-%dT%H:%M:%S%z'
@@ -42,7 +44,8 @@ logger = logging.getLogger(__name__)
 class ZarrBackend(AbstractTileService):
     def __init__(self, dataset_name, path, config=None):
         AbstractTileService.__init__(self, dataset_name)
-        self.__config = config if config is not None else {}
+        config = config if config is not None else {}
+        self.__config = config
 
         logger.info(f'Opening zarr backend at {path} for dataset {self._name}')
 
@@ -76,38 +79,104 @@ class ZarrBackend(AbstractTileService):
 
         self.__depth = config['coords'].get('depth')
 
+        if self.__store_type == 's3' and not (config.get('public', False) or config.get('aws', {}).get('public', False)):
+            self.__credentials = get_cred_handler(dataset_name, config)
+        else:
+            self.__credentials = None
+
+        self.__corrections = None
+
+        # If we know the ds is ok, set the corrections to empty list so we don't bother checking
+        if config.get('verified', False):
+            self.__corrections = []
+
+        self.__ds: xr.Dataset = self.__open_ds()
+
+    def __open_ds(self) -> xr.Dataset:
         if self.__store_type in ['', 'file']:
             store = self.__path
         elif self.__store_type == 's3':
             try:
-                aws_cfg = self.__config['aws']
-
-                if aws_cfg['public']:
-                    # region = aws_cfg.get('region', 'us-west-2')
-                    # store = f'https://{self.__host}.s3.{region}.amazonaws.com{self.__path}'
+                if self.__credentials is None:
                     s3 = s3fs.S3FileSystem(True)
-                    store = s3fs.S3Map(root=path, s3=s3, check=False)
+                    store = s3fs.S3Map(root=self.__url, s3=s3, check=False)
                 else:
-                    s3 = s3fs.S3FileSystem(False, key=aws_cfg['accessKeyID'], secret=aws_cfg['secretAccessKey'])
-                    store = s3fs.S3Map(root=path, s3=s3, check=False)
+                    s3 = s3fs.S3FileSystem(False, **self.__credentials.get_credentials('s3fs'))
+                    store = s3fs.S3Map(root=self.__url, s3=s3, check=False)
             except Exception as e:
-                logger.error(f'Failed to open zarr dataset at {self.__path}, ignoring it. Cause: {e}')
+                logger.error(f'Failed to prepare zarr dataset at {self.__path}, ignoring it. Cause: {e}')
+                logger.exception(e)
                 raise NexusTileServiceException(f'Cannot open S3 dataset ({e})')
         else:
             raise ValueError(self.__store_type)
 
         try:
-            self.__ds: xr.Dataset = xr.open_zarr(store, consolidated=True)
+            ds = xr.open_zarr(store, consolidated=True)
+
+            lats = ds[self.__latitude].to_numpy()
+            delta = lats[1] - lats[0]
+
+            if delta < 0:
+                logger.info(f'Latitude coordinate for {self._name} is in descending order. Flipping it to ascending')
+                ds = ds.isel({self.__latitude: slice(None, None, -1)})
+
+            ds = ds.transpose(self.__time, self.__latitude, self.__longitude, ...)
+
+            if self.__corrections is None:
+                logger.info('Checking if dataset needs any corrections')
+
+                corrections = []
+
+                times = ds[self.__time].to_numpy()
+
+                deltas = [times[i+1] - times[i] for i in range(len(times) - 1)]
+
+                if not all([d >= 0 for d in deltas]):
+                    logger.warning('Dataset times are not monotonically ascending')
+
+                    corrections.append(dict(
+                        func=xr.Dataset.sortby,
+                        args=(self.__time,),
+                        kwargs={}
+                    ))
+
+                if len(set(times)) != len(times):
+                    logger.warning('Dataset has repeated time coords')
+
+                    corrections.append(dict(
+                        func=xr.Dataset.drop_duplicates,
+                        args=(self.__time,),
+                        kwargs={'keep': 'last'}
+                    ))
+
+                del times, deltas
+
+                self.__corrections = corrections
+
+            if len(self.__corrections) > 0:
+                logger.info(f'Applying {len(self.__corrections)} corrective actions')
+
+                for a in self.__corrections:
+                    logger.debug(f'Applying {a["func"]}, args={a["args"]}, kwargs={a["kwargs"]}')
+
+                    ds = a['func'](ds, *a['args'], **a['kwargs'])
+
+            return ds
         except Exception as e:
             logger.error(f'Failed to open zarr dataset at {self.__path}, ignoring it. Cause: {e}')
             raise NexusTileServiceException(f'Cannot open dataset ({e})')
 
-        lats = self.__ds[self.__latitude].to_numpy()
-        delta = lats[1] - lats[0]
+    def update(self, force: bool = False) -> bool:
+        if force or (self.__credentials is not None and not self.__credentials.is_valid()):
+            try:
+                logger.info(f'Refreshing zarr dataset {self._name} at {self.__path}')
+                self.__ds = self.__open_ds()
+            except Exception as e:
+                logger.error('Backend update failed')
+                logger.exception(e)
+                return False
 
-        if delta < 0:
-            logger.warning(f'Latitude coordinate for {self._name} is in descending order. Flipping it to ascending')
-            self.__ds = self.__ds.isel({self.__latitude: slice(None, None, -1)})
+        return True
 
     def get_dataseries_list(self, simple=False):
         ds = {
@@ -153,7 +222,7 @@ class ZarrBackend(AbstractTileService):
         times = self.__ds.sel(sel)[self.__time].to_numpy()
 
         if np.issubdtype(times.dtype, np.datetime64):
-            times = ((times - np.datetime64(EPOCH)) / 1e9).astype(int)
+            times = (times - np.datetime64(EPOCH)).astype('timedelta64[s]').astype(int)
 
         times = sorted(times.tolist())
 
@@ -325,10 +394,10 @@ class ZarrBackend(AbstractTileService):
         max_date = self.__ds[self.__time].max().to_numpy()
 
         if np.issubdtype(min_date.dtype, np.datetime64):
-            min_date = ((min_date - np.datetime64(EPOCH)) / 1e9).astype(int).item()
+            min_date = (min_date - np.datetime64(EPOCH)).astype('timedelta64[s]').astype(int).item()
 
         if np.issubdtype(max_date.dtype, np.datetime64):
-            max_date = ((max_date - np.datetime64(EPOCH)) / 1e9).astype(int).item()
+            max_date = (max_date - np.datetime64(EPOCH)).astype('timedelta64[s]').astype(int).item()
 
         return min_date, max_date
 
@@ -435,7 +504,7 @@ class ZarrBackend(AbstractTileService):
             TileVariable(v, v) for v in self.__variables
         ]
 
-        matched = self.__ds.sel(sel_g) #.sel(sel_t, method=method)
+        matched = self.__ds.sel(sel_g)
 
         if sel_t is not None:
             matched = matched.sel(sel_t, method=method)
@@ -446,7 +515,7 @@ class ZarrBackend(AbstractTileService):
         times = matched[self.__time].to_numpy()
 
         if np.issubdtype(times.dtype, np.datetime64):
-            times = ((times - np.datetime64(EPOCH)) / 1e9).astype(int)
+            times = (times - np.datetime64(EPOCH)).astype('timedelta64[s]').astype(int)
 
         tile.times = ma.masked_invalid(times)
 
@@ -458,7 +527,6 @@ class ZarrBackend(AbstractTileService):
         else:
             tile.data = ma.masked_invalid(var_data[0])
             tile.is_multi = False
-
 
     def _metadata_store_docs_to_tiles(self, *store_docs):
         return [ZarrBackend.__nts_url_to_tile(d) for d in store_docs]
