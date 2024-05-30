@@ -21,13 +21,13 @@ Basic Structure
 
 The Collection Config is a YAML file containing a single list named ``collections``:
 
-.. code-block::
+.. code-block:: yaml
 
   collections: []
 
 The items in this list are the collections defined and they have the basic structure:
 
-.. code-block::
+.. code-block:: yaml
 
   - id: <single variable collection name>
     path: <root collection location. Local path or S3 URI>
@@ -68,7 +68,7 @@ Zarr Collections
 To specify a collection as a Zarr collection, simply add ``storeType: zarr`` to the collection object. If the data is local,
 this is all you need to do.
 
-.. code-block::
+.. code-block:: yaml
 
   id: <collection name>
   path: <root collection location. Local path>
@@ -87,7 +87,7 @@ You will need to provide credentials to access the bucket, or specify if it is p
 
 Example:
 
-.. code-block::
+.. code-block:: yaml
 
   collections:
   - id: MUR_SST
