@@ -6,6 +6,7 @@ Welcome to the Apache SDAP project documentation!
    :caption: Contents:
 
    intro
+   collections
    quickstart
    build
    dockerimages
