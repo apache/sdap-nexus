@@ -1,8 +1,8 @@
 .. _collections:
 
-*******
+***********************
 Collection Config Guide
-*******
+***********************
 
 Introduction
 ============
@@ -17,7 +17,7 @@ This guide will explain how to set up both protobuf and Zarr collections.
 .. _collections-basics:
 
 Basic Structure
-==========
+===============
 
 The Collection Config is a YAML file containing a single list named ``collections``:
 
@@ -56,14 +56,55 @@ There are slight variations and additions to this structure depending on the typ
 .. _collections-nc:
 
 NetCDF - Protobuf Collections
-=======
+=============================
 
-TBA
+For NetCDF data, you'll also need to tell the Ingester how big you want to make the tiles. This is set with the ``slices``
+object, which is a dictionary mapping dimension names to slice lengths. Omitted dimensions are assumed to be 1. It is important
+to set tile sizes that are not too big as to result in excess unnecessary data transfer, but also not too small as to result in
+an explosion in the number of generated tiles, which will lead to excessive metadata storage overhead and possible performance
+degradations. We also strongly recommend swath tiles be sized no larger than 15 x 15, as the current method for handling
+swath data is very memory inefficient scaled rapidly by tile size.
+
+.. note:: The source dataset dimension names are used in slice definitions, not the coordinate names as in the ``dimensionNames`` object. In gridded datasets, these names are often the same, but this is not the case for swath data.
+
+Example:
+
+.. code-block:: yaml
+
+  collections:
+  - id: MUR25-JPL-L4-GLOB-v04.2
+    path: s3://mur-sst/zarr-v1/
+    priority: 1
+    projection: Grid
+    dimensionNames:
+      latitude: lat
+      longitude: lon
+      time: time
+      variable: analysed_sst
+    slices:
+      lat: 100
+      lon: 100
+      time: 1
+  - id: ASCATB-L2-Coastal
+    path: s3://example-bucket/swath-path/
+    priority: 1
+    projection: SwathMulti
+    dimensionNames:
+      latitude: lat
+      longitude: lon
+      time: time
+      variables:
+      - wind_speed
+      - wind_dir
+    slices:
+      NUMROWS: 15
+      NUMROWS: 15
+
 
 .. _collections-zarr:
 
 Zarr Collections
-====
+================
 
 To specify a collection as a Zarr collection, simply add ``storeType: zarr`` to the collection object. If the data is local,
 this is all you need to do.
