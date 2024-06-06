@@ -111,7 +111,16 @@ class ZarrBackend(AbstractTileService):
             raise ValueError(self.__store_type)
 
         try:
-            ds = xr.open_zarr(store, consolidated=True)
+            ds = xr.open_zarr(
+                store,
+                consolidated=True,
+                storage_options=dict(exceptions=(KeyError,))  # This arg sets exception types to be treated as missing
+                                                              # chunks (ie, FillValue/NaN) Default behavior is to ignore
+                                                              # KeyError, OSError and PermissionError. We don't want
+                                                              # this in the case that the underlying S3 credentials
+                                                              # expire, which would raise PermissionErrors. Excluding
+                                                              # OSError too as PermissionError is a subclass of OSError
+            )
 
             lats = ds[self.__latitude].to_numpy()
             delta = lats[1] - lats[0]
