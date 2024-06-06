@@ -62,8 +62,8 @@ For NetCDF data, you'll also need to tell the Ingester how big you want to make 
 object, which is a dictionary mapping dimension names to slice lengths. Omitted dimensions are assumed to be 1. It is important
 to set tile sizes that are not too big as to result in excess unnecessary data transfer, but also not too small as to result in
 an explosion in the number of generated tiles, which will lead to excessive metadata storage overhead and possible performance
-degradations. We also strongly recommend swath tiles be sized no larger than 15 x 15, as the current method for handling
-swath data is very memory inefficient scaled rapidly by tile size.
+degradations. For gridded data, we recommend tile sizes between 30 x 30 and 100 x 100, we also strongly recommend swath tiles be 
+sized no larger than 15 x 15, as the current method for handling swath data is very memory inefficient scaled rapidly by tile size.
 
 .. note:: The source dataset dimension names are used in slice definitions, not the coordinate names as in the ``dimensionNames`` object. In gridded datasets, these names are often the same, but this is not the case for swath data.
 
