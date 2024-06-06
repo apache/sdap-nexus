@@ -179,14 +179,6 @@ class NexusTileService:
 
             b = NexusTileService.backends[dataset_s]
 
-            # if not b['up']:
-            #     success = b['backend'].try_connect()
-            #
-            #     if not success:
-            #         raise NexusProcessingException(reason=f'Dataset {dataset_s} is currently unavailable')
-            #     else:
-            #         NexusTileService.backends[dataset_s]['up'] = True
-
             return b['backend']
 
 
@@ -243,7 +235,6 @@ class NexusTileService:
 
                 if d_id in NexusTileService.backends:
                     continue
-                    # is_up = NexusTileService.backends[d_id]['backend'].try_connect()
 
                 added_datasets += 1
 

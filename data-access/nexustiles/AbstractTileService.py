@@ -21,15 +21,6 @@ import numpy.ma as ma
 
 
 class AbstractTileService(ABC):
-    # @staticmethod
-    # @abstractmethod
-    # def open_dataset(dataset_s, **kwargs):
-    #     pass
-
-    # @abstractmethod
-    # def try_connect(self) -> bool:
-    #     raise NotImplementedError()
-
     def __init__(self, dataset_name):
         self._name = dataset_name
 
