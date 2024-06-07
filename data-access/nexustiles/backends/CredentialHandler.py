@@ -12,26 +12,29 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
+
+import base64
 import ipaddress
-import os
-from abc import ABC, abstractmethod, abstractclassmethod
-from typing import Literal
-from botocore.config import Config
-import boto3
 import logging
-from botocore.credentials import Credentials
-from botocore.exceptions import ClientError
+import os
+from abc import ABC, abstractmethod
 from datetime import datetime, timedelta, timezone
+from typing import Literal
+
+import boto3
 import requests
 import requests_mock
-import base64
+from botocore.config import Config
+from botocore.credentials import Credentials
+from botocore.exceptions import ClientError
 from requests.cookies import RequestsCookieJar
-
 
 logger = logging.getLogger(__name__)
 
 DT_FORMAT = '%Y-%m-%d %H:%M:%S%z'
 
+# Commented out entries are endpoints that I found documented but not working
 EOSDIS_DAAC_ENDPOINTS = {
     'podaac':            'https://archive.podaac.earthdata.nasa.gov/s3credentials',
     'podaac-swot':       'https://archive.swot.podaac.earthdata.nasa.gov/s3credentials',
@@ -48,6 +51,7 @@ EOSDIS_DAAC_ENDPOINTS = {
     'notadaac':          'mock://data.notadaac.earthdata.nasa.gov/s3credentials'
 }
 
+# Sometimes the flow has the token in a different named cookie. Listing known names here
 EDL_TOKEN_COOKIE_NAMES = [
     'accessToken',
     'pure-cookie'  # https://api.giovanni.earthdata.nasa.gov/s3credentials
