@@ -14,36 +14,26 @@
 # limitations under the License.
 
 INSITU_API_ENDPOINT = 'https://doms.jpl.nasa.gov/insitu/1.0/query_data_doms_custom_pagination'
-INSITU_API_SCHEMA_ENDPOINT = 'https://doms.jpl.nasa.gov/insitu/1.0/cdms_schema'
+INSITU_API_SCHEMA_ENDPOINT = 'https://doms.jpl.nasa.gov/in_situ_schema.json'
 
 INSITU_PROVIDER_MAP = [
     {
-        'name': 'NCAR',
-        'endpoint': 'https://cdms.ucar.edu/insitu/1.0/query_data_doms_custom_pagination',
-        'projects': [
-            {
-                'short_name': 'ICOADS_NCAR',
-                'name': 'ICOADS Release 3.0',
-                'platforms': ['0', '16', '17', '30', '41', '42']
-            }
-        ]
-    },
-    {
-        'name': 'NCAR',
-        'projects': [
-            {
-                'short_name': 'ICOADS_JPL',
-                'name': 'ICOADS Release 3.0',
-                'platforms': ['0', '16', '17', '30', '41', '42']
-            }
-        ]
-    },
-    {
         'name': 'Florida State University, COAPS',
+        'endpoint': 'https://doms.coaps.fsu.edu/ws/search/samos_cdms',
         'projects': [
             {
                 'name': 'SAMOS',
                 'platforms': ['30']
+            }
+        ]
+    },
+    {
+        'name': 'NCAR',
+        'endpoint': 'https://rda-work.ucar.edu/ws/search/icoads',
+        'projects': [
+            {
+                'name': 'ICOADS Release 3.0',
+                'platforms': ['0', '16', '17', '30', '41', '42']
             }
         ]
     },

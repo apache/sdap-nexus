@@ -13,24 +13,4 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-
-netcdf4==1.5.5.1
-basemap==1.2.2
-scipy==1.6.0
-pyspark==3.2.1
-pytz==2021.1
-utm==0.6.0
-shapely==1.7.1
-backports.functools_lru_cache==1.6.1
-boto3==1.16.63
-pillow==8.1.0
-mpld3=0.5.1
-tornado==6.1
-pyproj==2.6.1.post1
-pyyaml==6.0
-geos==3.8.1
-gdal==3.2.1
-mock==4.0.3
-importlib_metadata==4.11.4
-#singledispatch==3.4.0.3
-
+from webservice.management.Datasets import DatasetAdd

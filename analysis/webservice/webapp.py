@@ -18,6 +18,7 @@ import configparser
 import logging
 import sys
 import os
+from datetime import datetime
 
 import tornado.web
 from tornado.routing import Rule, RuleRouter, AnyMatches
@@ -26,6 +27,29 @@ from tornado.options import define, options, parse_command_line
 from webservice.redirect import RemoteCollectionMatcher
 from webservice.nexus_tornado.app_builders import NexusAppBuilder
 from webservice.nexus_tornado.app_builders import RedirectAppBuilder
+
+from nexustiles.nexustiles import NexusTileService
+
+try:
+    from importlib.metadata import version as _version
+    from importlib.metadata import files as _files
+except ImportError:
+    from importlib_metadata import version as _version
+
+try:
+    __version__ = _version('sdap-nexus')
+except Exception:
+    __version__ = 'Cannot be determined'
+
+banner = [
+     '',
+     ' ____  ____    _    ____    | ',
+     '/ ___||  _ \\  / \\  |  _ \\   | Apache SDAP (TM)',
+     '\\___ \\| | | |/ _ \\ | |_) |  | Science Data Analytics Platform',
+     f' ___) | |_| / ___ \\|  __/   | Version: {__version__}',
+     '|____/|____/_/   \\_\\_|      | ',
+     ''
+]
 
 
 def inject_args_in_config(args, config):
@@ -49,6 +73,7 @@ def inject_args_in_config(args, config):
 
 
 def main():
+    start = datetime.now()
 
     logging.basicConfig(
         level=logging.DEBUG,
@@ -57,6 +82,9 @@ def main():
     )
 
     log = logging.getLogger(__name__)
+
+    for line in banner:
+        log.info(line)
 
     web_config = configparser.RawConfigParser()
     web_config.read_file(open(os.path.join(os.path.dirname(__file__), "config", "web.ini")))
@@ -114,7 +142,14 @@ def main():
     log.info("Starting web server in debug mode: %s" % options.debug)
     server = tornado.web.HTTPServer(router)
     server.listen(options.port)
-    log.info("Starting HTTP listener...")
+    log.info('Waiting for dataset backends to come up...')
+
+    with NexusTileService.DS_LOCK:
+        if not NexusTileService.is_update_thread_alive():
+            log.critical('A fatal error occurred when loading the datasets')
+            exit(-1)
+
+    log.info(f"SDAP started in {datetime.now() - start}. Starting HTTP listener...")
     tornado.ioloop.IOLoop.current().start()
 
 

@@ -9,17 +9,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - SDAP-506:
   - Added STAC Catalog endpoint for matchup outputs
 - SDAP-508: Added spatial extents to the satellite dataset entries in `/list` and `/cdmslist`
+- SDAP-505: Added support for DOMS insitu api 
+- SDAP-472:
+  - Support for Zarr backend (gridded data only)
+  - Dataset management endpoints for Zarr datasets
+- SDAP-513: Added helm chart value `solr.initImage` to specify Solr init pod image. If omitted, defaults to `apache/sdap-solr-cloud-init:1.1.0`
 ### Changed
+- Updates to `openapi` spec to include additional algorithms
 - SDAP-493: 
   - Updated /job endpoint to use `executionId` terminology for consistency with existing `/cdmsresults` endpoint
   - Updated /job endpoint with details about number of primary and secondary tiles.
 - SDAP-500: Improvements to SDAP Asynchronous Jobs
 - SDAP-499: Added page number to default filename for matchup output
+- SDAP-472: Overhauled `data-access` to support multiple backends for simultaneous support of multiple ARD formats
+- Data access backends patches:
+  - Added `dask` dependency
+  - Code cleanup
+  - Zarr: Fixed handling of times conversion from xr/np datetimes to Unix timestamps
+- Changed SDAP startup behavior to wait for all datasets to be prepared before accepting HTTP requests
 ### Deprecated
 ### Removed
 - SDAP-493: 
   - Removed `resultSizeLimit` from /match_spark endpoint 
 ### Fixed
+- SDAP-515:
+  - Improved error handling with connections to remote SDAP deployments
 - Updated quickstart docs with corrected command for running Solr via Docker
 ### Security
 
@@ -46,10 +60,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Support for deploying on k8s version 1.25:
   - Upgraded Cassandra Helm chart dependency version
   - Bumped default Cassandra protocol version 3 -> 4 in webapp and tools
-- SDAP-507: Changes to remove `geos` sub-dependency from core image build:
+- SDAP-507: Changes to remove `geos` sub-dependency from core image build (partially superseded by SDAP-511 changes):
   - Removed `gdal` and `basemap` as core dependencies
   - Moved `shapely` installation in docker build from conda install to pip install
   - Disabled `/domsplot` endpoint & commented out references to its source file as it depends on `basemap` and raises `ImportError`s at startup
+- SDAP-511: Switched package management to use Poetry instead of conda/mamba
 ### Deprecated
 ### Removed
 - SDAP-465: Removed `climatology` directory.

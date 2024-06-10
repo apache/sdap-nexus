@@ -44,12 +44,12 @@ class HofMoellerCalculator(object):
     def hofmoeller_stats(tile_service_factory, metrics_callback, tile_in_spark):
 
         (latlon, tile_id, index,
-         min_lat, max_lat, min_lon, max_lon) = tile_in_spark
+         min_lat, max_lat, min_lon, max_lon, dataset) = tile_in_spark
 
         tile_service = tile_service_factory()
         try:
             # Load the dataset tile
-            tile = tile_service.find_tile_by_id(tile_id, metrics_callback=metrics_callback)[0]
+            tile = tile_service.find_tile_by_id(tile_id, metrics_callback=metrics_callback, ds=dataset)[0]
             calculation_start = datetime.now()
             # Mask it to the search domain
             tile = tile_service.mask_tiles_to_bbox(min_lat, max_lat,
@@ -352,7 +352,7 @@ class LatitudeTimeHoffMoellerSparkHandlerImpl(BaseHoffMoellerSparkHandlerImpl):
 
         min_lon, min_lat, max_lon, max_lat = bbox.bounds
 
-        nexus_tiles_spark = [(self._latlon, tile.tile_id, x, min_lat, max_lat, min_lon, max_lon) for x, tile in
+        nexus_tiles_spark = [(self._latlon, tile.tile_id, x, min_lat, max_lat, min_lon, max_lon, tile.dataset) for x, tile in
                              enumerate(self._get_tile_service().find_tiles_in_box(min_lat, max_lat, min_lon, max_lon,
                                                                                   ds, start_time, end_time,
                                                                                   metrics_callback=metrics_record.record_metrics,
@@ -408,7 +408,7 @@ class LongitudeTimeHoffMoellerSparkHandlerImpl(BaseHoffMoellerSparkHandlerImpl):
 
         min_lon, min_lat, max_lon, max_lat = bbox.bounds
 
-        nexus_tiles_spark = [(self._latlon, tile.tile_id, x, min_lat, max_lat, min_lon, max_lon) for x, tile in
+        nexus_tiles_spark = [(self._latlon, tile.tile_id, x, min_lat, max_lat, min_lon, max_lon, tile.dataset) for x, tile in
                              enumerate(self._get_tile_service().find_tiles_in_box(min_lat, max_lat, min_lon, max_lon,
                                                                                   ds, start_time, end_time,
                                                                                   metrics_callback=metrics_record.record_metrics,

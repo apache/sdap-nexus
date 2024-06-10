@@ -19,7 +19,7 @@ import logging
 from datetime import datetime
 from functools import partial
 
-from nexustiles.nexustiles import NexusTileServiceException
+from nexustiles.exception import NexusTileServiceException
 from pytz import timezone
 
 from webservice.NexusHandler import nexus_handler
