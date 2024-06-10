@@ -34,6 +34,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 - SDAP-515:
   - Improved error handling with connections to remote SDAP deployments
+- Updated quickstart docs with corrected command for running Solr via Docker
 ### Security
 
 ## [1.2.0] - 2023-11-22
