@@ -18,6 +18,7 @@ import configparser
 import logging
 import sys
 import os
+from datetime import datetime
 
 import tornado.web
 from tornado.routing import Rule, RuleRouter, AnyMatches
@@ -72,6 +73,8 @@ def inject_args_in_config(args, config):
 
 
 def main():
+    start = datetime.now()
+
     logging.basicConfig(
         level=logging.DEBUG,
         format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
@@ -145,7 +148,14 @@ def main():
         if not NexusTileService.is_update_tread_alive():
             raise Exception('Backend thread crashed')
 
-    log.info("Starting HTTP listener...")
+    log.info('Waiting for dataset backends to come up...')
+
+    with NexusTileService.DS_LOCK:
+        if not NexusTileService.is_update_thread_alive():
+            log.critical('A fatal error occurred when loading the datasets')
+            exit(-1)
+
+    log.info(f"SDAP started in {datetime.now() - start}. Starting HTTP listener...")
     tornado.ioloop.IOLoop.current().start()
 
 
