@@ -145,12 +145,6 @@ def main():
     log.info('Waiting for dataset backends to come up...')
 
     with NexusTileService.DS_LOCK:
-        if not NexusTileService.is_update_tread_alive():
-            raise Exception('Backend thread crashed')
-
-    log.info('Waiting for dataset backends to come up...')
-
-    with NexusTileService.DS_LOCK:
         if not NexusTileService.is_update_thread_alive():
             log.critical('A fatal error occurred when loading the datasets')
             exit(-1)
