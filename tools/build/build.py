@@ -37,14 +37,8 @@ if any([req is None for req in [DOCKER, TAR, GPG, GIT]]):
                   f'     gpg: {GPG if GPG is not None else "MISSING"}')
 
 
-ASF_NEXUS_REPO = 'https://github.com/apache/incubator-sdap-nexus.git'
-ASF_INGESTER_REPO = 'https://github.com/apache/incubator-sdap-ingester.git'
-
-HAS_GRADUATED = False
-
-#
-# dry_run = False
-#
+ASF_NEXUS_REPO = 'https://github.com/apache/sdap-nexus.git'
+ASF_INGESTER_REPO = 'https://github.com/apache/sdap-ingester.git'
 
 
 def build_cmd(tag, context, dockerfile='', cache=True):
@@ -161,12 +155,7 @@ def pull_source(dst_dir: tempfile.TemporaryDirectory, args: argparse.Namespace):
             [DEV, REL, ARC]
         )
 
-        url = url_map[release_area]
-
-        if HAS_GRADUATED:
-            raise NotImplementedError()
-        else:
-            url = url + 'incubator/sdap/'
+        url = url_map[release_area] + 'sdap/'
 
         response = requests.get(url)
         response.raise_for_status()
@@ -204,7 +193,10 @@ def pull_source(dst_dir: tempfile.TemporaryDirectory, args: argparse.Namespace):
 
             return s
 
-        build_artifacts = list(set([remove_suffixes(node.text, ['.sha512', '.asc']) for node in soup.find_all('a') if node.get('href').rstrip('/') not in ['KEYS', '..']]))
+        build_artifacts = list(set([
+            remove_suffixes(node.text, ['.sha512', '.asc'])
+            for node in soup.find_all('a') if node.get('href').rstrip('/') not in ['KEYS', '..']
+        ]))
 
         build_artifacts = [
             a for a in build_artifacts if a not in ['Parent Directory', 'Name', 'Last modified', 'Size', 'Description']
@@ -290,7 +282,7 @@ def pull_source(dst_dir: tempfile.TemporaryDirectory, args: argparse.Namespace):
                 cwd=dst_dir.name
             )
             shutil.move(
-                os.path.join(dst_dir.name, 'incubator-sdap-nexus'),
+                os.path.join(dst_dir.name, 'sdap-nexus'),
                 os.path.join(dst_dir.name, 'nexus')
             )
 
@@ -312,7 +304,7 @@ def pull_source(dst_dir: tempfile.TemporaryDirectory, args: argparse.Namespace):
                 cwd=dst_dir.name
             )
             shutil.move(
-                os.path.join(dst_dir.name, 'incubator-sdap-ingester'),
+                os.path.join(dst_dir.name, 'sdap-ingester'),
                 os.path.join(dst_dir.name, 'ingester')
             )
     else:
