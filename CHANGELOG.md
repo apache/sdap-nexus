@@ -22,6 +22,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - SDAP-500: Improvements to SDAP Asynchronous Jobs
 - SDAP-499: Added page number to default filename for matchup output
 - SDAP-472: Overhauled `data-access` to support multiple backends for simultaneous support of multiple ARD formats
+- Data access backends patches:
+  - Added `dask` dependency
+  - Code cleanup
+  - Zarr: Fixed handling of times conversion from xr/np datetimes to Unix timestamps
+- Changed SDAP startup behavior to wait for all datasets to be prepared before accepting HTTP requests
 ### Deprecated
 ### Removed
 - SDAP-493: 
@@ -29,6 +34,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 - SDAP-515:
   - Improved error handling with connections to remote SDAP deployments
+- Updated quickstart docs with corrected command for running Solr via Docker
 ### Security
 
 ## [1.2.0] - 2023-11-22

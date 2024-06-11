@@ -42,7 +42,8 @@ logger = logging.getLogger(__name__)
 class ZarrBackend(AbstractTileService):
     def __init__(self, dataset_name, path, config=None):
         AbstractTileService.__init__(self, dataset_name)
-        self.__config = config if config is not None else {}
+        config = config if config is not None else {}
+        self.__config = config
 
         logger.info(f'Opening zarr backend at {path} for dataset {self._name}')
 
@@ -153,7 +154,7 @@ class ZarrBackend(AbstractTileService):
         times = self.__ds.sel(sel)[self.__time].to_numpy()
 
         if np.issubdtype(times.dtype, np.datetime64):
-            times = ((times - np.datetime64(EPOCH)) / 1e9).astype(int)
+            times = (times - np.datetime64(EPOCH)).astype('timedelta64[s]').astype(int)
 
         times = sorted(times.tolist())
 
@@ -325,10 +326,10 @@ class ZarrBackend(AbstractTileService):
         max_date = self.__ds[self.__time].max().to_numpy()
 
         if np.issubdtype(min_date.dtype, np.datetime64):
-            min_date = ((min_date - np.datetime64(EPOCH)) / 1e9).astype(int).item()
+            min_date = (min_date - np.datetime64(EPOCH)).astype('timedelta64[s]').astype(int).item()
 
         if np.issubdtype(max_date.dtype, np.datetime64):
-            max_date = ((max_date - np.datetime64(EPOCH)) / 1e9).astype(int).item()
+            max_date = (max_date - np.datetime64(EPOCH)).astype('timedelta64[s]').astype(int).item()
 
         return min_date, max_date
 
@@ -435,7 +436,7 @@ class ZarrBackend(AbstractTileService):
             TileVariable(v, v) for v in self.__variables
         ]
 
-        matched = self.__ds.sel(sel_g) #.sel(sel_t, method=method)
+        matched = self.__ds.sel(sel_g)
 
         if sel_t is not None:
             matched = matched.sel(sel_t, method=method)
@@ -446,7 +447,7 @@ class ZarrBackend(AbstractTileService):
         times = matched[self.__time].to_numpy()
 
         if np.issubdtype(times.dtype, np.datetime64):
-            times = ((times - np.datetime64(EPOCH)) / 1e9).astype(int)
+            times = (times - np.datetime64(EPOCH)).astype('timedelta64[s]').astype(int)
 
         tile.times = ma.masked_invalid(times)
 
@@ -458,7 +459,6 @@ class ZarrBackend(AbstractTileService):
         else:
             tile.data = ma.masked_invalid(var_data[0])
             tile.is_multi = False
-
 
     def _metadata_store_docs_to_tiles(self, *store_docs):
         return [ZarrBackend.__nts_url_to_tile(d) for d in store_docs]

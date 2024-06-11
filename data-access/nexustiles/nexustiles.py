@@ -107,7 +107,6 @@ def catch_not_implemented(func):
 
 
 SOLR_LOCK = threading.Lock()
-DS_LOCK = threading.Lock()
 thread_local = threading.local()
 
 
@@ -126,12 +125,14 @@ class NexusTileService:
 
     ds_config = None
 
+    DS_LOCK = threading.Lock()
+
     __update_thread = None
 
     @staticmethod
     def __update_datasets_loop():
         while True:
-            with DS_LOCK:
+            with NexusTileService.DS_LOCK:
                 NexusTileService._update_datasets()
             sleep(3600)
 
@@ -165,11 +166,15 @@ class NexusTileService:
             NexusTileService.__update_thread.start()
 
     @staticmethod
+    def is_update_thread_alive() -> bool:
+        return NexusTileService.__update_thread is not None and NexusTileService.__update_thread.is_alive()
+
+    @staticmethod
     def _get_backend(dataset_s) -> AbstractTileService:
         if dataset_s is not None:
             dataset_s = dataset_s
 
-        with DS_LOCK:
+        with NexusTileService.DS_LOCK:
             if dataset_s not in NexusTileService.backends:
                 logger.warning(f'Dataset {dataset_s} not currently loaded. Checking to see if it was recently'
                                f'added')
@@ -178,14 +183,6 @@ class NexusTileService:
                     raise DatasetNotFoundException(reason=f'Dataset {dataset_s} is not currently loaded/ingested')
 
             b = NexusTileService.backends[dataset_s]
-
-            # if not b['up']:
-            #     success = b['backend'].try_connect()
-            #
-            #     if not success:
-            #         raise NexusProcessingException(reason=f'Dataset {dataset_s} is currently unavailable')
-            #     else:
-            #         NexusTileService.backends[dataset_s]['up'] = True
 
             return b['backend']
 
@@ -243,7 +240,6 @@ class NexusTileService:
 
                 if d_id in NexusTileService.backends:
                     continue
-                    # is_up = NexusTileService.backends[d_id]['backend'].try_connect()
 
                 added_datasets += 1
 
@@ -309,7 +305,7 @@ class NexusTileService:
 
         logger.info(f'Updated dataset {name} in Solr. Updating backends')
 
-        with DS_LOCK:
+        with NexusTileService.DS_LOCK:
             NexusTileService._update_datasets()
 
         return {'success': True}
@@ -341,7 +337,7 @@ class NexusTileService:
 
         logger.info(f'Added dataset {name} to Solr. Updating backends')
 
-        with DS_LOCK:
+        with NexusTileService.DS_LOCK:
             NexusTileService._update_datasets()
 
         return {'success': True}
@@ -366,7 +362,7 @@ class NexusTileService:
 
         logger.info(f'Removed dataset {name} from Solr. Updating backends')
 
-        with DS_LOCK:
+        with NexusTileService.DS_LOCK:
             NexusTileService._update_datasets()
 
         return {'success': True}
