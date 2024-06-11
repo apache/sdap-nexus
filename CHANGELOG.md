@@ -16,12 +16,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - SDAP-513: Added helm chart value `solr.initImage` to specify Solr init pod image. If omitted, defaults to `apache/sdap-solr-cloud-init:1.1.0`
 - SDAP-497: Added tool to ease building of releases. Can build from ASF distributions, git repos, and local
 ### Changed
+- Updates to `openapi` spec to include additional algorithms
 - SDAP-493: 
   - Updated /job endpoint to use `executionId` terminology for consistency with existing `/cdmsresults` endpoint
   - Updated /job endpoint with details about number of primary and secondary tiles.
 - SDAP-500: Improvements to SDAP Asynchronous Jobs
 - SDAP-499: Added page number to default filename for matchup output
 - SDAP-472: Overhauled `data-access` to support multiple backends for simultaneous support of multiple ARD formats
+- Data access backends patches:
+  - Added `dask` dependency
+  - Code cleanup
+  - Zarr: Fixed handling of times conversion from xr/np datetimes to Unix timestamps
+- Changed SDAP startup behavior to wait for all datasets to be prepared before accepting HTTP requests
 ### Deprecated
 ### Removed
 - SDAP-493: 
@@ -29,6 +35,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 - SDAP-515:
   - Improved error handling with connections to remote SDAP deployments
+- Updated quickstart docs with corrected command for running Solr via Docker
 ### Security
 
 ## [1.2.0] - 2023-11-22
