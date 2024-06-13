@@ -15,6 +15,7 @@
 
 import contextlib
 import logging
+import random
 from io import BytesIO
 from os.path import join
 from tempfile import TemporaryDirectory
@@ -106,6 +107,18 @@ class Tomogram3D(NexusCalcHandler):
             "name": "Hide Basemap",
             "type": "boolean",
             "description": "If true, do not draw basemap beneath plot. This can be used to speed up render time a bit"
+        },
+        "canopy_ds": {
+            "name": "Canopy height dataset name",
+            "type": "string",
+            "description": "Dataset containing canopy heights (RH98). This is used to trim out tomogram voxels that "
+                           "return over the measured or predicted canopy"
+        },
+        "ground_ds": {
+            "name": "Ground height dataset name",
+            "type": "string",
+            "description": "Dataset containing ground height (DEM). This is used to trim out tomogram voxels that "
+                           "return below the measured or predicted ground"
         },
     }
     singleton = True
@@ -217,21 +230,24 @@ class Tomogram3D(NexusCalcHandler):
 
         hide_basemap = compute_options.get_boolean_arg('hideBasemap')
 
+        ch_ds = compute_options.get_argument('canopy_ds', None)
+        g_ds = compute_options.get_argument('ground_ds', None)
+
         return (ds, parameter_s, bounding_poly, min_elevation, max_elevation,
-                (orbit_elev, orbit_step, frame_duration, view_azim, view_elev), filter_arg, render_type, hide_basemap)
+                (orbit_elev, orbit_step, frame_duration, view_azim, view_elev), filter_arg, render_type, hide_basemap,
+                ch_ds, g_ds)
 
-    def calc(self, computeOptions, **args):
-        (ds, parameter, bounding_poly, min_elevation, max_elevation, render_params, filter_arg, render_type,
-         hide_basemap) = (self.parse_args(computeOptions))
-
-        min_lat = bounding_poly.bounds[1]
-        max_lat = bounding_poly.bounds[3]
-        min_lon = bounding_poly.bounds[0]
-        max_lon = bounding_poly.bounds[2]
-
-        bounds = (min_lat, min_lon, max_lat, max_lon)
-
+    def do_subset(self, ds, parameter, bounds):
         tile_service = self._get_tile_service()
+
+        min_lat = bounds['lat'].start
+        max_lat = bounds['lat'].stop
+
+        min_lon = bounds['lon'].start
+        max_lon = bounds['lon'].stop
+
+        min_elevation = bounds['elevation'].start
+        max_elevation = bounds['elevation'].stop
 
         tiles = tile_service.find_tiles_in_box(
             min_lat, max_lat, min_lon, max_lon,
@@ -248,7 +264,7 @@ class Tomogram3D(NexusCalcHandler):
 
         data = []
 
-        for i in range(len(tiles)-1, -1, -1):
+        for i in range(len(tiles) - 1, -1, -1):
             tile = tiles.pop(i)
 
             tile_id = tile.tile_id
@@ -277,7 +293,8 @@ class Tomogram3D(NexusCalcHandler):
                         break
 
                 if data_val is None:
-                    logger.warning(f'No variable {parameter} found at point {nexus_point.index} for tile {tile.tile_id}')
+                    logger.warning(
+                        f'No variable {parameter} found at point {nexus_point.index} for tile {tile.tile_id}')
                     data_val = np.nan
 
                 data.append({
@@ -287,31 +304,56 @@ class Tomogram3D(NexusCalcHandler):
                     'data': data_val
                 })
 
-        logger.info('Building dataframe')
+        return data
 
-        lats = np.array([p['latitude'] for p in data])
-        lons = np.array([p['longitude'] for p in data])
-        elevs = np.array([p['elevation'] for p in data])
+    def calc(self, computeOptions, **args):
+        (ds, parameter, bounding_poly, min_elevation, max_elevation, render_params, filter_arg, render_type,
+         hide_basemap, ch_ds, g_ds) = (self.parse_args(computeOptions))
 
-        tomo = np.array([p['data'] for p in data])
-        tomo = 10 * np.log10(tomo)
+        min_lat = bounding_poly.bounds[1]
+        max_lat = bounding_poly.bounds[3]
+        min_lon = bounding_poly.bounds[0]
+        max_lon = bounding_poly.bounds[2]
 
-        df = pd.DataFrame(
-            np.hstack((
-                lats[:, np.newaxis],
-                lons[:, np.newaxis],
-                elevs[:, np.newaxis],
-                tomo[:, np.newaxis]
-            )),
-            columns=[
-                'lat',
-                'lon',
-                'elevation',
-                'tomo_value'
-            ]
+        bounds = dict(
+            lat=slice(min_lat, max_lat),
+            lon=slice(min_lon, max_lon),
+            elevation=slice(min_elevation, max_elevation)
         )
 
+        data = self.do_subset(ds, parameter, bounds)
+
+        logger.info('Building dataframe')
+
+        if ch_ds is None and g_ds is None:
+            lats = np.array([p['latitude'] for p in data])
+            lons = np.array([p['longitude'] for p in data])
+            elevs = np.array([p['elevation'] for p in data])
+
+            tomo = np.array([p['data'] for p in data])
+            tomo = 10 * np.log10(tomo)
+
+            df = pd.DataFrame(
+                np.hstack((
+                    lats[:, np.newaxis],
+                    lons[:, np.newaxis],
+                    elevs[:, np.newaxis],
+                    tomo[:, np.newaxis]
+                )),
+                columns=[
+                    'lat',
+                    'lon',
+                    'elevation',
+                    'tomo_value'
+                ]
+            )
+        else:
+            df = self.__mask_by_elev_map(data, ch_ds, g_ds, bounds.copy(), parameter)
+            df['tomo_value'] = 10 * np.log10(df['tomo_value'])
+
         logger.info(f'DataFrame:\n{df}')
+
+        bounds = (bounds['lat'].start, bounds['lon'].start, bounds['lat'].stop, bounds['lon'].stop)
 
         return Tomogram3DResults(
             df,
@@ -321,6 +363,66 @@ class Tomogram3D(NexusCalcHandler):
             bounds=bounds,
             hide_basemap=hide_basemap,
         )
+
+    def __mask_by_elev_map(self, data_points, ch_ds, g_ds, bounds, parameter):
+        from .Tomogram import TomogramBaseClass as Tomo
+
+        # Sample data_points to determine difference in elevation between slices
+
+        sample = data_points[random.randint(0, len(data_points) - 1)]
+
+        sample = [d['elevation'] for d in data_points if
+                  d['latitude'] == sample['latitude'] and d['longitude'] == sample['longitude']]
+
+        sample.sort()
+        sample = [sample[i+1] - sample[i] for i in range(len(sample) - 1)]
+
+        if min(sample) != max(sample):
+            raise NexusProcessingException(
+                code=500,
+                reason='There appears to be non-uniform elevation slices in the subset.'
+            )
+
+        stride = sample[0]
+
+        # Bin and grid the subset data to an xarray Dataset
+        elevations = np.arange(bounds['elevation'].start, bounds['elevation'].stop + stride, stride/2)
+        bounds['elevation'] = slice(None, None)  # Remove elevation from params as these are 2d datasets
+
+        ds = Tomo.data_subset_to_ds_with_elevation(
+            Tomo.bin_subset_elevations_to_range(
+                data_points, elevations, stride/2
+            )
+        )[3]
+
+        elev_vars = {}
+
+        # Subset the elevation maps
+        if ch_ds is not None:
+            elev_vars['ch'] = Tomo.data_subset_to_ds(self.do_subset(ch_ds, parameter, bounds))[3]
+
+        if g_ds is not None:
+            elev_vars['gh'] = Tomo.data_subset_to_ds(self.do_subset(g_ds, parameter, bounds))[3]
+
+        # Add them to the Dataset, regridding if necessary
+        if elev_vars:
+            Tomo.add_variables_to_tomo(ds, **elev_vars)
+
+        # Trim the data
+        if 'ch' in ds.data_vars:
+            ds = ds.where(ds.tomo.elevation <= ds.ch)
+        if 'gh' in ds.data_vars:
+            ds = ds.where(ds.tomo.elevation >= ds.gh)
+
+        # Convert to DataFrame, move coords to columns, rename to be consistent with other approach and select cols
+        filtered_df = ds.to_dataframe().reset_index(['elevation', 'latitude', 'longitude']).rename(
+            columns=dict(
+                latitude='lat', longitude='lon', tomo='tomo_value'
+            )
+        )[['lat', 'lon', 'elevation', 'tomo_value']]
+
+        return filtered_df
+        # return filtered_df[pd.notna(filtered_df['tomo_value'])]
 
 
 class Tomogram3DResults(NexusResults):

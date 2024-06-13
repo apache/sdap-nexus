@@ -173,7 +173,9 @@ class TomogramBaseClass(NexusCalcHandler):
         return binned_subset
 
     @staticmethod
-    def data_subset_to_ds_with_elevation(data_in_bounds: list) -> Tuple[np.ndarray, np.ndarray, np.ndarray, xr.Dataset]:
+    def data_subset_to_ds_with_elevation(
+            data_in_bounds: list
+    ) -> Tuple[np.ndarray, np.ndarray, np.ndarray, xr.Dataset]:
         lats = np.unique([d['latitude'] for d in data_in_bounds])
         lons = np.unique([d['longitude'] for d in data_in_bounds])
         elevations = np.unique([d['elevation'] for d in data_in_bounds])
@@ -199,6 +201,48 @@ class TomogramBaseClass(NexusCalcHandler):
         )
 
         return lats, lons, vals, ds
+
+    @staticmethod
+    def add_variables_to_tomo(tomo_ds, **variables):
+        X, Y = np.meshgrid(tomo_ds.longitude.to_numpy(), tomo_ds.latitude.to_numpy())
+
+        for var in variables:
+            try:
+                xr.align(tomo_ds['tomo'], variables[var].tomo, join='exact')
+                tomo_ds[var] = variables[var].tomo
+            except:
+                from scipy.interpolate import griddata
+
+                logger.info(f'Interpolating map to tomo grid')
+
+                var_ds = variables[var]
+                data_points = []
+
+                for lon_i, lon in enumerate(var_ds.longitude):
+                    for lat_i, lat in enumerate(var_ds.latitude):
+                        val = var_ds.isel(latitude=lat_i, longitude=lon_i).tomo.item()
+
+                        data_points.append((lon, lat, val))
+
+                regridded = griddata(
+                    list(zip(
+                        [p[0] for p in data_points], [p[1] for p in data_points]
+                    )),
+                    np.array([p[2] for p in data_points]),
+                    (X, Y),
+                    method='nearest',
+                    fill_value=np.nan
+                )
+
+                tomo_ds[var] = xr.DataArray(
+                    data=regridded,
+                    dims=['latitude', 'longitude'],
+                    coords=dict(
+                        latitude=tomo_ds.latitude,
+                        longitude=tomo_ds.longitude
+                    ),
+                    name=var
+                )
 
 
 @nexus_handler
@@ -342,7 +386,19 @@ class LongitudeTomogramImpl(TomogramBaseClass):
             "name": "Calculate peaks",
             "type": "boolean",
             "description": "Calculate peaks along tomogram slice (currently uses simplest approach)"
-        }
+        },
+        "canopy_ds": {
+            "name": "Canopy height dataset name",
+            "type": "string",
+            "description": "Dataset containing canopy heights (RH98). This is used to trim out tomogram voxels that "
+                           "return over the measured or predicted canopy"
+        },
+        "ground_ds": {
+            "name": "Ground height dataset name",
+            "type": "string",
+            "description": "Dataset containing ground height (DEM). This is used to trim out tomogram voxels that "
+                           "return below the measured or predicted ground"
+        },
     }
     singleton = True
 
@@ -380,18 +436,25 @@ class LongitudeTomogramImpl(TomogramBaseClass):
 
         peaks = compute_options.get_boolean_arg('peaks')
 
+        ch_ds = compute_options.get_argument('canopy_ds', None)
+        g_ds = compute_options.get_argument('ground_ds', None)
+
         return (ds, parameter, longitude, min_lat, max_lat, min_elevation, max_elevation, elevation_margin,
-                horizontal_margin, stride, peaks)
+                horizontal_margin, stride, peaks, ch_ds, g_ds)
 
     def calc(self, compute_options, **args):
         (dataset, parameter, longitude, min_lat, max_lat, min_elevation, max_elevation, elevation_margin,
-         horizontal_margin, stride, calc_peaks) = self.parse_args(compute_options)
+         horizontal_margin, stride, calc_peaks, ch_ds, g_ds) = self.parse_args(compute_options)
 
         slices = dict(
             lat=slice(min_lat, max_lat),
             lon=slice(longitude - horizontal_margin, longitude + horizontal_margin),
             elevation=slice(min_elevation, max_elevation)
         )
+
+        # TODO: Do stride/elevation margin need to be provided or can they be computed? This is important because
+        #  getting them wrong will mess up the result. (?): Stride === elevation diff between adjacent layers;
+        #  margin === stride / 2
 
         r = np.arange(min_elevation, max_elevation + stride, stride)
 
@@ -403,8 +466,27 @@ class LongitudeTomogramImpl(TomogramBaseClass):
             TomogramBaseClass.bin_subset_elevations_to_range(data_in_bounds, r, elevation_margin)
         )[3]
 
-        if len(ds.longitude) > 1:
-            ds = ds.sel(longitude=longitude, method='nearest')
+        slices['elevation'] = slice(None, None)
+        elev_vars = {}
+
+        if ch_ds is not None:
+            elev_vars['ch'] = TomogramBaseClass.data_subset_to_ds(self.do_subset(ch_ds, parameter, slices, 0))[3]
+
+        if g_ds is not None:
+            elev_vars['gh'] = TomogramBaseClass.data_subset_to_ds(self.do_subset(g_ds, parameter, slices, 0))[3]
+
+        # if len(ds.longitude) > 1:
+        #     ds = ds.sel(longitude=longitude, method='nearest')
+
+        if elev_vars:
+            TomogramBaseClass.add_variables_to_tomo(ds, **elev_vars)
+
+        ds = ds.sel(longitude=longitude, method='nearest')
+
+        if 'ch' in ds.data_vars:
+            ds = ds.where(ds.tomo.elevation <= ds.ch)
+        if 'gh' in ds.data_vars:
+            ds = ds.where(ds.tomo.elevation >= ds.gh)
 
         lats = ds.latitude.to_numpy()
 
@@ -501,7 +583,19 @@ class LatitudeTomogramImpl(TomogramBaseClass):
             "name": "Calculate peaks",
             "type": "boolean",
             "description": "Calculate peaks along tomogram slice (currently uses simplest approach)"
-        }
+        },
+        "canopy_ds": {
+            "name": "Canopy height dataset name",
+            "type": "string",
+            "description": "Dataset containing canopy heights (RH98). This is used to trim out tomogram voxels that "
+                           "return over the measured or predicted canopy"
+        },
+        "ground_ds": {
+            "name": "Ground height dataset name",
+            "type": "string",
+            "description": "Dataset containing ground height (DEM). This is used to trim out tomogram voxels that "
+                           "return below the measured or predicted ground"
+        },
     }
     singleton = True
 
@@ -539,12 +633,15 @@ class LatitudeTomogramImpl(TomogramBaseClass):
 
         peaks = compute_options.get_boolean_arg('peaks')
 
+        ch_ds = compute_options.get_argument('canopy_ds', None)
+        g_ds = compute_options.get_argument('ground_ds', None)\
+
         return (ds, parameter, latitude, min_lon, max_lon, min_elevation, max_elevation, elevation_margin,
-                horizontal_margin, stride, peaks)
+                horizontal_margin, stride, peaks, ch_ds, g_ds)
 
     def calc(self, compute_options, **args):
         (dataset, parameter, latitude, min_lon, max_lon, min_elevation, max_elevation, elevation_margin,
-         horizontal_margin, stride, calc_peaks) = self.parse_args(compute_options)
+         horizontal_margin, stride, calc_peaks, ch_ds, g_ds) = self.parse_args(compute_options)
 
         slices = dict(
             lon=slice(min_lon, max_lon),
@@ -562,8 +659,32 @@ class LatitudeTomogramImpl(TomogramBaseClass):
             TomogramBaseClass.bin_subset_elevations_to_range(data_in_bounds, r, elevation_margin)
         )[3]
 
-        if len(ds.latitude) > 1:
-            ds = ds.sel(latitude=latitude, method='nearest')
+        slices['elevation'] = slice(None, None)
+        elev_vars = {}
+
+        if ch_ds is not None:
+            elev_vars['ch'] = TomogramBaseClass.data_subset_to_ds(self.do_subset(ch_ds, parameter, slices, 0))[3]
+
+        if g_ds is not None:
+            elev_vars['gh'] = TomogramBaseClass.data_subset_to_ds(self.do_subset(g_ds, parameter, slices, 0))[3]
+
+        try:
+            ds.to_netcdf('/tmp/tomo.nc')
+        except:
+            print('temp save failed :(')
+
+        # if len(ds.latitude) > 1:
+        #     ds = ds.sel(latitude=latitude, method='nearest')
+
+        if elev_vars:
+            TomogramBaseClass.add_variables_to_tomo(ds, **elev_vars)
+
+        ds = ds.sel(latitude=latitude, method='nearest')
+
+        if 'ch' in ds.data_vars:
+            ds = ds.where(ds.tomo.elevation <= ds.ch)
+        if 'gh' in ds.data_vars:
+            ds = ds.where(ds.tomo.elevation >= ds.gh)
 
         lons = ds.longitude.to_numpy()
 
