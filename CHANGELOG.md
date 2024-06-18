@@ -13,19 +13,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - SDAP-472:
   - Support for Zarr backend (gridded data only)
   - Dataset management endpoints for Zarr datasets
+- SDAP-513: Added helm chart value `solr.initImage` to specify Solr init pod image. If omitted, defaults to `apache/sdap-solr-cloud-init:1.1.0`
 - SDAP-495: Added visualization endpoint `/stv/lidar` to produce 2d and 3d visualizations of the [ABoVE LVIS 2017 & 2019 L3 Vegetation Structure dataset](https://daac.ornl.gov/ABOVE/guides/ABoVE_LVIS_VegetationStructure.html). These endpoints provide visualization for ground height, mean vegetation height (RH050), canopy height (RH098) and canopy complexity (CC >= 03p00m)
 ### Changed
+- Updates to `openapi` spec to include additional algorithms
 - SDAP-493: 
   - Updated /job endpoint to use `executionId` terminology for consistency with existing `/cdmsresults` endpoint
   - Updated /job endpoint with details about number of primary and secondary tiles.
 - SDAP-500: Improvements to SDAP Asynchronous Jobs
 - SDAP-499: Added page number to default filename for matchup output
 - SDAP-472: Overhauled `data-access` to support multiple backends for simultaneous support of multiple ARD formats
+- Data access backends patches:
+  - Added `dask` dependency
+  - Code cleanup
+  - Zarr: Fixed handling of times conversion from xr/np datetimes to Unix timestamps
+- Changed SDAP startup behavior to wait for all datasets to be prepared before accepting HTTP requests
 ### Deprecated
 ### Removed
 - SDAP-493: 
   - Removed `resultSizeLimit` from /match_spark endpoint 
 ### Fixed
+- SDAP-515:
+  - Improved error handling with connections to remote SDAP deployments
+- Updated quickstart docs with corrected command for running Solr via Docker
 ### Security
 
 ## [1.2.0] - 2023-11-22
