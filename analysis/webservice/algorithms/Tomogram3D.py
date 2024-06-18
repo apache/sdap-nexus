@@ -30,6 +30,7 @@ from PIL import Image
 from webservice.NexusHandler import nexus_handler
 from webservice.algorithms.NexusCalcHandler import NexusCalcHandler
 from webservice.webmodel import NexusResults, NexusProcessingException, NoDataException
+from xarray import Dataset, apply_ufunc
 
 logger = logging.getLogger(__name__)
 
@@ -94,14 +95,14 @@ class Tomogram3D(NexusCalcHandler):
             "type": "comma-delimited pair of numbers",
             "description": "Pair of numbers min,max. If defined, will filter out all points in the tomogram whose value"
                            " does not satisfy min <= v <= max. Can be left unbounded, eg: 'filter=-15,' would filter "
-                           "everything but points >= -15"
+                           "everything but points >= -15. Ignored with \'elevPercentiles\'"
         },
         "renderType": {
             "name": "Render Type",
             "type": "string",
             "description": "Type of render: Must be either \"scatter\" or \"peak\". Scatter will plot every voxel in "
                            "the tomogram, colored by value, peak will plot a surface of all peaks for each lat/lon "
-                           "grid point, flat colored and shaded. Default: scatter"
+                           "grid point, flat colored and shaded. Ignored with \'elevPercentiles\'. Default: scatter"
         },
         "hideBasemap": {
             "name": "Hide Basemap",
@@ -120,6 +121,12 @@ class Tomogram3D(NexusCalcHandler):
             "description": "Dataset containing ground height (DEM). This is used to trim out tomogram voxels that "
                            "return below the measured or predicted ground"
         },
+        "elevPercentiles": {
+            "name": "Elevation percentiles",
+            "type": "boolean",
+            "description": "Display percentiles of cumulative returns over elevation. Requires both canopy_ds and "
+                           "ground_ds be set."
+        }
     }
     singleton = True
 
@@ -156,7 +163,10 @@ class Tomogram3D(NexusCalcHandler):
 
         output = compute_options.get_argument('output', None)
 
-        if output not in ['PNG', 'GIF', 'CSV']:
+        if output is not None:
+            output = output.upper()
+
+        if output not in ['PNG', 'GIF', 'CSV', 'NETCDF']:
             raise NexusProcessingException(reason=f'Missing or invalid required parameter: output = {output}', code=400)
 
         orbit_params = compute_options.get_argument('orbit', '30,10')
@@ -193,7 +203,18 @@ class Tomogram3D(NexusCalcHandler):
 
             orbit_elev, orbit_step = None, None
 
-        filter_arg = compute_options.get_argument('filter')
+        ch_ds = compute_options.get_argument('canopy_ds', None)
+        g_ds = compute_options.get_argument('ground_ds', None)
+
+        percentiles = compute_options.get_boolean_arg('elevPercentiles')
+
+        if percentiles and (ch_ds is None or g_ds is None):
+            raise NexusProcessingException(
+                code=400,
+                reason='\'elevPercentiles\' argument requires \'canopy_ds\' and \'ground_ds\' be set'
+            )
+
+        filter_arg = compute_options.get_argument('filter') if not percentiles else None
 
         if filter_arg is not None:
             try:
@@ -220,7 +241,7 @@ class Tomogram3D(NexusCalcHandler):
         else:
             filter_arg = (None, None)
 
-        render_type = compute_options.get_argument('renderType', 'scatter').lower()
+        render_type = compute_options.get_argument('renderType', 'scatter').lower() if not percentiles else 'scatter'
 
         if render_type not in ['scatter', 'peak']:
             raise NexusProcessingException(
@@ -230,12 +251,9 @@ class Tomogram3D(NexusCalcHandler):
 
         hide_basemap = compute_options.get_boolean_arg('hideBasemap')
 
-        ch_ds = compute_options.get_argument('canopy_ds', None)
-        g_ds = compute_options.get_argument('ground_ds', None)
-
         return (ds, parameter_s, bounding_poly, min_elevation, max_elevation,
                 (orbit_elev, orbit_step, frame_duration, view_azim, view_elev), filter_arg, render_type, hide_basemap,
-                ch_ds, g_ds)
+                ch_ds, g_ds, percentiles, output)
 
     def do_subset(self, ds, parameter, bounds):
         tile_service = self._get_tile_service()
@@ -308,7 +326,7 @@ class Tomogram3D(NexusCalcHandler):
 
     def calc(self, computeOptions, **args):
         (ds, parameter, bounding_poly, min_elevation, max_elevation, render_params, filter_arg, render_type,
-         hide_basemap, ch_ds, g_ds) = (self.parse_args(computeOptions))
+         hide_basemap, ch_ds, g_ds, percentiles, output) = (self.parse_args(computeOptions))
 
         min_lat = bounding_poly.bounds[1]
         max_lat = bounding_poly.bounds[3]
@@ -325,7 +343,7 @@ class Tomogram3D(NexusCalcHandler):
 
         logger.info('Building dataframe')
 
-        if ch_ds is None and g_ds is None:
+        if ch_ds is None and g_ds is None and output != 'NETCDF':
             lats = np.array([p['latitude'] for p in data])
             lons = np.array([p['longitude'] for p in data])
             elevs = np.array([p['elevation'] for p in data])
@@ -348,10 +366,9 @@ class Tomogram3D(NexusCalcHandler):
                 ]
             )
         else:
-            df = self.__mask_by_elev_map(data, ch_ds, g_ds, bounds.copy(), parameter)
-            df['tomo_value'] = 10 * np.log10(df['tomo_value'])
+            df = self.__mask_by_elev_map(data, ch_ds, g_ds, bounds.copy(), parameter, percentiles, output)
 
-        logger.info(f'DataFrame:\n{df}')
+        logger.info(f'Result repr:\n{df}')
 
         bounds = (bounds['lat'].start, bounds['lon'].start, bounds['lat'].stop, bounds['lon'].stop)
 
@@ -362,9 +379,10 @@ class Tomogram3D(NexusCalcHandler):
             render_type,
             bounds=bounds,
             hide_basemap=hide_basemap,
+            style='db' if not percentiles else 'percentile'
         )
 
-    def __mask_by_elev_map(self, data_points, ch_ds, g_ds, bounds, parameter):
+    def __mask_by_elev_map(self, data_points, ch_ds, g_ds, bounds, parameter, percentiles, output):
         from .Tomogram import TomogramBaseClass as Tomo
 
         # Sample data_points to determine difference in elevation between slices
@@ -414,6 +432,15 @@ class Tomogram3D(NexusCalcHandler):
         if 'gh' in ds.data_vars:
             ds = ds.where(ds.tomo.elevation >= ds.gh)
 
+        if percentiles:
+            tomo = ds['tomo'].cumsum(dim='elevation', skipna=True).where(ds['tomo'].notnull())
+            ds['tomo'] = tomo / tomo.max(dim='elevation', skipna=True)
+        else:
+            ds['tomo'] = apply_ufunc(lambda a: 10 * np.log10(a), ds.tomo)
+
+        if output == 'NETCDF':
+            return ds
+
         # Convert to DataFrame, move coords to columns, rename to be consistent with other approach and select cols
         filtered_df = ds.to_dataframe().reset_index(['elevation', 'latitude', 'longitude']).rename(
             columns=dict(
@@ -422,11 +449,10 @@ class Tomogram3D(NexusCalcHandler):
         )[['lat', 'lon', 'elevation', 'tomo_value']]
 
         return filtered_df
-        # return filtered_df[pd.notna(filtered_df['tomo_value'])]
 
 
 class Tomogram3DResults(NexusResults):
-    def __init__(self, results=None, render_params=None, filter_args=None, render_type='scatter',
+    def __init__(self, results=None, render_params=None, filter_args=None, render_type='scatter', style='db',
                  bounds=None, meta=None, stats=None, computeOptions=None, status_code=200, **args):
         NexusResults.__init__(self, results, meta, stats, computeOptions, status_code, **args)
         self.render_params = render_params
@@ -438,7 +464,7 @@ class Tomogram3DResults(NexusResults):
             self.filter = filter_args
 
         self.render_type = render_type
-
+        self.style = style
         self.hide_basemap = 'hide_basemap' in args and args['hide_basemap']
 
     def results(self):
@@ -446,6 +472,17 @@ class Tomogram3DResults(NexusResults):
         r = Tomogram3DResults.min_max_filter(r, *self.filter)
 
         return r
+
+    def result_dataset(self):
+        ds = NexusResults.results(self)
+
+        if not isinstance(ds, Dataset):
+            raise NexusProcessingException(
+                code=500,
+                reason=f'Invalid result type {type(ds)}'
+            )
+
+        return ds
 
     def __common(self):
         xyz = self.results()[['lon', 'lat', 'elevation']].values
@@ -526,14 +563,20 @@ class Tomogram3DResults(NexusResults):
 
         if self.render_type == 'scatter':
             logger.info('Plotting tomogram data')
+
+            if self.style == 'db':
+                v = dict(vmin=-30, vmax=-10)
+            else:
+                v = dict(vmin=0, vmax=1)
+
             s = ax.scatter(
                 xyz[:, 0], xyz[:, 1], xyz[:, 2],
-                marker='D',
+                marker=',',
                 c=results[['tomo_value']].values,
                 zdir='z',
                 depthshade=True,
                 cmap=mpl.colormaps['viridis'],
-                vmin=-30, vmax=-10
+                **v
             )
 
             cbar = fig.colorbar(s, ax=ax)
@@ -652,14 +695,20 @@ class Tomogram3DResults(NexusResults):
 
         if self.render_type == 'scatter':
             logger.info('Plotting tomogram data')
+
+            if self.style == 'db':
+                v = dict(vmin=-30, vmax=-10)
+            else:
+                v = dict(vmin=0, vmax=1)
+
             s = ax.scatter(
                 xyz[:, 0], xyz[:, 1], xyz[:, 2],
-                marker='D',
+                marker=',',
                 c=results[['tomo_value']].values,
                 zdir='z',
                 depthshade=True,
                 cmap=mpl.colormaps['viridis'],
-                vmin=-30, vmax=-10
+                **v
             )
 
             cbar = fig.colorbar(s, ax=ax)
@@ -738,6 +787,21 @@ class Tomogram3DResults(NexusResults):
         buf = BytesIO()
 
         df.to_csv(buf, header=False, index=False)
+
+        buf.seek(0)
+        return buf.read()
+
+    def toNetCDF(self):
+        ds = self.result_dataset()
+
+        comp = dict(zlib=True, complevel=9)
+        encoding = {vname: comp for vname in ds.data_vars}
+
+        with TemporaryDirectory() as td:
+            ds.to_netcdf(join(td, 'ds.nc'), encoding=encoding)
+
+            with open(join(td, 'ds.nc'), 'rb') as fp:
+                buf = BytesIO(fp.read())
 
         buf.seek(0)
         return buf.read()

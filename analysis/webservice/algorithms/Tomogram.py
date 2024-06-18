@@ -245,7 +245,7 @@ class TomogramBaseClass(NexusCalcHandler):
                 )
 
 
-@nexus_handler
+# @nexus_handler
 class ElevationTomogramImpl(TomogramBaseClass):
     name = "Elevation-sliced Tomogram"
     path = "/tomogram/elevation"
@@ -385,7 +385,8 @@ class LongitudeTomogramImpl(TomogramBaseClass):
         "peaks": {
             "name": "Calculate peaks",
             "type": "boolean",
-            "description": "Calculate peaks along tomogram slice (currently uses simplest approach)"
+            "description": "Calculate peaks along tomogram slice (currently uses simplest approach). "
+                           "Ignored with \'elevPercentiles\'"
         },
         "canopy_ds": {
             "name": "Canopy height dataset name",
@@ -399,6 +400,12 @@ class LongitudeTomogramImpl(TomogramBaseClass):
             "description": "Dataset containing ground height (DEM). This is used to trim out tomogram voxels that "
                            "return below the measured or predicted ground"
         },
+        "elevPercentiles": {
+            "name": "Elevation percentiles",
+            "type": "boolean",
+            "description": "Display percentiles of cumulative returns over elevation. Requires both canopy_ds and "
+                           "ground_ds be set."
+        }
     }
     singleton = True
 
@@ -434,17 +441,25 @@ class LongitudeTomogramImpl(TomogramBaseClass):
         horizontal_margin = compute_options.get_float_arg('horizontalMargin', 0.001)
         stride = compute_options.get_int_arg('stride', 1)
 
-        peaks = compute_options.get_boolean_arg('peaks')
-
         ch_ds = compute_options.get_argument('canopy_ds', None)
         g_ds = compute_options.get_argument('ground_ds', None)
 
+        percentiles = compute_options.get_boolean_arg('elevPercentiles')
+
+        if percentiles and (ch_ds is None or g_ds is None):
+            raise NexusProcessingException(
+                code=400,
+                reason='\'elevPercentiles\' argument requires \'canopy_ds\' and \'ground_ds\' be set'
+            )
+
+        peaks = compute_options.get_boolean_arg('peaks') and not percentiles
+
         return (ds, parameter, longitude, min_lat, max_lat, min_elevation, max_elevation, elevation_margin,
-                horizontal_margin, stride, peaks, ch_ds, g_ds)
+                horizontal_margin, stride, peaks, ch_ds, g_ds, percentiles)
 
     def calc(self, compute_options, **args):
         (dataset, parameter, longitude, min_lat, max_lat, min_elevation, max_elevation, elevation_margin,
-         horizontal_margin, stride, calc_peaks, ch_ds, g_ds) = self.parse_args(compute_options)
+         horizontal_margin, stride, calc_peaks, ch_ds, g_ds, percentiles) = self.parse_args(compute_options)
 
         slices = dict(
             lat=slice(min_lat, max_lat),
@@ -490,7 +505,11 @@ class LongitudeTomogramImpl(TomogramBaseClass):
 
         lats = ds.latitude.to_numpy()
 
-        ds['tomo'] = xr.apply_ufunc(lambda a: 10 * np.log10(a), ds.tomo)
+        if percentiles:
+            tomo = ds['tomo'].cumsum(dim='elevation', skipna=True).where(ds['tomo'].notnull())
+            ds['tomo'] = tomo / tomo.max(dim='elevation', skipna=True)
+        else:
+            ds['tomo'] = xr.apply_ufunc(lambda a: 10 * np.log10(a), ds.tomo)
 
         rows = ds.tomo.to_numpy()
 
@@ -519,7 +538,8 @@ class LongitudeTomogramImpl(TomogramBaseClass):
             results=(rows, peaks),
             s={'longitude': longitude},
             coords=dict(x=lats, y=ds.elevation.to_numpy()),
-            meta=dict(dataset=dataset)
+            meta=dict(dataset=dataset),
+            style='db' if not percentiles else 'percentile'
         )
 
 
@@ -582,7 +602,8 @@ class LatitudeTomogramImpl(TomogramBaseClass):
         "peaks": {
             "name": "Calculate peaks",
             "type": "boolean",
-            "description": "Calculate peaks along tomogram slice (currently uses simplest approach)"
+            "description": "Calculate peaks along tomogram slice (currently uses simplest approach). "
+                           "Ignored with \'elevPercentiles\'"
         },
         "canopy_ds": {
             "name": "Canopy height dataset name",
@@ -596,6 +617,12 @@ class LatitudeTomogramImpl(TomogramBaseClass):
             "description": "Dataset containing ground height (DEM). This is used to trim out tomogram voxels that "
                            "return below the measured or predicted ground"
         },
+        "elevPercentiles": {
+            "name": "Elevation percentiles",
+            "type": "boolean",
+            "description": "Display percentiles of cumulative returns over elevation. Requires both canopy_ds and "
+                           "ground_ds be set."
+        }
     }
     singleton = True
 
@@ -631,17 +658,25 @@ class LatitudeTomogramImpl(TomogramBaseClass):
         horizontal_margin = compute_options.get_float_arg('horizontalMargin', 0.001)
         stride = compute_options.get_int_arg('stride', 1)
 
-        peaks = compute_options.get_boolean_arg('peaks')
-
         ch_ds = compute_options.get_argument('canopy_ds', None)
-        g_ds = compute_options.get_argument('ground_ds', None)\
+        g_ds = compute_options.get_argument('ground_ds', None)
+
+        percentiles = compute_options.get_boolean_arg('elevPercentiles')
+
+        if percentiles and (ch_ds is None or g_ds is None):
+            raise NexusProcessingException(
+                code=400,
+                reason='\'elevPercentiles\' argument requires \'canopy_ds\' and \'ground_ds\' be set'
+            )
+
+        peaks = compute_options.get_boolean_arg('peaks') and not percentiles
 
         return (ds, parameter, latitude, min_lon, max_lon, min_elevation, max_elevation, elevation_margin,
-                horizontal_margin, stride, peaks, ch_ds, g_ds)
+                horizontal_margin, stride, peaks, ch_ds, g_ds, percentiles)
 
     def calc(self, compute_options, **args):
         (dataset, parameter, latitude, min_lon, max_lon, min_elevation, max_elevation, elevation_margin,
-         horizontal_margin, stride, calc_peaks, ch_ds, g_ds) = self.parse_args(compute_options)
+         horizontal_margin, stride, calc_peaks, ch_ds, g_ds, percentiles) = self.parse_args(compute_options)
 
         slices = dict(
             lon=slice(min_lon, max_lon),
@@ -668,11 +703,6 @@ class LatitudeTomogramImpl(TomogramBaseClass):
         if g_ds is not None:
             elev_vars['gh'] = TomogramBaseClass.data_subset_to_ds(self.do_subset(g_ds, parameter, slices, 0))[3]
 
-        try:
-            ds.to_netcdf('/tmp/tomo.nc')
-        except:
-            print('temp save failed :(')
-
         # if len(ds.latitude) > 1:
         #     ds = ds.sel(latitude=latitude, method='nearest')
 
@@ -688,7 +718,11 @@ class LatitudeTomogramImpl(TomogramBaseClass):
 
         lons = ds.longitude.to_numpy()
 
-        ds['tomo'] = xr.apply_ufunc(lambda a: 10 * np.log10(a), ds.tomo)
+        if percentiles:
+            tomo = ds['tomo'].cumsum(dim='elevation', skipna=True).where(ds['tomo'].notnull())
+            ds['tomo'] = tomo / tomo.max(dim='elevation', skipna=True)
+        else:
+            ds['tomo'] = xr.apply_ufunc(lambda a: 10 * np.log10(a), ds.tomo)
 
         rows = ds.tomo.to_numpy()
 
@@ -717,7 +751,8 @@ class LatitudeTomogramImpl(TomogramBaseClass):
             results=(rows, peaks),
             s={'latitude': latitude},
             coords=dict(x=lons, y=ds.elevation.to_numpy()),
-            meta=dict(dataset=dataset)
+            meta=dict(dataset=dataset),
+            style='db' if not percentiles else 'percentile'
         )
 
 
@@ -759,10 +794,22 @@ class ElevationTomoResults(NexusResults):
 
 
 class ProfileTomoResults(NexusResults):
-    def __init__(self, results=None, s=None, coords=None, meta=None, stats=None, computeOptions=None, status_code=200, **args):
+    def __init__(
+            self,
+            results=None,
+            s=None,
+            coords=None,
+            meta=None,
+            style='db',
+            stats=None,
+            computeOptions=None,
+            status_code=200,
+            **args
+    ):
         NexusResults.__init__(self, results, meta, stats, computeOptions, status_code, **args)
         self.__coords = coords
         self.__slice = s
+        self.__style = style
 
     def toImage(self):
         rows, peaks = self.results()
@@ -779,7 +826,11 @@ class ProfileTomoResults(NexusResults):
         logger.info('Building plot')
 
         plt.figure(figsize=(11, 7))
-        plt.pcolormesh(self.__coords['x'], self.__coords['y'], rows, vmin=-30, vmax=-10)
+        if self.__style == 'db':
+            v = dict(vmin=-30, vmax=-10)
+        else:
+            v = dict(vmin=0, vmax=1)
+        plt.pcolormesh(self.__coords['x'], self.__coords['y'], rows, **v)
         plt.colorbar()
         plt.title(f'{self.meta()["dataset"]} tomogram slice\n{title_row}')
         plt.xlabel(xlabel)
