@@ -39,15 +39,32 @@ if any([req is None for req in [DOCKER, TAR, GPG, GIT]]):
 
 ASF_NEXUS_REPO = 'https://github.com/apache/sdap-nexus.git'
 ASF_INGESTER_REPO = 'https://github.com/apache/sdap-ingester.git'
+ASF_NEXUSPROTO_REPO = 'https://github.com/apache/sdap-nexusproto.git'
+ASF_NEXUSPROTO_BRANCH = 'develop'
 
 
-def build_cmd(tag, context, dockerfile='', cache=True):
+def build_cmd(
+        tag,
+        context,
+        dockerfile='',
+        cache=True,
+        proto=None,
+        proto_repo=ASF_NEXUSPROTO_REPO,
+        proto_branch=ASF_NEXUSPROTO_BRANCH
+):
     command = [DOCKER, 'build', context]
 
     if dockerfile != '':
         command.extend(['-f', os.path.join(context, dockerfile)])
 
     command.extend(['-t', tag])
+
+    if proto == 'git':
+        command.extend([
+            '--build-arg', 'BUILD_NEXUSPROTO=true',
+            '--build-arg', f'APACHE_NEXUSPROTO={proto_repo}',
+            '--build-arg', f'APACHE_NEXUSPROTO_BRANCH={proto_branch}',
+        ])
 
     if not cache:
         command.append('--no-cache')
@@ -120,9 +137,17 @@ def choice_prompt(prompt: str, choices: list, default: str = None) -> str:
         return choices[int(choice)]
 
 
-def basic_prompt(prompt):
+def basic_prompt(prompt, default=None):
+    if default is not None:
+        prompt = f'{prompt} [{default}] : '
+    else:
+        prompt += ': '
+
     while True:
         response = input(prompt)
+
+        if response == '' and default is not None:
+            response = default
 
         if yes_no_prompt(f'Confirm: "{response}" [Y]/N '):
             return response
@@ -268,11 +293,11 @@ def pull_source(dst_dir: tempfile.TemporaryDirectory, args: argparse.Namespace):
             if not yes_no_prompt('Will you be using a fork for the Nexus repository? Y/[N]: ', False):
                 nexus_repo = ASF_NEXUS_REPO
             else:
-                nexus_repo = basic_prompt('Enter Nexus fork URL: ')
+                nexus_repo = basic_prompt('Enter Nexus fork URL')
 
             # TODO Maybe fetch list of branches?
 
-            nexus_branch = basic_prompt('Enter Nexus branch to build: ')
+            nexus_branch = basic_prompt('Enter Nexus branch to build')
 
             print(f'Cloning Nexus repo {nexus_repo} at {nexus_branch}')
 
@@ -290,11 +315,11 @@ def pull_source(dst_dir: tempfile.TemporaryDirectory, args: argparse.Namespace):
             if not yes_no_prompt('Will you be using a fork for the Ingester repository? Y/[N]: ', False):
                 ingester_repo = ASF_INGESTER_REPO
             else:
-                ingester_repo = basic_prompt('Enter Ingester fork URL: ')
+                ingester_repo = basic_prompt('Enter Ingester fork URL')
 
             # TODO Maybe fetch list of branches?
 
-            ingester_branch = basic_prompt('Enter Ingester branch to build: ')
+            ingester_branch = basic_prompt('Enter Ingester branch to build')
 
             print(f'Cloning Nexus repo {ingester_repo} at {ingester_branch}')
 
@@ -391,23 +416,58 @@ def main():
         default=[],
     )
 
+    parser.add_argument(
+        '--nexusproto',
+        dest='proto_src',
+        choices=['pip', 'git', None],
+        default=None,
+        help='Source for nexusproto build. \'pip\' to use the latest published version from PyPi; \'git\' to build '
+             'from a git repo (see --nexusproto-repo and --nexusproto-branch). Omit to be prompted'
+    )
+
+    parser.add_argument(
+        '--nexusproto-repo',
+        dest='proto_repo',
+        default=None,
+        help='Repository URL for nexusproto build. Omit to be prompted if --nexusproto=git'
+    )
+
+    parser.add_argument(
+        '--nexusproto-branch',
+        dest='proto_branch',
+        default=None,
+        help='Repository branch name for nexusproto build. Omit to be prompted if --nexusproto=git'
+    )
+
     parser.set_defaults(cache=None, push=None)
 
     args = parser.parse_args()
 
     tag, registry, cache, push = args.tag, args.registry, args.cache, args.push
 
+    proto, proto_repo, proto_branch = args.proto_src, args.proto_repo, args.proto_branch
+
     if tag is None:
-        tag = basic_prompt('Enter the tag to use for built images: ')
+        tag = basic_prompt('Enter the tag to use for built images')
 
     if registry is None:
-        registry = basic_prompt('Enter Docker image registry: ')
+        registry = basic_prompt('Enter Docker image registry')
 
     if cache is None:
         cache = yes_no_prompt('Use Docker build cache? [Y]/N: ')
 
     if push is None:
         push = yes_no_prompt('Push built images? [Y]/N: ')
+
+    if proto is None:
+        proto = 'git' if yes_no_prompt('Custom build nexusproto? Y/[N]: ', default=False) else 'pip'
+
+    if proto == 'git':
+        if proto_repo is None:
+            proto_repo = basic_prompt('Enter nexusproto repository URL', default=ASF_NEXUSPROTO_REPO)
+
+        if proto_branch is None:
+            proto_branch = basic_prompt('Enter nexusproto repository branch', default=ASF_NEXUSPROTO_BRANCH)
 
     extract_dir = tempfile.TemporaryDirectory()
 
@@ -439,7 +499,10 @@ def main():
                 gi_tag,
                 os.path.join(extract_dir.name, 'ingester'),
                 dockerfile='granule_ingester/docker/Dockerfile',
-                cache=cache
+                cache=cache,
+                proto=proto,
+                proto_repo=proto_repo,
+                proto_branch=proto_branch
             ), dryrun=args.dry)
 
             built_images.append(gi_tag)
@@ -475,7 +538,10 @@ def main():
                 webapp_tag,
                 os.path.join(extract_dir.name, 'nexus'),
                 dockerfile='docker/nexus-webapp/Dockerfile',
-                cache=cache
+                cache=cache,
+                proto=proto,
+                proto_repo=proto_repo,
+                proto_branch=proto_branch
             ), dryrun=args.dry)
 
             built_images.append(webapp_tag)
