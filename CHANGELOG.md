@@ -4,6 +4,39 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.0] - 2024-06-10
+### Added
+- SDAP-506:
+  - Added STAC Catalog endpoint for matchup outputs
+- SDAP-508: Added spatial extents to the satellite dataset entries in `/list` and `/cdmslist`
+- SDAP-505: Added support for DOMS insitu api 
+- SDAP-472:
+  - Support for Zarr backend (gridded data only)
+  - Dataset management endpoints for Zarr datasets
+- SDAP-513: Added helm chart value `solr.initImage` to specify Solr init pod image. If omitted, defaults to `apache/sdap-solr-cloud-init:1.1.0`
+### Changed
+- Updates to `openapi` spec to include additional algorithms
+- SDAP-493: 
+  - Updated /job endpoint to use `executionId` terminology for consistency with existing `/cdmsresults` endpoint
+  - Updated /job endpoint with details about number of primary and secondary tiles.
+- SDAP-500: Improvements to SDAP Asynchronous Jobs
+- SDAP-499: Added page number to default filename for matchup output
+- SDAP-472: Overhauled `data-access` to support multiple backends for simultaneous support of multiple ARD formats
+- Data access backends patches:
+  - Added `dask` dependency
+  - Code cleanup
+  - Zarr: Fixed handling of times conversion from xr/np datetimes to Unix timestamps
+- Changed SDAP startup behavior to wait for all datasets to be prepared before accepting HTTP requests
+### Deprecated
+### Removed
+- SDAP-493: 
+  - Removed `resultSizeLimit` from /match_spark endpoint 
+### Fixed
+- SDAP-515:
+  - Improved error handling with connections to remote SDAP deployments
+- Updated quickstart docs with corrected command for running Solr via Docker
+### Security
+
 ## [1.2.0] - 2023-11-22
 ### Added
 - SDAP-467: Added pagination to cdmsresults endpoint

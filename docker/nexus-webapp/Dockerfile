@@ -60,7 +60,7 @@ COPY docker/nexus-webapp/install_nexusproto.sh /tmp/install_nexusproto.sh
 COPY docker/nexus-webapp/entrypoint.sh /opt/entrypoint.sh
 
 # Copy readme + ASF legal files
-COPY README.md README DISCLAIMER LICENSE NOTICE ./
+COPY README.md README LICENSE NOTICE ./
 
 ENV PATH="$POETRY_HOME/bin:$VENV_PATH/bin:$PATH"
 
