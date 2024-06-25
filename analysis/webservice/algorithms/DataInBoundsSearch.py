@@ -16,6 +16,7 @@
 
 import json
 import numpy
+import logging
 
 from datetime import datetime
 from pytz import timezone
@@ -26,6 +27,7 @@ from webservice.webmodel import NexusResults, NexusProcessingException
 
 EPOCH = timezone('UTC').localize(datetime(1970, 1, 1))
 ISO_8601 = '%Y-%m-%dT%H:%M:%S%z'
+logger = logging.getLogger(__name__)
 
 
 @nexus_handler
@@ -132,6 +134,8 @@ class DataInBoundsSearchCalcHandlerImpl(NexusCalcHandler):
                                                                 end_time)
         else:
             tiles = self._get_tile_service().get_tiles_by_metadata(metadata_filter, ds, start_time, end_time)
+
+        logger.info(f'Matched {len(tiles)} tiles')
 
         data = []
         for tile in tiles:
