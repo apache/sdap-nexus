@@ -15,12 +15,13 @@
 
 import logging
 from io import BytesIO
-from typing import Dict, Literal, Union, Tuple
-from collections import namedtuple
+from typing import Tuple
 
+import matplotlib as mpl
 import matplotlib.pyplot as plt
 import numpy as np
 import xarray as xr
+
 from webservice.NexusHandler import nexus_handler
 from webservice.algorithms.NexusCalcHandler import NexusCalcHandler
 from webservice.webmodel import NexusResults, NexusProcessingException, NoDataException
@@ -405,7 +406,13 @@ class LongitudeTomogramImpl(TomogramBaseClass):
             "type": "boolean",
             "description": "Display percentiles of cumulative returns over elevation. Requires both canopy_ds and "
                            "ground_ds be set."
-        }
+        },
+        "cmap": {
+            "name": "Color Map",
+            "type": "string",
+            "description": f"Color map to use. Will default to viridis if not provided or an unsupported map is "
+                           f"provided. Supported cmaps: {[k for k in sorted(mpl.colormaps.keys())]}"
+        },
     }
     singleton = True
 
@@ -454,12 +461,17 @@ class LongitudeTomogramImpl(TomogramBaseClass):
 
         peaks = compute_options.get_boolean_arg('peaks') and not percentiles
 
+        cmap = mpl.colormaps.get(
+            compute_options.get_argument('cmap', 'viridis'),
+            mpl.colormaps['viridis']
+        )
+
         return (ds, parameter, longitude, min_lat, max_lat, min_elevation, max_elevation, elevation_margin,
-                horizontal_margin, stride, peaks, ch_ds, g_ds, percentiles)
+                horizontal_margin, stride, peaks, ch_ds, g_ds, percentiles, cmap)
 
     def calc(self, compute_options, **args):
         (dataset, parameter, longitude, min_lat, max_lat, min_elevation, max_elevation, elevation_margin,
-         horizontal_margin, stride, calc_peaks, ch_ds, g_ds, percentiles) = self.parse_args(compute_options)
+         horizontal_margin, stride, calc_peaks, ch_ds, g_ds, percentiles, cmap) = self.parse_args(compute_options)
 
         slices = dict(
             lat=slice(min_lat, max_lat),
@@ -499,9 +511,9 @@ class LongitudeTomogramImpl(TomogramBaseClass):
         ds = ds.sel(longitude=longitude, method='nearest')
 
         if 'ch' in ds.data_vars:
-            ds = ds.where(ds.tomo.elevation <= ds.ch)
+            ds['tomo'] = ds['tomo'].where(ds.tomo.elevation <= ds.ch)
         if 'gh' in ds.data_vars:
-            ds = ds.where(ds.tomo.elevation >= ds.gh)
+            ds['tomo'] = ds['tomo'].where(ds.tomo.elevation >= ds.gh)
 
         lats = ds.latitude.to_numpy()
 
@@ -539,7 +551,8 @@ class LongitudeTomogramImpl(TomogramBaseClass):
             s={'longitude': longitude},
             coords=dict(x=lats, y=ds.elevation.to_numpy()),
             meta=dict(dataset=dataset),
-            style='db' if not percentiles else 'percentile'
+            style='db' if not percentiles else 'percentile',
+            cmap=cmap
         )
 
 
@@ -622,7 +635,13 @@ class LatitudeTomogramImpl(TomogramBaseClass):
             "type": "boolean",
             "description": "Display percentiles of cumulative returns over elevation. Requires both canopy_ds and "
                            "ground_ds be set."
-        }
+        },
+        "cmap": {
+            "name": "Color Map",
+            "type": "string",
+            "description": f"Color map to use. Will default to viridis if not provided or an unsupported map is "
+                           f"provided. Supported cmaps: {[k for k in sorted(mpl.colormaps.keys())]}"
+        },
     }
     singleton = True
 
@@ -671,12 +690,17 @@ class LatitudeTomogramImpl(TomogramBaseClass):
 
         peaks = compute_options.get_boolean_arg('peaks') and not percentiles
 
+        cmap = mpl.colormaps.get(
+            compute_options.get_argument('cmap', 'viridis'),
+            mpl.colormaps['viridis']
+        )
+
         return (ds, parameter, latitude, min_lon, max_lon, min_elevation, max_elevation, elevation_margin,
-                horizontal_margin, stride, peaks, ch_ds, g_ds, percentiles)
+                horizontal_margin, stride, peaks, ch_ds, g_ds, percentiles, cmap)
 
     def calc(self, compute_options, **args):
         (dataset, parameter, latitude, min_lon, max_lon, min_elevation, max_elevation, elevation_margin,
-         horizontal_margin, stride, calc_peaks, ch_ds, g_ds, percentiles) = self.parse_args(compute_options)
+         horizontal_margin, stride, calc_peaks, ch_ds, g_ds, percentiles, cmap) = self.parse_args(compute_options)
 
         slices = dict(
             lon=slice(min_lon, max_lon),
@@ -712,9 +736,9 @@ class LatitudeTomogramImpl(TomogramBaseClass):
         ds = ds.sel(latitude=latitude, method='nearest')
 
         if 'ch' in ds.data_vars:
-            ds = ds.where(ds.tomo.elevation <= ds.ch)
+            ds['tomo'] = ds['tomo'].where(ds.tomo.elevation <= ds.ch)
         if 'gh' in ds.data_vars:
-            ds = ds.where(ds.tomo.elevation >= ds.gh)
+            ds['tomo'] = ds['tomo'].where(ds.tomo.elevation >= ds.gh)
 
         lons = ds.longitude.to_numpy()
 
@@ -752,7 +776,8 @@ class LatitudeTomogramImpl(TomogramBaseClass):
             s={'latitude': latitude},
             coords=dict(x=lons, y=ds.elevation.to_numpy()),
             meta=dict(dataset=dataset),
-            style='db' if not percentiles else 'percentile'
+            style='db' if not percentiles else 'percentile',
+            cmap=cmap
         )
 
 
@@ -810,6 +835,7 @@ class ProfileTomoResults(NexusResults):
         self.__coords = coords
         self.__slice = s
         self.__style = style
+        self.__cmap = args.get('cmap', mpl.colormaps['viridis'])
 
     def toImage(self):
         rows, peaks = self.results()
@@ -830,7 +856,7 @@ class ProfileTomoResults(NexusResults):
             v = dict(vmin=-30, vmax=-10)
         else:
             v = dict(vmin=0, vmax=1)
-        plt.pcolormesh(self.__coords['x'], self.__coords['y'], rows, **v)
+        plt.pcolormesh(self.__coords['x'], self.__coords['y'], rows, cmap=self.__cmap, **v)
         plt.colorbar()
         plt.title(f'{self.meta()["dataset"]} tomogram slice\n{title_row}')
         plt.xlabel(xlabel)

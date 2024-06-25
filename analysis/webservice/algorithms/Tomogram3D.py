@@ -25,14 +25,29 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import requests
-from mpl_toolkits.basemap import Basemap
 from PIL import Image
+from matplotlib.colors import LinearSegmentedColormap, XKCD_COLORS
+from mpl_toolkits.basemap import Basemap
+from xarray import Dataset, apply_ufunc
+
 from webservice.NexusHandler import nexus_handler
 from webservice.algorithms.NexusCalcHandler import NexusCalcHandler
 from webservice.webmodel import NexusResults, NexusProcessingException, NoDataException
-from xarray import Dataset, apply_ufunc
 
 logger = logging.getLogger(__name__)
+mpl.colormaps.register(
+    LinearSegmentedColormap.from_list(
+        'forest',
+        [
+            XKCD_COLORS['xkcd:dirt brown'],
+            # (0.0, 1.0, 0.0),
+            XKCD_COLORS['xkcd:dark forest green'],
+            XKCD_COLORS['xkcd:forest green'],
+            XKCD_COLORS['xkcd:forest'],
+            XKCD_COLORS['xkcd:light forest green'],
+            XKCD_COLORS['xkcd:leaf'],
+        ])
+)
 
 
 @nexus_handler
@@ -126,7 +141,21 @@ class Tomogram3D(NexusCalcHandler):
             "type": "boolean",
             "description": "Display percentiles of cumulative returns over elevation. Requires both canopy_ds and "
                            "ground_ds be set."
-        }
+        },
+        "renderRH": {
+            "name": "Render RH",
+            "type": "int",
+            "description": "With \'elevPercentiles\', this parameter is an integer between 0 and 100, which if set, "
+                           "will filter out all data whose cumulative return values is greater than the parameter "
+                           "value. It will also apply the color mapping to the voxel elevation rather than value, "
+                           "rendering a surface of that RH value."
+        },
+        "cmap": {
+            "name": "Color Map",
+            "type": "string",
+            "description": f"Color map to use. Will default to viridis if not provided or an unsupported map is "
+                           f"provided. Supported cmaps: {[k for k in sorted(mpl.colormaps.keys())]}"
+        },
     }
     singleton = True
 
@@ -214,6 +243,14 @@ class Tomogram3D(NexusCalcHandler):
                 reason='\'elevPercentiles\' argument requires \'canopy_ds\' and \'ground_ds\' be set'
             )
 
+        render_rh = compute_options.get_int_arg('renderRH', default=None)
+
+        if render_rh is not None and not 0 <= render_rh <= 100:
+            raise NexusProcessingException(
+                code=400,
+                reason="'renderRH' must be between 0 and 100"
+            )
+
         filter_arg = compute_options.get_argument('filter') if not percentiles else None
 
         if filter_arg is not None:
@@ -251,9 +288,14 @@ class Tomogram3D(NexusCalcHandler):
 
         hide_basemap = compute_options.get_boolean_arg('hideBasemap')
 
+        cmap = mpl.colormaps.get(
+            compute_options.get_argument('cmap', 'viridis'),
+            mpl.colormaps['viridis']
+        )
+
         return (ds, parameter_s, bounding_poly, min_elevation, max_elevation,
                 (orbit_elev, orbit_step, frame_duration, view_azim, view_elev), filter_arg, render_type, hide_basemap,
-                ch_ds, g_ds, percentiles, output)
+                ch_ds, g_ds, percentiles, output, render_rh, cmap)
 
     def do_subset(self, ds, parameter, bounds):
         tile_service = self._get_tile_service()
@@ -326,7 +368,7 @@ class Tomogram3D(NexusCalcHandler):
 
     def calc(self, computeOptions, **args):
         (ds, parameter, bounding_poly, min_elevation, max_elevation, render_params, filter_arg, render_type,
-         hide_basemap, ch_ds, g_ds, percentiles, output) = (self.parse_args(computeOptions))
+         hide_basemap, ch_ds, g_ds, percentiles, output, render_rh, cmap) = (self.parse_args(computeOptions))
 
         min_lat = bounding_poly.bounds[1]
         max_lat = bounding_poly.bounds[3]
@@ -366,11 +408,22 @@ class Tomogram3D(NexusCalcHandler):
                 ]
             )
         else:
-            df = self.__mask_by_elev_map(data, ch_ds, g_ds, bounds.copy(), parameter, percentiles, output)
+            df = self.__mask_by_elev_map(
+                data, ch_ds, g_ds, bounds.copy(), parameter, percentiles, output, render_rh is not None
+            )
 
         logger.info(f'Result repr:\n{df}')
 
         bounds = (bounds['lat'].start, bounds['lon'].start, bounds['lat'].stop, bounds['lon'].stop)
+
+        if percentiles:
+            if render_rh is None or output == 'NETCDF':
+                style = 'percentile'
+            else:
+                df = df[df['tomo_value'] > 1 - (render_rh / 100)]
+                style = 'percentile_elevation'
+        else:
+            style = 'db'
 
         return Tomogram3DResults(
             df,
@@ -379,37 +432,49 @@ class Tomogram3D(NexusCalcHandler):
             render_type,
             bounds=bounds,
             hide_basemap=hide_basemap,
-            style='db' if not percentiles else 'percentile'
+            style=style,
+            cmap=cmap
         )
 
-    def __mask_by_elev_map(self, data_points, ch_ds, g_ds, bounds, parameter, percentiles, output):
+    def __mask_by_elev_map(self, data_points, ch_ds, g_ds, bounds, parameter, percentiles, output, invert):
         from .Tomogram import TomogramBaseClass as Tomo
 
+        tries = 5
+
         # Sample data_points to determine difference in elevation between slices
+        while tries >= 0:
+            # There's a bug where some samples yield non-uniform slices for what DEFINITELY was uniform data at ingest
+            # Trying to get around it by just resampling for now, but this will definitely need further investigation
+            tries -= 1
+            sample = data_points[random.randint(0, len(data_points) - 1)]
 
-        sample = data_points[random.randint(0, len(data_points) - 1)]
+            sample = [d['elevation'] for d in data_points if
+                      d['latitude'] == sample['latitude'] and d['longitude'] == sample['longitude']]
 
-        sample = [d['elevation'] for d in data_points if
-                  d['latitude'] == sample['latitude'] and d['longitude'] == sample['longitude']]
+            sample.sort()
+            sample = [sample[i + 1] - sample[i] for i in range(len(sample) - 1)]
 
-        sample.sort()
-        sample = [sample[i+1] - sample[i] for i in range(len(sample) - 1)]
-
-        if min(sample) != max(sample):
-            raise NexusProcessingException(
-                code=500,
-                reason='There appears to be non-uniform elevation slices in the subset.'
-            )
+            if min(sample) == max(sample):
+                break
+            elif tries < 0:
+                raise NexusProcessingException(
+                    code=500,
+                    reason=f'There appears to be non-uniform elevation slices in the subset: '
+                           f'{sample}, {min(sample)}, {max(sample)}, {len(sample)}'
+                )
+            else:
+                logger.warning(f'Possible bad elevation sampling. Trying again. '
+                               f'{min(sample)}, {max(sample)}, {len(sample)}')
 
         stride = sample[0]
 
         # Bin and grid the subset data to an xarray Dataset
-        elevations = np.arange(bounds['elevation'].start, bounds['elevation'].stop + stride, stride/2)
+        elevations = np.arange(bounds['elevation'].start, bounds['elevation'].stop + stride, stride / 2)
         bounds['elevation'] = slice(None, None)  # Remove elevation from params as these are 2d datasets
 
         ds = Tomo.data_subset_to_ds_with_elevation(
             Tomo.bin_subset_elevations_to_range(
-                data_points, elevations, stride/2
+                data_points, elevations, stride / 2
             )
         )[3]
 
@@ -428,13 +493,16 @@ class Tomogram3D(NexusCalcHandler):
 
         # Trim the data
         if 'ch' in ds.data_vars:
-            ds = ds.where(ds.tomo.elevation <= ds.ch)
+            ds['tomo'] = ds['tomo'].where(ds.tomo.elevation <= ds.ch)
         if 'gh' in ds.data_vars:
-            ds = ds.where(ds.tomo.elevation >= ds.gh)
+            ds['tomo'] = ds['tomo'].where(ds.tomo.elevation >= ds.gh)
 
         if percentiles:
             tomo = ds['tomo'].cumsum(dim='elevation', skipna=True).where(ds['tomo'].notnull())
             ds['tomo'] = tomo / tomo.max(dim='elevation', skipna=True)
+
+            if invert:
+                ds['tomo'] = 1 - ds['tomo']
         else:
             ds['tomo'] = apply_ufunc(lambda a: 10 * np.log10(a), ds.tomo)
 
@@ -466,6 +534,7 @@ class Tomogram3DResults(NexusResults):
         self.render_type = render_type
         self.style = style
         self.hide_basemap = 'hide_basemap' in args and args['hide_basemap']
+        self.cmap = args.get('cmap', mpl.colormaps['viridis'])
 
     def results(self):
         r: pd.DataFrame = NexusResults.results(self)
@@ -487,7 +556,7 @@ class Tomogram3DResults(NexusResults):
     def __common(self):
         xyz = self.results()[['lon', 'lat', 'elevation']].values
 
-        fig = plt.figure(figsize=(10,7))
+        fig = plt.figure(figsize=(10, 7))
         return xyz, (fig, fig.add_subplot(111, projection='3d'))
 
     @staticmethod
@@ -519,7 +588,7 @@ class Tomogram3DResults(NexusResults):
         if not self.hide_basemap:
             min_lat, min_lon, max_lat, max_lon = self.bounds
 
-            m = Basemap(llcrnrlon=min_lon, llcrnrlat=min_lat, urcrnrlat=max_lat, urcrnrlon=max_lon,)
+            m = Basemap(llcrnrlon=min_lon, llcrnrlat=min_lat, urcrnrlat=max_lat, urcrnrlon=max_lon, )
 
             basemap_size = 512
 
@@ -566,21 +635,28 @@ class Tomogram3DResults(NexusResults):
 
             if self.style == 'db':
                 v = dict(vmin=-30, vmax=-10)
-            else:
+                cbl = 'Tomogram (dB)'
+            elif self.style == 'percentile':
                 v = dict(vmin=0, vmax=1)
+                cbl = 'Tomogram Cumulative value (%/100)'
+            else:
+                elevs = results[['elevation']].values
+                v = dict(vmin=np.nanmin(elevs), vmax=np.nanmax(elevs))
+                cbl = 'Voxel elevation'
 
             s = ax.scatter(
                 xyz[:, 0], xyz[:, 1], xyz[:, 2],
                 marker=',',
-                c=results[['tomo_value']].values,
+                c=results[['tomo_value']].values if self.style != 'percentile_elevation'
+                else results[['elevation']].values,
                 zdir='z',
                 depthshade=True,
-                cmap=mpl.colormaps['viridis'],
+                cmap=self.cmap,
                 **v
             )
 
             cbar = fig.colorbar(s, ax=ax)
-            cbar.set_label('Tomogram (dB)')
+            cbar.set_label(cbl)
         else:
             logger.info('Collecting data by lat/lon')
             lats = np.unique(results['lat'].values)
@@ -698,21 +774,28 @@ class Tomogram3DResults(NexusResults):
 
             if self.style == 'db':
                 v = dict(vmin=-30, vmax=-10)
-            else:
+                cbl = 'Tomogram (dB)'
+            elif self.style == 'percentile':
                 v = dict(vmin=0, vmax=1)
+                cbl = 'Tomogram Cumulative value (%/100)'
+            else:
+                elevs = results[['elevation']].values
+                v = dict(vmin=np.nanmin(elevs), vmax=np.nanmax(elevs))
+                cbl = 'Voxel elevation'
 
             s = ax.scatter(
                 xyz[:, 0], xyz[:, 1], xyz[:, 2],
                 marker=',',
-                c=results[['tomo_value']].values,
+                c=results[['tomo_value']].values if self.style != 'percentile_elevation'
+                else results[['elevation']].values,
                 zdir='z',
                 depthshade=True,
-                cmap=mpl.colormaps['viridis'],
+                cmap=self.cmap,
                 **v
             )
 
             cbar = fig.colorbar(s, ax=ax)
-            cbar.set_label('Tomogram (dB)')
+            cbar.set_label(cbl)
         else:
             logger.info('Collecting data by lat/lon')
             lats = np.unique(results['lat'].values)
