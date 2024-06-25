@@ -14,6 +14,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Support for Zarr backend (gridded data only)
   - Dataset management endpoints for Zarr datasets
 - SDAP-513: Added helm chart value `solr.initImage` to specify Solr init pod image. If omitted, defaults to `apache/sdap-solr-cloud-init:1.1.0`
+- SDAP-517: Added new options for AWS credential management for dataset backends relying on data in S3. 
+  - Profile `config.aws.profile` takes creds from named AWS profile
+  - Dynamic DAAC credentials: Gets dynamic credentials from NASA EOSIDS DAACs (requires Earthdata Login; only works in `us-west-2` AWS region)
 ### Changed
 - Updates to `openapi` spec to include additional algorithms
 - SDAP-493: 
