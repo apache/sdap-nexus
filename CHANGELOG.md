@@ -14,6 +14,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Support for Zarr backend (gridded data only)
   - Dataset management endpoints for Zarr datasets
 - SDAP-513: Added helm chart value `solr.initImage` to specify Solr init pod image. If omitted, defaults to `apache/sdap-solr-cloud-init:1.1.0`
+- SDAP-497: Added tool to ease building of releases. Can build from ASF distributions, git repos, and local
 ### Changed
 - Updates to `openapi` spec to include additional algorithms
 - SDAP-493: 
