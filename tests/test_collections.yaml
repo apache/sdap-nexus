@@ -1,0 +1,55 @@
+collections:
+  - id: MUR25-JPL-L4-GLOB-v04.2_test
+    path: /data/granules/MUR25-JPL-L4-GLOB-v04.2_test/*.nc
+    priority: 1
+    forward-processing-priority: 6
+    projection: Grid
+    dimensionNames:
+      latitude: lat
+      longitude: lon
+      time: time
+      variable: analysed_sst
+    slices:
+      time: 1
+      lat: 100
+      lon: 100
+  - id: ASCATB-L2-Coastal_test
+    path: /data/granules/ASCATB-L2-Coastal_test/*.nc
+    priority: 1
+    projection: SwathMulti
+    dimensionNames:
+      latitude: lat
+      longitude: lon
+      variables:
+        - wind_speed
+        - wind_dir
+      time: time
+    slices:
+      NUMROWS: 15
+      NUMCELLS: 15
+  - id: OISSS_L4_multimission_7day_v1_test
+    path: /data/granules/OISSS_L4_multimission_7day_v1_test/*.nc
+    priority: 1
+    forward-processing-priority: 1
+    projection: Grid
+    dimensionNames:
+      latitude: latitude
+      longitude: longitude
+      time: time
+      variable: sss
+    slices:
+      time: 1
+      latitude: 30
+      longitude: 30
+  - id: VIIRS_NPP-2018_Heatwave_test
+    path: /data/granules/VIIRS_NPP-2018_Heatwave_test/*.nc
+    priority: 1
+    projection: Swath
+    dimensionNames:
+      latitude: lat
+      longitude: lon
+      time: time
+      variable: sea_surface_temperature
+    slices:
+      ni: 30
+      nj: 30

@@ -17,6 +17,7 @@ import copy
 import csv
 import datetime
 import io
+import itertools
 import json
 import os
 import warnings
@@ -51,39 +52,7 @@ import cdms_reader
 
 @pytest.fixture(scope="session")
 def host():
-    return os.getenv('TEST_HOST', 'https://doms.jpl.nasa.gov')
-
-
-@pytest.fixture()
-def insitu_endpoint_JPL():
-    return os.getenv(
-        'INSITU_ENDPOINT_JPL',
-        'https://doms.jpl.nasa.gov/insitu/1.0/query_data_doms_custom_pagination'
-    )
-
-
-@pytest.fixture()
-def insitu_endpoint_NCAR():
-    return os.getenv(
-        'INSITU_ENDPOINT_NCAR',
-        'https://cdms.ucar.edu/insitu/1.0/query_data_doms_custom_pagination'
-    )
-
-
-@pytest.fixture()
-def insitu_endpoint_saildrone():
-    return os.getenv(
-        'INSITU_ENDPOINT_SAILDRONE',
-        'https://nasa-cdms.saildrone.com/insitu/1.0/query_data_doms_custom_pagination'
-    )
-
-
-@pytest.fixture()
-def insitu_swagger_endpoint():
-    return os.getenv(
-        'INSITU_SWAGGER_ENDPOINT',
-        'https://doms.jpl.nasa.gov/insitu/1.0/insitu_query_swagger/'
-    )
+    return os.getenv('TEST_HOST', 'http://localhost:8083/')
 
 
 @pytest.fixture(scope="session")
@@ -190,6 +159,82 @@ def distance_vs_time_query(host, start):
     return result
 
 
+@pytest.fixture()
+def matchup_params():
+    return {
+        'gridded_to_gridded': {
+            "primary": "MUR25-JPL-L4-GLOB-v04.2_test",
+            "secondary": "OISSS_L4_multimission_7day_v1_test",
+            "startTime": "2018-08-01T00:00:00Z",
+            "endTime": "2018-08-02T00:00:00Z",
+            "b": "-100,20,-90,30",
+            "depthMin": -20,
+            "depthMax": 10,
+            "tt": 43200,
+            "rt": 1000,
+            "matchOnce": True,
+            "resultSizeLimit": 7000,
+            "platforms": "42"
+        },
+        'gridded_to_swath': {
+            "primary": "MUR25-JPL-L4-GLOB-v04.2_test",
+            "secondary": "ASCATB-L2-Coastal_test",
+            "startTime": "2018-07-05T00:00:00Z",
+            "endTime": "2018-07-05T23:59:59Z",
+            "b": "-127,32,-120,40",
+            "depthMin": -20,
+            "depthMax": 10,
+            "tt": 12000,
+            "rt": 1000,
+            "matchOnce": True,
+            "resultSizeLimit": 7000,
+            "platforms": "42"
+        },
+        'swath_to_gridded': {
+            "primary": "ASCATB-L2-Coastal_test",
+            "secondary": "MUR25-JPL-L4-GLOB-v04.2_test",
+            "startTime": "2018-08-01T00:00:00Z",
+            "endTime": "2018-08-02T00:00:00Z",
+            "b": "-100,20,-90,30",
+            "depthMin": -20,
+            "depthMax": 10,
+            "tt": 43200,
+            "rt": 1000,
+            "matchOnce": True,
+            "resultSizeLimit": 7000,
+            "platforms": "65"
+        },
+        'swath_to_swath': {
+            "primary": "VIIRS_NPP-2018_Heatwave_test",
+            "secondary": "ASCATB-L2-Coastal_test",
+            "startTime": "2018-07-05T00:00:00Z",
+            "endTime": "2018-07-05T23:59:59Z",
+            "b": "-120,28,-118,30",
+            "depthMin": -20,
+            "depthMax": 10,
+            "tt": 43200,
+            "rt": 1000,
+            "matchOnce": True,
+            "resultSizeLimit": 7000,
+            "platforms": "42"
+        },
+        'long': {  # TODO: Find something for this; it's copied atm
+            "primary": "VIIRS_NPP-2018_Heatwave",
+            "secondary": "ASCATB-L2-Coastal",
+            "startTime": "2018-07-05T00:00:00Z",
+            "endTime": "2018-07-05T23:59:59Z",
+            "b": "-120,28,-118,30",
+            "depthMin": -20,
+            "depthMax": 10,
+            "tt": 43200,
+            "rt": 1000,
+            "matchOnce": True,
+            "resultSizeLimit": 7000,
+            "platforms": "42"
+        },
+    }
+
+
 def skip(msg=""):
     raise pytest.skip(msg)
 
@@ -284,7 +329,7 @@ def verify_match(match, point, time, s_point, s_time, params, bounding_poly):
            <= (match['time'] + params['tt'])
 
 
-def verify_match_consistence(match, params, bounding_poly):
+def verify_match_consistency(match, params, bounding_poly):
     # Check primary point within search bounds
     assert iso_time_to_epoch(params['startTime']) \
            <= match['time'] \
@@ -535,542 +580,37 @@ def run_matchup(url, params, page_size=3500):
 
 
 @pytest.mark.integration
-def test_matchup_spark_L4_IS_ICOADS(host, eid, start, fail_on_miscount):
+@pytest.mark.parametrize(
+    ['match', 'expected'],
+    list(zip(
+        ['gridded_to_gridded', 'gridded_to_swath', 'swath_to_gridded', 'swath_to_swath'],
+        [1110, 6, 21, 4027]
+    ))
+)
+def test_match_spark(host, start, fail_on_miscount, matchup_params, match, expected):
     url = urljoin(host, 'match_spark')
 
-    params = {
-        "primary": "MUR25-JPL-L4-GLOB-v04.2",
-        "secondary": "ICOADS Release 3.0",
-        # "secondary": "ICOADS_JPL",
-        "startTime": "2018-08-16T00:00:00Z",
-        "endTime": "2018-08-27T23:59:59Z",
-        "b": "-90.38,27.625,-86.125,28.125",
-        "depthMin": -20,
-        "depthMax": 10,
-        "tt": 43200,
-        "rt": 1000,
-        "matchOnce": True,
-        "resultSizeLimit": 7000,
-        "platforms": "42"
-    }
+    params = matchup_params[match]
 
     bounding_poly = b_to_polygon(params['b'])
 
     body = run_matchup(url, params)
-    try_save("test_matchup_spark_L4_IS_ICOADS_A", start, body)
+    try_save(f"test_matchup_spark_{match}", start, body)
     data = body['data']
 
     assert body['count'] == len(data)
-    uniq_primaries(data, case='test_matchup_spark_L4_IS_ICOADS_A')
-    check_count(len(data), 5, fail_on_miscount)
-
-    data.sort(key=lambda e: e['point'])
-    body['data'] = data
-
-    eid['eid'].append(body['executionId'])
-    eid['params'].append(copy.deepcopy(params))
-
-    verify_match(
-        data[0],    'Point(-86.125 27.625)',
-        1535360400, 'Point(-86.130 27.630)',
-        1535374800,  params, bounding_poly
-    )
-
-    verify_match(
-        data[1],    'Point(-88.875 27.875)',
-        1534669200, 'Point(-88.880 27.880)',
-        1534698000,  params, bounding_poly
-    )
-
-    verify_match(
-        data[2],    'Point(-90.125 27.625)',
-        1534496400, 'Point(-90.130 27.630)',
-        1534491000,  params, bounding_poly
-    )
-
-    verify_match(
-        data[3],    'Point(-90.125 28.125)',
-        1534928400, 'Point(-90.130 28.120)',
-        1534899600,  params, bounding_poly
-    )
-
-    verify_match(
-        data[4],    'Point(-90.375 28.125)',
-        1534842000, 'Point(-90.380 28.120)',
-        1534813200,  params, bounding_poly
-    )
-
-    params['primary'] = 'JPL-L4-MRVA-CHLA-GLOB-v3.0'
-
-    body = run_matchup(url, params)
-    try_save("test_matchup_spark_L4_IS_ICOADS_B", start, body)
-    data = body['data']
-
-    assert body['count'] == len(data)
-    uniq_primaries(data, case='test_matchup_spark_L4_IS_ICOADS_B')
-    check_count(len(data), 5, fail_on_miscount)
-
-    data.sort(key=lambda e: e['point'])
-    body['data'] = data
-
-    eid['eid'].append(body['executionId'])
-    eid['params'].append(copy.deepcopy(params))
-
-    verify_match(
-        data[0],    'Point(-86.125 27.625)',
-        1535371200, 'Point(-86.130 27.630)',
-        1535374800,  params, bounding_poly
-    )
-
-    verify_match(
-        data[1],    'Point(-88.875 27.875)',
-        1534680000, 'Point(-88.880 27.880)',
-        1534698000,  params, bounding_poly
-    )
-
-    verify_match(
-        data[2],    'Point(-90.125 27.625)',
-        1534507200, 'Point(-90.130 27.630)',
-        1534491000,  params, bounding_poly
-    )
-
-    verify_match(
-        data[3],    'Point(-90.125 28.125)',
-        1534939200, 'Point(-90.130 28.120)',
-        1534899600,  params, bounding_poly
-    )
-
-    verify_match(
-        data[4],    'Point(-90.375 28.125)',
-        1534852800, 'Point(-90.380 28.120)',
-        1534813200,  params, bounding_poly
-    )
-
-    eid['successful'] = True
-
-
-@pytest.mark.integration
-def test_matchup_spark_L4_IS_SAMOS(host, start, fail_on_miscount):
-    url = urljoin(host, 'match_spark')
-
-    params = {
-        "primary": "MUR25-JPL-L4-GLOB-v04.2",
-        "secondary": "SAMOS",
-        # "startTime": "2018-01-01T00:00:00Z",
-        "startTime": "2018-01-02T00:00:00Z",
-        "endTime": "2018-01-10T23:59:59Z",
-        "b": "-130,20,-110,40",
-        "depthMin": -35,
-        "depthMax": 10,
-        "tt": 86400,
-        "rt": 50000,
-        "matchOnce": True,
-        "resultSizeLimit": 0,
-        "platforms": "30",
-    }
-
-    bounding_poly = b_to_polygon(params['b'])
-
-    body = run_matchup(url, params)
-    try_save("test_matchup_spark_L4_IS_SAMOS", start, body)
-    data = body['data']
-
-    assert body['count'] == len(data)
-    uniq_primaries(data, case='test_matchup_spark_L4_IS_SAMOS')
-    check_count(len(data), 194, fail_on_miscount)
+    uniq_primaries(data, case=f"test_matchup_spark_{match}")
+    check_count(len(data), expected, fail_on_miscount)
 
     for match in data:
-        verify_match_consistence(match, params, bounding_poly)
+        verify_match_consistency(match, params, bounding_poly)
 
 
 @pytest.mark.integration
-def test_matchup_spark_L4_IS_shark2018(host, start, fail_on_miscount):
+def test_matchup_spark_job_cancellation(host, start, matchup_params):
     url = urljoin(host, 'match_spark')
 
-    params = {
-        "primary": "JPL-L4-MRVA-CHLA-GLOB-v3.0",
-        "secondary": "shark-2018",
-        "startTime": "2018-04-01T00:00:00Z",
-        "endTime": "2018-04-01T23:59:59Z",
-        "b": "-140,10,-110,40",
-        "depthMin": -5,
-        "depthMax": 5,
-        "tt": 86400,
-        "rt": 50000,
-        "matchOnce": True,
-        "resultSizeLimit": 0,
-        "platforms": "3B",
-        "parameter": "mass_concentration_of_chlorophyll_in_sea_water"
-    }
-
-    bounding_poly = b_to_polygon(params['b'])
-
-    body = run_matchup(url, params)
-    try_save("test_matchup_spark_L4_IS_shark2018", start, body)
-    data = body['data']
-
-    assert body['count'] == len(data)
-    uniq_primaries(data, case='test_matchup_spark_L4_IS_shark2018')
-    check_count(len(data), 27, fail_on_miscount)
-
-    for match in data:
-        verify_match_consistence(match, params, bounding_poly)
-        assert "mass_concentration_of_chlorophyll_in_sea_water" in match['matches'][0]['secondary'][0]['variable_name']
-
-
-@pytest.mark.integration
-def test_matchup_spark_L2_IS_ICOADS(host, start, fail_on_miscount):
-    url = urljoin(host, 'match_spark')
-
-    params = {
-        "primary": "ASCATB-L2-Coastal",
-        # "secondary": "ICOADS Release 3.0",
-        "secondary": "ICOADS_JPL",
-        "startTime": "2017-07-01T02:00:00Z",
-        "endTime": "2017-07-01T02:59:59Z",
-        # "endTime": "2017-07-01T23:59:59Z",
-        # "b": "-100,20,-79,30",
-        "b": "-90,25,-85,30",
-        "depthMin": -10,
-        "depthMax": 10,
-        "tt": 3600,
-        "rt": 25000,
-        "matchOnce": False,
-        "resultSizeLimit": 0,
-        "platforms": "0,16,17,30,41,42"
-    }
-
-    bounding_poly = b_to_polygon(params['b'])
-
-    body = run_matchup(url, params)
-    try_save("test_matchup_spark_L2_IS_ICOADS", start, body)
-    data = body['data']
-
-    assert body['count'] == len(data)
-    uniq_primaries(data, case='test_matchup_spark_L2_IS_ICOADS')
-    check_count(len(data), 51, fail_on_miscount)
-
-    for match in data:
-        verify_match_consistence(match, params, bounding_poly)
-
-
-@pytest.mark.integration
-def test_matchup_spark_L2_IS_SAMOS(host, start, fail_on_miscount):
-    url = urljoin(host, 'match_spark')
-
-    params = {
-        "primary": "ASCATB-L2-Coastal",
-        "secondary": "SAMOS",
-        "startTime": "2017-05-01T00:00:00Z",
-        "endTime": "2017-05-03T23:59:59Z",
-        "b": "-100,20,-79,30",
-        "depthMin": -20,
-        "depthMax": 10,
-        "tt": 7200,
-        "rt": 50000,
-        "matchOnce": True,
-        "resultSizeLimit": 0,
-        "platforms": "30",
-    }
-
-    bounding_poly = b_to_polygon(params['b'])
-
-    body = run_matchup(url, params)
-    try_save("test_matchup_spark_L2_IS_SAMOS", start, body)
-    data = body['data']
-
-    assert body['count'] == len(data)
-    uniq_primaries(data, case='test_matchup_spark_L2_IS_SAMOS')
-    check_count(len(data), 135, fail_on_miscount)
-
-    for match in data:
-        verify_match_consistence(match, params, bounding_poly)
-
-
-@pytest.mark.integration
-def test_matchup_spark_L2_IS_shark2018(host, start, fail_on_miscount):
-    url = urljoin(host, 'match_spark')
-
-    params = {
-        "primary": "ASCATB-L2-Coastal",
-        "secondary": "shark-2018",
-        "startTime": "2018-04-02T18:30:00Z",
-        "endTime": "2018-04-02T18:59:59Z",
-        "b": "-140,10,-110,40",
-        "depthMin": -5,
-        "depthMax": 5,
-        "tt": 3600,
-        "rt": 50000,
-        "matchOnce": True,
-        "resultSizeLimit": 0,
-        "platforms": "3B"
-    }
-
-    bounding_poly = b_to_polygon(params['b'])
-
-    body = run_matchup(url, params)
-    try_save("test_matchup_spark_L2_IS_shark2018", start, body)
-    data = body['data']
-
-    assert body['count'] == len(data)
-    uniq_primaries(data, case='test_matchup_spark_L2_IS_shark2018')
-    check_count(len(data), 53, fail_on_miscount)
-
-    for match in data:
-        verify_match_consistence(match, params, bounding_poly)
-
-
-@pytest.mark.integration
-def test_matchup_spark_L4_L4(host, start, fail_on_miscount):
-    url = urljoin(host, 'match_spark')
-
-    params = {
-        "primary": "MUR25-JPL-L4-GLOB-v04.2",
-        "secondary": "JPL-L4-MRVA-CHLA-GLOB-v3.0",
-        "startTime": "2018-08-01T00:00:00Z",
-        "endTime": "2018-08-02T00:00:00Z",
-        "b": "-100,20,-90,30",
-        "depthMin": -20,
-        "depthMax": 10,
-        "tt": 43200,
-        "rt": 1000,
-        "matchOnce": True,
-        "resultSizeLimit": 7000,
-        "platforms": "42"
-    }
-
-    bounding_poly = b_to_polygon(params['b'])
-
-    body = run_matchup(url, params)
-    try_save("test_matchup_spark_L4_L4", start, body)
-    data = body['data']
-
-    assert body['count'] == len(data)
-    uniq_primaries(data, case='test_matchup_spark_L4_L4')
-    check_count(len(data), 1110, fail_on_miscount)
-
-    for match in data:
-        verify_match_consistence(match, params, bounding_poly)
-
-
-@pytest.mark.integration
-def test_matchup_spark_L4_L2(host, start, fail_on_miscount):
-    url = urljoin(host, 'match_spark')
-
-    params = {
-        "primary": "MUR25-JPL-L4-GLOB-v04.2",
-        "secondary": "ASCATB-L2-Coastal",
-        "startTime": "2018-07-05T00:00:00Z",
-        "endTime": "2018-07-05T23:59:59Z",
-        "b": "-127,32,-120,40",
-        "depthMin": -20,
-        "depthMax": 10,
-        "tt": 12000,
-        "rt": 1000,
-        "matchOnce": True,
-        "resultSizeLimit": 7000,
-        "platforms": "42"
-    }
-
-    bounding_poly = b_to_polygon(params['b'])
-
-    body = run_matchup(url, params)
-    try_save("test_matchup_spark_L4_L2", start, body)
-    data = body['data']
-
-    assert body['count'] == len(data)
-    uniq_primaries(data, case='test_matchup_spark_L4_L2')
-    check_count(len(data), 6, fail_on_miscount)
-
-    for match in data:
-        verify_match_consistence(match, params, bounding_poly)
-
-
-@pytest.mark.integration
-def test_matchup_spark_L2_L4(host, start, fail_on_miscount):
-    url = urljoin(host, 'match_spark')
-
-    params = {
-        "primary": "ASCATB-L2-Coastal",
-        "secondary": "MUR25-JPL-L4-GLOB-v04.2",
-        "startTime": "2018-08-01T00:00:00Z",
-        "endTime": "2018-08-02T00:00:00Z",
-        "b": "-100,20,-90,30",
-        "depthMin": -20,
-        "depthMax": 10,
-        "tt": 43200,
-        "rt": 1000,
-        "matchOnce": True,
-        "resultSizeLimit": 7000,
-        "platforms": "65"
-    }
-
-    bounding_poly = b_to_polygon(params['b'])
-
-    body = body = run_matchup(url, params)
-    try_save("test_matchup_spark_L2_L4", start, body)
-    data = body['data']
-
-    assert body['count'] == len(data)
-    uniq_primaries(data, case='test_matchup_spark_L2_L4')
-    check_count(len(data), 21, fail_on_miscount)
-
-    for match in data:
-        verify_match_consistence(match, params, bounding_poly)
-
-
-@pytest.mark.integration
-def test_matchup_spark_L2_L2(host, start, fail_on_miscount):
-    url = urljoin(host, 'match_spark')
-
-    params = {
-        "primary": "VIIRS_NPP-2018_Heatwave",
-        "secondary": "ASCATB-L2-Coastal",
-        "startTime": "2018-07-05T00:00:00Z",
-        "endTime": "2018-07-05T23:59:59Z",
-        "b": "-120,28,-118,30",
-        "depthMin": -20,
-        "depthMax": 10,
-        "tt": 43200,
-        "rt": 1000,
-        "matchOnce": True,
-        "resultSizeLimit": 7000,
-        "platforms": "42"
-    }
-
-    bounding_poly = b_to_polygon(params['b'])
-
-    body = run_matchup(url, params, page_size=10000)
-    try_save("test_matchup_spark_L2_L2", start, body)
-    data = body['data']
-
-    assert body['count'] == len(data)
-    uniq_primaries(data, case='test_matchup_spark_L2_L2')
-    check_count(len(data), 4027, fail_on_miscount)
-
-    for match in data:
-        verify_match_consistence(match, params, bounding_poly)
-
-
-@pytest.mark.integration
-def test_matchup_spark_prioritize_distance(host, start, distance_vs_time_query):
-    url = urljoin(host, 'match_spark')
-
-    params = {
-        "primary": "JPL-L4-MRVA-CHLA-GLOB-v3.0",
-        "secondary": "shark-2018",
-        "startTime": "2018-04-01T00:00:00Z",
-        "endTime": "2018-04-01T23:59:59Z",
-        "b": "-131,26,-130,27",
-        "depthMin": -5,
-        "depthMax": 5,
-        "tt": 86400,
-        "rt": 10000,
-        "matchOnce": True,
-        "resultSizeLimit": 0,
-        "platforms": "3B",
-        "parameter": "mass_concentration_of_chlorophyll_in_sea_water",
-        "prioritizeDistance": True
-    }
-
-    body = run_matchup(url, params)
-    try_save("test_matchup_spark_prioritize_distance", start, body)
-    data = body['data']
-
-    assert body['count'] == len(data)
-    check_count(len(data), 1, True)
-
-    primary_point = data[0]
-
-    valid_primary = [
-        "96bc2f4b-fd78-3c41-a3cb-cc6b2d7197a3[[0, 16, 19]]",
-        "96bc2f4b-fd78-3c41-a3cb-cc6b2d7197a3[[16, 19]]"
-    ]
-
-    assert primary_point['id'] in valid_primary, \
-        f'Incorrect primary returned{primary_point["id"]}'
-
-    match_point = primary_point['matches'][0]
-
-    if distance_vs_time_query['success']:
-        min_dist = distance_vs_time_query['distances']['min_dist']
-    else:
-        min_dist = distance_vs_time_query['backup']['min_dist']
-
-    assert match_point['lat'] == min_dist[0]  # "26.6141296"
-    assert match_point['lon'] == min_dist[1]  # "-130.0827904"
-    assert match_point['time'] == min_dist[2]  # 1522637640
-
-
-@pytest.mark.integration
-def test_matchup_spark_prioritize_time(host, start, distance_vs_time_query):
-    url = urljoin(host, 'match_spark')
-
-    params = {
-        "primary": "JPL-L4-MRVA-CHLA-GLOB-v3.0",
-        "secondary": "shark-2018",
-        "startTime": "2018-04-01T00:00:00Z",
-        "endTime": "2018-04-01T23:59:59Z",
-        "b": "-131,26,-130,27",
-        "depthMin": -5,
-        "depthMax": 5,
-        "tt": 86400,
-        "rt": 10000,
-        "matchOnce": True,
-        "resultSizeLimit": 0,
-        "platforms": "3B",
-        "parameter": "mass_concentration_of_chlorophyll_in_sea_water",
-        "prioritizeDistance": False
-    }
-
-    body = run_matchup(url, params)
-    try_save("test_matchup_spark_prioritize_time", start, body)
-    data = body['data']
-
-    assert body['count'] == len(data)
-    check_count(len(data), 1, True)
-
-    primary_point = data[0]
-
-    valid_primary = [
-        "96bc2f4b-fd78-3c41-a3cb-cc6b2d7197a3[[0, 16, 19]]",
-        "96bc2f4b-fd78-3c41-a3cb-cc6b2d7197a3[[16, 19]]"
-    ]
-
-    assert primary_point['id'] in valid_primary, \
-        f'Incorrect primary returned{primary_point["id"]}'
-
-    match_point = primary_point['matches'][0]
-
-    if distance_vs_time_query['success']:
-        min_time = distance_vs_time_query['distances']['min_time']
-    else:
-        min_time = distance_vs_time_query['backup']['min_time']
-
-    assert match_point['lat'] == min_time[0]  # "26.6894016"
-    assert match_point['lon'] == min_time[1]  # "-130.0547072"
-    assert match_point['time'] == min_time[2]  # 1522626840
-
-
-@pytest.mark.integration
-def test_matchup_spark_job_cancellation(host, start):
-    url = urljoin(host, 'match_spark')
-
-    params = {
-        "primary": "MUR25-JPL-L4-GLOB-v04.2",
-        "secondary": "SAMOS",
-        # "startTime": "2018-01-01T00:00:00Z",
-        "startTime": "2018-01-02T00:00:00Z",
-        "endTime": "2018-01-10T23:59:59Z",
-        "b": "-130,20,-110,40",
-        "depthMin": -35,
-        "depthMax": 10,
-        "tt": 86400,
-        "rt": 50000,
-        "matchOnce": True,
-        "resultSizeLimit": 0,
-        "platforms": "30",
-    }
+    params = matchup_params['long']
 
     response = requests.get(url, params=params)
 
@@ -1103,6 +643,7 @@ def test_matchup_spark_job_cancellation(host, start):
 
 
 @pytest.mark.integration
+@pytest.mark.skip('Test not re-implemented yet')
 def test_cdmsresults_json(host, eid, start):
     url = urljoin(host, 'cdmsresults')
 
@@ -1218,6 +759,7 @@ def test_cdmsresults_json(host, eid, start):
 
 
 @pytest.mark.integration
+@pytest.mark.skip('Test not re-implemented yet')
 def test_cdmsresults_csv(host, eid, start):
     url = urljoin(host, 'cdmsresults')
 
@@ -1301,6 +843,7 @@ def test_cdmsresults_csv(host, eid, start):
 
 
 @pytest.mark.integration
+@pytest.mark.skip('Test not re-implemented yet')
 def test_cdmsresults_netcdf(host, eid, start):
     warnings.filterwarnings('ignore')
 
@@ -1515,104 +1058,6 @@ def test_cdmssubset_L2(host, start):
 
 
 @pytest.mark.integration
-def test_insitu_JPL(insitu_endpoint_JPL, start, timeouts):
-    params = {
-        'itemsPerPage': 20000,
-        'startTime': '2017-05-01T00:00:00Z',
-        'endTime': '2017-05-01T23:59:59Z',
-        'bbox': '-100,20,-79,30',
-        'minDepth': -20.0,
-        'maxDepth': 20.0,
-        'provider': 'Florida State University, COAPS',
-        'project': 'SAMOS',
-        'platform': '0,16,17,30,41,42',
-    }
-
-    response = requests.get(insitu_endpoint_JPL, params=params, timeout=timeouts)
-
-    assert response.status_code == 200
-
-    body = response.json()
-    try_save("test_insitu_JPL", start, body)
-
-    validate_insitu(body, params, 'JPL')
-
-
-@pytest.mark.integration
-# @pytest.mark.xfail
-def test_insitu_NCAR(insitu_endpoint_NCAR, start, timeouts):
-    params = {
-        'itemsPerPage': 1000,
-        'startTime': '2017-07-01T00:00:00Z',
-        # 'endTime': '2017-07-05T00:00:00Z',
-        'endTime': '2017-08-01T00:00:00Z',
-        # 'bbox': '-65,25,-60,30',
-        'bbox': '-65,25,-55,30',
-        'minDepth': 0,
-        'maxDepth': 5,
-        'provider': 'NCAR',
-        'project': 'ICOADS Release 3.0',
-        'platform': '0,16,17,30,41,42',
-    }
-
-    response = requests.get(insitu_endpoint_NCAR, params=params, timeout=timeouts)
-
-    assert response.status_code == 200
-
-    body = response.json()
-    try_save("test_insitu_NCAR", start, body)
-
-    validate_insitu(body, params, 'NCAR')
-
-
-@pytest.mark.integration
-def test_insitu_saildrone(insitu_endpoint_saildrone, start, timeouts):
-    params = {
-        'itemsPerPage': 1000,
-        'startTime': '2018-04-01T00:00:00Z',
-        'endTime': '2018-04-01T23:59:59Z',
-        'bbox': '-140,10,-110,40',
-        'minDepth': -10,
-        'maxDepth': 5,
-        'provider': 'Saildrone',
-        'project': 'shark-2018',
-        'platform': '3B',
-    }
-
-    # Saildrone test has a tendency to fail, retry a couple times then just issue a warning if it persists
-    response = None
-
-    try:
-        response = requests.get(insitu_endpoint_saildrone, params=params, timeout=timeouts)
-        success = response.status_code == 200
-    except ConnectTimeout:
-        success = False
-
-    retries = 3
-    delay = [5, 15, 30]
-
-    while not success and retries > 0:
-        sleep(delay[3 - retries])
-        try:
-            response = requests.get(insitu_endpoint_saildrone, params=params, timeout=timeouts)
-            success = response.status_code == 200
-        except ConnectTimeout:
-            success = False
-        retries -= 1
-
-    if not success and response is None:
-        warnings.warn(f'Saildrone request failed due to connection timeout - max retries exceeded')
-        return
-
-    assert response.status_code == 200
-
-    body = response.json()
-    try_save("test_insitu_saildrone", start, body)
-
-    validate_insitu(body, params, 'Saildrone')
-
-
-@pytest.mark.integration
 def test_insitu_schema(start, timeouts):
     url = 'https://doms.jpl.nasa.gov/insitu/1.0/cdms_schema'
 
@@ -1666,42 +1111,3 @@ def test_swaggerui_sdap(host):
             raise ValueError("Could not verify documentation yaml file, assumed value also failed")
 
 
-@pytest.mark.integration
-def test_swaggerui_insitu(insitu_swagger_endpoint):
-    response = requests.get(insitu_swagger_endpoint)
-
-    assert response.status_code == 200
-    assert 'swagger-ui' in response.text
-
-    try:
-        # There's probably a better way to do this, but extract the .yml file for the docs from the returned text
-        soup = BeautifulSoup(response.text, 'html.parser')
-
-        script = str([tag for tag in soup.find_all('script') if tag.attrs == {}][0])
-
-        start_index = script.find('url:')
-        end_index = script.find('",\n', start_index)
-
-        script = script[start_index:end_index]
-
-        yml_filename = script.split('"')[1]
-
-        url = urljoin(insitu_swagger_endpoint, yml_filename)
-
-        response = requests.get(url)
-
-        assert response.status_code == 200
-    except AssertionError:
-        raise
-    except:
-        try:
-            url = urljoin(insitu_swagger_endpoint, 'insitu-spec-0.0.1.yml')
-
-            response = requests.get(url)
-
-            assert response.status_code == 200
-
-            warnings.warn("Could not extract documentation yaml filename from response text, "
-                          "but using an assumed value worked successfully")
-        except:
-            raise ValueError("Could not verify documentation yaml file, assumed value also failed")

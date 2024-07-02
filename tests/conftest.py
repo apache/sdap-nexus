@@ -19,8 +19,6 @@ import pytest
 def pytest_addoption(parser):
     parser.addoption("--skip-matchup", action="store_true",
                      help="Skip matchup_spark test. (Only for script testing purposes)")
-    parser.addoption("--force-subset", action="store_true",
-                     help="Force cdmssubset test to run. It is currently skipped by default.")
     parser.addoption('--matchup-fail-on-miscount', action='store_true',
                      help='Fail matchup tests if they return an unexpected number of matches; '
                           'otherwise issue a warning')
@@ -33,12 +31,4 @@ def pytest_collection_modifyitems(config, items):
         skip = pytest.mark.skip(reason="Manually skipped")
         for item in items:
             if "matchup_spark" in item.name:
-                item.add_marker(skip)
-
-    force = config.getoption("--force-subset")
-
-    if not force:
-        skip = pytest.mark.skip(reason="Waiting for Zarr integration before this case is run")
-        for item in items:
-            if "cdmssubset" in item.name:
                 item.add_marker(skip)
