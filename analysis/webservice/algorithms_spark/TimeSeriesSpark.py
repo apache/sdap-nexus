@@ -269,8 +269,7 @@ class TimeSeriesSparkHandlerImpl(NexusCalcSparkHandler):
                 "LowPass filter calculation took %s for dataset %s" % (str(datetime.now() - the_time), shortName))
 
             the_time = datetime.now()
-            self._create_nc_file_time1d(np.array(results), 'ts.nc', 'mean',
-                                        fill=-9999.)
+            # self._create_nc_file_time1d(np.array(results), 'ts.nc', 'mean', fill=-9999.)
             self.log.info(
                 "NetCDF generation took %s for dataset %s" % (str(datetime.now() - the_time), shortName))
 
