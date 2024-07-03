@@ -20,12 +20,13 @@ import io
 import itertools
 import json
 import os
+import re
 import warnings
 from datetime import datetime
 from pathlib import Path
 from tempfile import NamedTemporaryFile as Temp
 from time import sleep
-from urllib.parse import urljoin
+from urllib.parse import urljoin, urlparse, urlunparse
 from zipfile import ZipFile
 
 import pandas as pd
@@ -88,7 +89,7 @@ def timeouts():
 
 @pytest.fixture()
 def fail_on_miscount(request):
-    return request.config.getoption('--matchup-fail-on-miscount', default=False)
+    return request.config.getoption('--matchup-warn-on-miscount', default=False)
 
 
 @pytest.fixture(scope='session')
@@ -164,7 +165,7 @@ def matchup_params():
     return {
         'gridded_to_gridded': {
             "primary": "MUR25-JPL-L4-GLOB-v04.2_test",
-            "secondary": "OISSS_L4_multimission_7day_v1_test",
+            "secondary": "SMAP_JPL_L3_SSS_CAP_8DAY-RUNNINGMEAN_V5_test",
             "startTime": "2018-08-01T00:00:00Z",
             "endTime": "2018-08-02T00:00:00Z",
             "b": "-100,20,-90,30",
@@ -219,8 +220,8 @@ def matchup_params():
             "platforms": "42"
         },
         'long': {  # TODO: Find something for this; it's copied atm
-            "primary": "VIIRS_NPP-2018_Heatwave",
-            "secondary": "ASCATB-L2-Coastal",
+            "primary": "VIIRS_NPP-2018_Heatwave_test",
+            "secondary": "ASCATB-L2-Coastal_test",
             "startTime": "2018-07-05T00:00:00Z",
             "endTime": "2018-07-05T23:59:59Z",
             "b": "-120,28,-118,30",
@@ -484,6 +485,13 @@ def check_count(count, expected, fail_on_mismatch):
         warnings.warn(f'Incorrect count: Expected {expected}, got {count}')
 
 
+def url_scheme(scheme, url):
+    if urlparse(url).scheme == scheme:
+        return url
+    else:
+        return urlunparse(tuple([scheme] + list(urlparse(url)[1:])))
+
+
 # Run the matchup query and return json output (and eid?)
 # Should be able to work if match_spark is synchronous or asynchronous
 def run_matchup(url, params, page_size=3500):
@@ -491,6 +499,8 @@ def run_matchup(url, params, page_size=3500):
     # TIMEOUT = float('inf')
 
     response = requests.get(url, params=params)
+
+    scheme = urlparse(url).scheme
 
     assert response.status_code == 200, 'Initial match_spark query failed'
     response_json = response.json()
@@ -502,6 +512,8 @@ def run_matchup(url, params, page_size=3500):
     else:
         start = datetime.utcnow()
         job_url = [link for link in response_json['links'] if link['rel'] == 'self'][0]['href']
+
+        job_url = url_scheme(scheme, job_url)
 
         retries = 3
         timeouts = [2, 5, 10]
@@ -535,6 +547,8 @@ def run_matchup(url, params, page_size=3500):
                 link for link in response_json['links'] if 'STAC' in link['title']
             ][0]['href']
 
+            stac_url = url_scheme(scheme, stac_url)
+
             catalogue_response = requests.get(stac_url)
             assert catalogue_response.status_code == 200, 'Catalogue fetch failed'
 
@@ -544,13 +558,16 @@ def run_matchup(url, params, page_size=3500):
                 link for link in catalogue_response['links'] if 'JSON' in link['title']
             ][0]['href']
 
+            json_cat_url = url_scheme(scheme, json_cat_url)
+
             catalogue_response = requests.get(json_cat_url)
             assert catalogue_response.status_code == 200, 'Catalogue fetch failed'
 
             catalogue_response = catalogue_response.json()
 
             results_urls = [
-                link['href'] for link in catalogue_response['links'] if 'output=JSON' in link['href']
+                url_scheme(scheme, link['href']) for link in
+                catalogue_response['links'] if 'output=JSON' in link['href']
                 # link['href'] for link in response_json['links'] if link['type'] == 'application/json'
             ]
 
@@ -563,7 +580,11 @@ def run_matchup(url, params, page_size=3500):
 
                     try:
                         response.raise_for_status()
-                        return response.json()
+                        result = response.json()
+
+                        assert result['count'] == len(result['data'])
+
+                        return result
                     except:
                         retries -= 1
                         sleep(retry_delay)
@@ -574,7 +595,7 @@ def run_matchup(url, params, page_size=3500):
             matchup_result = get_results(results_urls[0])
 
             for url in results_urls[1:]:
-                matchup_result['data'].append(get_results(url)['data'])
+                matchup_result['data'].extend(get_results(url)['data'])
 
             return matchup_result
 
@@ -584,7 +605,7 @@ def run_matchup(url, params, page_size=3500):
     ['match', 'expected'],
     list(zip(
         ['gridded_to_gridded', 'gridded_to_swath', 'swath_to_gridded', 'swath_to_swath'],
-        [1110, 6, 21, 4027]
+        [1058, 6, 21, 4026]
     ))
 )
 def test_match_spark(host, start, fail_on_miscount, matchup_params, match, expected):
@@ -598,16 +619,15 @@ def test_match_spark(host, start, fail_on_miscount, matchup_params, match, expec
     try_save(f"test_matchup_spark_{match}", start, body)
     data = body['data']
 
-    assert body['count'] == len(data)
-    uniq_primaries(data, case=f"test_matchup_spark_{match}")
-    check_count(len(data), expected, fail_on_miscount)
-
     for match in data:
         verify_match_consistency(match, params, bounding_poly)
 
+    uniq_primaries(data, case=f"test_matchup_spark_{match}")
+    check_count(len(data), expected, fail_on_miscount)
+
 
 @pytest.mark.integration
-def test_matchup_spark_job_cancellation(host, start, matchup_params):
+def test_match_spark_job_cancellation(host, start, matchup_params):
     url = urljoin(host, 'match_spark')
 
     params = matchup_params['long']
@@ -622,12 +642,17 @@ def test_matchup_spark_job_cancellation(host, start, matchup_params):
     if not asynchronous:
         skip('Deployed SDAP version does not have asynchronous matchup')
     else:
-        sleep(25) # Time to allow spark workers to start working
+        sleep(1)  # Time to allow spark workers to start working
 
         if response_json['status'] != 'running':
             skip('Job finished before it could be cancelled')
         else:
             cancel_url = [link for link in response_json['links'] if link['rel'] == 'cancel'][0]['href']
+
+            cancel_url = url_scheme(
+                urlparse(url).scheme,
+                cancel_url
+            )
 
             cancel_response = requests.get(cancel_url)
             assert cancel_response.status_code == 200, 'Cancellation query failed'
@@ -940,6 +965,52 @@ def test_cdmsresults_netcdf(host, eid, start):
 
 
 @pytest.mark.integration
+def test_timeseries_spark(host, start):
+    url = urljoin(host, 'timeSeriesSpark')
+
+    params = {
+        "ds": "MUR25-JPL-L4-GLOB-v04.2_test",
+        "b": "-135,-10,-80,10",
+        "startTime": "2018-07-05T00:00:00Z",
+        "endTime": "2018-09-30T23:59:59Z",
+    }
+
+    response = requests.get(url, params=params)
+
+    assert response.status_code == 200
+
+    data = response.json()
+    try_save('test_timeseries_spark', start, data)
+
+    assert len(data['data']) == len(pd.date_range(params['startTime'], params['endTime'], freq='D'))
+
+    epoch = datetime(1970, 1, 1, tzinfo=UTC)
+
+    start = (datetime.strptime(params['startTime'], '%Y-%m-%dT%H:%M:%SZ').replace(tzinfo=UTC) - epoch).total_seconds()
+    end = (datetime.strptime(params['endTime'], '%Y-%m-%dT%H:%M:%SZ').replace(tzinfo=UTC) - epoch).total_seconds()
+
+    for p in data['data']:
+        assert start <= p[0]['time'] <= end
+
+
+@pytest.mark.integration
+def test_list(host, start):
+    url = urljoin(host, 'list')
+
+    response = requests.get(url)
+
+    assert response.status_code == 200
+
+    body = response.json()
+    try_save("test_list", start, body)
+
+    assert isinstance(body, list)
+
+    if len(body) == 0:
+        warnings.warn('/list returned no datasets. This could be correct if SDAP has no data ingested, otherwise '
+                      'this should be considered a failure')
+
+@pytest.mark.integration
 def test_cdmslist(host, start):
     url = urljoin(host, 'cdmslist')
 
@@ -955,8 +1026,13 @@ def test_cdmslist(host, start):
     num_satellite = len(data['satellite'])
     num_insitu = len(data['insitu'])
 
-    assert num_insitu > 0
-    assert num_satellite > 0
+    if num_satellite == 0:
+        warnings.warn('/cdmslist returned no satellite datasets. This could be correct if SDAP has no data ingested, '
+                      'otherwise this should be considered a failure')
+
+    if num_insitu == 0:
+        warnings.warn('/cdmslist returned no insitu datasets. This could be correct if SDAP has no insitu data '
+                      'ingested, otherwise this should be considered a failure')
 
 
 @pytest.mark.integration
@@ -964,7 +1040,7 @@ def test_cdmssubset_L4(host, start):
     url = urljoin(host, 'cdmssubset')
 
     params = {
-        "dataset": "MUR25-JPL-L4-GLOB-v04.2",
+        "dataset": "MUR25-JPL-L4-GLOB-v04.2_test",
         "parameter": "sst",
         "startTime": "2018-09-24T00:00:00Z",
         "endTime": "2018-09-30T00:00:00Z",
@@ -985,7 +1061,7 @@ def test_cdmssubset_L4(host, start):
     with ZipFile(response_buf) as data:
         namelist = data.namelist()
 
-        assert namelist == ['MUR25-JPL-L4-GLOB-v04.2.csv']
+        assert namelist == ['MUR25-JPL-L4-GLOB-v04.2_test.csv']
 
         csv_buf = io.StringIO(data.read(namelist[0]).decode('utf-8'))
         csv_data = pd.read_csv(csv_buf)
@@ -997,7 +1073,7 @@ def test_cdmssubset_L4(host, start):
     for i in range(0, len(csv_data)):
         validate_row_bounds(csv_data.iloc[i])
 
-    params['dataset'] = 'OISSS_L4_multimission_7day_v1'
+    params['dataset'] = 'OISSS_L4_multimission_7day_v1_test'
 
     response = requests.get(url, params=params)
 
@@ -1010,7 +1086,7 @@ def test_cdmssubset_L4(host, start):
     with ZipFile(response_buf) as data:
         namelist = data.namelist()
 
-        assert namelist == ['OISSS_L4_multimission_7day_v1.csv']
+        assert namelist == ['OISSS_L4_multimission_7day_v1_test.csv']
 
         csv_buf = io.StringIO(data.read(namelist[0]).decode('utf-8'))
         csv_data = pd.read_csv(csv_buf)
@@ -1024,7 +1100,7 @@ def test_cdmssubset_L2(host, start):
     url = urljoin(host, 'cdmssubset')
 
     params = {
-        "dataset": "ASCATB-L2-Coastal",
+        "dataset": "ASCATB-L2-Coastal_test",
         "startTime": "2018-09-24T00:00:00Z",
         "endTime": "2018-09-30T00:00:00Z",
         "b": "160,-30,180,-25",
@@ -1044,7 +1120,7 @@ def test_cdmssubset_L2(host, start):
     with ZipFile(response_buf) as data:
         namelist = data.namelist()
 
-        assert namelist == ['ASCATB-L2-Coastal.csv']
+        assert namelist == ['ASCATB-L2-Coastal_test.csv']
 
         csv_buf = io.StringIO(data.read(namelist[0]).decode('utf-8'))
         csv_data = pd.read_csv(csv_buf)
@@ -1055,17 +1131,6 @@ def test_cdmssubset_L2(host, start):
 
     for i in range(0, len(csv_data)):
         validate_row_bounds(csv_data.iloc[i])
-
-
-@pytest.mark.integration
-def test_insitu_schema(start, timeouts):
-    url = 'https://doms.jpl.nasa.gov/insitu/1.0/cdms_schema'
-
-    response = requests.get(url, timeout=timeouts)
-
-    assert response.status_code == 200
-
-    assert len(response.json()) > 0
 
 
 @pytest.mark.integration
@@ -1109,5 +1174,87 @@ def test_swaggerui_sdap(host):
                           "but using an assumed value worked successfully")
         except:
             raise ValueError("Could not verify documentation yaml file, assumed value also failed")
+
+
+@pytest.mark.integration
+def test_version(host, start):
+    url = urljoin(host, 'version')
+
+    response = requests.get(url)
+
+    assert response.status_code == 200
+    assert re.match(r'^\d+\.\d+\.\d+(-.+)?$', response.text)
+
+
+@pytest.mark.integration
+def test_capabilities(host, start):
+    url = urljoin(host, 'capabilities')
+
+    response = requests.get(url)
+
+    assert response.status_code == 200
+
+    capabilities = response.json()
+
+    try_save('test_capabilities', start, capabilities)
+
+    assert len(capabilities) > 0
+
+    for capability in capabilities:
+        assert all([k in capability for k in ['name', 'path', 'description', 'parameters']])
+        assert all([isinstance(k, str) for k in ['name', 'path', 'description']])
+
+        assert isinstance(capability['parameters'], (dict, list))
+
+        for param in capability['parameters']:
+            if isinstance(capability['parameters'], dict):
+                param = capability['parameters'][param]
+
+            assert isinstance(param, dict)
+            assert all([k in param and isinstance(param[k], str) for k in ['name', 'type', 'description']])
+
+
+@pytest.mark.integration
+def test_endpoints(host, start):
+    url = urljoin(host, 'capabilities')
+
+    response = requests.get(url)
+
+    if response.status_code != 200:
+        skip('Could not get endpoints list. Expected if test_capabilities has failed')
+
+    capabilities = response.json()
+
+    endpoints = [c['path'] for c in capabilities]
+
+    non_existent_endpoints = []
+
+    for endpoint in endpoints:
+        status = requests.head(urljoin(host, endpoint)).status_code
+
+        if status == 404:
+            # Strip special characters because some endpoints have wildcards/regex characters
+            # This may not work forever though
+            stripped_endpoint = re.sub(r'[^a-zA-Z0-9/_-]', '', endpoint)
+
+            status = requests.head(urljoin(host, stripped_endpoint)).status_code
+
+            if status == 404:
+                non_existent_endpoints.append(([endpoint, stripped_endpoint], status))
+
+    assert len(non_existent_endpoints) == 0, non_existent_endpoints
+
+
+@pytest.mark.integration
+def test_heartbeat(host, start):
+    url = urljoin(host, 'heartbeat')
+
+    response = requests.get(url)
+
+    assert response.status_code == 200
+    heartbeat = response.json()
+
+    assert isinstance(heartbeat, dict)
+    assert all(heartbeat.values())
 
 

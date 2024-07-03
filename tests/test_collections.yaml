@@ -39,8 +39,8 @@ collections:
       variable: sss
     slices:
       time: 1
-      latitude: 30
-      longitude: 30
+      latitude: 100
+      longitude: 100
   - id: VIIRS_NPP-2018_Heatwave_test
     path: /data/granules/VIIRS_NPP-2018_Heatwave_test/*.nc
     priority: 1
@@ -53,3 +53,21 @@ collections:
     slices:
       ni: 30
       nj: 30
+    preprocess:
+      - name: squeeze
+        dimensions:
+          - time
+  - id: SMAP_JPL_L3_SSS_CAP_8DAY-RUNNINGMEAN_V5_test
+    path: /data/granules/SMAP_JPL_L3_SSS_CAP_8DAY-RUNNINGMEAN_V5_test/*.nc
+    priority: 1
+    forward-processing-priority: 1
+    projection: Grid
+    dimensionNames:
+      latitude: latitude
+      longitude: longitude
+      time: time
+      variable: smap_sss
+    slices:
+      time: 1
+      latitude: 100
+      longitude: 100

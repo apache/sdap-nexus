@@ -49,11 +49,11 @@ Pull the necessary Docker images from the `Apache SDAP repository <https://hub.d
 
   export CASSANDRA_VERSION=3.11.6-debian-10-r138
   export RMQ_VERSION=3.8.9-debian-10-r37
-  export COLLECTION_MANAGER_VERSION=1.2.0
-  export GRANULE_INGESTER_VERSION=1.2.0
-  export WEBAPP_VERSION=1.2.0
-  export SOLR_VERSION=1.2.0
-  export SOLR_CLOUD_INIT_VERSION=1.2.0
+  export COLLECTION_MANAGER_VERSION=1.3.0
+  export GRANULE_INGESTER_VERSION=1.3.0
+  export WEBAPP_VERSION=1.3.0
+  export SOLR_VERSION=1.3.0
+  export SOLR_CLOUD_INIT_VERSION=1.3.0
   export ZK_VERSION=3.5.5
 
   export JUPYTER_VERSION=1.0.0-rc2
@@ -314,7 +314,7 @@ The collection configuration is a ``.yml`` file that tells the collection manage
   cat << EOF >> ${CONFIG_DIR}/collectionConfig.yml
   collections:
     - id: AVHRR_OI_L4_GHRSST_NCEI
-      path: /data/granules/*.nc
+      path: /data/granules/*AVHRR_OI-GLOB-v02.0-fv02.0.nc
       priority: 1
       forward-processing-priority: 5
       projection: Grid

@@ -19,9 +19,9 @@ import pytest
 def pytest_addoption(parser):
     parser.addoption("--skip-matchup", action="store_true",
                      help="Skip matchup_spark test. (Only for script testing purposes)")
-    parser.addoption('--matchup-fail-on-miscount', action='store_true',
-                     help='Fail matchup tests if they return an unexpected number of matches; '
-                          'otherwise issue a warning')
+    parser.addoption('--matchup-warn-on-miscount', action='store_false',
+                     help='Issue a warning for matchup tests if they return an unexpected number of matches; '
+                          'otherwise fail')
 
 
 def pytest_collection_modifyitems(config, items):

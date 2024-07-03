@@ -45,8 +45,10 @@ If you have not started the Collection Manager, start it now:
 
   docker run --name collection-manager --network sdap-net -v ${DATA_DIRECTORY}:/data/granules/ -v $(pwd):/home/ingester/config/ -e COLLECTIONS_PATH="/home/ingester/config/test_collections.yaml" -e HISTORY_URL="http://host.docker.internal:8983/" -e RABBITMQ_HOST="host.docker.internal:5672" -e RABBITMQ_USERNAME="user" -e RABBITMQ_PASSWORD="bitnami" -d ${REPO}/sdap-collection-manager:${COLLECTION_MANAGER_VERSION}
 
-Refer to the :ref:`Quickstart Guide<quickstart>` to see how many files are enqueued for ingest, there should be 134 total.
-(This may appear to be less if you have ingesters running. We recommend not starting the ingesters until all data is queued)
+Refer to the :ref:`Quickstart Guide<quickstart>` to see how many files are enqueued for ingest, there should be 207 total.
+(This may appear to be less if you have ingesters running. We recommend not starting the ingesters until all data is queued.
+You may also see more if the Collection Manager was running during the data download. This is a known issue where the Collection
+Manager queues downloading files more than once as they're seen as modified.)
 
 Once the data is ready for ingest, start up the ingester(s) and wait for them to finish. After that, you can stop the Collection Manager,
 ingester and RabbitMQ containers and start the webapp container if it is not already running.
