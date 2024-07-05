@@ -248,7 +248,7 @@ class ClimMapNexusSparkHandlerImpl(NexusCalcSparkHandler):
                             y0, y1, x0, x1))
 
         # Store global map in a NetCDF file.
-        self._create_nc_file(a, 'clmap.nc', 'val')
+        # self._create_nc_file(a, 'clmap.nc', 'val')
 
         # Create dict for JSON response
         results = [[{'avg': a[y, x], 'cnt': int(n[y, x]),
