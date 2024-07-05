@@ -332,39 +332,12 @@ class SolrProxy(object):
                               search_start_s, search_end_s
                           )
             additionalparams['fq'].append(time_clause)
-            
-        min_elevation = kwargs['min_elevation'] if 'min_elevation' in kwargs else None
-        max_elevation = kwargs['max_elevation'] if 'max_elevation' in kwargs else None
-        
-        if min_elevation and max_elevation:
-            elevation_clause = "(" \
-                          "tile_min_elevation_d:[%s TO %s] " \
-                          "OR tile_max_elevation_d:[%s TO %s] " \
-                          "OR (tile_min_elevation_d:[* TO %s] AND tile_max_elevation_d:[%s TO *])" \
-                          ")" % (
-                              min_elevation, max_elevation,
-                              min_elevation, max_elevation,
-                              min_elevation, max_elevation
-                          )
-            additionalparams['fq'].append(elevation_clause)
-        elif min_elevation:
-            elevation_clause = "(" \
-                           "tile_min_elevation_d:[%s TO *] " \
-                           "OR tile_max_elevation_d:[%s TO *] " \
-                           ")" % (
-                               min_elevation,
-                               min_elevation
-                           )
-            additionalparams['fq'].append(elevation_clause)
-        elif max_elevation:
-            elevation_clause = "(" \
-                           "tile_min_elevation_d:[* TO %s] " \
-                           "OR tile_max_elevation_d:[* TO %s] " \
-                           ")" % (
-                               max_elevation,
-                               max_elevation
-                           )
-            additionalparams['fq'].append(elevation_clause)
+
+        min_elevation = kwargs.get('min_elevation', None)
+        max_elevation = kwargs.get('max_elevation', None)
+
+        elevation_clause = self.get_elevation_clause(min_elevation, max_elevation)
+        additionalparams['fq'].append(elevation_clause)
 
         self._merge_kwargs(additionalparams, **kwargs)
 
@@ -400,6 +373,12 @@ class SolrProxy(object):
                           )
             additionalparams['fq'].append(time_clause)
 
+        min_elevation = kwargs['min_elevation'] if 'min_elevation' in kwargs else None
+        max_elevation = kwargs['max_elevation'] if 'max_elevation' in kwargs else None
+
+        elevation_clause = self.get_elevation_clause(min_elevation, max_elevation)
+        additionalparams['fq'].append(elevation_clause)
+
         self._merge_kwargs(additionalparams, **kwargs)
 
         return self.do_query_all(
@@ -433,6 +412,12 @@ class SolrProxy(object):
                               search_start_s, search_end_s
                           )
             additionalparams['fq'].append(time_clause)
+
+        min_elevation = kwargs['min_elevation'] if 'min_elevation' in kwargs else None
+        max_elevation = kwargs['max_elevation'] if 'max_elevation' in kwargs else None
+
+        elevation_clause = self.get_elevation_clause(min_elevation, max_elevation)
+        additionalparams['fq'].append(elevation_clause)
 
         self._merge_kwargs(additionalparams, **kwargs)
 
@@ -652,6 +637,25 @@ class SolrProxy(object):
                           search_start_s, search_end_s
                           )
         return time_clause
+
+    def get_elevation_clause(self, min_elevation, max_elevation):
+        if min_elevation is not None and max_elevation is not None:
+            if min_elevation == max_elevation:
+                elevation_clause = f"(tile_min_elevation_d:[* TO {min_elevation}] AND tile_max_elevation_d:[{max_elevation} TO *])"
+            else:
+                elevation_clause = (f"(tile_min_elevation_d:[{min_elevation} TO {max_elevation}] OR "
+                                    f"tile_max_elevation_d:[{min_elevation} TO {max_elevation}] OR "
+                                    f"(tile_min_elevation_d:[* TO {min_elevation}] AND tile_max_elevation_d:[{max_elevation} TO *]))")
+        elif min_elevation is not None:
+            elevation_clause = (f"(tile_min_elevation_d:[{min_elevation} TO *] AND "
+                                f"tile_max_elevation_d:[{min_elevation} TO *])")
+        elif max_elevation is not None:
+            elevation_clause = (f"(tile_min_elevation_d:[* TO {max_elevation}] AND "
+                                f"tile_max_elevation_d:[* TO {max_elevation}])")
+        else:
+            elevation_clause = (f"((*:* -tile_min_elevation_d:[* TO *]) OR "
+                                f"(tile_min_elevation_d:[0 TO 0] OR tile_max_elevation_d:[0 TO 0]))")
+        return elevation_clause
 
     def get_tile_count(self, ds, bounding_polygon=None, start_time=0, end_time=-1, metadata=None, **kwargs):
         """

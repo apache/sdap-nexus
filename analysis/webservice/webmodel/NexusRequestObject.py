@@ -17,7 +17,7 @@ import logging
 import re
 from datetime import datetime
 from decimal import Decimal
-from typing import Tuple, Union
+from typing import Optional, Tuple
 
 from pytz import UTC
 from shapely.geometry import Polygon
@@ -115,40 +115,42 @@ class NexusRequestObject(StatsComputeOptions):
     def get_min_lon(self, default=Decimal(-180)):
         return self.get_decimal_arg("minLon", default)
 
-    def get_elevation_args(self) -> Tuple[Union[float, None], Union[float, None]]:
+    def get_elevation_args(self) -> Tuple[Optional[float], Optional[float]]:
+        '''
+        Extract both single elevation args (depth, height, elevation) or
+        min/max elevation args (minDepth/maxDepth, minHeight/maxHeight, minElevation/maxElevation)
+        Return a tuple of the form (min, max)
+        '''
         min_depth = self.get_float_arg('minDepth', None)
         max_depth = self.get_float_arg('maxDepth', None)
+        depth = self.get_float_arg('depth', None)
+
         min_height = self.get_float_arg('minHeight', None)
         max_height = self.get_float_arg('maxHeight', None)
+        height = self.get_float_arg('height', None)
+
         min_elevation = self.get_float_arg('minElevation', None)
         max_elevation = self.get_float_arg('maxElevation', None)
+        elevation = self.get_float_arg('elevation', None)
 
-        ret_min = None
-        ret_max = None
-        using_depth = False
+        # Handle single parameter cases
+        if depth is not None:
+            return -1 * depth, -1 * depth
+        elif height is not None:
+            return height, height
+        elif elevation is not None:
+            return elevation, elevation
 
-        if min_elevation is not None:
-            ret_min = min_elevation
-        elif min_height is not None:
-            ret_min = min_height
-        elif min_depth is not None:
-            ret_min = -1 * min_depth
-            using_depth = True
+        # Handle min/max parameter cases
+        ret_min = min_elevation or min_height or (-1 * min_depth if min_depth is not None else None)
+        ret_max = max_elevation or max_height or (-1 * max_depth if max_depth is not None else None)
 
-        if max_elevation is not None:
-            ret_max = max_elevation
-        elif max_height is not None:
-            ret_max = max_height
-        elif max_depth is not None:
-            ret_max = -1 * max_depth
-            using_depth = True
-
-        if (ret_max is not None and ret_min is not None) and ret_max < ret_min:
-            if using_depth:
+        # Validate max > min unless using depth args
+        if ret_max is not None and ret_min is not None and ret_max < ret_min:
+            if min_depth is not None or max_depth is not None:
                 ret_max, ret_min = ret_min, ret_max
             else:
                 raise ValueError(f'Request max elevation less than min elevation: {ret_max} < {ret_min}')
-
         return ret_min, ret_max
 
     # added to fit the simplified version of TimeAvgMapSpark parse_argumemt

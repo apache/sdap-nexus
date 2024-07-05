@@ -750,6 +750,43 @@ class NexusTileService:
 
                 num_vars = len(tile.data)
                 multi_data_mask = np.repeat(data_mask[np.newaxis, ...], num_vars, axis=0)
+                tile.data = ma.masked_where(multi_data_mask, tile.data)
+            else:
+                tile.data = ma.masked_where(data_mask, tile.data)
+
+            tiles[:] = [tile for tile in tiles if not tile.data.mask.all()]
+
+        return tiles
+
+    def mask_tiles_to_elevation(self, min_e, max_e, tiles):
+        """
+        Masks data in tiles to specified time range.
+        :param start_time: The start time to search for tiles
+        :param end_time: The end time to search for tiles
+        :param tiles: List of tiles
+        :return: A list tiles with data masked to specified time range
+        """
+        if min_e is None:
+            min_e = -float('inf')
+
+        if max_e is None:
+            max_e = float('inf')
+
+        for tile in tiles:
+            if tile.elevation is None:
+                continue
+
+            tile.elevation = ma.masked_outside(tile.elevation, min_e, max_e)
+
+            data_mask = ma.getmaskarray(tile.elevation)
+
+            # If this is multi-var, need to mask each variable separately.
+            if tile.is_multi:
+                # Combine space/time mask with existing mask on data
+                data_mask = reduce(np.logical_or, [tile.data[0].mask, data_mask])
+
+                num_vars = len(tile.data)
+                multi_data_mask = np.repeat(data_mask[np.newaxis, ...], num_vars, axis=0)
                 multi_data_mask = np.broadcast_arrays(multi_data_mask, tile.data)[0]
                 tile.data = ma.masked_where(multi_data_mask, tile.data)
             else:
