@@ -83,4 +83,30 @@ it has the required data ingested under the correct collection names, otherwise 
 Cleanup
 =======
 
-TBA
+If you would like to remove the test data ingested in this guide, use the following steps to delete it.
+
+For the tile data itself, there's a tool for that exact purpose:
+
+.. code-block:: bash
+
+  cd ../tools/deletebyquery
+  pip install -r requirements.txt
+  # Run once for each dataset to avoid catching any other datasets with a wildcard query
+  python deletebyquery.py --solr localhost:8983 --cassandra localhost --cassandraUsername cassandra --cassandraPassword cassandra -q 'dataset_s:ASCATB-L2-Coastal_test'
+  python deletebyquery.py --solr localhost:8983 --cassandra localhost --cassandraUsername cassandra --cassandraPassword cassandra -q 'dataset_s:VIIRS_NPP-2018_Heatwave_test'
+  python deletebyquery.py --solr localhost:8983 --cassandra localhost --cassandraUsername cassandra --cassandraPassword cassandra -q 'dataset_s:OISSS_L4_multimission_7day_v1_test'
+  python deletebyquery.py --solr localhost:8983 --cassandra localhost --cassandraUsername cassandra --cassandraPassword cassandra -q 'dataset_s:MUR25-JPL-L4-GLOB-v04.2_test'
+
+Unfortunately, this does not remove records of the datasets or ingested input granules themselves, they need to be removed manually.
+
+.. code-block:: bash
+
+  curl -g 'http://localhost:8983/solr/nexusgranules/update?commit=true' -H 'Content-Type: application/json' -d '{"delete": {"query": "dataset_s:MUR25-JPL-L4-GLOB-v04.2_test"}}'
+  curl -g 'http://localhost:8983/solr/nexusgranules/update?commit=true' -H 'Content-Type: application/json' -d '{"delete": {"query": "dataset_s:ASCATB-L2-Coastal_test"}}'
+  curl -g 'http://localhost:8983/solr/nexusgranules/update?commit=true' -H 'Content-Type: application/json' -d '{"delete": {"query": "dataset_s:OISSS_L4_multimission_7day_v1_test"}}'
+  curl -g 'http://localhost:8983/solr/nexusgranules/update?commit=true' -H 'Content-Type: application/json' -d '{"delete": {"query": "dataset_s:VIIRS_NPP-2018_Heatwave_test"}}'
+
+  curl -g 'http://localhost:8983/solr/nexusdatasets/update?commit=true' -H 'Content-Type: application/json' -d '{"delete": {"query": "dataset_s:MUR25-JPL-L4-GLOB-v04.2_test"}}'
+  curl -g 'http://localhost:8983/solr/nexusdatasets/update?commit=true' -H 'Content-Type: application/json' -d '{"delete": {"query": "dataset_s:ASCATB-L2-Coastal_test"}}'
+  curl -g 'http://localhost:8983/solr/nexusdatasets/update?commit=true' -H 'Content-Type: application/json' -d '{"delete": {"query": "dataset_s:OISSS_L4_multimission_7day_v1_test"}}'
+  curl -g 'http://localhost:8983/solr/nexusdatasets/update?commit=true' -H 'Content-Type: application/json' -d '{"delete": {"query": "dataset_s:VIIRS_NPP-2018_Heatwave_test"}}'
