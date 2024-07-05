@@ -13,11 +13,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import copy
 import csv
 import datetime
 import io
-import itertools
 import json
 import os
 import re
@@ -36,7 +34,6 @@ from bs4 import BeautifulSoup
 from dateutil.parser import parse
 from geopy.distance import geodesic
 from pytz import timezone, UTC
-from requests.exceptions import ConnectTimeout
 from shapely import wkt
 from shapely.geometry import Polygon, Point
 
@@ -50,6 +47,7 @@ import cdms_reader
 #
 #########################
 
+# TODO: Consider removing old helper methods & fixtures for old CDMS tests that aren't used here (mainly insitu stuff)
 
 @pytest.fixture(scope="session")
 def host():
@@ -775,24 +773,6 @@ def test_subset_L4(host, start, collection):
         assert bounding_poly.intersects(Point(float(p['longitude']), float(p['latitude'])))
         assert start <= p['time'] <= end
 
-    # response_buf = io.BytesIO(response.content)
-    #
-    # with ZipFile(response_buf) as data:
-    #     namelist = data.namelist()
-    #
-    #     assert namelist == [f'{collection}.csv']
-    #
-    #     csv_buf = io.StringIO(data.read(namelist[0]).decode('utf-8'))
-    #     csv_data = pd.read_csv(csv_buf)
-    #
-    # def validate_row_bounds(row):
-    #     assert bounding_poly.intersects(Point(float(row['longitude']), float(row['latitude'])))
-    #     assert params['startTime'] <= row['time'] <= params['endTime']
-    #
-    # for i in range(0, len(csv_data)):
-    #     validate_row_bounds(csv_data.iloc[i])
-
-
 @pytest.mark.integration
 def test_subset_L2(host, start):
     url = urljoin(host, 'datainbounds')
@@ -820,24 +800,6 @@ def test_subset_L2(host, start):
     for p in data:
         assert bounding_poly.intersects(Point(float(p['longitude']), float(p['latitude'])))
         assert start <= p['time'] <= end
-
-    # response_buf = io.BytesIO(response.content)
-    #
-    # with ZipFile(response_buf) as data:
-    #     namelist = data.namelist()
-    #
-    #     assert namelist == ['ASCATB-L2-Coastal_test.csv']
-    #
-    #     csv_buf = io.StringIO(data.read(namelist[0]).decode('utf-8'))
-    #     csv_data = pd.read_csv(csv_buf)
-    #
-    # def validate_row_bounds(row):
-    #     assert bounding_poly.intersects(Point(float(row['longitude']), float(row['latitude'])))
-    #     assert params['startTime'] <= row['time'] <= params['endTime']
-    #
-    # for i in range(0, len(csv_data)):
-    #     validate_row_bounds(csv_data.iloc[i])
-
 
 @pytest.mark.integration
 def test_timeseries_spark(host, start):
@@ -1336,11 +1298,3 @@ def test_cdmsresults_netcdf(host, eid, start):
 
     temp_file.close()
     warnings.filterwarnings('default')
-
-
-
-
-
-
-
-

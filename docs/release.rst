@@ -108,7 +108,7 @@ Verify the images are working by using them in the :ref:`Quickstart Guide<quicks
 Extended Testing
 ----------------
 
-Section coming soon...
+:ref`See here for running SDAP tests<test>`.
 
 Vote
 ====

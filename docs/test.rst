@@ -56,12 +56,29 @@ ingester and RabbitMQ containers and start the webapp container if it is not alr
 Set Up pytest
 =============
 
-TBA
+Before running the tests, you must first set up an environment and install dependencies:
+
+.. code-block:: bash
+
+  python -m venv env
+  source env/bin/activate
+  pip install -r requirements.txt
 
 Run the Tests!
 ==============
 
-TBA
+To execute the tests, simply run
+
+.. code-block:: bash
+
+  pytest --with-integration
+
+You can also target the tests to an SDAP instance running at a different location, say a remote deployment, but be sure
+it has the required data ingested under the correct collection names, otherwise most tests will fail.
+
+.. code-block:: bash
+
+  export TEST_HOST=<SDAP URL>
 
 Cleanup
 =======

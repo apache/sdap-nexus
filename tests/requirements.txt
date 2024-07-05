@@ -1,0 +1,7 @@
+pandas
+pytest
+requests
+beautifulsoup4
+python-dateutil
+pytz
+shapely
