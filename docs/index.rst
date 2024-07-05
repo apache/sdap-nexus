@@ -1,5 +1,5 @@
 Welcome to the Apache SDAP project documentation!
-================================================
+=================================================
 
 .. toctree::
    :maxdepth: 2
