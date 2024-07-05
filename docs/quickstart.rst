@@ -1,13 +1,13 @@
 .. _quickstart:
 
-*****************
+*************************
 Quickstart Guide - Docker
-*****************
+*************************
 
 This quickstart will take approximately 45 minutes to complete.
 
 Introduction
-=============
+============
 
 NEXUS is a collection of software that enables the analysis of scientific data. In order to achieve fast analysis, NEXUS takes the approach of breaking apart, or "tiling", the original data into smaller tiles for storage. Metadata about each tile is stored in a fast searchable index with a pointer to the original data array. When an analysis is requested, the necessary tiles are looked up in the index and then the data for only those tiles is loaded for processing.
 
@@ -16,7 +16,7 @@ This quickstart guide will walk you through how to install and run NEXUS on your
 .. _quickstart-prerequisites:
 
 Prerequisites
-==============
+=============
 
 * Docker (tested on v20.10.17)
 * Internet Connection
@@ -25,14 +25,14 @@ Prerequisites
 * 8.5 GB of disk space
 
 Prepare
-========
+=======
 
 Start downloading the Docker images and set up the Docker bridge network.
 
 .. _quickstart-step1:
 
 Set Default Docker Platform
----
+---------------------------
 
 To ensure consistency when building/running on different hardware architectures, we should set this variable to ensure docker uses ``linux/amd64``.
 
@@ -41,7 +41,7 @@ To ensure consistency when building/running on different hardware architectures,
   export DOCKER_DEFAULT_PLATFORM=linux/amd64
 
 Set Tag Variables
--------------------
+-----------------
 
 Pull the necessary Docker images from the `Apache SDAP repository <https://hub.docker.com/search?q=apache%2Fsdap>`_ on Docker Hub. Please check the repository for the latest version tag.
 
@@ -74,7 +74,7 @@ For Local Builds
 Continue to the section: "Create a new Docker Bridge Network"
 
 For Release Builds: Pull Docker Images
--------------------
+--------------------------------------
 
 .. code-block:: bash
 
@@ -94,7 +94,7 @@ For Release Builds: Pull Docker Images
 .. _quickstart-step2:
 
 Create a new Docker Bridge Network
-------------------------------------
+----------------------------------
 
 This quickstart consists of launching several Docker containers that need to communicate with one another. To facilitate this communication, we want to be able to reference containers via hostname instead of IP address. The default bridge network used by Docker only supports this by using the ``--link`` option which is now considered to be `deprecated <https://docs.docker.com/network/links/>`_.
 
@@ -109,7 +109,7 @@ The network we will be using for this quickstart will be called ``sdap-net``. Cr
 .. _quickstart-step3:
 
 Start Core Components
-======================
+=====================
 
 NEXUS relies on Apache Solr and Apache Cassandra to store tile metadata and science data, so let's start those first.
 
@@ -131,7 +131,7 @@ We then need to ensure the ``/solr`` znode is present.
 .. _quickstart-step4:
 
 Start Solr
------------
+----------
 
 SDAP is tested with Solr version 8.11.1.
 
@@ -156,7 +156,7 @@ When the init script finishes, kill the container by typing ``Ctrl + C``
 .. _quickstart-step5:
 
 Starting Cassandra
--------------------
+------------------
 
 SDAP is tested with Cassandra version 3.11.6.
 
@@ -196,7 +196,7 @@ With Solr and Cassandra started and initialized, we can now start the collection
 .. _quickstart-step6:
 
 Start the Ingester
-===================
+==================
 
 In this section, we will start the components for the ingester. These components are:
 
@@ -207,7 +207,7 @@ In this section, we will start the components for the ingester. These components
 We will also be downloading a number of NetCDF files containing science data for use in this demo.
 
 Create Data Directory
-------------------------
+---------------------
 
 Let's start by creating the directory to hold the science data to ingest.
 
@@ -221,7 +221,7 @@ Choose a location that is mountable by Docker (typically needs to be under the u
 .. _quickstart-step7:
 
 Start RabbitMQ
-----------------
+--------------
 
 The collection manager and granule ingester(s) use RabbitMQ to communicate, so we need to start that up first.
 
@@ -257,7 +257,7 @@ The granule ingester(s) read new granules from the message queue and process the
 .. _quickstart-optional-step:
 
 [OPTIONAL] Run Message Queue Monitor
--------------------------------------
+------------------------------------
 
 The granule ingestion process can take some time. To monitor its progress, we wrote a simple python script to monitor the message queue. It will wait until some granules show up and then will exit once they have all been ingested.
 
@@ -278,7 +278,7 @@ And then run it in a separate shell
 .. _quickstart-step9:
 
 Download Sample Data
----------------------
+--------------------
 
 The data we will be downloading is part of the `AVHRR OI dataset <https://podaac.jpl.nasa.gov/dataset/AVHRR_OI-NCEI-L4-GLOB-v2.0>`_ which measures sea surface temperature. We will download 1 month of data and ingest it into a local Solr and Cassandra instance.
 
@@ -303,7 +303,7 @@ You should now have 30 files downloaded to your data directory, one for each day
 .. _quickstart-step10:
 
 Create Collection Configuration
---------------------------------
+-------------------------------
 
 The collection configuration is a ``.yml`` file that tells the collection manager what datasets it is managing, where the granules are stored, and how they are to be tiled.
 
@@ -338,7 +338,7 @@ The collection configuration is a ``.yml`` file that tells the collection manage
 .. _quickstart-step11:
 
 Start the Collection Manager
------------------------------
+----------------------------
 
 Now we can start the collection manager.
 
@@ -370,7 +370,7 @@ When it starts, it will publish messages for the downloaded granules to RabbitMQ
 .. _quickstart-step13:
 
 Start the Webapp
-=================
+================
 
 Now that the data is being (has been) ingested, we need to start the webapp that provides the HTTP interface to the analysis capabilities. This is currently a python webapp running Tornado and is contained in the nexus-webapp Docker image. To start the webapp and expose port 8083 use the following command:
 
@@ -422,7 +422,7 @@ Click on the ``Time Series Example`` notebook to start it. This will open the no
 .. _quickstart-finished:
 
 Finished!
-================
+=========
 
 Congratulations you have completed the quickstart! In this example you:
 
@@ -432,7 +432,7 @@ Congratulations you have completed the quickstart! In this example you:
 #. Ran a time series analysis on 1 month of AVHRR OI data and plotted the result
 
 Cleanup
-========
+=======
 
 To shut down the Solr container cleanly, run the following command:
 
@@ -449,7 +449,7 @@ The remaining containers can safely be stopped using Docker Desktop or by runnin
 .. _issues:
 
 Known Issues
-=============
+============
 
 This section contains a list of issues that may be encountered while running this guide, their causes and solutions.
 
@@ -470,11 +470,10 @@ There are two solutions to this issue:
 * Try running only one ingester container.
 
 Collection Manager Messages Not Publishing
--------------------------------------------
+------------------------------------------
 
 RabbitMQ may not receive the messages published by the Collection Manager. When this happens, new granules added to monitored collections will not be processed by the ingester(s).
 
 The cause of this issue seems to be due to the RMQ container having limited resources, which causes message publication to block indefinitely.
 
 To solve this, first figure out which resource is causing issues by navigating to http://localhost:15672/#/ and sign in with username ``user`` and password ``bitnami``. View the 'Nodes' section. Insufficient resources will be shown in red. Allocate more of those resources in Docker and restart the Docker daemon.
-
