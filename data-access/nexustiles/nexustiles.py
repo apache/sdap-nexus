@@ -385,6 +385,22 @@ class NexusTileService:
 
         return datasets
 
+    def heartbeat(self) -> Dict[str, bool]:
+        heartbeats = {'nexusproto': NexusTileService.backends[None]['backend'].heartbeat()}
+
+        for backend_name in NexusTileService.backends:
+            if backend_name in [None, '__nexusproto__']:
+                continue
+
+            backend = NexusTileService.backends[backend_name]['backend']
+
+            if backend == NexusTileService.backends[None]['backend']:
+                continue
+
+            heartbeats[backend_name] = backend.heartbeat()
+
+        return heartbeats
+
 
     @tile_data()
     @catch_not_implemented
