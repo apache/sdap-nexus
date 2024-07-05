@@ -601,6 +601,380 @@ def run_matchup(url, params, page_size=3500):
 
 
 @pytest.mark.integration
+def test_version(host, start):
+    url = urljoin(host, 'version')
+
+    response = requests.get(url)
+
+    assert response.status_code == 200
+    assert re.match(r'^\d+\.\d+\.\d+(-.+)?$', response.text)
+
+
+@pytest.mark.integration
+def test_capabilities(host, start):
+    url = urljoin(host, 'capabilities')
+
+    response = requests.get(url)
+
+    assert response.status_code == 200
+
+    capabilities = response.json()
+
+    try_save('test_capabilities', start, capabilities)
+
+    assert len(capabilities) > 0
+
+    for capability in capabilities:
+        assert all([k in capability for k in ['name', 'path', 'description', 'parameters']])
+        assert all([isinstance(k, str) for k in ['name', 'path', 'description']])
+
+        assert isinstance(capability['parameters'], (dict, list))
+
+        for param in capability['parameters']:
+            if isinstance(capability['parameters'], dict):
+                param = capability['parameters'][param]
+
+            assert isinstance(param, dict)
+            assert all([k in param and isinstance(param[k], str) for k in ['name', 'type', 'description']])
+
+
+@pytest.mark.integration
+def test_endpoints(host, start):
+    url = urljoin(host, 'capabilities')
+
+    response = requests.get(url)
+
+    if response.status_code != 200:
+        skip('Could not get endpoints list. Expected if test_capabilities has failed')
+
+    capabilities = response.json()
+
+    endpoints = [c['path'] for c in capabilities]
+
+    non_existent_endpoints = []
+
+    for endpoint in endpoints:
+        status = requests.head(urljoin(host, endpoint)).status_code
+
+        if status == 404:
+            # Strip special characters because some endpoints have wildcards/regex characters
+            # This may not work forever though
+            stripped_endpoint = re.sub(r'[^a-zA-Z0-9/_-]', '', endpoint)
+
+            status = requests.head(urljoin(host, stripped_endpoint)).status_code
+
+            if status == 404:
+                non_existent_endpoints.append(([endpoint, stripped_endpoint], status))
+
+    assert len(non_existent_endpoints) == 0, non_existent_endpoints
+
+
+@pytest.mark.integration
+def test_heartbeat(host, start):
+    url = urljoin(host, 'heartbeat')
+
+    response = requests.get(url)
+
+    assert response.status_code == 200
+    heartbeat = response.json()
+
+    assert isinstance(heartbeat, dict)
+    assert all(heartbeat.values())
+
+
+@pytest.mark.integration
+def test_swaggerui_sdap(host):
+    url = urljoin(host, 'apidocs/')
+
+    response = requests.get(url)
+
+    assert response.status_code == 200
+    assert 'swagger-ui' in response.text
+
+    try:
+        # There's probably a better way to do this, but extract the .yml file for the docs from the returned text
+        soup = BeautifulSoup(response.text, 'html.parser')
+
+        script = str([tag for tag in soup.find_all('script') if tag.attrs == {}][0])
+
+        start_index = script.find('url:')
+        end_index = script.find('",\n', start_index)
+
+        script = script[start_index:end_index]
+
+        yml_filename = script.split('"')[1]
+
+        url = urljoin(url, yml_filename)
+
+        response = requests.get(url)
+
+        assert response.status_code == 200
+    except AssertionError:
+        raise
+    except:
+        try:
+            url = urljoin(url, 'openapi.yml')
+
+            response = requests.get(url)
+
+            assert response.status_code == 200
+
+            warnings.warn("Could not extract documentation yaml filename from response text, "
+                          "but using an assumed value worked successfully")
+        except:
+            raise ValueError("Could not verify documentation yaml file, assumed value also failed")
+
+
+@pytest.mark.integration
+def test_list(host, start):
+    url = urljoin(host, 'list')
+
+    response = requests.get(url)
+
+    assert response.status_code == 200
+
+    body = response.json()
+    try_save("test_list", start, body)
+
+    assert isinstance(body, list)
+
+    if len(body) == 0:
+        warnings.warn('/list returned no datasets. This could be correct if SDAP has no data ingested, otherwise '
+                      'this should be considered a failure')
+
+
+@pytest.mark.integration
+@pytest.mark.parametrize(
+    ['collection'],
+    [('MUR25-JPL-L4-GLOB-v04.2_test',), ('OISSS_L4_multimission_7day_v1_test',)]
+)
+def test_subset_L4(host, start, collection):
+    url = urljoin(host, 'datainbounds')
+
+    params = {
+        "ds": collection,
+        "startTime": "2018-09-24T00:00:00Z",
+        "endTime": "2018-09-30T00:00:00Z",
+        "b": "160,-30,180,-25",
+    }
+
+    response = requests.get(url, params=params)
+    assert response.status_code == 200
+
+    data = response.json()
+    try_save(f"test_datainbounds_L4_{collection}", start, data)
+
+    bounding_poly = b_to_polygon(params['b'])
+
+    epoch = datetime(1970, 1, 1, tzinfo=UTC)
+
+    start = (datetime.strptime(params['startTime'], '%Y-%m-%dT%H:%M:%SZ').replace(tzinfo=UTC) - epoch).total_seconds()
+    end = (datetime.strptime(params['endTime'], '%Y-%m-%dT%H:%M:%SZ').replace(tzinfo=UTC) - epoch).total_seconds()
+
+    for p in data:
+        assert bounding_poly.intersects(Point(float(p['longitude']), float(p['latitude'])))
+        assert start <= p['time'] <= end
+
+    # response_buf = io.BytesIO(response.content)
+    #
+    # with ZipFile(response_buf) as data:
+    #     namelist = data.namelist()
+    #
+    #     assert namelist == [f'{collection}.csv']
+    #
+    #     csv_buf = io.StringIO(data.read(namelist[0]).decode('utf-8'))
+    #     csv_data = pd.read_csv(csv_buf)
+    #
+    # def validate_row_bounds(row):
+    #     assert bounding_poly.intersects(Point(float(row['longitude']), float(row['latitude'])))
+    #     assert params['startTime'] <= row['time'] <= params['endTime']
+    #
+    # for i in range(0, len(csv_data)):
+    #     validate_row_bounds(csv_data.iloc[i])
+
+
+@pytest.mark.integration
+def test_subset_L2(host, start):
+    url = urljoin(host, 'datainbounds')
+
+    params = {
+        "ds": "ASCATB-L2-Coastal_test",
+        "startTime": "2018-09-24T00:00:00Z",
+        "endTime": "2018-09-30T00:00:00Z",
+        "b": "160,-30,180,-25",
+    }
+
+    response = requests.get(url, params=params)
+    assert response.status_code == 200
+
+    data = response.json()
+    try_save("test_datainbounds_L2", start, data)
+
+    bounding_poly = b_to_polygon(params['b'])
+
+    epoch = datetime(1970, 1, 1, tzinfo=UTC)
+
+    start = (datetime.strptime(params['startTime'], '%Y-%m-%dT%H:%M:%SZ').replace(tzinfo=UTC) - epoch).total_seconds()
+    end = (datetime.strptime(params['endTime'], '%Y-%m-%dT%H:%M:%SZ').replace(tzinfo=UTC) - epoch).total_seconds()
+
+    for p in data:
+        assert bounding_poly.intersects(Point(float(p['longitude']), float(p['latitude'])))
+        assert start <= p['time'] <= end
+
+    # response_buf = io.BytesIO(response.content)
+    #
+    # with ZipFile(response_buf) as data:
+    #     namelist = data.namelist()
+    #
+    #     assert namelist == ['ASCATB-L2-Coastal_test.csv']
+    #
+    #     csv_buf = io.StringIO(data.read(namelist[0]).decode('utf-8'))
+    #     csv_data = pd.read_csv(csv_buf)
+    #
+    # def validate_row_bounds(row):
+    #     assert bounding_poly.intersects(Point(float(row['longitude']), float(row['latitude'])))
+    #     assert params['startTime'] <= row['time'] <= params['endTime']
+    #
+    # for i in range(0, len(csv_data)):
+    #     validate_row_bounds(csv_data.iloc[i])
+
+
+@pytest.mark.integration
+def test_timeseries_spark(host, start):
+    url = urljoin(host, 'timeSeriesSpark')
+
+    params = {
+        "ds": "MUR25-JPL-L4-GLOB-v04.2_test",
+        "b": "-135,-10,-80,10",
+        "startTime": "2018-07-05T00:00:00Z",
+        "endTime": "2018-09-30T23:59:59Z",
+    }
+
+    response = requests.get(url, params=params)
+
+    assert response.status_code == 200
+
+    data = response.json()
+    try_save('test_timeseries_spark', start, data)
+
+    assert len(data['data']) == len(pd.date_range(params['startTime'], params['endTime'], freq='D'))
+
+    epoch = datetime(1970, 1, 1, tzinfo=UTC)
+
+    start = (datetime.strptime(params['startTime'], '%Y-%m-%dT%H:%M:%SZ').replace(tzinfo=UTC) - epoch).total_seconds()
+    end = (datetime.strptime(params['endTime'], '%Y-%m-%dT%H:%M:%SZ').replace(tzinfo=UTC) - epoch).total_seconds()
+
+    for p in data['data']:
+        assert start <= p[0]['time'] <= end
+
+
+@pytest.mark.integration
+def test_cdmslist(host, start):
+    url = urljoin(host, 'cdmslist')
+
+    response = requests.get(url)
+
+    assert response.status_code == 200
+
+    body = response.json()
+    try_save("test_cdmslist", start, body)
+
+    data = body['data']
+
+    num_satellite = len(data['satellite'])
+    num_insitu = len(data['insitu'])
+
+    if num_satellite == 0:
+        warnings.warn('/cdmslist returned no satellite datasets. This could be correct if SDAP has no data ingested, '
+                      'otherwise this should be considered a failure')
+
+    if num_insitu == 0:
+        warnings.warn('/cdmslist returned no insitu datasets. This could be correct if SDAP has no insitu data '
+                      'ingested, otherwise this should be considered a failure')
+
+
+@pytest.mark.integration
+@pytest.mark.parametrize(
+    ['collection'],
+    [('MUR25-JPL-L4-GLOB-v04.2_test',), ('OISSS_L4_multimission_7day_v1_test',)]
+)
+def test_cdmssubset_L4(host, start, collection):
+    url = urljoin(host, 'cdmssubset')
+
+    params = {
+        "dataset": collection,
+        "parameter": "sst",
+        "startTime": "2018-09-24T00:00:00Z",
+        "endTime": "2018-09-30T00:00:00Z",
+        "b": "160,-30,180,-25",
+        "output": "ZIP"
+    }
+
+    response = requests.get(url, params=params)
+
+    assert response.status_code == 200
+
+    try_save(f"test_cdmssubset_L4_{collection}", start, response, "zip", 'wb')
+
+    bounding_poly = b_to_polygon(params['b'])
+
+    response_buf = io.BytesIO(response.content)
+
+    with ZipFile(response_buf) as data:
+        namelist = data.namelist()
+
+        assert namelist == [f'{collection}.csv']
+
+        csv_buf = io.StringIO(data.read(namelist[0]).decode('utf-8'))
+        csv_data = pd.read_csv(csv_buf)
+
+    def validate_row_bounds(row):
+        assert bounding_poly.intersects(Point(float(row['longitude']), float(row['latitude'])))
+        assert params['startTime'] <= row['time'] <= params['endTime']
+
+    for i in range(0, len(csv_data)):
+        validate_row_bounds(csv_data.iloc[i])
+
+
+@pytest.mark.integration
+def test_cdmssubset_L2(host, start):
+    url = urljoin(host, 'cdmssubset')
+
+    params = {
+        "dataset": "ASCATB-L2-Coastal_test",
+        "startTime": "2018-09-24T00:00:00Z",
+        "endTime": "2018-09-30T00:00:00Z",
+        "b": "160,-30,180,-25",
+        "output": "ZIP"
+    }
+
+    response = requests.get(url, params=params)
+
+    assert response.status_code == 200
+
+    try_save("test_cdmssubset_L2", start, response, "zip", 'wb')
+
+    bounding_poly = b_to_polygon(params['b'])
+
+    response_buf = io.BytesIO(response.content)
+
+    with ZipFile(response_buf) as data:
+        namelist = data.namelist()
+
+        assert namelist == ['ASCATB-L2-Coastal_test.csv']
+
+        csv_buf = io.StringIO(data.read(namelist[0]).decode('utf-8'))
+        csv_data = pd.read_csv(csv_buf)
+
+    def validate_row_bounds(row):
+        assert bounding_poly.intersects(Point(float(row['longitude']), float(row['latitude'])))
+        assert params['startTime'] <= row['time'] <= params['endTime']
+
+    for i in range(0, len(csv_data)):
+        validate_row_bounds(csv_data.iloc[i])
+
+
+@pytest.mark.integration
 @pytest.mark.parametrize(
     ['match', 'expected'],
     list(zip(
@@ -964,297 +1338,9 @@ def test_cdmsresults_netcdf(host, eid, start):
     warnings.filterwarnings('default')
 
 
-@pytest.mark.integration
-def test_timeseries_spark(host, start):
-    url = urljoin(host, 'timeSeriesSpark')
 
-    params = {
-        "ds": "MUR25-JPL-L4-GLOB-v04.2_test",
-        "b": "-135,-10,-80,10",
-        "startTime": "2018-07-05T00:00:00Z",
-        "endTime": "2018-09-30T23:59:59Z",
-    }
 
-    response = requests.get(url, params=params)
 
-    assert response.status_code == 200
 
-    data = response.json()
-    try_save('test_timeseries_spark', start, data)
-
-    assert len(data['data']) == len(pd.date_range(params['startTime'], params['endTime'], freq='D'))
-
-    epoch = datetime(1970, 1, 1, tzinfo=UTC)
-
-    start = (datetime.strptime(params['startTime'], '%Y-%m-%dT%H:%M:%SZ').replace(tzinfo=UTC) - epoch).total_seconds()
-    end = (datetime.strptime(params['endTime'], '%Y-%m-%dT%H:%M:%SZ').replace(tzinfo=UTC) - epoch).total_seconds()
-
-    for p in data['data']:
-        assert start <= p[0]['time'] <= end
-
-
-@pytest.mark.integration
-def test_list(host, start):
-    url = urljoin(host, 'list')
-
-    response = requests.get(url)
-
-    assert response.status_code == 200
-
-    body = response.json()
-    try_save("test_list", start, body)
-
-    assert isinstance(body, list)
-
-    if len(body) == 0:
-        warnings.warn('/list returned no datasets. This could be correct if SDAP has no data ingested, otherwise '
-                      'this should be considered a failure')
-
-@pytest.mark.integration
-def test_cdmslist(host, start):
-    url = urljoin(host, 'cdmslist')
-
-    response = requests.get(url)
-
-    assert response.status_code == 200
-
-    body = response.json()
-    try_save("test_cdmslist", start, body)
-
-    data = body['data']
-
-    num_satellite = len(data['satellite'])
-    num_insitu = len(data['insitu'])
-
-    if num_satellite == 0:
-        warnings.warn('/cdmslist returned no satellite datasets. This could be correct if SDAP has no data ingested, '
-                      'otherwise this should be considered a failure')
-
-    if num_insitu == 0:
-        warnings.warn('/cdmslist returned no insitu datasets. This could be correct if SDAP has no insitu data '
-                      'ingested, otherwise this should be considered a failure')
-
-
-@pytest.mark.integration
-def test_cdmssubset_L4(host, start):
-    url = urljoin(host, 'cdmssubset')
-
-    params = {
-        "dataset": "MUR25-JPL-L4-GLOB-v04.2_test",
-        "parameter": "sst",
-        "startTime": "2018-09-24T00:00:00Z",
-        "endTime": "2018-09-30T00:00:00Z",
-        "b": "160,-30,180,-25",
-        "output": "ZIP"
-    }
-
-    response = requests.get(url, params=params)
-
-    assert response.status_code == 200
-
-    try_save("test_cdmssubset_L4_a", start, response, "zip", 'wb')
-
-    bounding_poly = b_to_polygon(params['b'])
-
-    response_buf = io.BytesIO(response.content)
-
-    with ZipFile(response_buf) as data:
-        namelist = data.namelist()
-
-        assert namelist == ['MUR25-JPL-L4-GLOB-v04.2_test.csv']
-
-        csv_buf = io.StringIO(data.read(namelist[0]).decode('utf-8'))
-        csv_data = pd.read_csv(csv_buf)
-
-    def validate_row_bounds(row):
-        assert bounding_poly.intersects(Point(float(row['longitude']), float(row['latitude'])))
-        assert params['startTime'] <= row['time'] <= params['endTime']
-
-    for i in range(0, len(csv_data)):
-        validate_row_bounds(csv_data.iloc[i])
-
-    params['dataset'] = 'OISSS_L4_multimission_7day_v1_test'
-
-    response = requests.get(url, params=params)
-
-    assert response.status_code == 200
-
-    try_save("test_cdmssubset_L4_b", start, response, "zip", 'wb')
-
-    response_buf = io.BytesIO(response.content)
-
-    with ZipFile(response_buf) as data:
-        namelist = data.namelist()
-
-        assert namelist == ['OISSS_L4_multimission_7day_v1_test.csv']
-
-        csv_buf = io.StringIO(data.read(namelist[0]).decode('utf-8'))
-        csv_data = pd.read_csv(csv_buf)
-
-    for i in range(0, len(csv_data)):
-        validate_row_bounds(csv_data.iloc[i])
-
-
-@pytest.mark.integration
-def test_cdmssubset_L2(host, start):
-    url = urljoin(host, 'cdmssubset')
-
-    params = {
-        "dataset": "ASCATB-L2-Coastal_test",
-        "startTime": "2018-09-24T00:00:00Z",
-        "endTime": "2018-09-30T00:00:00Z",
-        "b": "160,-30,180,-25",
-        "output": "ZIP"
-    }
-
-    response = requests.get(url, params=params)
-
-    assert response.status_code == 200
-
-    try_save("test_cdmssubset_L2", start, response, "zip", 'wb')
-
-    bounding_poly = b_to_polygon(params['b'])
-
-    response_buf = io.BytesIO(response.content)
-
-    with ZipFile(response_buf) as data:
-        namelist = data.namelist()
-
-        assert namelist == ['ASCATB-L2-Coastal_test.csv']
-
-        csv_buf = io.StringIO(data.read(namelist[0]).decode('utf-8'))
-        csv_data = pd.read_csv(csv_buf)
-
-    def validate_row_bounds(row):
-        assert bounding_poly.intersects(Point(float(row['longitude']), float(row['latitude'])))
-        assert params['startTime'] <= row['time'] <= params['endTime']
-
-    for i in range(0, len(csv_data)):
-        validate_row_bounds(csv_data.iloc[i])
-
-
-@pytest.mark.integration
-def test_swaggerui_sdap(host):
-    url = urljoin(host, 'apidocs/')
-
-    response = requests.get(url)
-
-    assert response.status_code == 200
-    assert 'swagger-ui' in response.text
-
-    try:
-        # There's probably a better way to do this, but extract the .yml file for the docs from the returned text
-        soup = BeautifulSoup(response.text, 'html.parser')
-
-        script = str([tag for tag in soup.find_all('script') if tag.attrs == {}][0])
-
-        start_index = script.find('url:')
-        end_index = script.find('",\n', start_index)
-
-        script = script[start_index:end_index]
-
-        yml_filename = script.split('"')[1]
-
-        url = urljoin(url, yml_filename)
-
-        response = requests.get(url)
-
-        assert response.status_code == 200
-    except AssertionError:
-        raise
-    except:
-        try:
-            url = urljoin(url, 'openapi.yml')
-
-            response = requests.get(url)
-
-            assert response.status_code == 200
-
-            warnings.warn("Could not extract documentation yaml filename from response text, "
-                          "but using an assumed value worked successfully")
-        except:
-            raise ValueError("Could not verify documentation yaml file, assumed value also failed")
-
-
-@pytest.mark.integration
-def test_version(host, start):
-    url = urljoin(host, 'version')
-
-    response = requests.get(url)
-
-    assert response.status_code == 200
-    assert re.match(r'^\d+\.\d+\.\d+(-.+)?$', response.text)
-
-
-@pytest.mark.integration
-def test_capabilities(host, start):
-    url = urljoin(host, 'capabilities')
-
-    response = requests.get(url)
-
-    assert response.status_code == 200
-
-    capabilities = response.json()
-
-    try_save('test_capabilities', start, capabilities)
-
-    assert len(capabilities) > 0
-
-    for capability in capabilities:
-        assert all([k in capability for k in ['name', 'path', 'description', 'parameters']])
-        assert all([isinstance(k, str) for k in ['name', 'path', 'description']])
-
-        assert isinstance(capability['parameters'], (dict, list))
-
-        for param in capability['parameters']:
-            if isinstance(capability['parameters'], dict):
-                param = capability['parameters'][param]
-
-            assert isinstance(param, dict)
-            assert all([k in param and isinstance(param[k], str) for k in ['name', 'type', 'description']])
-
-
-@pytest.mark.integration
-def test_endpoints(host, start):
-    url = urljoin(host, 'capabilities')
-
-    response = requests.get(url)
-
-    if response.status_code != 200:
-        skip('Could not get endpoints list. Expected if test_capabilities has failed')
-
-    capabilities = response.json()
-
-    endpoints = [c['path'] for c in capabilities]
-
-    non_existent_endpoints = []
-
-    for endpoint in endpoints:
-        status = requests.head(urljoin(host, endpoint)).status_code
-
-        if status == 404:
-            # Strip special characters because some endpoints have wildcards/regex characters
-            # This may not work forever though
-            stripped_endpoint = re.sub(r'[^a-zA-Z0-9/_-]', '', endpoint)
-
-            status = requests.head(urljoin(host, stripped_endpoint)).status_code
-
-            if status == 404:
-                non_existent_endpoints.append(([endpoint, stripped_endpoint], status))
-
-    assert len(non_existent_endpoints) == 0, non_existent_endpoints
-
-
-@pytest.mark.integration
-def test_heartbeat(host, start):
-    url = urljoin(host, 'heartbeat')
-
-    response = requests.get(url)
-
-    assert response.status_code == 200
-    heartbeat = response.json()
-
-    assert isinstance(heartbeat, dict)
-    assert all(heartbeat.values())
 
 
