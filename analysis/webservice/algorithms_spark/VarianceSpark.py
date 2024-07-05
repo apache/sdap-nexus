@@ -129,8 +129,16 @@ class VarianceNexusSparkHandlerImpl(NexusCalcSparkHandler):
 
         start_seconds_from_epoch = int((start_time - EPOCH).total_seconds())
         end_seconds_from_epoch = int((end_time - EPOCH).total_seconds())
+        
+        min_elevation, max_elevation = request.get_elevation_args()
 
-        return ds, bounding_polygon, start_seconds_from_epoch, end_seconds_from_epoch, nparts_requested
+        if (min_elevation and max_elevation) and min_elevation > max_elevation:
+            raise NexusProcessingException(
+                reason='Min elevation must be less than or equal to max elevation',
+                code=400
+            )
+
+        return ds, bounding_polygon, start_seconds_from_epoch, end_seconds_from_epoch, nparts_requested, min_elevation, max_elevation
 
     def calc(self, compute_options, **args):
         """
@@ -140,7 +148,7 @@ class VarianceNexusSparkHandlerImpl(NexusCalcSparkHandler):
         :return:
         """
 
-        ds, bbox, start_time, end_time, nparts_requested = self.parse_arguments(compute_options)
+        ds, bbox, start_time, end_time, nparts_requested, min_elevation, max_elevation = self.parse_arguments(compute_options)
         self._setQueryParams(ds,
                              (float(bbox.bounds[1]),
                               float(bbox.bounds[3]),
@@ -205,7 +213,7 @@ class VarianceNexusSparkHandlerImpl(NexusCalcSparkHandler):
         self.log.info('Using {} partitions'.format(spark_nparts))
 
         rdd = self._sc.parallelize(nexus_tiles_spark, spark_nparts)
-        sum_count_part = rdd.map(partial(self._map, self._tile_service_factory))
+        sum_count_part = rdd.map(partial(self._map, self._tile_service_factory, min_elevation, max_elevation))
         sum_count = \
             sum_count_part.combineByKey(lambda val: val,
                                         lambda x, val: (x[0] + val[0],
@@ -233,7 +241,7 @@ class VarianceNexusSparkHandlerImpl(NexusCalcSparkHandler):
         self.log.info('Using {} partitions'.format(spark_nparts))
         rdd = self._sc.parallelize(nexus_tiles_spark, spark_nparts)
 
-        anomaly_squared_part = rdd.map(partial(self._calc_variance, self._tile_service_factory))
+        anomaly_squared_part = rdd.map(partial(self._calc_variance, self._tile_service_factory, min_elevation, max_elevation))
         anomaly_squared = \
             anomaly_squared_part.combineByKey(lambda val: val,
                                         lambda x, val: (x[0] + val[0],
@@ -287,7 +295,7 @@ class VarianceNexusSparkHandlerImpl(NexusCalcSparkHandler):
                             y0, y1, x0, x1))
 
         # Store global map in a NetCDF file.
-        self._create_nc_file(a, 'tam.nc', 'val', fill=self._fill)
+        # self._create_nc_file(a, 'tam.nc', 'val', fill=self._fill)
 
         # Create dict for JSON response
         results = [[{'variance': a[y, x], 'cnt': int(n[y, x]),
@@ -301,7 +309,7 @@ class VarianceNexusSparkHandlerImpl(NexusCalcSparkHandler):
                             endTime=end_time)
 
     @staticmethod
-    def _map(tile_service_factory, tile_in_spark):
+    def _map(tile_service_factory, min_elevation, max_elevation, tile_in_spark):
         # tile_in_spark is a spatial tile that corresponds to nexus tiles of the same area
         tile_bounds = tile_in_spark[0]
         (min_lat, max_lat, min_lon, max_lon,
@@ -328,7 +336,9 @@ class VarianceNexusSparkHandlerImpl(NexusCalcSparkHandler):
                                                       min_lon, max_lon,
                                                       ds=ds,
                                                       start_time=t_start,
-                                                      end_time=t_end)
+                                                      end_time=t_end,
+                                                      min_elevation=min_elevation,
+                                                      max_elevation=max_elevation)
 
             for tile in nexus_tiles:
                 # Taking the data, converted masked nans to 0
@@ -343,7 +353,7 @@ class VarianceNexusSparkHandlerImpl(NexusCalcSparkHandler):
         return tile_bounds, (sum_tile, cnt_tile)
 
     @staticmethod
-    def _calc_variance(tile_service_factory, tile_in_spark):
+    def _calc_variance(tile_service_factory, min_elevation, max_elevation, tile_in_spark):
         # tile_in_spark is a spatial tile that corresponds to nexus tiles of the same area
         tile_bounds = tile_in_spark[0]
         (min_lat, max_lat, min_lon, max_lon,
@@ -375,7 +385,9 @@ class VarianceNexusSparkHandlerImpl(NexusCalcSparkHandler):
                                                       min_lon, max_lon,
                                                       ds=ds,
                                                       start_time=t_start,
-                                                      end_time=t_end)
+                                                      end_time=t_end,
+                                                      min_elevation=min_elevation,
+                                                      max_elevation=max_elevation)
 
             for tile in nexus_tiles:
                 # Taking the data, converted masked nans to 0

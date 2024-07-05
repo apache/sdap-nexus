@@ -296,7 +296,7 @@ class CorrMapNexusSparkHandlerImpl(NexusCalcSparkHandler):
             n[y0:y1 + 1, x0:x1 + 1] = tile_cnt
 
         # Store global map in a NetCDF file.
-        self._create_nc_file(r, 'corrmap.nc', 'r')
+        # self._create_nc_file(r, 'corrmap.nc', 'r')
 
         # Create dict for JSON response
         results = [[{'r': r[y, x], 'cnt': int(n[y, x]),
