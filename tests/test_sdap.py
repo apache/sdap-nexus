@@ -781,7 +781,7 @@ def test_subset_L2(host, start):
         "ds": "ASCATB-L2-Coastal_test",
         "startTime": "2018-09-24T00:00:00Z",
         "endTime": "2018-09-30T00:00:00Z",
-        "b": "160,-30,165,-25",
+        "b": "160,-30,180,-25",
     }
 
     response = requests.get(url, params=params)
