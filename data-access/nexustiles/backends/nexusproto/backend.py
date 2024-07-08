@@ -549,6 +549,14 @@ class NexusprotoTileService(AbstractTileService):
 
         return tiles
 
+    def heartbeat(self) -> bool:
+        solrOnline = self.pingSolr()
+
+        # Not sure how to best check cassandra cluster status so just return True for now
+        cassOnline = True
+
+        return solrOnline and cassOnline
+
     def pingSolr(self):
         status = self._metadatastore.ping()
         if status and status["status"] == "OK":
