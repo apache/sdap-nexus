@@ -37,10 +37,10 @@ class NexusRequestHandler(tornado.web.RequestHandler):
         # temporary hack to use a NexusRequestObject without tornado request references
         # this object only supports timeAvgMapSpark yet.
         # Will be extended to replace the historical object in the next pull request related to ticket SDAP-252
-        if self.request.path == '/timeAvgMapSpark':
-            request = NexusRequestObjectTornadoFree(self)
-        else:
-            request = NexusRequestObject(self)
+        # if self.request.path == '/timeAvgMapSpark':
+        #     request = NexusRequestObjectTornadoFree(self)
+        # else:
+        request = NexusRequestObject(self)
 
         # create NexusCalcHandler which will process the request
         instance = self.__clazz(**self._clazz_init_args)

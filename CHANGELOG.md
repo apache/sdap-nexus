@@ -4,7 +4,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [1.3.0] - 2024-06-10
 ### Added
 - SDAP-506:
   - Added STAC Catalog endpoint for matchup outputs
@@ -35,6 +35,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 - SDAP-515:
   - Improved error handling with connections to remote SDAP deployments
+- SDAP-522: Fixed several broken endpoints discovered by SDAP-521 work
+  - Fixed `/version` by updating to correct NEXUS package name
+  - Fixed `/heartbeat` by moving heartbeat evaluations to all backends
+  - Fixed CDMS STAC catalog pagination
 - Updated quickstart docs with corrected command for running Solr via Docker
 ### Security
 

@@ -60,13 +60,13 @@ COPY docker/nexus-webapp/install_nexusproto.sh /tmp/install_nexusproto.sh
 COPY docker/nexus-webapp/entrypoint.sh /opt/entrypoint.sh
 
 # Copy readme + ASF legal files
-COPY README.md README DISCLAIMER LICENSE NOTICE ./
+COPY README.md README LICENSE NOTICE ./
 
 ENV PATH="$POETRY_HOME/bin:$VENV_PATH/bin:$PATH"
 
 # Install additional dependencies for image
 RUN apt-get update && \
-    apt-get install --no-install-recommends -y proj-bin tini && \
+    apt-get install --no-install-recommends -y proj-bin tini git && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
