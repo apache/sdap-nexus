@@ -24,6 +24,9 @@ class AbstractTileService(ABC):
     def __init__(self, dataset_name):
         self._name = dataset_name
 
+    def heartbeat(self) -> bool:
+        return True
+
     @abstractmethod
     def get_dataseries_list(self, simple=False):
         raise NotImplementedError()

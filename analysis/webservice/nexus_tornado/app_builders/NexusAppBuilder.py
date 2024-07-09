@@ -31,7 +31,7 @@ class NexusAppBuilder:
 
         class VersionHandler(tornado.web.RequestHandler):
             def get(self):
-                self.write(pkg_resources.get_distribution("nexusanalysis").version)
+                self.write(pkg_resources.get_distribution("sdap-nexus").version)
 
         self.handlers.append((r"/version", VersionHandler))
 

@@ -511,6 +511,15 @@ paths:
           schema:
             type: string
           example: -45,15,-30,30
+        - $ref: '#/components/parameters/MinDepth'
+        - $ref: '#/components/parameters/MaxDepth'
+        - $ref: '#/components/parameters/Depth'
+        - $ref: '#/components/parameters/MinHeight'
+        - $ref: '#/components/parameters/MaxHeight'
+        - $ref: '#/components/parameters/Height'
+        - $ref: '#/components/parameters/MinElevation'
+        - $ref: '#/components/parameters/MaxElevation'
+        - $ref: '#/components/parameters/Elevation'
       responses:
         "200":
           description: Successful operation
@@ -684,6 +693,15 @@ paths:
           schema:
             type: string
           example: "-180,-90,180,90"
+        - $ref: '#/components/parameters/MinDepth'
+        - $ref: '#/components/parameters/MaxDepth'
+        - $ref: '#/components/parameters/Depth'
+        - $ref: '#/components/parameters/MinHeight'
+        - $ref: '#/components/parameters/MaxHeight'
+        - $ref: '#/components/parameters/Height'
+        - $ref: '#/components/parameters/MinElevation'
+        - $ref: '#/components/parameters/MaxElevation'
+        - $ref: '#/components/parameters/Elevation'
       responses:
         "200":
           description: Successful operation
@@ -757,6 +775,15 @@ paths:
           schema:
             type: boolean
             default: true
+        - $ref: '#/components/parameters/MinDepth'
+        - $ref: '#/components/parameters/MaxDepth'
+        - $ref: '#/components/parameters/Depth'
+        - $ref: '#/components/parameters/MinHeight'
+        - $ref: '#/components/parameters/MaxHeight'
+        - $ref: '#/components/parameters/Height'
+        - $ref: '#/components/parameters/MinElevation'
+        - $ref: '#/components/parameters/MaxElevation'
+        - $ref: '#/components/parameters/Elevation'
       responses:
         "200":
           description: Successful operation
@@ -821,6 +848,15 @@ paths:
           schema:
             type: string
           example: "-180,-90,180,90"
+        - $ref: '#/components/parameters/MinDepth'
+        - $ref: '#/components/parameters/MaxDepth'
+        - $ref: '#/components/parameters/Depth'
+        - $ref: '#/components/parameters/MinHeight'
+        - $ref: '#/components/parameters/MaxHeight'
+        - $ref: '#/components/parameters/Height'
+        - $ref: '#/components/parameters/MinElevation'
+        - $ref: '#/components/parameters/MaxElevation'
+        - $ref: '#/components/parameters/Elevation'
       responses:
         "200":
           description: Successful operation
@@ -880,6 +916,15 @@ paths:
           schema:
             type: string
           example: "-180,-90,180,90"
+        - $ref: '#/components/parameters/MinDepth'
+        - $ref: '#/components/parameters/MaxDepth'
+        - $ref: '#/components/parameters/Depth'
+        - $ref: '#/components/parameters/MinHeight'
+        - $ref: '#/components/parameters/MaxHeight'
+        - $ref: '#/components/parameters/Height'
+        - $ref: '#/components/parameters/MinElevation'
+        - $ref: '#/components/parameters/MaxElevation'
+        - $ref: '#/components/parameters/Elevation'
       responses:
         "200":
           description: Successful operation
@@ -939,6 +984,15 @@ paths:
           schema:
             type: string
           example: "-180,-90,180,90"
+        - $ref: '#/components/parameters/MinDepth'
+        - $ref: '#/components/parameters/MaxDepth'
+        - $ref: '#/components/parameters/Depth'
+        - $ref: '#/components/parameters/MinHeight'
+        - $ref: '#/components/parameters/MaxHeight'
+        - $ref: '#/components/parameters/Height'
+        - $ref: '#/components/parameters/MinElevation'
+        - $ref: '#/components/parameters/MaxElevation'
+        - $ref: '#/components/parameters/Elevation'
       responses:
         "200":
           description: Successful operation
@@ -998,6 +1052,15 @@ paths:
           schema:
             type: string
           example: "-180,-90,180,90"
+        - $ref: '#/components/parameters/MinDepth'
+        - $ref: '#/components/parameters/MaxDepth'
+        - $ref: '#/components/parameters/Depth'
+        - $ref: '#/components/parameters/MinHeight'
+        - $ref: '#/components/parameters/MaxHeight'
+        - $ref: '#/components/parameters/Height'
+        - $ref: '#/components/parameters/MinElevation'
+        - $ref: '#/components/parameters/MaxElevation'
+        - $ref: '#/components/parameters/Elevation'
       responses:
         "200":
           description: Successful operation
@@ -1057,6 +1120,15 @@ paths:
           schema:
             type: string
           example: "-180,-90,180,90"
+        - $ref: '#/components/parameters/MinDepth'
+        - $ref: '#/components/parameters/MaxDepth'
+        - $ref: '#/components/parameters/Depth'
+        - $ref: '#/components/parameters/MinHeight'
+        - $ref: '#/components/parameters/MaxHeight'
+        - $ref: '#/components/parameters/Height'
+        - $ref: '#/components/parameters/MinElevation'
+        - $ref: '#/components/parameters/MaxElevation'
+        - $ref: '#/components/parameters/Elevation'
       responses:
         "200":
           description: Successful operation
@@ -1222,6 +1294,78 @@ components:
             - 48
       example: 30
       explode: false
+    MinDepth:
+      in: query
+      name: minDepth
+      description: Minimum depth where positive values correspond to distance below surface. Must be less than maxDepth if maxDepth provided
+      required: false
+      schema:
+        type: number
+      example: 0
+    MaxDepth:
+      in: query
+      name: maxDepth
+      description: Maximum depth where positive values correspond to distance below surface. Must be greater than minDepth if minDepth provided
+      required: false
+      schema:
+        type: number
+      example: 10
+    Depth:
+      in: query
+      name: depth
+      description: Depth where positive values correspond to distance below surface
+      required: false
+      schema:
+        type: number
+      example: 5
+    MinHeight:
+      in: query
+      name: minHeight
+      description: Minimum height above surface. Must be less than maxHeight if maxHeight provided
+      required: false
+      schema:
+        type: number
+      example: 0
+    MaxHeight:
+      in: query
+      name: maxHeight
+      description: Maximum height above surface. Must be greater than minHeight if minHeight provided
+      required: false
+      schema:
+        type: number
+      example: 10
+    Height:
+      in: query
+      name: height
+      description: Height above surface
+      required: false
+      schema:
+        type: number
+      example: 5
+    MinElevation:
+      in: query
+      name: minElevation
+      description: Minimum elevation above surface. Must be less than maxElevation if maxElevation provided
+      required: false
+      schema:
+        type: number
+      example: 0
+    MaxElevation:
+      in: query
+      name: maxElevation
+      description: Maximum elevation above surface. Must be greater than minElevation if minElevation provided
+      required: false
+      schema:
+        type: number
+      example: 10
+    Elevation:
+      in: query
+      name: elevation
+      description: Elevation above surface
+      required: false
+      schema:
+        type: number
+      example: 5
   schemas:
     DomsQueryResult:
       type: object

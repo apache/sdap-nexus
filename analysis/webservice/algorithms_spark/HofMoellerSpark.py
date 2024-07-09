@@ -194,8 +194,16 @@ class BaseHoffMoellerSparkHandlerImpl(NexusCalcSparkHandler):
         start_seconds_from_epoch = int((start_time - EPOCH).total_seconds())
         end_seconds_from_epoch = int((end_time - EPOCH).total_seconds())
         normalize_dates = request.get_normalize_dates()
+        
+        min_elevation, max_elevation = request.get_elevation_args()
 
-        return ds, bounding_polygon, start_seconds_from_epoch, end_seconds_from_epoch, normalize_dates
+        if (min_elevation and max_elevation) and min_elevation > max_elevation:
+            raise NexusProcessingException(
+                reason='Min elevation must be less than or equal to max elevation',
+                code=400
+            )
+
+        return ds, bounding_polygon, start_seconds_from_epoch, end_seconds_from_epoch, normalize_dates, min_elevation, max_elevation
 
     def applyDeseasonToHofMoellerByField(self, results, pivot="lats", field="mean", append=True):
         shape = (len(results), len(results[0][pivot]))
@@ -345,7 +353,7 @@ class LatitudeTimeHoffMoellerSparkHandlerImpl(BaseHoffMoellerSparkHandlerImpl):
         BaseHoffMoellerSparkHandlerImpl.__init__(self, **kwargs)
 
     def calc(self, compute_options, **args):
-        ds, bbox, start_time, end_time, normalize_dates = self.parse_arguments(compute_options)
+        ds, bbox, start_time, end_time, normalize_dates, min_elevation, max_elevation = self.parse_arguments(compute_options)
 
         metrics_record = self._create_metrics_record()
         calculation_start = datetime.now()
@@ -354,7 +362,8 @@ class LatitudeTimeHoffMoellerSparkHandlerImpl(BaseHoffMoellerSparkHandlerImpl):
 
         nexus_tiles_spark = [(self._latlon, tile.tile_id, x, min_lat, max_lat, min_lon, max_lon, tile.dataset) for x, tile in
                              enumerate(self._get_tile_service().find_tiles_in_box(min_lat, max_lat, min_lon, max_lon,
-                                                                                  ds, start_time, end_time,
+                                                                                  ds, start_time, end_time, min_elevation=min_elevation,
+                                                                                  max_elevation=max_elevation,
                                                                                   metrics_callback=metrics_record.record_metrics,
                                                                                   fetch_data=False))]
 
@@ -401,7 +410,7 @@ class LongitudeTimeHoffMoellerSparkHandlerImpl(BaseHoffMoellerSparkHandlerImpl):
         BaseHoffMoellerSparkHandlerImpl.__init__(self, **kwargs)
 
     def calc(self, compute_options, **args):
-        ds, bbox, start_time, end_time, normalize_dates = self.parse_arguments(compute_options)
+        ds, bbox, start_time, end_time, normalize_dates, min_elevation, max_elevation = self.parse_arguments(compute_options)
 
         metrics_record = self._create_metrics_record()
         calculation_start = datetime.now()
@@ -410,7 +419,8 @@ class LongitudeTimeHoffMoellerSparkHandlerImpl(BaseHoffMoellerSparkHandlerImpl):
 
         nexus_tiles_spark = [(self._latlon, tile.tile_id, x, min_lat, max_lat, min_lon, max_lon, tile.dataset) for x, tile in
                              enumerate(self._get_tile_service().find_tiles_in_box(min_lat, max_lat, min_lon, max_lon,
-                                                                                  ds, start_time, end_time,
+                                                                                  ds, start_time, end_time, min_elevation=min_elevation,
+                                                                                  max_elevation=max_elevation,
                                                                                   metrics_callback=metrics_record.record_metrics,
                                                                                   fetch_data=False))]
 
