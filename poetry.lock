@@ -217,6 +217,71 @@ docs = ["jaraco.packaging (>=3.2)", "rst.linker (>=1.9)", "sphinx"]
 testing = ["pytest (>=3.5,!=3.7.3)", "pytest-black-multipy", "pytest-checkdocs (>=1.2.3)", "pytest-cov", "pytest-flake8"]
 
 [[package]]
+name = "basemap"
+version = "1.3.9"
+description = "Plot data on map projections with matplotlib"
+optional = false
+python-versions = ">=2.6, !=3.0.*, !=3.1.*, <4"
+files = [
+    {file = "basemap-1.3.9-cp27-cp27m-win32.whl", hash = "sha256:eb70651888fd2bc54c180ef6edb0d331c133b52d242200d9de4a5f85736b6380"},
+    {file = "basemap-1.3.9-cp27-cp27m-win_amd64.whl", hash = "sha256:ae7a28e433aa26f2b1e20cc7e663415b697785de1647dcd27a32b75648a440c1"},
+    {file = "basemap-1.3.9-cp27-cp27mu-manylinux1_i686.whl", hash = "sha256:2e57d61ee4144c084d6bbcf4000c0d20d29b95db60f817a626329817e462d81e"},
+    {file = "basemap-1.3.9-cp27-cp27mu-manylinux1_x86_64.whl", hash = "sha256:782d5aeced90ae3ed8faaa8bb0844b3f3d409999b2fe68c239f48b58bd135d0d"},
+    {file = "basemap-1.3.9-cp310-cp310-manylinux1_i686.whl", hash = "sha256:3d12c051b1fe67bd99bc908cd5e8381fc4c1098f0f75dac01a714e1c23cae13f"},
+    {file = "basemap-1.3.9-cp310-cp310-manylinux1_x86_64.whl", hash = "sha256:b15ba7aa8a3412d090206d2cde29d01205c3a6d0ba737b7e2d4e607a7022d749"},
+    {file = "basemap-1.3.9-cp310-cp310-win32.whl", hash = "sha256:7c287dac5cbe9344f269d7d7658be54cecb1c85f93a1d33e404f61ebb83c2e05"},
+    {file = "basemap-1.3.9-cp310-cp310-win_amd64.whl", hash = "sha256:64cb0824ad72805e8e8cccb213b5b7a59d2b198e78f399f9ce4d5f6456159cfd"},
+    {file = "basemap-1.3.9-cp311-cp311-manylinux1_i686.whl", hash = "sha256:3c9651a9cad13a272a1b1e96dbe12ba15200c0ee3a8250a8189220efcc79c57d"},
+    {file = "basemap-1.3.9-cp311-cp311-manylinux1_x86_64.whl", hash = "sha256:8a6412bdd3fb7fa3c9f2f5e377084ed2a09f67d858958eeb63ac148653482fa5"},
+    {file = "basemap-1.3.9-cp311-cp311-win32.whl", hash = "sha256:62354d1310eadbc79bf9f81fa1fe3c5e1bbad5829272b5e4c6feb23446228cc9"},
+    {file = "basemap-1.3.9-cp311-cp311-win_amd64.whl", hash = "sha256:9b59aa1bd1df0ff0af73ce3b277831a3ae92a1c2b327329608af3883c5fbac85"},
+    {file = "basemap-1.3.9-cp35-cp35m-manylinux1_i686.whl", hash = "sha256:f3d2dd9ef6ded8ad7f2b889a24eb7a1368642222c75b685c2c48ed7274ebaaca"},
+    {file = "basemap-1.3.9-cp35-cp35m-manylinux1_x86_64.whl", hash = "sha256:8c207b787f913cd1e03d55298bc634d45d2f93a7dcdaf1b8b337b6a4b1a030dd"},
+    {file = "basemap-1.3.9-cp35-cp35m-win32.whl", hash = "sha256:c6e09b3371e8aa55e27934f13fecaf19d615cd8311e543b06de0e983913fb690"},
+    {file = "basemap-1.3.9-cp35-cp35m-win_amd64.whl", hash = "sha256:c2b531e80f4c86092365aa7bd3183d6a5d755e5fd652edc7d365a014a1b73451"},
+    {file = "basemap-1.3.9-cp36-cp36m-manylinux1_i686.whl", hash = "sha256:61668b1280cfa6ef7f8e3e7f5755b2155c1d3508ae8a37a0a9322efff2167f07"},
+    {file = "basemap-1.3.9-cp36-cp36m-manylinux1_x86_64.whl", hash = "sha256:12826a797946b2cba51f711ab4ec24899b93c746327c9a411dbd2f8d6f81f0b7"},
+    {file = "basemap-1.3.9-cp36-cp36m-win32.whl", hash = "sha256:df43ba6d6c196add944e1284ca7b3e52893e125d8b67bcac0c4f0c7c5ba60902"},
+    {file = "basemap-1.3.9-cp36-cp36m-win_amd64.whl", hash = "sha256:682bfc6da0bf90a1f22e065837821e36dfd681f862f3d428ec7310d6bc390040"},
+    {file = "basemap-1.3.9-cp37-cp37m-manylinux1_i686.whl", hash = "sha256:94c1eed9fbca34eee096a01f985a3c5fd351114f5a848fe879fa330e0dea7516"},
+    {file = "basemap-1.3.9-cp37-cp37m-manylinux1_x86_64.whl", hash = "sha256:a1587cb3a2c2c10905f133cb7450e946b72b01caec7959e029914b03bf40c34b"},
+    {file = "basemap-1.3.9-cp37-cp37m-win32.whl", hash = "sha256:5f519746dfbbe5fb41879d29b10f3ecf3d5a046b77d7ea00b43c0f3270599c00"},
+    {file = "basemap-1.3.9-cp37-cp37m-win_amd64.whl", hash = "sha256:57e4f524dad685c032374aff387aca435423838d388cecf42ade111471ba5b4d"},
+    {file = "basemap-1.3.9-cp38-cp38-manylinux1_i686.whl", hash = "sha256:3f07ae0772f2f8e6fbf3818551266b4a2b6c9b71a84966fbc5592bf138188511"},
+    {file = "basemap-1.3.9-cp38-cp38-manylinux1_x86_64.whl", hash = "sha256:3d17ddf670063089c918f31fb522688857d9f8a97864526315e2d210426062b4"},
+    {file = "basemap-1.3.9-cp38-cp38-win32.whl", hash = "sha256:c367e15a13882cc5c54bb1012432c8c32415f455cc37429f7abb53d5c9acf9a5"},
+    {file = "basemap-1.3.9-cp38-cp38-win_amd64.whl", hash = "sha256:cfecd9c42172e76689d5de55fadd729458cb902b31edd1092d21cb402412e0c1"},
+    {file = "basemap-1.3.9-cp39-cp39-manylinux1_i686.whl", hash = "sha256:32d9c75091d6cfbb799e74f5faabbf744793564f8edfa35c4aef26fbe1f0107b"},
+    {file = "basemap-1.3.9-cp39-cp39-manylinux1_x86_64.whl", hash = "sha256:56059fe6a978267a19cf9c8497b6212746a5bad651fd9a2864003aa03d58ae67"},
+    {file = "basemap-1.3.9-cp39-cp39-win32.whl", hash = "sha256:d065378c6520b22caba618413d9cccec28bfdc671962218a200dccf0ef3f60fb"},
+    {file = "basemap-1.3.9-cp39-cp39-win_amd64.whl", hash = "sha256:2b62c5164f3d58d33d18acd73ab84ca5b521a8c296a8444eedae24ac1252dbf6"},
+    {file = "basemap-1.3.9.zip", hash = "sha256:b787b9e627ca5358ca169494b60b8140607a7c6a4835a4fd00267e364e950699"},
+]
+
+[package.dependencies]
+basemap-data = ">=1.3.2,<1.4"
+matplotlib = {version = ">=1.5,<3.8", markers = "python_version >= \"3.5\""}
+numpy = {version = ">=1.21,<1.26", markers = "python_version >= \"3.8\""}
+pyproj = {version = ">=1.9.3,<3.7.0", markers = "python_version >= \"3.5\""}
+pyshp = {version = ">=1.2,<2.4", markers = "python_version >= \"2.7\""}
+
+[package.extras]
+doc = ["furo (>=2022.4.7,<2023.5.21)", "sphinx (>=5.3,<6.3)"]
+lint = ["astroid (>=1.6,<2.0)", "astroid (>=2.4,<2.5)", "astroid (>=2.5,<2.7)", "astroid (>=2.8,<3.0)", "flake8 (>=2.6,<3.0)", "flake8 (>=2.6,<3.0)", "flake8 (>=2.6,<3.0)", "flake8 (>=2.6,<3.9)", "flake8 (>=2.6,<4.0)", "flake8 (>=2.6,<7.1)", "pylint (>=1.9,<2.0)", "pylint (>=2.11,<3.0)", "pylint (>=2.6,<2.7)", "pylint (>=2.7,<2.10)", "unittest2"]
+test = ["coverage (>=3.7,<4.0)", "netCDF4 (>=1.3,<1.4)", "netCDF4 (>=1.3,<1.7)", "ordereddict", "pillow (>=3.4.0,<4.0.0)", "pillow (>=3.4.0,<4.0.0)", "pillow (>=4.3.0,<5.0.0)", "pillow (>=5.4.0,<6.0.0)", "pillow (>=6.2.2,<7.0.0)", "pillow (>=7.1.0,<8.0.0)", "pillow (>=8.3.2,<9.0.0)", "pillow (>=9.4.0,<10.1.0)", "pytest (>=2.9,<3.0)", "pytest (>=3.2,<3.3)", "pytest (>=3.2,<3.3)", "pytest (>=3.2,<5.0)", "pytest (>=3.2,<5.0)", "pytest (>=3.2,<6.2)", "pytest (>=6.2.5,<6.3)", "pytest-cov (>=2.5,<2.6)", "pytest-cov (>=2.5,<2.6)", "pytest-cov (>=2.5,<2.6)", "pytest-cov (>=2.5,<2.9)", "pytest-cov (>=2.5,<3.0)", "pytest-cov (>=2.5,<3.1)", "typing (>=3.5,<3.11)", "unittest2"]
+
+[[package]]
+name = "basemap-data"
+version = "1.3.2"
+description = "Data assets for matplotlib basemap"
+optional = false
+python-versions = ">=2.6, !=3.0.*, !=3.1.*, <4"
+files = [
+    {file = "basemap_data-1.3.2-py2.py3-none-any.whl", hash = "sha256:26e794556c496b26f7714658cdbea5c68cb47d6a8a9fb0e674844fa89c56fc59"},
+    {file = "basemap_data-1.3.2.zip", hash = "sha256:0072efd6f12c76e9f35e8fd718360d634b849ba988e74acccaf1ec536275f70b"},
+]
+
+[[package]]
 name = "boto3"
 version = "1.21.21"
 description = "The AWS SDK for Python"
@@ -1931,6 +1996,17 @@ files = [
 certifi = "*"
 
 [[package]]
+name = "pyshp"
+version = "2.3.1"
+description = "Pure Python read/write support for ESRI Shapefile format"
+optional = false
+python-versions = ">=2.7"
+files = [
+    {file = "pyshp-2.3.1-py2.py3-none-any.whl", hash = "sha256:67024c0ccdc352ba5db777c4e968483782dfa78f8e200672a90d2d30fd8b7b49"},
+    {file = "pyshp-2.3.1.tar.gz", hash = "sha256:4caec82fd8dd096feba8217858068bacb2a3b5950f43c048c6dc32a3489d5af1"},
+]
+
+[[package]]
 name = "pysolr"
 version = "3.9.0"
 description = "Lightweight Python client for Apache Solr"
@@ -2645,4 +2721,4 @@ test = ["big-O", "importlib-resources", "jaraco.functools", "jaraco.itertools", 
 [metadata]
 lock-version = "2.0"
 python-versions = "~=3.8"
-content-hash = "d5724c5c4ddd9411f2faf5519c3b3584bc9b8259e84d5c692911322ff67f4042"
+content-hash = "366ebca159efee2f1c9effd3598f6ecfbb349d0f85e91254f939508d70bf079f"
