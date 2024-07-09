@@ -14,15 +14,15 @@
 # limitations under the License.
 
 import argparse
+import hashlib
 import os
 import shutil
 import subprocess
 import tempfile
-import hashlib
-from tenacity import retry, stop_after_attempt, wait_fixed
 
 import requests
 from bs4 import BeautifulSoup
+from tenacity import retry, stop_after_attempt, wait_fixed
 
 DOCKER = shutil.which('docker')
 TAR = shutil.which('tar')
@@ -41,6 +41,8 @@ ASF_NEXUS_REPO = 'https://github.com/apache/sdap-nexus.git'
 ASF_INGESTER_REPO = 'https://github.com/apache/sdap-ingester.git'
 ASF_NEXUSPROTO_REPO = 'https://github.com/apache/sdap-nexusproto.git'
 ASF_NEXUSPROTO_BRANCH = 'develop'
+
+SKIP_KEYS = ['webapp', 'solr', 'solr-init', 'gi', 'cm']
 
 
 def build_cmd(
@@ -153,7 +155,7 @@ def basic_prompt(prompt, default=None):
             return response
 
 
-def pull_source(dst_dir: tempfile.TemporaryDirectory, args: argparse.Namespace):
+def pull_source(dst_dir: tempfile.TemporaryDirectory, build: dict):
     ASF = 'ASF (dist.apache.org)'
     GHB = 'GitHub'
     LFS = 'Local Filesystem (Not implemented yet)'
@@ -231,10 +233,16 @@ def pull_source(dst_dir: tempfile.TemporaryDirectory, args: argparse.Namespace):
         ingester_tarball = None
 
         for artifact in build_artifacts:
-            if '-nexus-' in artifact and not args.skip_nexus:
-                nexus_tarball = os.path.join(dst_dir.name, artifact)
-            elif '-ingester-' in artifact and not args.skip_ingester:
-                ingester_tarball = os.path.join(dst_dir.name, artifact)
+            if '-nexus-' in artifact:
+                if any([build['webapp'], build['solr'], build['solr-init']]):
+                    nexus_tarball = os.path.join(dst_dir.name, artifact)
+                else:
+                    continue
+            elif '-ingester-' in artifact:
+                if any([build['cm'], build['gi']]):
+                    ingester_tarball = os.path.join(dst_dir.name, artifact)
+                else:
+                    continue
 
             for ext in ['', '.sha512', '.asc']:
                 filename = artifact + ext
@@ -269,7 +277,7 @@ def pull_source(dst_dir: tempfile.TemporaryDirectory, args: argparse.Namespace):
 
         print('Extracting release source files...')
 
-        if not args.skip_nexus:
+        if any([build['webapp'], build['solr'], build['solr-init']]):
             run_subprocess(
                 [TAR, 'xvf', nexus_tarball, '-C', dst_dir.name],
                 suppress_output=True
@@ -279,7 +287,7 @@ def pull_source(dst_dir: tempfile.TemporaryDirectory, args: argparse.Namespace):
                 os.path.join(dst_dir.name, 'nexus')
             )
 
-        if not args.skip_ingester:
+        if any([build['cm'], build['gi']]):
             run_subprocess(
                 [TAR, 'xvf', ingester_tarball, '-C', dst_dir.name],
                 suppress_output=True
@@ -289,7 +297,7 @@ def pull_source(dst_dir: tempfile.TemporaryDirectory, args: argparse.Namespace):
                 os.path.join(dst_dir.name, 'ingester')
             )
     elif source_location == GHB:
-        if not args.skip_nexus:
+        if any([build['webapp'], build['solr'], build['solr-init']]):
             if not yes_no_prompt('Will you be using a fork for the Nexus repository? Y/[N]: ', False):
                 nexus_repo = ASF_NEXUS_REPO
             else:
@@ -311,7 +319,7 @@ def pull_source(dst_dir: tempfile.TemporaryDirectory, args: argparse.Namespace):
                 os.path.join(dst_dir.name, 'nexus')
             )
 
-        if not args.skip_ingester:
+        if any([build['cm'], build['gi']]):
             if not yes_no_prompt('Will you be using a fork for the Ingester repository? Y/[N]: ', False):
                 ingester_repo = ASF_INGESTER_REPO
             else:
@@ -447,6 +455,17 @@ def main():
 
     proto, proto_repo, proto_branch = args.proto_src, args.proto_repo, args.proto_branch
 
+    build = {key: key not in args.skip for key in SKIP_KEYS}
+
+    if args.skip_ingester:
+        build['cm'] = False
+        build['gi'] = False
+
+    if args.skip_nexus:
+        build['webapp'] = False
+        build['solr'] = False
+        build['solr-init'] = False
+
     if tag is None:
         tag = basic_prompt('Enter the tag to use for built images')
 
@@ -471,18 +490,18 @@ def main():
 
     extract_dir = tempfile.TemporaryDirectory()
 
-    pull_source(extract_dir, args)
+    pull_source(extract_dir, build)
 
     os.environ['DOCKER_DEFAULT_PLATFORM'] = 'linux/amd64'
 
     built_images = []
 
-    if not args.skip_ingester:
+    if any([build['cm'], build['gi']]):
         print('Building ingester images...')
 
         cm_tag = f'{registry}/sdap-collection-manager:{tag}'
 
-        if 'cm' not in args.skip:
+        if build['cm']:
             run_subprocess(build_cmd(
                 cm_tag,
                 os.path.join(extract_dir.name, 'ingester'),
@@ -494,7 +513,7 @@ def main():
 
         gi_tag = f'{registry}/sdap-granule-ingester:{tag}'
 
-        if 'gi' not in args.skip:
+        if build['gi']:
             run_subprocess(build_cmd(
                 gi_tag,
                 os.path.join(extract_dir.name, 'ingester'),
@@ -507,10 +526,10 @@ def main():
 
             built_images.append(gi_tag)
 
-    if not args.skip_nexus:
+    if any([build['webapp'], build['solr'], build['solr-init']]):
         solr_tag = f'{registry}/sdap-solr-cloud:{tag}'
 
-        if 'solr' not in args.skip:
+        if build['solr']:
             run_subprocess(build_cmd(
                 solr_tag,
                 os.path.join(extract_dir.name, 'nexus/docker/solr'),
@@ -521,7 +540,7 @@ def main():
 
         solr_init_tag = f'{registry}/sdap-solr-cloud-init:{tag}'
 
-        if 'solr-init' not in args.skip:
+        if build['solr-init']:
             run_subprocess(build_cmd(
                 solr_init_tag,
                 os.path.join(extract_dir.name, 'nexus/docker/solr'),
@@ -533,7 +552,7 @@ def main():
 
         webapp_tag = f'{registry}/sdap-nexus-webapp:{tag}'
 
-        if 'webapp' not in args.skip:
+        if build['webapp']:
             run_subprocess(build_cmd(
                 webapp_tag,
                 os.path.join(extract_dir.name, 'nexus'),
