@@ -24,6 +24,9 @@ class AbstractTileService(ABC):
     def __init__(self, dataset_name):
         self._name = dataset_name
 
+    def heartbeat(self) -> bool:
+        return True
+
     def update(self, force: bool=False) -> bool:
         """
         If applicable, verify the underlying connection(s) are still open and valid, replacing them if necessary

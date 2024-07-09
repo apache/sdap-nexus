@@ -187,6 +187,11 @@ class ZarrBackend(AbstractTileService):
 
         return True
 
+    def heartbeat(self) -> bool:
+        # TODO: This is temporary, eventually we should use the logic to be introduced for SDAP-517 (PR#312) to evaluate
+        #  if data is accessible currently.
+        return True
+
     def get_dataseries_list(self, simple=False):
         ds = {
             "shortName": self._name,
