@@ -4,6 +4,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased] - Unreleased
+### Added
+- SDAP-497: Added tool to ease building of releases. Can build from ASF distributions, git repos, and local
+### Changed
+### Deprecated
+### Removed
+### Fixed
+### Security
+
 ## [1.3.0] - 2024-06-10
 ### Added
 - SDAP-506:
@@ -14,7 +23,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Support for Zarr backend (gridded data only)
   - Dataset management endpoints for Zarr datasets
 - SDAP-513: Added helm chart value `solr.initImage` to specify Solr init pod image. If omitted, defaults to `apache/sdap-solr-cloud-init:1.1.0`
-- SDAP-497: Added tool to ease building of releases. Can build from ASF distributions, git repos, and local
 ### Changed
 - Updates to `openapi` spec to include additional algorithms
 - SDAP-493: 
