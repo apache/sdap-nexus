@@ -81,7 +81,7 @@ class StacCatalog(BaseDomsHandler.BaseDomsQueryCalcHandler):
         ]
 
         url = f'https://{self.host}/cdmsresults?id={execution_id}&output={output_format}'
-        for page_num in range(1, num_primary_matched, page_size):
+        for page_num, _ in enumerate(range(1, num_primary_matched, page_size), start=1):
             links.append({
                 'rel': 'data',
                 'href': f'{url}&pageNum={page_num}&pageSize={page_size}'
