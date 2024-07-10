@@ -115,8 +115,16 @@ class TimeAvgMapNexusSparkHandlerImpl(NexusCalcSparkHandler):
 
         start_seconds_from_epoch = int((start_time - EPOCH).total_seconds())
         end_seconds_from_epoch = int((end_time - EPOCH).total_seconds())
+        
+        min_elevation, max_elevation = request.get_elevation_args()
 
-        return ds, bounding_polygon, start_seconds_from_epoch, end_seconds_from_epoch, nparts_requested
+        if (min_elevation and max_elevation) and min_elevation > max_elevation:
+            raise NexusProcessingException(
+                reason='Min elevation must be less than or equal to max elevation',
+                code=400
+            )
+
+        return ds, bounding_polygon, start_seconds_from_epoch, end_seconds_from_epoch, nparts_requested, min_elevation, max_elevation
 
     def calc(self, compute_options, **args):
         """
@@ -129,7 +137,7 @@ class TimeAvgMapNexusSparkHandlerImpl(NexusCalcSparkHandler):
 
         metrics_record = self._create_metrics_record()
 
-        ds, bbox, start_time, end_time, nparts_requested = self.parse_arguments(compute_options)
+        ds, bbox, start_time, end_time, nparts_requested, min_elevation, max_elevation = self.parse_arguments(compute_options)
         self._setQueryParams(ds,
                              (float(bbox.bounds[1]),
                               float(bbox.bounds[3]),
@@ -197,7 +205,7 @@ class TimeAvgMapNexusSparkHandlerImpl(NexusCalcSparkHandler):
 
         rdd = self._sc.parallelize(nexus_tiles_spark, spark_nparts)
         metrics_record.record_metrics(partitions=rdd.getNumPartitions())
-        sum_count_part = rdd.map(partial(self._map, self._tile_service_factory, metrics_record.record_metrics))
+        sum_count_part = rdd.map(partial(self._map, self._tile_service_factory, metrics_record.record_metrics, min_elevation, max_elevation))
         reduce_duration = 0
         reduce_start = datetime.now()
         sum_count = sum_count_part.combineByKey(lambda val: val,
@@ -263,7 +271,7 @@ class TimeAvgMapNexusSparkHandlerImpl(NexusCalcSparkHandler):
                             endTime=end_time)
 
     @staticmethod
-    def _map(tile_service_factory, metrics_callback, tile_in_spark):
+    def _map(tile_service_factory, metrics_callback, min_elevation, max_elevation, tile_in_spark):
         tile_bounds = tile_in_spark[0]
         (min_lat, max_lat, min_lon, max_lon,
          min_y, max_y, min_x, max_x) = tile_bounds
@@ -290,6 +298,8 @@ class TimeAvgMapNexusSparkHandlerImpl(NexusCalcSparkHandler):
                                                                 ds=ds,
                                                                 start_time=t_start,
                                                                 end_time=t_end,
+                                                                min_elevation=min_elevation,
+                                                                max_elevation=max_elevation,
                                                                 metrics_callback=metrics_callback)
 
             calculation_start = datetime.now()

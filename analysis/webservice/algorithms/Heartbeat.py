@@ -29,15 +29,7 @@ class HeartbeatCalcHandlerImpl(NexusCalcHandler):
     singleton = True
 
     def calc(self, computeOptions, **args):
-        solrOnline = self._get_tile_service().pingSolr()
-
-        # Not sure how to best check cassandra cluster status so just return True for now
-        cassOnline = True
-
-        if solrOnline and cassOnline:
-            status = {"online": True}
-        else:
-            status = {"online": False}
+        status = self._get_tile_service().heartbeat()
 
         class SimpleResult(object):
             def __init__(self, result):

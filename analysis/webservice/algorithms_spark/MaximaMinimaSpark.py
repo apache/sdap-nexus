@@ -127,8 +127,16 @@ class MaximaMinimaSparkHandlerImpl(NexusCalcSparkHandler):
 
         start_seconds_from_epoch = int((start_time - EPOCH).total_seconds())
         end_seconds_from_epoch = int((end_time - EPOCH).total_seconds())
+        
+        min_elevation, max_elevation = request.get_elevation_args()
 
-        return ds, bounding_polygon, start_seconds_from_epoch, end_seconds_from_epoch, nparts_requested
+        if (min_elevation and max_elevation) and min_elevation > max_elevation:
+            raise NexusProcessingException(
+                reason='Min elevation must be less than or equal to max elevation',
+                code=400
+            )
+
+        return ds, bounding_polygon, start_seconds_from_epoch, end_seconds_from_epoch, nparts_requested, min_elevation, max_elevation
 
 
     def calc(self, compute_options, **args):
@@ -139,7 +147,7 @@ class MaximaMinimaSparkHandlerImpl(NexusCalcSparkHandler):
         :return:
         """
 
-        ds, bbox, start_time, end_time, nparts_requested = self.parse_arguments(compute_options)
+        ds, bbox, start_time, end_time, nparts_requested, min_elevation, max_elevation = self.parse_arguments(compute_options)
         self._setQueryParams(ds,
                              (float(bbox.bounds[1]),
                               float(bbox.bounds[3]),
@@ -180,9 +188,9 @@ class MaximaMinimaSparkHandlerImpl(NexusCalcSparkHandler):
                                                               self._maxLonCent))
 
         # Create array of tuples to pass to Spark map function
-        nexus_tiles_spark = [[self._find_tile_bounds(t),
+        nexus_tiles_spark = np.array([[self._find_tile_bounds(t),
                               self._startTime, self._endTime,
-                              self._ds] for t in nexus_tiles]
+                              self._ds] for t in nexus_tiles], dtype='object')
 
         # Remove empty tiles (should have bounds set to None)
         bad_tile_inds = np.where([t[0] is None for t in nexus_tiles_spark])[0]
@@ -205,7 +213,7 @@ class MaximaMinimaSparkHandlerImpl(NexusCalcSparkHandler):
         self.log.info('Using {} partitions'.format(spark_nparts))
 
         rdd = self._sc.parallelize(nexus_tiles_spark, spark_nparts)
-        max_min_part = rdd.map(partial(self._map, self._tile_service_factory))
+        max_min_part = rdd.map(partial(self._map, self._tile_service_factory, min_elevation, max_elevation))
         max_min_count = \
             max_min_part.combineByKey(lambda val: val,
                                         lambda x, val: (np.maximum(x[0], val[0]),   # Max
@@ -281,7 +289,7 @@ class MaximaMinimaSparkHandlerImpl(NexusCalcSparkHandler):
 
     # this operates on only one nexus tile bound over time. Can assume all nexus_tiles are the same shape
     @staticmethod
-    def _map(tile_service_factory, tile_in_spark):
+    def _map(tile_service_factory, min_elevation, max_elevation, tile_in_spark):
         # tile_in_spark is a spatial tile that corresponds to nexus tiles of the same area
         tile_bounds = tile_in_spark[0]
         (min_lat, max_lat, min_lon, max_lon,
@@ -313,7 +321,9 @@ class MaximaMinimaSparkHandlerImpl(NexusCalcSparkHandler):
                                                       min_lon, max_lon,
                                                       ds=ds,
                                                       start_time=t_start,
-                                                      end_time=t_end)
+                                                      end_time=t_end,
+                                                      min_elevation=min_elevation, 
+                                                      max_elevation=max_elevation)
 
             for tile in nexus_tiles:
                 # Take max and min of the data - just used the masked arrays, no extra .data

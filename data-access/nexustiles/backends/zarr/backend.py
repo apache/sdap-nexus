@@ -110,6 +110,11 @@ class ZarrBackend(AbstractTileService):
             logger.warning(f'Latitude coordinate for {self._name} is in descending order. Flipping it to ascending')
             self.__ds = self.__ds.isel({self.__latitude: slice(None, None, -1)})
 
+    def heartbeat(self) -> bool:
+        # TODO: This is temporary, eventually we should use the logic to be introduced for SDAP-517 (PR#312) to evaluate
+        #  if data is accessible currently.
+        return True
+
     def get_dataseries_list(self, simple=False):
         ds = {
             "shortName": self._name,
