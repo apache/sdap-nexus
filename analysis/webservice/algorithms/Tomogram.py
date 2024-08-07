@@ -14,12 +14,15 @@
 # limitations under the License.
 
 import logging
+import os
 from io import BytesIO
+from tempfile import TemporaryDirectory
 from typing import Tuple
 
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 import numpy as np
+import random
 import xarray as xr
 
 from webservice.NexusHandler import nexus_handler
@@ -245,6 +248,35 @@ class TomogramBaseClass(NexusCalcHandler):
                     name=var
                 )
 
+    @staticmethod
+    def _get_elevation_step_size(data):
+        tries = 5
+        sample = [1]
+
+        while tries >= 0:
+            tries -= 1
+            sample = data[random.randint(0, len(data) - 1)]
+
+            sample = [d['elevation'] for d in data if
+                      d['latitude'] == sample['latitude'] and d['longitude'] == sample['longitude']]
+            sample.sort()
+
+            sample = [sample[i+1] - sample[i] for i in range(len(sample) - 1)]
+
+            if min(sample) == max(sample):
+                break
+            elif tries < 0:
+                raise NexusProcessingException(
+                    code=500,
+                    reason=f'There appears to be non-uniform elevation slices in the subset: '
+                           f'{sample}, {min(sample)}, {max(sample)}, {len(sample)}'
+                )
+            else:
+                logger.warning(f'Possible bad elevation sampling. Trying again. '
+                               f'{min(sample)}, {max(sample)}, {len(sample)}')
+
+        return sample[0]
+
 
 # @nexus_handler
 class ElevationTomogramImpl(TomogramBaseClass):
@@ -368,16 +400,6 @@ class LongitudeTomogramImpl(TomogramBaseClass):
             "type": "int",
             "description": "Maximum Elevation. Required."
         },
-        "stride": {
-            "name": "Stride",
-            "type": "integer",
-            "description": "Stride between elevation slices. Default: 1"
-        },
-        "elevationMargin": {
-            "name": "Elevation Margin",
-            "type": "float",
-            "description": "Margin +/- desired elevation to include in output. Default: 0.5m"
-        },
         "horizontalMargin": {
             "name": "Horizontal Margin",
             "type": "float",
@@ -444,9 +466,7 @@ class LongitudeTomogramImpl(TomogramBaseClass):
         min_elevation = get_required_int('minElevation')
         max_elevation = get_required_int('maxElevation')
 
-        elevation_margin = compute_options.get_float_arg('elevationMargin', 0.5)
         horizontal_margin = compute_options.get_float_arg('horizontalMargin', 0.001)
-        stride = compute_options.get_int_arg('stride', 1)
 
         ch_ds = compute_options.get_argument('canopy_ds', None)
         g_ds = compute_options.get_argument('ground_ds', None)
@@ -466,12 +486,12 @@ class LongitudeTomogramImpl(TomogramBaseClass):
             mpl.colormaps['viridis']
         )
 
-        return (ds, parameter, longitude, min_lat, max_lat, min_elevation, max_elevation, elevation_margin,
-                horizontal_margin, stride, peaks, ch_ds, g_ds, percentiles, cmap)
+        return (ds, parameter, longitude, min_lat, max_lat, min_elevation, max_elevation, horizontal_margin, peaks,
+                ch_ds, g_ds, percentiles, cmap)
 
     def calc(self, compute_options, **args):
-        (dataset, parameter, longitude, min_lat, max_lat, min_elevation, max_elevation, elevation_margin,
-         horizontal_margin, stride, calc_peaks, ch_ds, g_ds, percentiles, cmap) = self.parse_args(compute_options)
+        (dataset, parameter, longitude, min_lat, max_lat, min_elevation, max_elevation, horizontal_margin, calc_peaks,
+         ch_ds, g_ds, percentiles, cmap) = self.parse_args(compute_options)
 
         slices = dict(
             lat=slice(min_lat, max_lat),
@@ -479,18 +499,15 @@ class LongitudeTomogramImpl(TomogramBaseClass):
             elevation=slice(min_elevation, max_elevation)
         )
 
-        # TODO: Do stride/elevation margin need to be provided or can they be computed? This is important because
-        #  getting them wrong will mess up the result. (?): Stride === elevation diff between adjacent layers;
-        #  margin === stride / 2
+        data_in_bounds = self.do_subset(dataset, parameter, slices, 0)
+        z_step = TomogramBaseClass._get_elevation_step_size(data_in_bounds)
 
-        r = np.arange(min_elevation, max_elevation + stride, stride)
-
-        data_in_bounds = self.do_subset(dataset, parameter, slices, elevation_margin)
+        r = np.arange(min_elevation, max_elevation + z_step, z_step)
 
         logger.info(f'Fetched {len(data_in_bounds):,} data points at this elevation')
 
         ds = TomogramBaseClass.data_subset_to_ds_with_elevation(
-            TomogramBaseClass.bin_subset_elevations_to_range(data_in_bounds, r, elevation_margin)
+            TomogramBaseClass.bin_subset_elevations_to_range(data_in_bounds, r, z_step / 2)
         )[3]
 
         slices['elevation'] = slice(None, None)
@@ -523,8 +540,6 @@ class LongitudeTomogramImpl(TomogramBaseClass):
         else:
             ds['tomo'] = xr.apply_ufunc(lambda a: 10 * np.log10(a), ds.tomo)
 
-        rows = ds.tomo.to_numpy()
-
         if calc_peaks:
             peaks = []
 
@@ -547,7 +562,7 @@ class LongitudeTomogramImpl(TomogramBaseClass):
             peaks = None
 
         return ProfileTomoResults(
-            results=(rows, peaks),
+            results=(ds, peaks),
             s={'longitude': longitude},
             coords=dict(x=lats, y=ds.elevation.to_numpy()),
             meta=dict(dataset=dataset),
@@ -596,16 +611,6 @@ class LatitudeTomogramImpl(TomogramBaseClass):
             "name": "Maximum Elevation",
             "type": "int",
             "description": "Maximum Elevation. Required."
-        },
-        "stride": {
-            "name": "Stride",
-            "type": "integer",
-            "description": "Stride between elevation slices. Default: 1"
-        },
-        "elevationMargin": {
-            "name": "Elevation Margin",
-            "type": "float",
-            "description": "Margin +/- desired elevation to include in output. Default: 0.5m"
         },
         "horizontalMargin": {
             "name": "Horizontal Margin",
@@ -673,9 +678,7 @@ class LatitudeTomogramImpl(TomogramBaseClass):
         min_elevation = get_required_int('minElevation')
         max_elevation = get_required_int('maxElevation')
 
-        elevation_margin = compute_options.get_float_arg('elevationMargin', 0.5)
         horizontal_margin = compute_options.get_float_arg('horizontalMargin', 0.001)
-        stride = compute_options.get_int_arg('stride', 1)
 
         ch_ds = compute_options.get_argument('canopy_ds', None)
         g_ds = compute_options.get_argument('ground_ds', None)
@@ -695,12 +698,12 @@ class LatitudeTomogramImpl(TomogramBaseClass):
             mpl.colormaps['viridis']
         )
 
-        return (ds, parameter, latitude, min_lon, max_lon, min_elevation, max_elevation, elevation_margin,
-                horizontal_margin, stride, peaks, ch_ds, g_ds, percentiles, cmap)
+        return (ds, parameter, latitude, min_lon, max_lon, min_elevation, max_elevation,horizontal_margin, peaks, ch_ds,
+                g_ds, percentiles, cmap)
 
     def calc(self, compute_options, **args):
-        (dataset, parameter, latitude, min_lon, max_lon, min_elevation, max_elevation, elevation_margin,
-         horizontal_margin, stride, calc_peaks, ch_ds, g_ds, percentiles, cmap) = self.parse_args(compute_options)
+        (dataset, parameter, latitude, min_lon, max_lon, min_elevation, max_elevation, horizontal_margin, calc_peaks,
+         ch_ds, g_ds, percentiles, cmap) = self.parse_args(compute_options)
 
         slices = dict(
             lon=slice(min_lon, max_lon),
@@ -708,14 +711,15 @@ class LatitudeTomogramImpl(TomogramBaseClass):
             elevation=slice(min_elevation, max_elevation)
         )
 
-        r = np.arange(min_elevation, max_elevation + stride, stride)
+        data_in_bounds = self.do_subset(dataset, parameter, slices, 0)
+        z_step = TomogramBaseClass._get_elevation_step_size(data_in_bounds)
 
-        data_in_bounds = self.do_subset(dataset, parameter, slices, elevation_margin)
+        r = np.arange(min_elevation, max_elevation + z_step, z_step)
 
         logger.info(f'Fetched {len(data_in_bounds):,} data points at this elevation')
 
         ds = TomogramBaseClass.data_subset_to_ds_with_elevation(
-            TomogramBaseClass.bin_subset_elevations_to_range(data_in_bounds, r, elevation_margin)
+            TomogramBaseClass.bin_subset_elevations_to_range(data_in_bounds, r, z_step / 2)
         )[3]
 
         slices['elevation'] = slice(None, None)
@@ -748,8 +752,6 @@ class LatitudeTomogramImpl(TomogramBaseClass):
         else:
             ds['tomo'] = xr.apply_ufunc(lambda a: 10 * np.log10(a), ds.tomo)
 
-        rows = ds.tomo.to_numpy()
-
         if calc_peaks:
             peaks = []
 
@@ -772,7 +774,7 @@ class LatitudeTomogramImpl(TomogramBaseClass):
             peaks = None
 
         return ProfileTomoResults(
-            results=(rows, peaks),
+            results=(ds, peaks),
             s={'latitude': latitude},
             coords=dict(x=lons, y=ds.elevation.to_numpy()),
             meta=dict(dataset=dataset),
@@ -838,7 +840,8 @@ class ProfileTomoResults(NexusResults):
         self.__cmap = args.get('cmap', mpl.colormaps['viridis'])
 
     def toImage(self):
-        rows, peaks = self.results()
+        ds, peaks = self.results()
+        rows = ds.tomo.to_numpy()
 
         if 'longitude' in self.__slice:
             lon = self.__slice['longitude']
@@ -879,3 +882,33 @@ class ProfileTomoResults(NexusResults):
         buffer.seek(0)
         plt.close()
         return buffer.read()
+
+    def toNetCDF(self):
+        ds, peaks = self.results()
+
+        if peaks is not None:
+            if 'latitude' in self.__slice:
+                coord = 'longitude'
+            else:
+                coord = 'latitude'
+
+            ds['peaks'] = xr.DataArray(
+                peaks[1],
+                coords={coord: ds[coord]},
+                dims=[coord],
+                name='peaks'
+            )
+
+        comp = dict(zlib=True, complevel=9)
+        encoding = {vname: comp for vname in ds.data_vars}
+
+        with TemporaryDirectory() as td:
+            ds.to_netcdf(os.path.join(td, 'ds.nc'), encoding=encoding)
+
+            with open(os.path.join(td, 'ds.nc'), 'rb') as fp:
+                buf = BytesIO(fp.read())
+
+        buf.seek(0)
+        return buf.read()
+
+
