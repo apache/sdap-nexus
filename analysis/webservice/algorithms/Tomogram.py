@@ -13,8 +13,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+
+import contextlib
 import logging
 import os
+import re
+import zipfile
 from io import BytesIO
 from tempfile import TemporaryDirectory
 from typing import Tuple
@@ -25,11 +29,13 @@ import numpy as np
 import random
 import xarray as xr
 
+from PIL import Image
 from webservice.NexusHandler import nexus_handler
 from webservice.algorithms.NexusCalcHandler import NexusCalcHandler
 from webservice.webmodel import NexusResults, NexusProcessingException, NoDataException
 
 logger = logging.getLogger(__name__)
+FLOAT_PATTERN = re.compile(r'^[+-]?(\d+(\.\d*)?|\.\d+)$')
 
 
 class TomogramBaseClass(NexusCalcHandler):
@@ -75,6 +81,10 @@ class TomogramBaseClass(NexusCalcHandler):
         else:
             min_elevation = bounds['elevation'] - margin
             max_elevation = bounds['elevation'] + margin
+
+        # In case slices are unbounded (ie, start/stop is None) replace the associated values with max/min for coord
+        min_lat, min_lon, max_lat, max_lon = [v if v is not None else d for v, d in
+                                              zip([min_lat, min_lon, max_lat, max_lon], [-90, -180, 90, 180])]
 
         tiles = tile_service.find_tiles_in_box(
             min_lat, max_lat, min_lon, max_lon,
@@ -377,8 +387,14 @@ class LongitudeTomogramImpl(TomogramBaseClass):
         },
         "longitude": {
             "name": "Longitude",
-            "type": "float",
-            "description": "Longitude at which to slice the tomogram. Required."
+            "type": "float, comma-delimited floats(>1), colon-delimited floats(<=3), literal['*']",
+            "description": "Longitude(s) at which to slice the tomogram. Required. Valid formats: Single float - Slice "
+                           "at a singular longitude; comma-delimited floats - slice at a list of longitudes; "
+                           "colon-delimited floats - slice using Python slicing notation (both ends are inclusive): "
+                           "[<start>]:[<stop>]:[<step>] where omitting <start> and/or <stop> produce unbounded slices "
+                           "and omitting <step> equates to an all-inclusive step size. A special value of \"*\" "
+                           "equates to ::1. Values other than singular floats are incompatible with PNG rendering "
+                           "(use ZIP to a ZIP archive of .pngs)"
         },
         "minLat": {
             "name": "Minimum Latitude",
@@ -460,7 +476,59 @@ class LongitudeTomogramImpl(TomogramBaseClass):
 
             return val
 
-        longitude = get_required_float('longitude')
+        longitude = compute_options.get_argument('longitude', None)
+        output = compute_options.get_content_type().lower()
+
+        if longitude is None:
+            raise NexusProcessingException(reason='Missing required parameter: longitude', code=400)
+        if re.match(FLOAT_PATTERN, longitude):
+            longitude = float(longitude)
+
+            if longitude < -180 or longitude > 180:
+                raise NexusProcessingException(reason='Invalid longitude: out of range', code=400)
+
+            longitude = [longitude]
+        elif ',' in longitude:
+            if output == 'png':
+                raise NexusProcessingException(reason='Cannot use PNG output with multi-longitude slicing', code=400)
+
+            try:
+                longitude = list(sorted([float(l) for l in longitude.split(',')]))
+            except ValueError:
+                raise NexusProcessingException(reason='Invalid longitude: invalid format', code=400)
+
+            if any([l < -180 or l > 180 for l in longitude]):
+                raise NexusProcessingException(reason='Invalid longitude: out of range', code=400)
+        elif ':' in longitude:
+            if output == 'png':
+                raise NexusProcessingException(reason='Cannot use PNG output with multi-longitude slicing', code=400)
+
+            try:
+                longitude = slice(*(float(p) if p else None for p in longitude.split(':')))
+            except:
+                raise NexusProcessingException(reason='Invalid longitude: invalid format', code=400)
+
+            if longitude.start is not None and longitude.stop is not None and longitude.start >= longitude.stop:
+                raise NexusProcessingException(reason='Invalid longitude: out of order', code=400)
+
+            # Some helpers for a < b / a > b where a could be None and return false in that case
+            def lt(a, b):
+                return a is not None and a < b
+
+            def gt(a, b):
+                return a is not None and a > b
+
+            if (lt(longitude.start, -180) or gt(longitude.start, 180) or
+                    lt(longitude.stop, -180) or gt(longitude.stop, 180)):
+                raise NexusProcessingException(reason='Invalid longitude: out of range', code=400)
+        elif longitude == '*':
+            if output == 'png':
+                raise NexusProcessingException(reason='Cannot use PNG output with multi-longitude slicing', code=400)
+
+            longitude = slice(None, None, None)
+        else:
+            raise NexusProcessingException(reason='Invalid longitude argument', code=400)
+
         min_lat = get_required_float('minLat')
         max_lat = get_required_float('maxLat')
         min_elevation = get_required_int('minElevation')
@@ -495,9 +563,15 @@ class LongitudeTomogramImpl(TomogramBaseClass):
 
         slices = dict(
             lat=slice(min_lat, max_lat),
-            lon=slice(longitude - horizontal_margin, longitude + horizontal_margin),
             elevation=slice(min_elevation, max_elevation)
         )
+
+        if isinstance(longitude, slice):
+            slices['lon'] = longitude
+        elif isinstance(longitude, list):
+            slices['lon'] = slice(longitude[0] - horizontal_margin, longitude[-1] + horizontal_margin)
+        else:
+            slices['lon'] = slice(longitude - horizontal_margin, longitude + horizontal_margin)
 
         data_in_bounds = self.do_subset(dataset, parameter, slices, 0)
         z_step = TomogramBaseClass._get_elevation_step_size(data_in_bounds)
@@ -519,13 +593,14 @@ class LongitudeTomogramImpl(TomogramBaseClass):
         if g_ds is not None:
             elev_vars['gh'] = TomogramBaseClass.data_subset_to_ds(self.do_subset(g_ds, parameter, slices, 0))[3]
 
-        # if len(ds.longitude) > 1:
-        #     ds = ds.sel(longitude=longitude, method='nearest')
-
         if elev_vars:
             TomogramBaseClass.add_variables_to_tomo(ds, **elev_vars)
 
-        ds = ds.sel(longitude=longitude, method='nearest')
+        if isinstance(longitude, list):
+            lon_slices = [ds.sel(longitude=l, method='nearest') for l in longitude]
+            ds = xr.concat(lon_slices, dim='longitude').drop_duplicates('longitude')
+        else:
+            ds = ds.sel(longitude=longitude)
 
         if 'ch' in ds.data_vars:
             ds['tomo'] = ds['tomo'].where(ds.tomo.elevation <= ds.ch)
@@ -543,21 +618,25 @@ class LongitudeTomogramImpl(TomogramBaseClass):
         if calc_peaks:
             peaks = []
 
-            for i in range(len(ds.tomo.latitude)):
-                col = ds.isel(latitude=i)
+            for i in range(len(ds.tomo.longitude)):
+                lon_peaks = []
+                ds_sub = ds.isel(longitude=i)
 
-                lat = col.latitude.item()
+                for j in range(len(ds.tomo.latitude)):
+                    col = ds_sub.isel(latitude=j)
 
-                try:
-                    idx = col.argmax(dim='elevation').tomo.item()
+                    lat = col.latitude.item()
 
-                    peaks.append((lat, col.isel(elevation=idx).elevation.item()))
+                    try:
+                        idx = col.argmax(dim='elevation').tomo.item()
 
-                except ValueError:
-                    peaks.append((lat, np.nan))
+                        lon_peaks.append((lat, col.isel(elevation=idx).elevation.item()))
 
-            peaks = (np.array([p[0] for p in peaks]),
-                     np.array([p[1] for p in peaks]))
+                    except ValueError:
+                        lon_peaks.append((lat, np.nan))
+
+                peaks.append((np.array([p[0] for p in lon_peaks]),
+                              np.array([p[1] for p in lon_peaks])))
         else:
             peaks = None
 
@@ -589,8 +668,14 @@ class LatitudeTomogramImpl(TomogramBaseClass):
         },
         "latitude": {
             "name": "Latitude",
-            "type": "float",
-            "description": "Latitude at which to slice the tomogram. Required."
+            "type": "float, comma-delimited floats(>1), colon-delimited floats(<=3), literal['*']",
+            "description": "Latitude(s) at which to slice the tomogram. Required. Valid formats: Single float - Slice "
+                           "at a singular latitude; comma-delimited floats - slice at a list of latitudes; "
+                           "colon-delimited floats - slice using Python slicing notation (both ends are inclusive): "
+                           "[<start>]:[<stop>]:[<step>] where omitting <start> and/or <stop> produce unbounded slices "
+                           "and omitting <step> equates to an all-inclusive step size. A special value of \"*\" "
+                           "equates to ::1. Values other than singular floats are incompatible with PNG rendering "
+                           "(use ZIP to a ZIP archive of .pngs)"
         },
         "minLon": {
             "name": "Minimum Longitude",
@@ -672,7 +757,59 @@ class LatitudeTomogramImpl(TomogramBaseClass):
 
             return val
 
-        latitude = get_required_float('latitude')
+        latitude = compute_options.get_argument('latitude', None)
+        output = compute_options.get_content_type().lower()
+
+        if latitude is None:
+            raise NexusProcessingException(reason='Missing required parameter: latitude', code=400)
+        if re.match(FLOAT_PATTERN, latitude):
+            latitude = float(latitude)
+
+            if latitude < -180 or latitude > 180:
+                raise NexusProcessingException(reason='Invalid latitude: out of range', code=400)
+
+            latitude = [latitude]
+        elif ',' in latitude:
+            if output == 'png':
+                raise NexusProcessingException(reason='Cannot use PNG output with multi-latitude slicing', code=400)
+
+            try:
+                latitude = list(sorted([float(l) for l in latitude.split(',')]))
+            except ValueError:
+                raise NexusProcessingException(reason='Invalid latitude: invalid format', code=400)
+
+            if any([l < -180 or l > 180] for l in latitude):
+                raise NexusProcessingException(reason='Invalid latitude: out of range', code=400)
+        elif ':' in latitude:
+            if output == 'png':
+                raise NexusProcessingException(reason='Cannot use PNG output with multi-longitude slicing', code=400)
+
+            try:
+                latitude = slice(*(float(p) if p else None for p in latitude.split(':')))
+            except:
+                raise NexusProcessingException(reason='Invalid latitude: invalid format', code=400)
+
+            if latitude.start is not None and latitude.stop is not None and latitude.start >= latitude.stop:
+                raise NexusProcessingException(reason='Invalid latitude: out of order', code=400)
+
+            # Some helpers for a < b / a > b where a could be None and return false in that case
+            def lt(a, b):
+                return a is not None and a < b
+
+            def gt(a, b):
+                return a is not None and a > b
+
+            if (lt(latitude.start, -180) or gt(latitude.start, 180) or
+                    lt(latitude.stop, -180) or gt(latitude.stop, 180)):
+                raise NexusProcessingException(reason='Invalid latitude: out of range', code=400)
+        elif latitude == '*':
+            if output == 'png':
+                raise NexusProcessingException(reason='Cannot use PNG output with multi-latitude slicing', code=400)
+
+            latitude = slice(None, None, None)
+        else:
+            raise NexusProcessingException(reason='Invalid latitude argument', code=400)
+
         min_lon = get_required_float('minLon')
         max_lon = get_required_float('maxLon')
         min_elevation = get_required_int('minElevation')
@@ -707,9 +844,15 @@ class LatitudeTomogramImpl(TomogramBaseClass):
 
         slices = dict(
             lon=slice(min_lon, max_lon),
-            lat=slice(latitude - horizontal_margin, latitude + horizontal_margin),
             elevation=slice(min_elevation, max_elevation)
         )
+
+        if isinstance(latitude, slice):
+            slices['lat'] = latitude
+        elif isinstance(latitude, list):
+            slices['lat'] = slice(latitude[0] - horizontal_margin, latitude[-1] + horizontal_margin)
+        else:
+            slices['lat'] = slice(latitude - horizontal_margin, latitude + horizontal_margin)
 
         data_in_bounds = self.do_subset(dataset, parameter, slices, 0)
         z_step = TomogramBaseClass._get_elevation_step_size(data_in_bounds)
@@ -731,13 +874,14 @@ class LatitudeTomogramImpl(TomogramBaseClass):
         if g_ds is not None:
             elev_vars['gh'] = TomogramBaseClass.data_subset_to_ds(self.do_subset(g_ds, parameter, slices, 0))[3]
 
-        # if len(ds.latitude) > 1:
-        #     ds = ds.sel(latitude=latitude, method='nearest')
-
         if elev_vars:
             TomogramBaseClass.add_variables_to_tomo(ds, **elev_vars)
 
-        ds = ds.sel(latitude=latitude, method='nearest')
+        if isinstance(latitude, list):
+            lat_slices = [ds.sel(latitude=l, method='nearest') for l in latitude]
+            ds = xr.concat(lat_slices, dim='latitude').drop_duplicates('latitude')
+        else:
+            ds = ds.sel(latitude=latitude)
 
         if 'ch' in ds.data_vars:
             ds['tomo'] = ds['tomo'].where(ds.tomo.elevation <= ds.ch)
@@ -755,21 +899,25 @@ class LatitudeTomogramImpl(TomogramBaseClass):
         if calc_peaks:
             peaks = []
 
-            for i in range(len(ds.tomo.longitude)):
-                col = ds.isel(longitude=i)
+            for i in range(len(ds.tomo.latitude)):
+                lat_peaks = []
+                ds_sub = ds.isel(latitude=i)
 
-                lon = col.longitude.item()
+                for j in range(len(ds.tomo.longitude)):
+                    col = ds_sub.isel(longitude=j)
 
-                try:
-                    idx = col.argmax(dim='elevation').tomo.item()
+                    lon = col.longitude.item()
 
-                    peaks.append((lon, col.isel(elevation=idx).elevation.item()))
+                    try:
+                        idx = col.argmax(dim='elevation').tomo.item()
 
-                except ValueError:
-                    peaks.append((lon, np.nan))
+                        lat_peaks.append((lon, col.isel(elevation=idx).elevation.item()))
 
-            peaks = (np.array([p[0] for p in peaks]),
-                     np.array([p[1] for p in peaks]))
+                    except ValueError:
+                        lat_peaks.append((lon, np.nan))
+
+                peaks.append((np.array([p[0] for p in lat_peaks]),
+                              np.array([p[1] for p in lat_peaks])))
         else:
             peaks = None
 
@@ -839,18 +987,24 @@ class ProfileTomoResults(NexusResults):
         self.__style = style
         self.__cmap = args.get('cmap', mpl.colormaps['viridis'])
 
-    def toImage(self):
+    def toImage(self, i=0):
         ds, peaks = self.results()
-        rows = ds.tomo.to_numpy()
 
         if 'longitude' in self.__slice:
             lon = self.__slice['longitude']
             title_row = f'Longitude: {lon}'
             xlabel = 'Latitude'
+            coord = 'longitude'
         else:
             lat = self.__slice['latitude']
             title_row = f'Latitude: {lat}'
             xlabel = 'Longitude'
+            coord = 'latitude'
+
+        ds = ds.isel({coord: i})
+        rows = ds.tomo.to_numpy()
+        if peaks is not None:
+            peaks = peaks[i]
 
         logger.info('Building plot')
 
@@ -887,15 +1041,10 @@ class ProfileTomoResults(NexusResults):
         ds, peaks = self.results()
 
         if peaks is not None:
-            if 'latitude' in self.__slice:
-                coord = 'longitude'
-            else:
-                coord = 'latitude'
-
             ds['peaks'] = xr.DataArray(
-                peaks[1],
-                coords={coord: ds[coord]},
-                dims=[coord],
+                np.array([p[1] for p in peaks]),
+                coords=dict(latitude=ds['latitude'], longitude=ds['longitude']),
+                dims=['longitude', 'latitude'],
                 name='peaks'
             )
 
@@ -911,4 +1060,104 @@ class ProfileTomoResults(NexusResults):
         buf.seek(0)
         return buf.read()
 
+    def __plot_to_images(self, td):
+        ds, peaks = self.results()
 
+        if 'latitude' in self.__slice:
+            along = 'latitude'
+            across = 'longitude'
+            title_row = 'Latitude: {:3.4f}'
+            xlabel = 'Longitude'
+        else:
+            along = 'longitude'
+            across = 'latitude'
+            title_row = 'Longitude: {:3.4f}'
+            xlabel = 'Latitude'
+
+        min_across = ds[across].min().item()
+        max_across = ds[across].max().item()
+
+        files = []
+
+        # with TemporaryDirectory() as td:
+        for al_i in range(len(ds[along])):
+            ds_sub = ds.isel({along: al_i})
+            al = ds_sub[along].item()
+
+            rows = ds_sub.tomo.to_numpy()
+
+            peaks_sub = None
+
+            if peaks is not None:
+                peaks_sub = peaks[al_i]
+
+            logger.info(f'Building plot for along slice {al_i} of {len(ds[along])}')
+
+            plt.figure(figsize=(11, 7))
+            if self.__style == 'db':
+                v = dict(vmin=-30, vmax=-10)
+            else:
+                v = dict(vmin=0, vmax=1)
+
+            plt.pcolormesh(self.__coords['x'], self.__coords['y'], rows, cmap=self.__cmap, **v)
+            plt.colorbar()
+            plt.title(f'{self.meta()["dataset"]} tomogram slice\n{title_row.format(al)}')
+            plt.xlabel(xlabel)
+            plt.ylabel(f'Elevation w.r.t. {self.meta()["dataset"]} reference (m)')
+
+            if peaks_sub is not None:
+                plt.plot(
+                    peaks_sub[0], peaks_sub[1], color='red', alpha=0.75
+                )
+
+                plt.legend(['Peak value'])
+
+            plt.ticklabel_format(useOffset=False)
+
+            filename = f'tomogram_{self.meta()["dataset"]}_{along}_{al:3.4f}_{across}_{min_across:3.4f}_to_{max_across:3.4f}.png'
+
+            plt.savefig(
+                os.path.join(
+                    td, filename
+                ), format='png', facecolor='white')
+
+            files.append((filename, os.path.join(td, filename)))
+            plt.close()
+
+        return files
+
+    def toZip(self):
+        buffer = BytesIO()
+
+        with TemporaryDirectory() as td:
+            files = self.__plot_to_images(td)
+
+            with zipfile.ZipFile(buffer, 'a', zipfile.ZIP_DEFLATED) as zf:
+                for filename, file_path in files:
+                    zf.write(file_path, filename)
+
+        buffer.seek(0)
+        return buffer.read()
+
+    def toGif(self):
+        buffer = BytesIO()
+
+        with TemporaryDirectory() as td:
+            files = self.__plot_to_images(td)
+
+            with contextlib.ExitStack() as stack:
+                logger.info(f'Combining frames into final GIF')
+
+                imgs = (stack.enter_context(Image.open(f[1])) for f in files)
+                img = next(imgs)
+                img.save(
+                    buffer,
+                    format='GIF',
+                    save_all=True,
+                    append_images=imgs,
+                    duration=([100] * (len(files) - 1)) + [800],
+                    loop=0
+                )
+
+        buffer.seek(0)
+        return buffer.read()
