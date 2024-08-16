@@ -97,7 +97,7 @@ class TomogramBaseClass(NexusCalcHandler):
         logger.info(f'Matched {len(tiles):,} tiles from Solr')
 
         if len(tiles) == 0:
-            raise NoDataException(reason='No data was found within the selected parameters')
+            raise NoDataException(reason='No tiles matched the selected parameters')
 
         data = []
 
@@ -140,6 +140,9 @@ class TomogramBaseClass(NexusCalcHandler):
                     'elevation': nexus_point.depth,
                     'data': data_val
                 })
+
+        if len(data) == 0:
+            raise NoDataException(reason='No data fit the selected parameters')
 
         return data
 
@@ -451,6 +454,18 @@ class LongitudeTomogramImpl(TomogramBaseClass):
             "description": f"Color map to use. Will default to viridis if not provided or an unsupported map is "
                            f"provided. Supported cmaps: {[k for k in sorted(mpl.colormaps.keys())]}"
         },
+        "cbarMin": {
+            "name": "Color bar min",
+            "type": "float",
+            "description": "Minimum value of the color bar. Only applies if elevPercentiles is False. Value must be "
+                           "less than cbarMax. Invalid configuration will be replaced by default values (-30)"
+        },
+        "cbarMax": {
+            "name": "Color bar max",
+            "type": "float",
+            "description": "Maximum value of the color bar. Only applies if elevPercentiles is False. Value must be "
+                           " greater than cbarMin. Invalid configuration will be replaced by default value (-10)"
+        },
     }
     singleton = True
 
@@ -646,7 +661,8 @@ class LongitudeTomogramImpl(TomogramBaseClass):
             coords=dict(x=lats, y=ds.elevation.to_numpy()),
             meta=dict(dataset=dataset),
             style='db' if not percentiles else 'percentile',
-            cmap=cmap
+            cmap=cmap,
+            computeOptions=compute_options
         )
 
 
@@ -731,6 +747,18 @@ class LatitudeTomogramImpl(TomogramBaseClass):
             "type": "string",
             "description": f"Color map to use. Will default to viridis if not provided or an unsupported map is "
                            f"provided. Supported cmaps: {[k for k in sorted(mpl.colormaps.keys())]}"
+        },
+        "cbarMin": {
+            "name": "Color bar min",
+            "type": "float",
+            "description": "Minimum value of the color bar. Only applies if elevPercentiles is False. Must be set with"
+                           " and less than cbarMax. Invalid configuration will be replaced by default value (-30)"
+        },
+        "cbarMax": {
+            "name": "Color bar max",
+            "type": "float",
+            "description": "Maximum value of the color bar. Only applies if elevPercentiles is False. Must be set with"
+                           " and greater than cbarMin. Invalid configuration will be replaced by default value (-10)"
         },
     }
     singleton = True
@@ -927,7 +955,8 @@ class LatitudeTomogramImpl(TomogramBaseClass):
             coords=dict(x=lons, y=ds.elevation.to_numpy()),
             meta=dict(dataset=dataset),
             style='db' if not percentiles else 'percentile',
-            cmap=cmap
+            cmap=cmap,
+            computeOptions=compute_options
         )
 
 
@@ -981,7 +1010,9 @@ class ProfileTomoResults(NexusResults):
             status_code=200,
             **args
     ):
-        NexusResults.__init__(self, results, meta, stats, computeOptions, status_code, **args)
+        NexusResults.__init__(self, results, meta, stats, None, status_code, **args)
+        # Workaround to avoid error from non-standard parameters
+        self.__computeOptions = computeOptions
         self.__coords = coords
         self.__slice = s
         self.__style = style
@@ -990,13 +1021,15 @@ class ProfileTomoResults(NexusResults):
     def toImage(self, i=0):
         ds, peaks = self.results()
 
+        options = self.__computeOptions
+
         if 'longitude' in self.__slice:
-            lon = self.__slice['longitude']
+            lon = self.__slice['longitude'][0]
             title_row = f'Longitude: {lon}'
             xlabel = 'Latitude'
             coord = 'longitude'
         else:
-            lat = self.__slice['latitude']
+            lat = self.__slice['latitude'][0]
             title_row = f'Latitude: {lat}'
             xlabel = 'Longitude'
             coord = 'latitude'
@@ -1010,7 +1043,19 @@ class ProfileTomoResults(NexusResults):
 
         plt.figure(figsize=(11, 7))
         if self.__style == 'db':
+            opt_min = options.get_float_arg('cbarMin', None)
+            opt_max = options.get_float_arg('cbarMax', None)
+
             v = dict(vmin=-30, vmax=-10)
+
+            if opt_min is not None:
+                v['vmin'] = opt_min
+            if opt_max is not None:
+                v['vmax'] = opt_max
+
+            if v['vmin'] >= v['vmax']:
+                logger.warning('cbarMin >= cbarMax. Using defaults')
+                v = dict(vmin=-30, vmax=-10)
         else:
             v = dict(vmin=0, vmax=1)
         plt.pcolormesh(self.__coords['x'], self.__coords['y'], rows, cmap=self.__cmap, **v)
@@ -1063,6 +1108,8 @@ class ProfileTomoResults(NexusResults):
     def __plot_to_images(self, td):
         ds, peaks = self.results()
 
+        options = self.__computeOptions
+
         if 'latitude' in self.__slice:
             along = 'latitude'
             across = 'longitude'
@@ -1095,7 +1142,19 @@ class ProfileTomoResults(NexusResults):
 
             plt.figure(figsize=(11, 7))
             if self.__style == 'db':
+                opt_min = options.get_float_arg('cbarMin', None)
+                opt_max = options.get_float_arg('cbarMax', None)
+
                 v = dict(vmin=-30, vmax=-10)
+
+                if opt_min is not None:
+                    v['vmin'] = opt_min
+                if opt_max is not None:
+                    v['vmax'] = opt_max
+
+                if v['vmin'] >= v['vmax']:
+                    logger.warning('cbarMin >= cbarMax. Using defaults')
+                    v = dict(vmin=-30, vmax=-10)
             else:
                 v = dict(vmin=0, vmax=1)
 
