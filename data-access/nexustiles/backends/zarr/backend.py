@@ -123,14 +123,19 @@ class ZarrBackend(AbstractTileService):
         }
 
         if not simple:
-            min_date = self.get_min_time([])
-            max_date = self.get_max_time([])
-            ds['start'] = min_date
-            ds['end'] = max_date
-            ds['iso_start'] = datetime.utcfromtimestamp(min_date).strftime(ISO_8601)
-            ds['iso_end'] = datetime.utcfromtimestamp(max_date).strftime(ISO_8601)
+            try:
+                min_date = self.get_min_time([])
+                max_date = self.get_max_time([])
+                ds['start'] = min_date
+                ds['end'] = max_date
+                ds['iso_start'] = datetime.utcfromtimestamp(min_date).strftime(ISO_8601)
+                ds['iso_end'] = datetime.utcfromtimestamp(max_date).strftime(ISO_8601)
 
-            ds['metadata'] = dict(self.__ds.attrs)
+                ds['metadata'] = dict(self.__ds.attrs)
+            except Exception as e:
+                logger.error(f'Failed to access dataset for {self._name}. Cause: {e}')
+                ds['error'] = "Dataset is currently unavailable"
+                ds['error_reason'] = str(e)
 
         return [ds]
 
