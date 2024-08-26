@@ -17,19 +17,22 @@
 import contextlib
 import logging
 import os
+import random
 import re
 import zipfile
 from io import BytesIO
+from math import ceil, sqrt, isnan
 from tempfile import TemporaryDirectory
 from typing import Tuple
 
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 import numpy as np
-import random
 import xarray as xr
-
 from PIL import Image
+from geopy.distance import geodesic
+from shapely.geometry import Point, LineString
+
 from webservice.NexusHandler import nexus_handler
 from webservice.algorithms.NexusCalcHandler import NexusCalcHandler
 from webservice.webmodel import NexusResults, NexusProcessingException, NoDataException
@@ -110,7 +113,6 @@ class TomogramBaseClass(NexusCalcHandler):
 
             tile = tile_service.fetch_data_for_tiles(tile)[0]
             tile = tile_service.mask_tiles_to_bbox(min_lat, max_lat, min_lon, max_lon, [tile])
-            # tile = tile_service.mask_tiles_to_time_range(start_time, end_time, tile)
 
             if min_elevation and max_elevation:
                 tile = tile_service.mask_tiles_to_elevation(min_elevation, max_elevation, tile)
@@ -602,6 +604,8 @@ class LongitudeTomogramImpl(TomogramBaseClass):
         slices['elevation'] = slice(None, None)
         elev_vars = {}
 
+        ds.to_netcdf('/tmp/test_lon.nc')
+
         if ch_ds is not None:
             elev_vars['ch'] = TomogramBaseClass.data_subset_to_ds(self.do_subset(ch_ds, parameter, slices, 0))[3]
 
@@ -621,8 +625,6 @@ class LongitudeTomogramImpl(TomogramBaseClass):
             ds['tomo'] = ds['tomo'].where(ds.tomo.elevation <= ds.ch)
         if 'gh' in ds.data_vars:
             ds['tomo'] = ds['tomo'].where(ds.tomo.elevation >= ds.gh)
-
-        lats = ds.latitude.to_numpy()
 
         if percentiles:
             tomo = ds['tomo'].cumsum(dim='elevation', skipna=True).where(ds['tomo'].notnull())
@@ -658,7 +660,7 @@ class LongitudeTomogramImpl(TomogramBaseClass):
         return ProfileTomoResults(
             results=(ds, peaks),
             s={'longitude': longitude},
-            coords=dict(x=lats, y=ds.elevation.to_numpy()),
+            coords=dict(x=ds.latitude, y=ds.elevation),
             meta=dict(dataset=dataset),
             style='db' if not percentiles else 'percentile',
             cmap=cmap,
@@ -916,13 +918,13 @@ class LatitudeTomogramImpl(TomogramBaseClass):
         if 'gh' in ds.data_vars:
             ds['tomo'] = ds['tomo'].where(ds.tomo.elevation >= ds.gh)
 
-        lons = ds.longitude.to_numpy()
-
         if percentiles:
             tomo = ds['tomo'].cumsum(dim='elevation', skipna=True).where(ds['tomo'].notnull())
             ds['tomo'] = tomo / tomo.max(dim='elevation', skipna=True)
         else:
             ds['tomo'] = xr.apply_ufunc(lambda a: 10 * np.log10(a), ds.tomo)
+
+        ds.to_netcdf('/tmp/test_lat.nc')
 
         if calc_peaks:
             peaks = []
@@ -952,7 +954,299 @@ class LatitudeTomogramImpl(TomogramBaseClass):
         return ProfileTomoResults(
             results=(ds, peaks),
             s={'latitude': latitude},
-            coords=dict(x=lons, y=ds.elevation.to_numpy()),
+            coords=dict(x=ds.longitude, y=ds.elevation),
+            meta=dict(dataset=dataset),
+            style='db' if not percentiles else 'percentile',
+            cmap=cmap,
+            computeOptions=compute_options
+        )
+
+
+@nexus_handler
+class CustomProfileTomogramImpl(TomogramBaseClass):
+    name = "Tomogram profile view between two points"
+    path = "/tomogram/profile"
+    description = "Fetches a tomogram sliced by a line between two points"
+    params = {
+        "ds": {
+            "name": "Dataset",
+            "type": "string",
+            "description": "The Dataset shortname to use in calculation. Required"
+        },
+        "parameter": {
+            "name": "Parameter",
+            "type": "string",
+            "description": "The parameter of interest."
+        },
+        "p1": {
+            "name": "Start Point",
+            "type": "comma-delimited pair of floats",
+            "description": "Point to start the slice line at: longitude,latitude, REQUIRED"
+        },
+        "p2": {
+            "name": "End Point",
+            "type": "comma-delimited pair of floats",
+            "description": "Point to end the slice line at: longitude,latitude, REQUIRED"
+        },
+        "minElevation": {
+            "name": "Minimum Elevation",
+            "type": "int",
+            "description": "Minimum Elevation. Required."
+        },
+        "maxElevation": {
+            "name": "Maximum Elevation",
+            "type": "int",
+            "description": "Maximum Elevation. Required."
+        },
+        "horizontalMargin": {
+            "name": "Horizontal Margin",
+            "type": "float",
+            "description": "Margin +/- desired lat/lon slice to include in output. Default: 0.001m"
+        },
+        "peaks": {
+            "name": "Calculate peaks",
+            "type": "boolean",
+            "description": "Calculate peaks along tomogram slice (currently uses simplest approach). "
+                           "Ignored with \'elevPercentiles\'"
+        },
+        "canopy_ds": {
+            "name": "Canopy height dataset name",
+            "type": "string",
+            "description": "Dataset containing canopy heights (RH98). This is used to trim out tomogram voxels that "
+                           "return over the measured or predicted canopy"
+        },
+        "ground_ds": {
+            "name": "Ground height dataset name",
+            "type": "string",
+            "description": "Dataset containing ground height (DEM). This is used to trim out tomogram voxels that "
+                           "return below the measured or predicted ground"
+        },
+        "elevPercentiles": {
+            "name": "Elevation percentiles",
+            "type": "boolean",
+            "description": "Display percentiles of cumulative returns over elevation. Requires both canopy_ds and "
+                           "ground_ds be set."
+        },
+        "cmap": {
+            "name": "Color Map",
+            "type": "string",
+            "description": f"Color map to use. Will default to viridis if not provided or an unsupported map is "
+                           f"provided. Supported cmaps: {[k for k in sorted(mpl.colormaps.keys())]}"
+        },
+        "cbarMin": {
+            "name": "Color bar min",
+            "type": "float",
+            "description": "Minimum value of the color bar. Only applies if elevPercentiles is False. Must be set with"
+                           " and less than cbarMax. Invalid configuration will be replaced by default value (-30)"
+        },
+        "cbarMax": {
+            "name": "Color bar max",
+            "type": "float",
+            "description": "Maximum value of the color bar. Only applies if elevPercentiles is False. Must be set with"
+                           " and greater than cbarMin. Invalid configuration will be replaced by default value (-10)"
+        },
+    }
+    singleton = True
+
+    def __init__(self, tile_service_factory, **kwargs):
+        TomogramBaseClass.__init__(self, tile_service_factory, **kwargs)
+
+    def parse_args(self, compute_options):
+        ds, parameter = super().parse_args(compute_options)
+
+        def get_required_int(name):
+            val = compute_options.get_int_arg(name, None)
+
+            if val is None:
+                raise NexusProcessingException(reason=f'Missing required parameter: {name}', code=400)
+
+            return val
+
+        def get_required_point(name):
+            val = compute_options.get_argument(name, None)
+
+            if val is None:
+                raise NexusProcessingException(reason=f'Missing required parameter: {name}', code=400)
+
+            val = val.split(',')
+
+            if len(val) != 2:
+                raise NexusProcessingException(reason=f'Invalid parameter: {name}={val}. Incorrect number of fields, '
+                                                      f'need 2', code=400)
+
+            try:
+                longitude = float(val[0])
+            except ValueError:
+                raise NexusProcessingException(reason='Longitude must be numeric', code=400)
+
+            try:
+                latitude = float(val[1])
+            except ValueError:
+                raise NexusProcessingException(reason='Latitude must be numeric', code=400)
+
+            if longitude < -180 or longitude > 180 or isnan(longitude):
+                raise NexusProcessingException(
+                    reason='Longitude must be non-nan and between -180 and 180', code=400
+                )
+
+            if latitude < -90 or latitude > 90 or isnan(latitude):
+                raise NexusProcessingException(
+                    reason='Latitude must be non-nan and between -90 and 90', code=400
+                )
+
+            return Point(longitude, latitude)
+
+        start_point = get_required_point('p1')
+        end_point = get_required_point('p2')
+
+        min_elevation = get_required_int('minElevation')
+        max_elevation = get_required_int('maxElevation')
+
+        if min_elevation >= max_elevation:
+            raise NexusProcessingException(
+                reason='Min elevation must be less than max elevation', code=400
+            )
+
+        horizontal_margin = compute_options.get_float_arg('horizontalMargin', 0.001)
+
+        ch_ds = compute_options.get_argument('canopy_ds', None)
+        g_ds = compute_options.get_argument('ground_ds', None)
+
+        output = compute_options.get_content_type().lower()
+
+        if output in ['csv', 'zip']:
+            raise NexusProcessingException(reason=f'Output {output} unsupported', code=400)
+
+        percentiles = compute_options.get_boolean_arg('elevPercentiles')
+
+        if percentiles and (ch_ds is None or g_ds is None):
+            raise NexusProcessingException(
+                code=400,
+                reason='\'elevPercentiles\' argument requires \'canopy_ds\' and \'ground_ds\' be set'
+            )
+
+        peaks = compute_options.get_boolean_arg('peaks') and not percentiles
+
+        cmap = mpl.colormaps.get(
+            compute_options.get_argument('cmap', 'viridis'),
+            mpl.colormaps['viridis']
+        )
+
+        return (ds, parameter, start_point, end_point, min_elevation, max_elevation,horizontal_margin, peaks, ch_ds,
+                g_ds, percentiles, cmap)
+
+    def calc(self, compute_options, **args):
+        (dataset, parameter, start_point, end_point, min_elevation, max_elevation, horizontal_margin, calc_peaks,
+         ch_ds, g_ds, percentiles, cmap) = self.parse_args(compute_options)
+
+        bbox_miny = min(start_point.y, end_point.y) - horizontal_margin
+        bbox_maxy = max(start_point.y, end_point.y) - horizontal_margin
+        bbox_minx = min(start_point.x, end_point.x) + horizontal_margin
+        bbox_maxx = max(start_point.x, end_point.x) + horizontal_margin
+
+        slices = dict(
+            lat=slice(bbox_miny, bbox_maxy),
+            lon=slice(bbox_minx, bbox_maxx),
+            elevation=slice(min_elevation, max_elevation)
+        )
+
+        data_in_bounds = self.do_subset(dataset, parameter, slices, 0)
+        z_step = TomogramBaseClass._get_elevation_step_size(data_in_bounds)
+
+        r = np.arange(min_elevation, max_elevation + z_step, z_step)
+
+        logger.info(f'Fetched {len(data_in_bounds):,} data points at this elevation')
+
+        ds = TomogramBaseClass.data_subset_to_ds_with_elevation(
+            TomogramBaseClass.bin_subset_elevations_to_range(data_in_bounds, r, z_step / 2)
+        )[3]
+
+        slices['elevation'] = slice(None, None)
+        elev_vars = {}
+
+        if ch_ds is not None:
+            elev_vars['ch'] = TomogramBaseClass.data_subset_to_ds(self.do_subset(ch_ds, parameter, slices, 0))[3]
+
+        if g_ds is not None:
+            elev_vars['gh'] = TomogramBaseClass.data_subset_to_ds(self.do_subset(g_ds, parameter, slices, 0))[3]
+
+        if elev_vars:
+            TomogramBaseClass.add_variables_to_tomo(ds, **elev_vars)
+
+        if 'ch' in ds.data_vars:
+            ds['tomo'] = ds['tomo'].where(ds.tomo.elevation <= ds.ch)
+        if 'gh' in ds.data_vars:
+            ds['tomo'] = ds['tomo'].where(ds.tomo.elevation >= ds.gh)
+
+        if percentiles:
+            tomo = ds['tomo'].cumsum(dim='elevation', skipna=True).where(ds['tomo'].notnull())
+            ds['tomo'] = tomo / tomo.max(dim='elevation', skipna=True)
+        else:
+            ds['tomo'] = xr.apply_ufunc(lambda a: 10 * np.log10(a), ds.tomo)
+
+        ds.to_netcdf('/tmp/test_arb.nc')
+
+        line = LineString([start_point, end_point])
+
+        i_lat_1 = list(ds.latitude.values).index(ds.sel(latitude=start_point.y, method='nearest').latitude)
+        i_lat_2 = list(ds.latitude.values).index(ds.sel(latitude=end_point.y, method='nearest').latitude)
+
+        i_lon_1 = list(ds.longitude.values).index(ds.sel(longitude=start_point.x, method='nearest').longitude)
+        i_lon_2 = list(ds.longitude.values).index(ds.sel(longitude=end_point.x, method='nearest').longitude)
+
+        steps = ceil(sqrt((i_lat_2 - i_lat_1) ** 2 + (i_lon_2 - i_lon_1) ** 2))
+
+        point_coords = []
+
+        for p in np.linspace(0, 1, steps):
+            point_coords.append(line.interpolate(p, True).coords[0])
+
+        point_coords = [dict(longitude=p[0], latitude=p[1]) for p in point_coords]
+
+        points = [ds.sel(p, method='nearest') for p in point_coords]
+
+        ds = xr.concat(points, dim='distance')
+
+        def dist(lat, lon):
+            return abs(geodesic((start_point.y, start_point.x), (lat, lon)).m)
+
+        dists = []
+
+        for lat, lon in zip(ds.latitude.values, ds.longitude.values):
+            dists.append(dist(lat, lon))
+
+        ds = (ds.assign_coords(dict(distance=(['distance'], dists))).set_index(distance='distance').
+              expand_dims(dim='slice').drop_duplicates('distance'))
+
+        if calc_peaks:
+            peaks = []
+
+            for i in range(len(ds.tomo.slice)):
+                slice_peaks = []
+                ds_sub = ds.isel(slice=i)
+
+                for j in range(len(ds.tomo.distance)):
+                    col = ds_sub.isel(distance=j)
+
+                    distance = col.distance.item()
+
+                    try:
+                        idx = col.argmax(dim='elevation').tomo.item()
+
+                        slice_peaks.append((distance, col.isel(elevation=idx).elevation.item()))
+
+                    except ValueError:
+                        slice_peaks.append((distance, np.nan))
+
+                peaks.append((np.array([p[0] for p in slice_peaks]),
+                              np.array([p[1] for p in slice_peaks])))
+        else:
+            peaks = None
+
+        return ProfileTomoResults(
+            results=(ds, peaks),
+            s={'start_point': start_point, 'end_point': end_point},
+            coords=dict(x=ds.distance, y=ds.elevation),
             meta=dict(dataset=dataset),
             style='db' if not percentiles else 'percentile',
             cmap=cmap,
@@ -1028,13 +1322,24 @@ class ProfileTomoResults(NexusResults):
             title_row = f'Longitude: {lon}'
             xlabel = 'Latitude'
             coord = 'longitude'
-        else:
+        elif 'latitude' in self.__slice:
             lat = self.__slice['latitude'][0]
             title_row = f'Latitude: {lat}'
             xlabel = 'Longitude'
             coord = 'latitude'
+        else:
+            start = self.__slice['start_point']
+            end = self.__slice['end_point']
 
-        ds = ds.isel({coord: i})
+            start = (start.x, start.y)
+            end = (end.x, end.y)
+
+            title_row = f'Slice from: {start} to {end}'
+            xlabel = 'Distance along slice [m]'
+            coord = 'slice'
+
+        ds = ds.isel({coord: i}).transpose(self.__coords['y'].name, self.__coords['x'].name)
+
         rows = ds.tomo.to_numpy()
         if peaks is not None:
             peaks = peaks[i]
@@ -1085,11 +1390,18 @@ class ProfileTomoResults(NexusResults):
     def toNetCDF(self):
         ds, peaks = self.results()
 
+        if 'start_point' in self.__slice:
+            coords = dict(slice=ds['slice'], distance=ds['distance'])
+            dims = ['slice', 'distance']
+        else:
+            coords = dict(latitude=ds['latitude'], longitude=ds['longitude'])
+            dims = ['longitude', 'latitude']
+
         if peaks is not None:
             ds['peaks'] = xr.DataArray(
                 np.array([p[1] for p in peaks]),
-                coords=dict(latitude=ds['latitude'], longitude=ds['longitude']),
-                dims=['longitude', 'latitude'],
+                coords=coords,
+                dims=dims,
                 name='peaks'
             )
 
@@ -1126,7 +1438,6 @@ class ProfileTomoResults(NexusResults):
 
         files = []
 
-        # with TemporaryDirectory() as td:
         for al_i in range(len(ds[along])):
             ds_sub = ds.isel({along: al_i})
             al = ds_sub[along].item()
