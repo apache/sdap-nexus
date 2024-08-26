@@ -604,8 +604,6 @@ class LongitudeTomogramImpl(TomogramBaseClass):
         slices['elevation'] = slice(None, None)
         elev_vars = {}
 
-        ds.to_netcdf('/tmp/test_lon.nc')
-
         if ch_ds is not None:
             elev_vars['ch'] = TomogramBaseClass.data_subset_to_ds(self.do_subset(ch_ds, parameter, slices, 0))[3]
 
@@ -924,8 +922,6 @@ class LatitudeTomogramImpl(TomogramBaseClass):
         else:
             ds['tomo'] = xr.apply_ufunc(lambda a: 10 * np.log10(a), ds.tomo)
 
-        ds.to_netcdf('/tmp/test_lat.nc')
-
         if calc_peaks:
             peaks = []
 
@@ -1183,8 +1179,6 @@ class CustomProfileTomogramImpl(TomogramBaseClass):
             ds['tomo'] = tomo / tomo.max(dim='elevation', skipna=True)
         else:
             ds['tomo'] = xr.apply_ufunc(lambda a: 10 * np.log10(a), ds.tomo)
-
-        ds.to_netcdf('/tmp/test_arb.nc')
 
         line = LineString([start_point, end_point])
 
