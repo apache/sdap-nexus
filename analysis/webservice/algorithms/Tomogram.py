@@ -37,6 +37,8 @@ from webservice.NexusHandler import nexus_handler
 from webservice.algorithms.NexusCalcHandler import NexusCalcHandler
 from webservice.webmodel import NexusResults, NexusProcessingException, NoDataException
 
+from nexustiles.exception import NexusTileServiceException
+
 logger = logging.getLogger(__name__)
 FLOAT_PATTERN = re.compile(r'^[+-]?(\d+(\.\d*)?|\.\d+)$')
 
@@ -1131,6 +1133,74 @@ class CustomProfileTomogramImpl(TomogramBaseClass):
         return (ds, parameter, start_point, end_point, min_elevation, max_elevation,horizontal_margin, peaks, ch_ds,
                 g_ds, percentiles, cmap)
 
+    def __subset_on_line(self, ds, start_point, end_point, min_elevation, max_elevation, parameter, horizontal_margin):
+        tile_service = self._get_tile_service()
+
+        tiles = tile_service.find_tiles_along_line(
+            start_point, end_point,
+            ds=ds,
+            min_elevation=min_elevation,
+            max_elevation=max_elevation,
+            fetch_data=False
+        )
+
+        logger.info(f'Matched {len(tiles):,} tiles from Solr')
+
+        if len(tiles) == 0:
+            raise NoDataException(reason="No tiles matched the selected paramters")
+
+        data = []
+
+        bbox_miny = min(start_point.y, end_point.y) - horizontal_margin
+        bbox_maxy = max(start_point.y, end_point.y) - horizontal_margin
+        bbox_minx = min(start_point.x, end_point.x) + horizontal_margin
+        bbox_maxx = max(start_point.x, end_point.x) + horizontal_margin
+
+        for i in range(len(tiles) - 1, -1, -1):
+            tile = tiles.pop(i)
+
+            tile_id = tile.tile_id
+
+            logger.info(f'Processing tile {tile_id} | {i=}')
+
+            tile = tile_service.fetch_data_for_tiles(tile)[0]
+            tile = tile_service.mask_tiles_to_bbox(bbox_miny, bbox_maxy, bbox_minx, bbox_maxx, [tile])
+
+            if min_elevation and max_elevation:
+                tile = tile_service.mask_tiles_to_elevation(min_elevation, max_elevation, tile)
+
+            if len(tile) == 0:
+                logger.info(f'Skipping empty tile {tile_id}')
+                continue
+
+            tile = tile[0]
+
+            for nexus_point in tile.nexus_point_generator():
+                data_vals = nexus_point.data_vals if tile.is_multi else [nexus_point.data_vals]
+                data_val = None
+
+                for value, variable in zip(data_vals, tile.variables):
+                    if parameter is None or variable == parameter:
+                        data_val = value
+                        break
+
+                if data_val is None:
+                    logger.warning(
+                        f'No variable {parameter} found at point {nexus_point.index} for tile {tile.tile_id}')
+                    data_val = np.nan
+
+                data.append({
+                    'latitude': nexus_point.latitude,
+                    'longitude': nexus_point.longitude,
+                    'elevation': nexus_point.depth,
+                    'data': data_val
+                })
+
+        if len(data) == 0:
+            raise NoDataException(reason='No data fit the selected parameters')
+
+        return data
+
     def calc(self, compute_options, **args):
         (dataset, parameter, start_point, end_point, min_elevation, max_elevation, horizontal_margin, calc_peaks,
          ch_ds, g_ds, percentiles, cmap) = self.parse_args(compute_options)
@@ -1146,7 +1216,19 @@ class CustomProfileTomogramImpl(TomogramBaseClass):
             elevation=slice(min_elevation, max_elevation)
         )
 
-        data_in_bounds = self.do_subset(dataset, parameter, slices, 0)
+        try:
+            data_in_bounds = self.__subset_on_line(dataset, start_point, end_point, min_elevation, max_elevation,
+                                                   parameter, horizontal_margin)
+        except NexusTileServiceException as e:
+            logger.warning('Selected dataset does not support subsetting along a line, will fall back to box subset')
+            data_in_bounds = self.do_subset(dataset, parameter, slices, 0)
+        except Exception as e:
+            logger.error('An unexpected exception occurred', exc_info=e)
+            raise NexusProcessingException(
+                code=500,
+                reason=str(e)
+            )
+
         z_step = TomogramBaseClass._get_elevation_step_size(data_in_bounds)
 
         r = np.arange(min_elevation, max_elevation + z_step, z_step)

@@ -515,6 +515,17 @@ class NexusTileService:
             min_lat, max_lat, min_lon, max_lon, dataset, time, **kwargs
         )
 
+    @tile_data()
+    @catch_not_implemented
+    def find_tiles_along_line(self, start_point, end_point, ds=None, start_time=0, end_time=-1, **kwargs):
+        # Find tiles that fall in the given box in the Solr index
+        if type(start_time) is datetime:
+            start_time = (start_time - EPOCH).total_seconds()
+        if type(end_time) is datetime:
+            end_time = (end_time - EPOCH).total_seconds()
+
+        return NexusTileService._get_backend(ds).find_tiles_along_line(start_point, end_point, ds, start_time, end_time, **kwargs)
+
     def get_tiles_bounded_by_box(self, min_lat, max_lat, min_lon, max_lon, ds=None, start_time=0, end_time=-1,
                                  **kwargs):
         tiles = self.find_tiles_in_box(min_lat, max_lat, min_lon, max_lon, ds, start_time, end_time, **kwargs)
