@@ -20,6 +20,7 @@ import os
 import random
 import re
 import zipfile
+from bisect import bisect_left
 from io import BytesIO
 from math import ceil, sqrt, isnan
 from tempfile import TemporaryDirectory
@@ -33,11 +34,10 @@ from PIL import Image
 from geopy.distance import geodesic
 from shapely.geometry import Point, LineString
 
+from nexustiles.exception import NexusTileServiceException
 from webservice.NexusHandler import nexus_handler
 from webservice.algorithms.NexusCalcHandler import NexusCalcHandler
 from webservice.webmodel import NexusResults, NexusProcessingException, NoDataException
-
-from nexustiles.exception import NexusTileServiceException
 
 logger = logging.getLogger(__name__)
 FLOAT_PATTERN = re.compile(r'^[+-]?(\d+(\.\d*)?|\.\d+)$')
@@ -180,16 +180,28 @@ class TomogramBaseClass(NexusCalcHandler):
         binned_subset = []
 
         for d in data_in_bounds:
-            elevation = d['elevation']
+            elevation: float = d['elevation']
             d_copy = dict(**d)
 
-            a = np.argwhere(np.absolute(elevation_range - elevation) <= margin)
+            pos = bisect_left(elevation_range, elevation)
 
-            if a.shape[0] > 0:
-                d_copy['elevation'] = elevation_range[a[0][0]]
-                binned_subset.append(d_copy)
+            if pos == 0:
+                binned_elev = elevation_range[0]
+            elif pos == len(elevation_range):
+                binned_elev = elevation_range[-1]
             else:
+                before = elevation_range[pos - 1]
+                after = elevation_range[pos]
+                if after - elevation < elevation - before:
+                    binned_elev = after
+                else:
+                    binned_elev = before
+
+            if abs(binned_elev - elevation) > margin:
                 logger.warning(f'Could not bin point {d_copy}')
+            else:
+                d_copy['elevation'] = binned_elev
+                binned_subset.append(d_copy)
 
         return binned_subset
 
