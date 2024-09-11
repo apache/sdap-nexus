@@ -213,14 +213,55 @@ class TomogramBaseClass(NexusCalcHandler):
         lons = np.unique([d['longitude'] for d in data_in_bounds])
         elevations = np.unique([d['elevation'] for d in data_in_bounds])
 
-        vals = np.empty((len(elevations), len(lats), len(lons)))
+        # Commented out is the old gridding method
+        #
+        # vals = np.empty((len(elevations), len(lats), len(lons)))
+        #
+        # time = elapsed('data_subset_to_ds_with_elevation: val init', time)
+        #
+        # data_dict = {(d['elevation'], d['latitude'], d['longitude']): d['data'] for d in data_in_bounds}
+        #
+        # time = elapsed('data_subset_to_ds_with_elevation: dict build', time)
+        #
+        # print(f'{len(elevations) * len(lats) * len(lons):,}')
+        #
+        # for i, elev in enumerate(elevations):
+        #     for j, lat in enumerate(lats):
+        #         for k, lon in enumerate(lons):
+        #             vals[i, j, k] = data_dict.get((elev, lat, lon), np.nan)
+        #
+        # time = elapsed('data_subset_to_ds_with_elevation: populate', time)
 
-        data_dict = {(d['elevation'], d['latitude'], d['longitude']): d['data'] for d in data_in_bounds}
+        vals = np.full((len(elevations), len(lats), len(lons)), np.nan)
 
-        for i, elev in enumerate(elevations):
-            for j, lat in enumerate(lats):
-                for k, lon in enumerate(lons):
-                    vals[i, j, k] = data_dict.get((elev, lat, lon), np.nan)
+        elevation_idxs = {}
+        lat_idxs = {}
+        lon_idxs = {}
+
+        for point in data_in_bounds:
+            elevation = point['elevation']
+            lat = point['latitude']
+            lon = point['longitude']
+
+            if elevation not in elevation_idxs:
+                e_i = np.argwhere(elevations == elevation)
+                elevation_idxs[elevation] = e_i
+            else:
+                e_i = elevation_idxs[elevation]
+
+            if lat not in lat_idxs:
+                lat_i = np.argwhere(lats == lat)
+                lat_idxs[lat] = lat_i
+            else:
+                lat_i = lat_idxs[lat]
+
+            if lon not in lon_idxs:
+                lon_i = np.argwhere(lons == lon)
+                lon_idxs[lon] = lon_i
+            else:
+                lon_i = lon_idxs[lon]
+
+            vals[e_i, lat_i, lon_i] = point['data']
 
         ds = xr.Dataset(
             data_vars=dict(
