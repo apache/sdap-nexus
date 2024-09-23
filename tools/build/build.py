@@ -158,7 +158,7 @@ def basic_prompt(prompt, default=None):
 def pull_source(dst_dir: tempfile.TemporaryDirectory, build: dict):
     ASF = 'ASF (dist.apache.org)'
     GHB = 'GitHub'
-    LFS = 'Local Filesystem (Not implemented yet)'
+    LFS = 'Local Filesystem'
 
     source_location = choice_prompt(
         'Where is the source you\'re building from stored?',
@@ -341,7 +341,36 @@ def pull_source(dst_dir: tempfile.TemporaryDirectory, build: dict):
                 os.path.join(dst_dir.name, 'ingester')
             )
     else:
-        raise NotImplementedError()
+        print('NOTE: Building from local FS should only be done for testing purposes. Please use other sources for '
+              'official release images (ASF) or anything pushed publicly for production or distribution outside of an '
+              'official release (GitHub).')
+
+        if any([build['webapp'], build['solr'], build['solr-init']]):
+            path = basic_prompt('Enter path to Nexus repository')
+
+            if not os.path.isdir(path):
+                print(f'{path} either does not exist or is not a directory')
+                exit(1)
+
+            print(f'Copying Nexus {os.path.abspath(path)} -> {os.path.join(dst_dir.name, "nexus")}')
+
+            shutil.copytree(
+                path,
+                os.path.join(dst_dir.name, 'nexus')
+            )
+        if any([build['cm'], build['gi']]):
+            path = basic_prompt('Enter path to Ingester repository')
+
+            if not os.path.isdir(path):
+                print(f'{path} either does not exist or is not a directory')
+                exit(1)
+
+            print(f'Copying Ingester {os.path.abspath(path)} -> {os.path.join(dst_dir.name, "nexus")}')
+
+            shutil.copytree(
+                path,
+                os.path.join(dst_dir.name, 'ingester')
+            )
 
 
 def main():
@@ -465,6 +494,8 @@ def main():
         build['webapp'] = False
         build['solr'] = False
         build['solr-init'] = False
+
+    # TODO: Prompting is a bit cumbersome. Maybe do all prompts then ask for confirmation for all entries
 
     if tag is None:
         tag = basic_prompt('Enter the tag to use for built images')
