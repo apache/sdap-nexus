@@ -1,13 +1,13 @@
 .. _build:
 
-*****************
+***********************************
 How to Build the SDAP Docker Images
-*****************
+***********************************
 
 In this guide, we will go over how to build the docker images for the various components of SDAP.
 
 Prepare
-===========
+=======
 
 First, we must ensure we have Docker installed and running. For this guide, we used Docker Desktop version 4.12.0. Download Docker Desktop `here. <https://www.docker.com/products/docker-desktop/>`_
 
@@ -52,7 +52,7 @@ Create a temporary directory to extract to.
   mv ${TMP_DIR}/Apache-SDAP/apache-sdap-nexus-${NEXUS_VERSION}-incubating-src/* ${NEXUS_DIR}
 
 Set Default Docker Platform
----
+---------------------------
 
 To ensure consistency when building/running on different hardware architectures, we should set this variable to ensure docker uses ``linux/amd64``.
 
@@ -72,7 +72,7 @@ For both of these, we must first move to the ingester root directory.
   cd ${INGESTER_DIR}
 
 Build the Collection Manager
--------
+----------------------------
 
 From the ingester root directory, run:
 
@@ -81,7 +81,7 @@ From the ingester root directory, run:
   docker build . -f collection_manager/docker/Dockerfile -t sdap-local/sdap-collection-manager:${INGESTER_VERSION}
 
 Build the Granule Ingester
--------
+--------------------------
 
 From the ingester root directory, run:
 
@@ -100,7 +100,7 @@ From the ingester root directory, run:
   Note: Building does not currently work on Apple Silicon (M1/M2). (`SDAP-488 <https://issues.apache.org/jira/browse/SDAP-488>`_)
 
 Build the Solr & Webapp Components
-======
+==================================
 
 For the remaining three components, we must now move to the nexus root directory.
 
@@ -109,7 +109,7 @@ For the remaining three components, we must now move to the nexus root directory
   cd ${NEXUS_DIR}
 
 Build the Solr Image
--------
+--------------------
 
 First we must move to the Solr Docker directory.
 
@@ -124,7 +124,7 @@ Now to build the image:
   docker build . -t sdap-local/sdap-solr-cloud:${NEXUS_VERSION}
 
 Build the Solr Initialization Image
--------
+-----------------------------------
 
 Now to build the image:
 
@@ -133,7 +133,7 @@ Now to build the image:
   docker build . -t sdap-local/sdap-solr-cloud-init:${NEXUS_VERSION} -f cloud-init/Dockerfile
 
 Build the Webapp Image
----------
+----------------------
 
 For the final image, we must return to the NEXUS root directory.
 
@@ -158,13 +158,13 @@ Now we can build the webapp with:
   Note: Building does not currently work on Apple Silicon (M1/M2). (`SDAP-488 <https://issues.apache.org/jira/browse/SDAP-488>`_)
 
 Verify Successful Build
-====
+=======================
 
 To verify build success, follow the :ref:`quickstart guide<quickstart>`.
 
 
 Finished!
-=====
+=========
 
 Congratulations! You have successfully built the images required for running NEXUS.
 

@@ -67,6 +67,7 @@ xarray = "^2022.3.0"
 dask = "*"
 zarr = "2.11.3"
 pandas = "<2.1.0rc0"
+matplotlib = "^3.7"
 psutil = "*"
 requests_mock = "*"  # For Zarr testing, remove before merge
 

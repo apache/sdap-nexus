@@ -9,7 +9,7 @@ if "%SPHINXBUILD%" == "" (
 )
 set SOURCEDIR=.
 set BUILDDIR=_build
-set SPHINXPROJ=incubator-sdap-nexus
+set SPHINXPROJ=sdap-nexus
 
 if "%1" == "" goto help
 
