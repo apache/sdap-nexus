@@ -28,7 +28,6 @@ import pandas as pd
 import requests
 from PIL import Image
 from matplotlib.colors import LinearSegmentedColormap, XKCD_COLORS
-from mpl_toolkits.basemap import Basemap
 from xarray import Dataset, apply_ufunc
 
 from webservice.NexusHandler import nexus_handler
@@ -589,14 +588,16 @@ class Tomogram3DResults(NexusResults):
         if not self.hide_basemap:
             min_lat, min_lon, max_lat, max_lon = self.bounds
 
-            m = Basemap(llcrnrlon=min_lon, llcrnrlat=min_lat, urcrnrlat=max_lat, urcrnrlon=max_lon, )
+            # Originally used mpl_toolkits.basemap.Basemap.aspect for this, but basemap installs an LGPL3 data package
+            # so we can't have that in a release. Thankfully, manual computation ends up being quite simple
+            aspect = (max_lat - min_lat) / (max_lon - min_lon)
 
             basemap_size = 512
 
             params = dict(
                 bbox=f'{min_lon},{min_lat},{max_lon},{max_lat}',
                 bboxSR=4326, imageSR=4326,
-                size=f'{basemap_size},{int(m.aspect * basemap_size)}',
+                size=f'{basemap_size},{int(aspect * basemap_size)}',
                 dpi=2000,
                 format='png32',
                 transparent=True,
@@ -728,14 +729,16 @@ class Tomogram3DResults(NexusResults):
         if not self.hide_basemap:
             min_lat, min_lon, max_lat, max_lon = self.bounds
 
-            m = Basemap(llcrnrlon=min_lon, llcrnrlat=min_lat, urcrnrlat=max_lat, urcrnrlon=max_lon, )
+            # Originally used mpl_toolkits.basemap.Basemap.aspect for this, but basemap installs an LGPL3 data package
+            # so we can't have that in a release. Thankfully, manual computation ends up being quite simple
+            aspect = (max_lat - min_lat) / (max_lon - min_lon)
 
             basemap_size = 512
 
             params = dict(
                 bbox=f'{min_lon},{min_lat},{max_lon},{max_lat}',
                 bboxSR=4326, imageSR=4326,
-                size=f'{basemap_size},{int(m.aspect * basemap_size)}',
+                size=f'{basemap_size},{int(aspect * basemap_size)}',
                 dpi=2000,
                 format='png32',
                 transparent=True,
