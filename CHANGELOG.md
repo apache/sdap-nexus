@@ -6,6 +6,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased] - Unreleased
 ### Added
+- SDAP-469: Support for three dimensional data. 2D data defaults to a layer at 0m elevation.
 ### Changed
 ### Deprecated
 ### Removed
