@@ -27,6 +27,17 @@ class AbstractTileService(ABC):
     def heartbeat(self) -> bool:
         return True
 
+    def update(self, force: bool=False) -> bool:
+        """
+        If applicable, verify the underlying connection(s) are still open and valid, replacing them if necessary
+
+        Default implementation is to do nothing and assume all is valid.
+
+        @param force: Forcibly replace underlying connections.
+        @return: True if valid and successful, False if dataset is now unreachable and therefore should not be used
+        """
+        return True
+
     @abstractmethod
     def get_dataseries_list(self, simple=False):
         raise NotImplementedError()

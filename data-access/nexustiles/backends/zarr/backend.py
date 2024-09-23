@@ -22,12 +22,14 @@ import numpy as np
 import numpy.ma as ma
 import s3fs
 import xarray as xr
-from nexustiles.AbstractTileService import AbstractTileService
-from nexustiles.exception import NexusTileServiceException
-from nexustiles.model.nexusmodel import Tile, BBox, TileVariable
 from pytz import timezone
 from shapely.geometry import MultiPolygon, box
 from yarl import URL
+
+from nexustiles.AbstractTileService import AbstractTileService
+from nexustiles.backends import get_cred_handler
+from nexustiles.exception import NexusTileServiceException
+from nexustiles.model.nexusmodel import Tile, BBox, TileVariable
 
 EPOCH = timezone('UTC').localize(datetime(1970, 1, 1))
 ISO_8601 = '%Y-%m-%dT%H:%M:%S%z'
@@ -77,38 +79,113 @@ class ZarrBackend(AbstractTileService):
 
         self.__depth = config['coords'].get('depth')
 
+        if self.__store_type == 's3' and not (config.get('public', False) or config.get('aws', {}).get('public', False)):
+            self.__credentials = get_cred_handler(dataset_name, config)
+        else:
+            self.__credentials = None
+
+        self.__corrections = None
+
+        # If we know the ds is ok, set the corrections to empty list so we don't bother checking
+        if config.get('verified', False):
+            self.__corrections = []
+
+        self.__ds: xr.Dataset = self.__open_ds()
+
+    def __open_ds(self) -> xr.Dataset:
         if self.__store_type in ['', 'file']:
             store = self.__path
         elif self.__store_type == 's3':
             try:
-                aws_cfg = self.__config['aws']
-
-                if aws_cfg['public']:
-                    # region = aws_cfg.get('region', 'us-west-2')
-                    # store = f'https://{self.__host}.s3.{region}.amazonaws.com{self.__path}'
+                if self.__credentials is None:
                     s3 = s3fs.S3FileSystem(True)
-                    store = s3fs.S3Map(root=path, s3=s3, check=False)
+                    store = s3fs.S3Map(root=self.__url, s3=s3, check=False)
                 else:
-                    s3 = s3fs.S3FileSystem(False, key=aws_cfg['accessKeyID'], secret=aws_cfg['secretAccessKey'])
-                    store = s3fs.S3Map(root=path, s3=s3, check=False)
+                    s3 = s3fs.S3FileSystem(False, **self.__credentials.get_credentials('s3fs'))
+                    store = s3fs.S3Map(root=self.__url, s3=s3, check=False)
             except Exception as e:
-                logger.error(f'Failed to open zarr dataset at {self.__path}, ignoring it. Cause: {e}')
+                logger.error(f'Failed to prepare zarr dataset at {self.__path}, ignoring it. Cause: {e}')
+                logger.exception(e)
                 raise NexusTileServiceException(f'Cannot open S3 dataset ({e})')
         else:
             raise ValueError(self.__store_type)
 
         try:
-            self.__ds: xr.Dataset = xr.open_zarr(store, consolidated=True)
+            ds = xr.open_zarr(
+                store,
+                consolidated=True,
+                storage_options=dict(exceptions=(KeyError,))  # This arg sets exception types to be treated as missing
+                                                              # chunks (ie, FillValue/NaN) Default behavior is to ignore
+                                                              # KeyError, OSError and PermissionError. We don't want
+                                                              # this in the case that the underlying S3 credentials
+                                                              # expire, which would raise PermissionErrors. Excluding
+                                                              # OSError too as PermissionError is a subclass of OSError
+            )
+
+            lats = ds[self.__latitude].to_numpy()
+            delta = lats[1] - lats[0]
+
+            if delta < 0:
+                logger.info(f'Latitude coordinate for {self._name} is in descending order. Flipping it to ascending')
+                ds = ds.isel({self.__latitude: slice(None, None, -1)})
+
+            ds = ds.transpose(self.__time, self.__latitude, self.__longitude, ...)
+
+            if self.__corrections is None:
+                logger.info('Checking if dataset needs any corrections')
+
+                corrections = []
+
+                times = ds[self.__time].to_numpy()
+
+                deltas = [times[i+1] - times[i] for i in range(len(times) - 1)]
+
+                if not all([d >= 0 for d in deltas]):
+                    logger.warning('Dataset times are not monotonically ascending')
+
+                    corrections.append(dict(
+                        func=xr.Dataset.sortby,
+                        args=(self.__time,),
+                        kwargs={}
+                    ))
+
+                if len(set(times)) != len(times):
+                    logger.warning('Dataset has repeated time coords')
+
+                    corrections.append(dict(
+                        func=xr.Dataset.drop_duplicates,
+                        args=(self.__time,),
+                        kwargs={'keep': 'last'}
+                    ))
+
+                del times, deltas
+
+                self.__corrections = corrections
+
+            if len(self.__corrections) > 0:
+                logger.info(f'Applying {len(self.__corrections)} corrective actions')
+
+                for a in self.__corrections:
+                    logger.debug(f'Applying {a["func"]}, args={a["args"]}, kwargs={a["kwargs"]}')
+
+                    ds = a['func'](ds, *a['args'], **a['kwargs'])
+
+            return ds
         except Exception as e:
             logger.error(f'Failed to open zarr dataset at {self.__path}, ignoring it. Cause: {e}')
             raise NexusTileServiceException(f'Cannot open dataset ({e})')
 
-        lats = self.__ds[self.__latitude].to_numpy()
-        delta = lats[1] - lats[0]
+    def update(self, force: bool = False) -> bool:
+        if force or (self.__credentials is not None and not self.__credentials.is_valid()):
+            try:
+                logger.info(f'Refreshing zarr dataset {self._name} at {self.__path}')
+                self.__ds = self.__open_ds()
+            except Exception as e:
+                logger.error('Backend update failed')
+                logger.exception(e)
+                return False
 
-        if delta < 0:
-            logger.warning(f'Latitude coordinate for {self._name} is in descending order. Flipping it to ascending')
-            self.__ds = self.__ds.isel({self.__latitude: slice(None, None, -1)})
+        return True
 
     def heartbeat(self) -> bool:
         # TODO: This is temporary, eventually we should use the logic to be introduced for SDAP-517 (PR#312) to evaluate

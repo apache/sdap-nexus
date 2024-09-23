@@ -29,18 +29,15 @@ import pkg_resources
 import pysolr
 from pytz import timezone, UTC
 from shapely.geometry import box
-from webservice.webmodel import DatasetNotFoundException, NexusProcessingException
-from webservice.NexusHandler import nexus_initializer
 from yarl import URL
 
+from webservice.NexusHandler import nexus_initializer
+from webservice.webmodel import DatasetNotFoundException
 from .AbstractTileService import AbstractTileService
 from .backends.nexusproto.backend import NexusprotoTileService
 from .backends.zarr.backend import ZarrBackend
-from .model.nexusmodel import Tile, BBox, TileStats, TileVariable
-
 from .exception import NexusTileServiceException
-
-from requests.structures import CaseInsensitiveDict
+from .model.nexusmodel import Tile, BBox, TileStats, TileVariable
 
 EPOCH = timezone('UTC').localize(datetime(1970, 1, 1))
 
@@ -170,10 +167,7 @@ class NexusTileService:
         return NexusTileService.__update_thread is not None and NexusTileService.__update_thread.is_alive()
 
     @staticmethod
-    def _get_backend(dataset_s) -> AbstractTileService:
-        if dataset_s is not None:
-            dataset_s = dataset_s
-
+    def _get_backend(dataset_s, check=True) -> AbstractTileService:
         with NexusTileService.DS_LOCK:
             if dataset_s not in NexusTileService.backends:
                 logger.warning(f'Dataset {dataset_s} not currently loaded. Checking to see if it was recently'
@@ -183,6 +177,9 @@ class NexusTileService:
                     raise DatasetNotFoundException(reason=f'Dataset {dataset_s} is not currently loaded/ingested')
 
             b = NexusTileService.backends[dataset_s]
+
+            if check and not b['backend'].update():
+                raise DatasetNotFoundException(reason=f'Dataset {dataset_s} is currently inaccessible')
 
             return b['backend']
 
@@ -239,6 +236,9 @@ class NexusTileService:
                 present_datasets.add(d_id)
 
                 if d_id in NexusTileService.backends:
+                    if not NexusTileService.backends[d_id]['backend'].update(True):
+                        logger.info(f'Dataset {d_id} of type {store_type} is no longer accessible and will be removed')
+                        present_datasets.remove(d_id)
                     continue
 
                 added_datasets += 1
