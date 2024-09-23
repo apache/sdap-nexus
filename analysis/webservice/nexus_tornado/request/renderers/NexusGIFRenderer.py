@@ -13,19 +13,20 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-class NexusRendererFactory(object):
-    content_types = ["CSV", "JSON", "XML", "PNG", "NETCDF", "ZIP", "GIF"]
-    module = __import__(__name__)
-
-    @classmethod
-    def get_renderer(cls, request):
-        content_type = request.get_content_type().upper()
-        if content_type in cls.content_types:
-            renderer_name = 'Nexus' + content_type + 'Renderer'
-            renderer = getattr(cls.module.nexus_tornado.request.renderers, renderer_name)
-            return renderer(request)
+import sys
+import traceback
+from webservice.webmodel import NexusProcessingException
 
 
+class NexusGIFRenderer(object):
+    def __init__(self, nexus_request):
+        self._request = nexus_request
 
-
-
+    def render(self, tornado_handler, result):
+        tornado_handler.set_header("Content-Type", "image/gif")
+        try:
+            tornado_handler.write(result.toGif())
+            tornado_handler.finish()
+        except AttributeError:
+            traceback.print_exc(file=sys.stdout)
+            raise NexusProcessingException(reason="Unable to convert results to a GIF.")
