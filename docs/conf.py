@@ -33,8 +33,8 @@
 
 # -- Project information -----------------------------------------------------
 
-project = 'incubator-sdap-nexus'
-copyright = '2017-2023, Apache SDAP'
+project = 'sdap-nexus'
+copyright = '2017-2024, Apache SDAP'
 author = 'Apache SDAP'
 
 # The short X.Y version
@@ -120,7 +120,7 @@ html_static_path = ['_static']
 # -- Options for HTMLHelp output ---------------------------------------------
 
 # Output file base name for HTML help builder.
-htmlhelp_basename = 'incubator-sdap-nexusdoc'
+htmlhelp_basename = 'sdap-nexusdoc'
 
 
 # -- Options for LaTeX output ------------------------------------------------
@@ -147,7 +147,7 @@ latex_elements = {
 # (source start file, target name, title,
 #  author, documentclass [howto, manual, or own class]).
 latex_documents = [
-    (master_doc, 'incubator-sdap-nexus.tex', 'incubator-sdap-nexus Documentation',
+    (master_doc, 'sdap-nexus.tex', 'sdap-nexus Documentation',
      'Apache SDAP', 'manual'),
 ]
 
@@ -157,7 +157,7 @@ latex_documents = [
 # One entry per manual page. List of tuples
 # (source start file, name, description, authors, manual section).
 man_pages = [
-    (master_doc, 'incubator-sdap-nexus', 'incubator-sdap-nexus Documentation',
+    (master_doc, 'sdap-nexus', 'sdap-nexus Documentation',
      [author], 1)
 ]
 
@@ -168,8 +168,8 @@ man_pages = [
 # (source start file, target name, title, author,
 #  dir menu entry, description, category)
 texinfo_documents = [
-    (master_doc, 'incubator-sdap-nexus', 'incubator-sdap-nexus Documentation',
-     author, 'incubator-sdap-nexus', 'One line description of project.',
+    (master_doc, 'sdap-nexus', 'sdap-nexus Documentation',
+     author, 'sdap-nexus', 'One line description of project.',
      'Miscellaneous'),
 ]
 

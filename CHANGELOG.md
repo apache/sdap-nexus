@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - SDAP-469: Support for three dimensional data. 2D data defaults to a layer at 0m elevation.
 - SDAP-492: Added some demo algorithms for working with and visualizing tomography data. Currently designed for data from airborne SAR campaigns, but can be readily generalized.
 - SDAP-497: Added tool to ease building of releases. Can build from ASF distributions, git repos, and local
+- SDAP-520: (Documentation) Added guide to docs for evaluating official release candidates.
 ### Changed
 ### Deprecated
 ### Removed

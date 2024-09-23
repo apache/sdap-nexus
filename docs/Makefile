@@ -19,7 +19,7 @@
 # You can set these variables from the command line.
 SPHINXOPTS    =
 SPHINXBUILD   = sphinx-build
-SPHINXPROJ    = incubator-sdap-nexus
+SPHINXPROJ    = sdap-nexus
 SOURCEDIR     = .
 BUILDDIR      = _build
 
