@@ -255,6 +255,10 @@ class NexusprotoTileService(AbstractTileService):
 
         return tiles
 
+    def find_tiles_along_line(self, start_point, end_point, ds=None, start_time=0, end_time=-1, **kwargs):
+        return self._metadatastore.find_tiles_along_line(start_point, end_point, ds, start_time,
+                                                                     end_time, **kwargs)
+
     def get_stats_within_box_at_time(self, min_lat, max_lat, min_lon, max_lon, dataset, time, **kwargs):
         tiles = self._metadatastore.find_all_tiles_within_box_at_time(min_lat, max_lat, min_lon, max_lon, dataset, time,
                                                                       **kwargs)
