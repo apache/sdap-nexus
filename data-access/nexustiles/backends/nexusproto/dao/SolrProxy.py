@@ -332,10 +332,10 @@ class SolrProxy(object):
                               search_start_s, search_end_s
                           )
             additionalparams['fq'].append(time_clause)
-            
+
         min_elevation = kwargs.get('min_elevation', None)
         max_elevation = kwargs.get('max_elevation', None)
-        
+
         elevation_clause = self.get_elevation_clause(min_elevation, max_elevation)
         additionalparams['fq'].append(elevation_clause)
 
@@ -372,10 +372,10 @@ class SolrProxy(object):
                               search_start_s, search_end_s
                           )
             additionalparams['fq'].append(time_clause)
-            
+
         min_elevation = kwargs['min_elevation'] if 'min_elevation' in kwargs else None
         max_elevation = kwargs['max_elevation'] if 'max_elevation' in kwargs else None
-        
+
         elevation_clause = self.get_elevation_clause(min_elevation, max_elevation)
         additionalparams['fq'].append(elevation_clause)
 
@@ -412,13 +412,13 @@ class SolrProxy(object):
                               search_start_s, search_end_s
                           )
             additionalparams['fq'].append(time_clause)
-        
+
         min_elevation = kwargs['min_elevation'] if 'min_elevation' in kwargs else None
         max_elevation = kwargs['max_elevation'] if 'max_elevation' in kwargs else None
-        
+
         elevation_clause = self.get_elevation_clause(min_elevation, max_elevation)
         additionalparams['fq'].append(elevation_clause)
-        
+
         self._merge_kwargs(additionalparams, **kwargs)
 
         return self.do_query_all(
@@ -599,6 +599,47 @@ class SolrProxy(object):
 
         return self.do_query_all(*(search, None, None, False, None), **additionalparams)
 
+    def find_tiles_along_line(self, start_point, end_point, ds=None, start_time=0, end_time=-1, **kwargs):
+        if ds is None:
+            ds = '*'
+
+        search = 'dataset_s:%s' % ds
+
+        additionalparams = {
+            'fq': [
+                "geo:\"Intersects(LineString(%s %s, %s %s))\"" % (
+                    start_point.x, start_point.y, end_point.x, end_point.y),
+                "tile_count_i:[1 TO *]"
+            ]
+        }
+
+        if 0 <= start_time <= end_time:
+            search_start_s = datetime.utcfromtimestamp(start_time).strftime(SOLR_FORMAT)
+            search_end_s = datetime.utcfromtimestamp(end_time).strftime(SOLR_FORMAT)
+
+            time_clause = "(" \
+                          "tile_min_time_dt:[%s TO %s] " \
+                          "OR tile_max_time_dt:[%s TO %s] " \
+                          "OR (tile_min_time_dt:[* TO %s] AND tile_max_time_dt:[%s TO *])" \
+                          ")" % (
+                              search_start_s, search_end_s,
+                              search_start_s, search_end_s,
+                              search_start_s, search_end_s
+                          )
+            additionalparams['fq'].append(time_clause)
+
+        min_elevation = kwargs.get('min_elevation', None)
+        max_elevation = kwargs.get('max_elevation', None)
+
+        elevation_clause = self.get_elevation_clause(min_elevation, max_elevation)
+        additionalparams['fq'].append(elevation_clause)
+
+        self._merge_kwargs(additionalparams, **kwargs)
+
+        return self.do_query_all(
+            *(search, None, None, False, 'tile_min_time_dt asc, tile_max_time_dt asc'),
+            **additionalparams)
+
     def find_all_tiles_by_metadata(self, metadata, ds, start_time=0, end_time=-1, **kwargs):
         """
         Get a list of tile metadata that matches the specified metadata, start_time, end_time.
@@ -637,7 +678,7 @@ class SolrProxy(object):
                           search_start_s, search_end_s
                           )
         return time_clause
-   
+
     def get_elevation_clause(self, min_elevation, max_elevation):
         if min_elevation is not None and max_elevation is not None:
             if min_elevation == max_elevation:
@@ -656,7 +697,7 @@ class SolrProxy(object):
             elevation_clause = (f"((*:* -tile_min_elevation_d:[* TO *]) OR "
                                 f"(tile_min_elevation_d:[0 TO 0] OR tile_max_elevation_d:[0 TO 0]))")
         return elevation_clause
-    
+
     def get_tile_count(self, ds, bounding_polygon=None, start_time=0, end_time=-1, metadata=None, **kwargs):
         """
         Return number of tiles that match search criteria.

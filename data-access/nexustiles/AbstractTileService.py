@@ -121,6 +121,10 @@ class AbstractTileService(ABC):
         raise NotImplementedError()
 
     @abstractmethod
+    def find_tiles_along_line(self, start_point, end_point, ds=None, start_time=0, end_time=-1, **kwargs):
+        raise NotImplementedError()
+
+    @abstractmethod
     def get_min_max_time_by_granule(self, ds, granule_name):
         raise NotImplementedError()
 
