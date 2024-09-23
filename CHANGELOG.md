@@ -4,6 +4,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased] - Unreleased
+### Added
+- SDAP-469: Support for three dimensional data. 2D data defaults to a layer at 0m elevation.
+- SDAP-492: Added some demo algorithms for working with and visualizing tomography data. Currently designed for data from airborne SAR campaigns, but can be readily generalized.
+### Changed
+### Deprecated
+### Removed
+### Fixed
+- SDAP-525: Fixed expired AWS creds for Zarr datasets breaking list endpoint
+### Security
+
 ## [1.3.0] - 2024-06-10
 ### Added
 - SDAP-506:
