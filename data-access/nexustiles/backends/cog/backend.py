@@ -229,6 +229,10 @@ class CoGBackend(AbstractTileService):
         # this
         raise NotImplementedError()
 
+    def find_tiles_along_line(self, start_point, end_point, ds=None, start_time=0, end_time=-1, **kwargs):
+        return self.__solr.find_tiles_along_line(start_point, end_point, ds, start_time,
+                                                         end_time, **kwargs)
+
     def get_min_max_time_by_granule(self, ds, granule_name):
         raise NotImplementedError()
 
