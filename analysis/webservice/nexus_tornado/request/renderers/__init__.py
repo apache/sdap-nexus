@@ -18,4 +18,5 @@ from .NexusJSONRenderer import NexusJSONRenderer
 from .NexusCSVRenderer import NexusCSVRenderer
 from .NexusNETCDFRenderer import NexusNETCDFRenderer
 from .NexusPNGRenderer import NexusPNGRenderer
+from .NexusGIFRenderer import NexusGIFRenderer
 from .NexusZIPRenderer import NexusZIPRenderer

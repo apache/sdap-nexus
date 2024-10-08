@@ -123,14 +123,19 @@ class ZarrBackend(AbstractTileService):
         }
 
         if not simple:
-            min_date = self.get_min_time([])
-            max_date = self.get_max_time([])
-            ds['start'] = min_date
-            ds['end'] = max_date
-            ds['iso_start'] = datetime.utcfromtimestamp(min_date).strftime(ISO_8601)
-            ds['iso_end'] = datetime.utcfromtimestamp(max_date).strftime(ISO_8601)
+            try:
+                min_date = self.get_min_time([])
+                max_date = self.get_max_time([])
+                ds['start'] = min_date
+                ds['end'] = max_date
+                ds['iso_start'] = datetime.utcfromtimestamp(min_date).strftime(ISO_8601)
+                ds['iso_end'] = datetime.utcfromtimestamp(max_date).strftime(ISO_8601)
 
-            ds['metadata'] = dict(self.__ds.attrs)
+                ds['metadata'] = dict(self.__ds.attrs)
+            except Exception as e:
+                logger.error(f'Failed to access dataset for {self._name}. Cause: {e}')
+                ds['error'] = "Dataset is currently unavailable"
+                ds['error_reason'] = str(e)
 
         return [ds]
 
@@ -295,6 +300,9 @@ class ZarrBackend(AbstractTileService):
         # Due to the precise nature of gridded Zarr's subsetting, it doesn't make sense to have a boundary region like
         # this
         return []
+
+    def find_tiles_along_line(self, start_point, end_point, ds=None, start_time=0, end_time=-1, **kwargs):
+        raise NotImplementedError()
 
     def get_min_max_time_by_granule(self, ds, granule_name):
         raise NotImplementedError()

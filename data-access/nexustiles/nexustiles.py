@@ -548,6 +548,17 @@ class NexusTileService:
             min_lat, max_lat, min_lon, max_lon, dataset, time, **kwargs
         )
 
+    @tile_data()
+    @catch_not_implemented
+    def find_tiles_along_line(self, start_point, end_point, ds=None, start_time=0, end_time=-1, **kwargs):
+        # Find tiles that fall in the given box in the Solr index
+        if type(start_time) is datetime:
+            start_time = (start_time - EPOCH).total_seconds()
+        if type(end_time) is datetime:
+            end_time = (end_time - EPOCH).total_seconds()
+
+        return NexusTileService._get_backend(ds).find_tiles_along_line(start_point, end_point, ds, start_time, end_time, **kwargs)
+
     def get_tiles_bounded_by_box(self, min_lat, max_lat, min_lon, max_lon, ds=None, start_time=0, end_time=-1,
                                  **kwargs):
         tiles = self.find_tiles_in_box(min_lat, max_lat, min_lon, max_lon, ds, start_time, end_time, **kwargs)
@@ -806,6 +817,45 @@ class NexusTileService:
                 multi_data_mask = np.repeat(data_mask[np.newaxis, ...], num_vars, axis=0)
                 tile.data = ma.masked_where(multi_data_mask, tile.data)
             else:
+                tile.data = ma.masked_where(data_mask, tile.data)
+
+            tiles[:] = [tile for tile in tiles if not tile.data.mask.all()]
+
+        return tiles
+
+    def mask_tiles_to_elevation(self, min_e, max_e, tiles):
+        """
+        Masks data in tiles to specified time range.
+        :param start_time: The start time to search for tiles
+        :param end_time: The end time to search for tiles
+        :param tiles: List of tiles
+        :return: A list tiles with data masked to specified time range
+        """
+        if min_e is None:
+            min_e = -float('inf')
+
+        if max_e is None:
+            max_e = float('inf')
+
+        for tile in tiles:
+            if tile.elevation is None:
+                continue
+
+            tile.elevation = ma.masked_outside(tile.elevation, min_e, max_e)
+
+            data_mask = ma.getmaskarray(tile.elevation)
+
+            # If this is multi-var, need to mask each variable separately.
+            if tile.is_multi:
+                # Combine space/time mask with existing mask on data
+                data_mask = reduce(np.logical_or, [tile.data[0].mask, data_mask])
+
+                num_vars = len(tile.data)
+                multi_data_mask = np.repeat(data_mask[np.newaxis, ...], num_vars, axis=0)
+                multi_data_mask = np.broadcast_arrays(multi_data_mask, tile.data)[0]
+                tile.data = ma.masked_where(multi_data_mask, tile.data)
+            else:
+                data_mask = np.broadcast_arrays(data_mask, tile.data)[0]
                 tile.data = ma.masked_where(data_mask, tile.data)
 
         tiles[:] = [tile for tile in tiles if not tile.data.mask.all()]
