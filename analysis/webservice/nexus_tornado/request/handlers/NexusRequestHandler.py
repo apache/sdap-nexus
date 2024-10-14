@@ -22,6 +22,9 @@ from webservice.nexus_tornado.request.renderers import NexusRendererFactory
 from webservice.webmodel import NexusRequestObjectTornadoFree, NexusRequestObject, NexusProcessingException
 from webservice.algorithms_spark.NexusCalcSparkTornadoHandler import NexusCalcSparkTornadoHandler
 
+from nexustiles.exception import AlgorithmUnsupportedForDatasetException
+
+from py4j.protocol import Py4JJavaError
 
 class NexusRequestHandler(tornado.web.RequestHandler):
     def initialize(self, thread_pool, clazz=None, **kargs):
@@ -66,6 +69,56 @@ class NexusRequestHandler(tornado.web.RequestHandler):
             # "NexusCalcSparkTornadoHandler" endpoints redirectm so no
             # need to render.
             if not isinstance(instance, NexusCalcSparkTornadoHandler):
+                renderer = NexusRendererFactory.get_renderer(request)
+                renderer.render(self, results)
+
+        except NexusProcessingException as e:
+            self.async_onerror_callback(e.reason, e.code)
+
+        # except pyspark
+
+        except AlgorithmUnsupportedForDatasetException as e:
+            self.logger.exception(e)
+            self.async_onerror_callback(
+                reason='Algorithm unsupported for dataset (backend has yet to implement functionality)',
+                code=400
+            )
+
+        except Py4JJavaError as e:
+            self.logger.exception(e)
+
+            if 'AlgorithmUnsupportedForDatasetException' in str(e):
+                self.async_onerror_callback(
+                    reason='Algorithm unsupported for dataset (backend has yet to implement functionality)',
+                    code=400
+                )
+            else:
+                self.async_onerror_callback(str(e), 500)
+
+        except Exception as e:
+            print(type(e))
+            self.async_onerror_callback(str(e), 500)
+
+    @tornado.gen.coroutine
+    def post(self):
+        self.logger.info("Received %s" % self._request_summary())
+
+        request = NexusRequestObject(self)
+
+        # create NexusCalcHandler which will process the request
+        instance = self.__clazz(**self._clazz_init_args)
+
+        try:
+            # process the request asynchronously on a different thread,
+            # the current tornado handler is still available to get other user requests
+            results = yield tornado.ioloop.IOLoop.current().run_in_executor(self.executor, instance.calc, request)
+
+            if results:
+                try:
+                    self.set_status(results.status_code)
+                except AttributeError:
+                    pass
+
                 renderer = NexusRendererFactory.get_renderer(request)
                 renderer.render(self, results)
 

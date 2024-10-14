@@ -69,6 +69,8 @@ zarr = "2.11.3"
 pandas = "<2.1.0rc0"
 matplotlib = "^3.7"
 psutil = "*"
+rasterio = "1.2.8"
+rioxarray = "*"
 
 
 [tool.poetry.dev-dependencies]

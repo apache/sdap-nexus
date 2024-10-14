@@ -20,7 +20,10 @@ from urllib.parse import urlparse
 
 import numpy as np
 import numpy.ma as ma
-import s3fs
+import rioxarray
+import rasterio as rio
+from rasterio.session import AWSSession
+import boto3
 import xarray as xr
 from nexustiles.AbstractTileService import AbstractTileService
 from nexustiles.exception import NexusTileServiceException
@@ -28,6 +31,8 @@ from nexustiles.model.nexusmodel import Tile, BBox, TileVariable
 from pytz import timezone
 from shapely.geometry import MultiPolygon, box
 from yarl import URL
+from rioxarray.exceptions import MissingCRS
+from nexustiles.backends.cog import SolrProxy
 
 EPOCH = timezone('UTC').localize(datetime(1970, 1, 1))
 ISO_8601 = '%Y-%m-%dT%H:%M:%S%z'
@@ -39,103 +44,37 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
-class ZarrBackend(AbstractTileService):
-    def __init__(self, dataset_name, path, config=None):
+class CoGBackend(AbstractTileService):
+    def __init__(self, dataset_name, bands, solr_config, config=None):
         AbstractTileService.__init__(self, dataset_name)
-        config = config if config is not None else {}
-        self.__config = config
+        self.__config = config if config is not None else {}
 
-        logger.info(f'Opening zarr backend at {path} for dataset {self._name}')
+        logger.info(f'Opening CoG backend at for dataset {self._name}')
 
-        url = urlparse(path)
+        self.__bands = bands
 
-        self.__url = path
+        self.__longitude = 'longitude'
+        self.__latitude = 'latitude'
+        self.__time = 'time'
 
-        self.__store_type = url.scheme
-        self.__host = url.netloc
-        self.__path = url.path
+        # self.__depth = config['coords'].get('depth')
 
-        if 'variable' in config:
-            data_vars = config['variable']
-        elif 'variables' in config:
-            data_vars = config['variables']
-        else:
-            raise KeyError('Data variables not provided in config')
-
-        if isinstance(data_vars, str):
-            self.__variables = [data_vars]
-        elif isinstance(data_vars, list):
-            self.__variables = data_vars
-        else:
-            raise TypeError(f'Improper type for variables config: {type(data_vars)}')
-
-        self.__variables = [v.strip('\"\'') for v in self.__variables]
-
-        self.__longitude = config['coords']['longitude']
-        self.__latitude = config['coords']['latitude']
-        self.__time = config['coords']['time']
-
-        self.__depth = config['coords'].get('depth')
-
-        if self.__store_type in ['', 'file']:
-            store = self.__path
-        elif self.__store_type == 's3':
-            try:
-                aws_cfg = self.__config['aws']
-
-                if aws_cfg['public']:
-                    # region = aws_cfg.get('region', 'us-west-2')
-                    # store = f'https://{self.__host}.s3.{region}.amazonaws.com{self.__path}'
-                    s3 = s3fs.S3FileSystem(True)
-                    store = s3fs.S3Map(root=path, s3=s3, check=False)
-                else:
-                    s3 = s3fs.S3FileSystem(False, key=aws_cfg['accessKeyID'], secret=aws_cfg['secretAccessKey'])
-                    store = s3fs.S3Map(root=path, s3=s3, check=False)
-            except Exception as e:
-                logger.error(f'Failed to open zarr dataset at {self.__path}, ignoring it. Cause: {e}')
-                raise NexusTileServiceException(f'Cannot open S3 dataset ({e})')
-        else:
-            raise ValueError(self.__store_type)
-
-        try:
-            self.__ds: xr.Dataset = xr.open_zarr(store, consolidated=True)
-        except Exception as e:
-            logger.error(f'Failed to open zarr dataset at {self.__path}, ignoring it. Cause: {e}')
-            raise NexusTileServiceException(f'Cannot open dataset ({e})')
-
-        lats = self.__ds[self.__latitude].to_numpy()
-        delta = lats[1] - lats[0]
-
-        if delta < 0:
-            logger.warning(f'Latitude coordinate for {self._name} is in descending order. Flipping it to ascending')
-            self.__ds = self.__ds.isel({self.__latitude: slice(None, None, -1)})
-
-    def heartbeat(self) -> bool:
-        # TODO: This is temporary, eventually we should use the logic to be introduced for SDAP-517 (PR#312) to evaluate
-        #  if data is accessible currently.
-        return True
+        self.__solr: SolrProxy = SolrProxy(solr_config)
 
     def get_dataseries_list(self, simple=False):
-        ds = {
-            "shortName": self._name,
-            "title": self._name,
-            "type": "zarr"
-        }
+        ds = dict(
+            shortName=self._name,
+            title=self._name,
+            type='Cloud Optimized GeoTIFF'
+        )
 
         if not simple:
-            try:
-                min_date = self.get_min_time([])
-                max_date = self.get_max_time([])
-                ds['start'] = min_date
-                ds['end'] = max_date
-                ds['iso_start'] = datetime.utcfromtimestamp(min_date).strftime(ISO_8601)
-                ds['iso_end'] = datetime.utcfromtimestamp(max_date).strftime(ISO_8601)
+            min_date, max_date = self.__solr.date_range_for_dataset(self._name)
 
-                ds['metadata'] = dict(self.__ds.attrs)
-            except Exception as e:
-                logger.error(f'Failed to access dataset for {self._name}. Cause: {e}')
-                ds['error'] = "Dataset is currently unavailable"
-                ds['error_reason'] = str(e)
+            ds['start'] = (min_date - EPOCH).total_seconds()
+            ds['end'] = (max_date - EPOCH).total_seconds()
+            ds['iso_start'] = min_date.strftime(ISO_8601)
+            ds['iso_end'] = max_date.strftime(ISO_8601)
 
         return [ds]
 
@@ -147,31 +86,16 @@ class ZarrBackend(AbstractTileService):
 
     def find_days_in_range_asc(self, min_lat, max_lat, min_lon, max_lon, dataset, start_time, end_time,
                                metrics_callback=None, **kwargs):
-        start = datetime.now()
-
-        if not isinstance(start_time, datetime):
-            start_time = datetime.utcfromtimestamp(start_time)
-
-        if not isinstance(end_time, datetime):
-            end_time = datetime.utcfromtimestamp(end_time)
-
-        sel = {
-            self.__latitude: slice(min_lat, max_lat),
-            self.__longitude: slice(min_lon, max_lon),
-            self.__time: slice(start_time, end_time)
-        }
-
-        times = self.__ds.sel(sel)[self.__time].to_numpy()
-
-        if np.issubdtype(times.dtype, np.datetime64):
-            times = (times - np.datetime64(EPOCH)).astype('timedelta64[s]').astype(int)
-
-        times = sorted(times.tolist())
-
-        if metrics_callback:
-            metrics_callback(backend=(datetime.now() - start).total_seconds())
-
-        return times
+        return self.__solr.find_days_in_range_asc(
+            min_lat,
+            max_lat,
+            min_lon,
+            max_lon,
+            dataset,
+            start_time,
+            end_time,
+            **kwargs
+        )
 
     def find_tile_by_polygon_and_most_recent_day_of_year(self, bounding_polygon, ds, day_of_year, **kwargs):
         """
@@ -197,23 +121,7 @@ class ZarrBackend(AbstractTileService):
         :return: List of one tile from ds with bounding_polygon on or before day_of_year or raise NexusTileServiceException if no tile found
         """
 
-        times = self.__ds[self.__time].to_numpy()
-
-        to_doy = lambda dt: datetime.utcfromtimestamp(int(dt)).timetuple().tm_yday
-
-        vfunc = np.vectorize(to_doy)
-        days_of_year = vfunc(times.astype(datetime) / 1e9)
-
-        try:
-            time = times[np.where(days_of_year <= day_of_year)[0][-1]].astype(datetime) / 1e9
-        except IndexError:
-            raise NexusTileServiceException(reason='No tiles matched')
-
-        min_lon, min_lat, max_lon, max_lat = bounding_polygon.bounds
-
-        return self.find_tiles_in_box(
-            min_lat, max_lat, min_lon, max_lon, ds, time, time
-        )
+        raise NotImplementedError()
 
     def find_all_tiles_in_box_at_time(self, min_lat, max_lat, min_lon, max_lon, dataset, time, **kwargs):
         return self.find_tiles_in_box(min_lat, max_lat, min_lon, max_lon, dataset, time, time, **kwargs)
@@ -222,26 +130,24 @@ class ZarrBackend(AbstractTileService):
         return self.find_tiles_in_polygon(bounding_polygon, dataset, time, time, **kwargs)
 
     def find_tiles_in_box(self, min_lat, max_lat, min_lon, max_lon, ds=None, start_time=0, end_time=-1, **kwargs):
-        if type(start_time) is datetime:
-            start_time = (start_time - EPOCH).total_seconds()
-        if type(end_time) is datetime:
-            end_time = (end_time - EPOCH).total_seconds()
+        tiffs = self.__solr.find_tiffs_in_bounds(
+            ds,
+            start_time,
+            end_time,
+            {
+                'min_lat': min_lat,
+                'max_lat': max_lat,
+                'min_lon': min_lon,
+                'max_lon': max_lon
+            }
+        )
 
         params = {
-            'min_lat': min_lat,
-            'max_lat': max_lat,
-            'min_lon': min_lon,
-            'max_lon': max_lon
-        }
-
-        times = None
-
-        if 0 <= start_time <= end_time:
-            if kwargs.get('distinct', True):
-                times_asc = self.find_days_in_range_asc(min_lat, max_lat, min_lon, max_lon, ds, start_time, end_time)
-                times = [(t, t) for t in times_asc]
-            else:
-                times = [(start_time, end_time)]
+                'min_lat': min_lat,
+                'max_lat': max_lat,
+                'min_lon': min_lon,
+                'max_lon': max_lon
+            }
 
         if 'depth' in kwargs:
             params['depth'] = kwargs['depth']
@@ -249,21 +155,43 @@ class ZarrBackend(AbstractTileService):
             params['min_depth'] = kwargs.get('min_depth')
             params['max_depth'] = kwargs.get('max_depth')
 
-        if times:
-            return [ZarrBackend.__to_url(self._name, min_time=t[0], max_time=t[1], **params) for t in times]
-        else:
-            return [ZarrBackend.__to_url(self._name, **params)]
+        return[CoGBackend.__to_url(
+            self._name,
+            tiff['path_s'],
+            min_time=tiff.get('min_time_dt'),
+            max_time=tiff.get('max_time_dt'),
+            **params) for tiff in tiffs]
 
     def find_tiles_in_polygon(self, bounding_polygon, ds=None, start_time=None, end_time=None, **kwargs):
         # Find tiles that fall within the polygon in the Solr index
+        tiffs = self.__solr.find_tiffs_in_bounds(
+            ds,
+            start_time,
+            end_time,
+            bounding_polygon
+        )
+
         bounds = bounding_polygon.bounds
 
-        min_lon = bounds[0]
-        min_lat = bounds[1]
-        max_lon = bounds[2]
-        max_lat = bounds[3]
+        params = {
+            'min_lat': bounds[1],
+            'max_lat': bounds[3],
+            'min_lon': bounds[0],
+            'max_lon': bounds[2]
+        }
 
-        return self.find_tiles_in_box(min_lat, max_lat, min_lon, max_lon, ds, start_time, end_time, **kwargs)
+        if 'depth' in kwargs:
+            params['depth'] = kwargs['depth']
+        elif 'min_depth' in kwargs or 'max_depth' in kwargs:
+            params['min_depth'] = kwargs.get('min_depth')
+            params['max_depth'] = kwargs.get('max_depth')
+
+        return [CoGBackend.__to_url(
+            self._name,
+            tiff['path_s'],
+            min_time=tiff.get('min_time_dt'),
+            max_time=tiff.get('max_time_dt'),
+            **params) for tiff in tiffs]
 
     def find_tiles_by_metadata(self, metadata, ds=None, start_time=0, end_time=-1, **kwargs):
         """
@@ -299,10 +227,11 @@ class ZarrBackend(AbstractTileService):
     def find_all_boundary_tiles_at_time(self, min_lat, max_lat, min_lon, max_lon, dataset, time, **kwargs):
         # Due to the precise nature of gridded Zarr's subsetting, it doesn't make sense to have a boundary region like
         # this
-        return []
+        raise NotImplementedError()
 
     def find_tiles_along_line(self, start_point, end_point, ds=None, start_time=0, end_time=-1, **kwargs):
-        raise NotImplementedError()
+        return self.__solr.find_tiles_along_line(start_point, end_point, ds, start_time,
+                                                         end_time, **kwargs)
 
     def get_min_max_time_by_granule(self, ds, granule_name):
         raise NotImplementedError()
@@ -320,31 +249,19 @@ class ZarrBackend(AbstractTileService):
         :return: shapely.geometry.Polygon that represents the smallest bounding box that encompasses all of the tiles
         """
 
-        bounds = [
-            (
-                float(URL(u).query['min_lon']),
-                float(URL(u).query['min_lat']),
-                float(URL(u).query['max_lon']),
-                float(URL(u).query['max_lat'])
-            )
-            for u in tile_ids
-        ]
+        raise NotImplementedError()
 
-        poly = MultiPolygon([box(*b) for b in bounds])
-
-        return box(*poly.bounds)
-
-    def __get_ds_min_max_date(self):
-        min_date = self.__ds[self.__time].min().to_numpy()
-        max_date = self.__ds[self.__time].max().to_numpy()
-
-        if np.issubdtype(min_date.dtype, np.datetime64):
-            min_date = (min_date - np.datetime64(EPOCH)).astype('timedelta64[s]').astype(int).item()
-
-        if np.issubdtype(max_date.dtype, np.datetime64):
-            max_date = (max_date - np.datetime64(EPOCH)).astype('timedelta64[s]').astype(int).item()
-
-        return min_date, max_date
+    # def __get_ds_min_max_date(self):
+    #     min_date = self.__ds[self.__time].min().to_numpy()
+    #     max_date = self.__ds[self.__time].max().to_numpy()
+    #
+    #     if np.issubdtype(min_date.dtype, np.datetime64):
+    #         min_date = ((min_date - np.datetime64(EPOCH)) / 1e9).astype(int).item()
+    #
+    #     if np.issubdtype(max_date.dtype, np.datetime64):
+    #         max_date = ((max_date - np.datetime64(EPOCH)) / 1e9).astype(int).item()
+    #
+    #     return min_date, max_date
 
     def get_min_time(self, tile_ids, ds=None):
         """
@@ -353,13 +270,10 @@ class ZarrBackend(AbstractTileService):
         :param ds: Filter by a specific dataset. Defaults to None (queries all datasets)
         :return: long time in seconds since epoch
         """
-        times = list(filter(lambda x: x is not None, [int(URL(tid).query['min_time']) for tid in tile_ids]))
+        paths = [URL(t).query['path'] for t in tile_ids]
 
-        if len(times) == 0:
-            min_date, max_date = self.__get_ds_min_max_date()
-            return min_date
-        else:
-            return min(times)
+        min_time = self.__solr.find_min_date_from_tiles(paths, self._name)
+        return int((min_time - EPOCH).total_seconds())
 
     def get_max_time(self, tile_ids, ds=None):
         """
@@ -368,13 +282,10 @@ class ZarrBackend(AbstractTileService):
         :param ds: Filter by a specific dataset. Defaults to None (queries all datasets)
         :return: long time in seconds since epoch
         """
-        times = list(filter(lambda x: x is not None, [int(URL(tid).query['max_time']) for tid in tile_ids]))
+        paths = [URL(t).query['path'] for t in tile_ids]
 
-        if len(tile_ids) == 0:
-            min_date, max_date = self.__get_ds_min_max_date()
-            return max_date
-        else:
-            return max(times)
+        max_time = self.__solr.find_max_date_from_tiles(paths, self._name)
+        return int((max_time - EPOCH).total_seconds())
 
     def get_distinct_bounding_boxes_in_polygon(self, bounding_polygon, ds, start_time, end_time):
         """
@@ -397,13 +308,95 @@ class ZarrBackend(AbstractTileService):
         :param metadata: List of metadata values to search for tiles e.g ["river_id_i:1", "granule_s:granule_name"]
         :return: number of tiles that match search criteria
         """
-        raise NotImplementedError()
+        return len(self.__solr.find_tiffs_in_bounds(
+            ds,
+            start_time,
+            end_time,
+            bounds=bounding_polygon
+        ))
 
     def fetch_data_for_tiles(self, *tiles):
         for tile in tiles:
             self.__fetch_data_for_tile(tile)
 
         return tiles
+
+    @staticmethod
+    def __open_granule_at_url(url_s, time: np.datetime64, bands, config, **kwargs):
+        url = urlparse(url_s)
+
+        logger.debug(f'Opening cog at {url_s}')
+
+        if url.scheme in ['file', '']:
+            tiff = rioxarray.open_rasterio(url.path, mask_and_scale=False).to_dataset('band')
+        elif url.scheme == 's3':
+            try:
+                aws_cfg = config['aws']
+
+                key_id = aws_cfg['accessKeyID']
+                secret = aws_cfg['secretAccessKey']
+            except KeyError:
+                raise NexusTileServiceException(f'AWS config not provided for dataset {url.path}')
+
+            session = boto3.Session(
+                aws_access_key_id=key_id,
+                aws_secret_access_key=secret,
+                region_name=aws_cfg.get('region', 'us-west-2')
+            )
+
+            with rio.Env(
+                AWSSession(session),
+                GDAL_DISABLE_READDIR_ON_OPEN='EMPTY_DIR'
+            ):
+                tiff = rioxarray.open_rasterio(url_s, mask_and_scale=False)
+
+                #####
+                # NOTE: This will likely be inefficient so leaving it disabled for now. I don't know how it will
+                # handle accessing data when the rio.Env context exits so maybe we want to pull it into memory before
+                # it does???
+                #
+                # tiff = tiff.load()
+
+                tiff = tiff.to_dataset('band')
+        else:
+            raise NotImplementedError(f'Support not yet added for tiffs with {url.scheme} URLs')
+
+        # Broadcast the dataset attributes to the vars for decoding
+        for var in tiff.data_vars:
+            tiff[var].attrs.update(tiff.attrs)
+
+        # Save the dtypes of the vars cause they will be lost to float32 on decode
+        var_dtypes = {var: tiff[var].dtype for var in tiff.data_vars}
+
+        # Decode
+        tiff = xr.decode_cf(tiff)
+
+        # Cast variables back to original dtypes
+        for var in tiff.data_vars:
+            tiff[var] = tiff[var].astype(var_dtypes[var])
+
+        try:
+            tiff = tiff.rio.reproject(dst_crs='EPSG:4326')
+        except MissingCRS:
+            pass
+
+        rename = dict(x='longitude', y='latitude')
+
+        drop = set(tiff.data_vars)
+
+        for band in bands:
+            band_num = bands[band]
+
+            rename[band_num] = band
+            drop.discard(band_num)
+
+        drop.discard('spatial_ref')
+
+        tiff = tiff.rename(rename).drop_vars(drop, errors='ignore')
+
+        tiff = tiff.expand_dims({"time": 1}).assign_coords({"time": [time]})
+
+        return tiff
 
     def __fetch_data_for_tile(self, tile: Tile):
         bbox: BBox = tile.bbox
@@ -413,8 +406,15 @@ class ZarrBackend(AbstractTileService):
         max_lat = None
         max_lon = None
 
-        min_time = tile.min_time
-        max_time = tile.max_time
+        if tile.min_time:
+            min_time = tile.min_time
+        else:
+            min_time = None
+
+        if tile.max_time:
+            max_time = tile.max_time
+        else:
+            max_time = None
 
         # if min_time:
         #     min_time = datetime.utcfromtimestamp(min_time)
@@ -427,6 +427,18 @@ class ZarrBackend(AbstractTileService):
             min_lon = bbox.min_lon
             max_lat = bbox.max_lat
             max_lon = bbox.max_lon
+
+        granule = tile.granule
+
+        ds: xr.Dataset = CoGBackend.__open_granule_at_url(granule, np.datetime64(min_time.isoformat(), 'ns'), self.__bands, self.__config)
+        variables = list(ds.data_vars)
+
+        lats = ds[self.__latitude].to_numpy()
+        delta = lats[1] - lats[0]
+
+        if delta < 0:
+            logger.warning(f'Latitude coordinate for {self._name} is in descending order. Flipping it to ascending')
+            ds = ds.isel({self.__latitude: slice(None, None, -1)})
 
         sel_g = {
             self.__latitude: slice(min_lat, max_lat),
@@ -446,10 +458,10 @@ class ZarrBackend(AbstractTileService):
             method = None
 
         tile.variables = [
-            TileVariable(v, v) for v in self.__variables
+            TileVariable(v, v) for v in variables
         ]
 
-        matched = self.__ds.sel(sel_g)
+        matched = ds.sel(sel_g)
 
         if sel_t is not None:
             matched = matched.sel(sel_t, method=method)
@@ -460,13 +472,13 @@ class ZarrBackend(AbstractTileService):
         times = matched[self.__time].to_numpy()
 
         if np.issubdtype(times.dtype, np.datetime64):
-            times = (times - np.datetime64(EPOCH)).astype('timedelta64[s]').astype(int)
+            times = ((times - np.datetime64(EPOCH)) / 1e9).astype(int)
 
         tile.times = ma.masked_invalid(times)
 
-        var_data = [matched[var].to_numpy() for var in self.__variables]
+        var_data = [matched[var].to_numpy() for var in variables]
 
-        if len(self.__variables) > 1:
+        if len(variables) > 1:
             tile.data = ma.masked_invalid(var_data)
             tile.is_multi = True
         else:
@@ -474,7 +486,7 @@ class ZarrBackend(AbstractTileService):
             tile.is_multi = False
 
     def _metadata_store_docs_to_tiles(self, *store_docs):
-        return [ZarrBackend.__nts_url_to_tile(d) for d in store_docs]
+        return [CoGBackend.__nts_url_to_tile(d) for d in store_docs]
 
     @staticmethod
     def __nts_url_to_tile(nts_url):
@@ -496,16 +508,21 @@ class ZarrBackend(AbstractTileService):
 
         tile.dataset = url.path
         tile.dataset_id = url.path
+        tile.granule = url.query['path']
 
         try:
             # tile.min_time = int(url.query['min_time'])
             tile.min_time = datetime.utcfromtimestamp(int(url.query['min_time']))
+        except ValueError:
+            tile.min_time = datetime.strptime(url.query['min_time'], '%Y-%m-%dT%H:%M:%SZ')
         except KeyError:
             pass
 
         try:
             # tile.max_time = int(url.query['max_time'])
             tile.max_time = datetime.utcfromtimestamp(int(url.query['max_time']))
+        except ValueError:
+            tile.max_time = datetime.strptime(url.query['max_time'], '%Y-%m-%dT%H:%M:%SZ')
         except KeyError:
             pass
 
@@ -514,12 +531,15 @@ class ZarrBackend(AbstractTileService):
         return tile
 
     @staticmethod
-    def __to_url(dataset, **kwargs):
+    def __to_url(dataset, tiff, **kwargs):
         if 'dataset' in kwargs:
             del kwargs['dataset']
 
         if 'ds' in kwargs:
             del kwargs['ds']
+
+        if 'path' in kwargs:
+            del kwargs['path']
 
         params = {}
 
@@ -535,11 +555,11 @@ class ZarrBackend(AbstractTileService):
 
             params[kw] = v
 
+        params['path'] = tiff
+
         return str(URL.build(
-            scheme='zarr',
+            scheme='cog',
             host='',
             path=dataset,
             query=params
         ))
-
-

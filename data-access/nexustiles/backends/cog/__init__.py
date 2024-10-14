@@ -13,6 +13,4 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from nexustiles.backends.cog.backend import CoGBackend
-from nexustiles.backends.zarr.backend import ZarrBackend
-from nexustiles.backends.nexusproto.backend import NexusprotoTileService
+from nexustiles.backends.cog.SolrProxy import SolrProxy

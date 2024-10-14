@@ -14,6 +14,7 @@
 # limitations under the License.
 
 import configparser
+import io
 import json
 import logging
 import sys
@@ -34,11 +35,13 @@ from webservice.NexusHandler import nexus_initializer
 from yarl import URL
 
 from .AbstractTileService import AbstractTileService
-from .backends.nexusproto.backend import NexusprotoTileService
-from .backends.zarr.backend import ZarrBackend
+# from .backends.nexusproto.backend import NexusprotoTileService
+# from .backends.zarr.backend import ZarrBackend
 from .model.nexusmodel import Tile, BBox, TileStats, TileVariable
 
-from .exception import NexusTileServiceException
+from nexustiles.backends import *
+
+from .exception import NexusTileServiceException, AlgorithmUnsupportedForDatasetException
 
 from requests.structures import CaseInsensitiveDict
 
@@ -101,7 +104,7 @@ def catch_not_implemented(func):
         try:
             return func(*args, **kwargs)
         except NotImplementedError:
-            raise NexusTileServiceException('Action unsupported by backend')
+            raise AlgorithmUnsupportedForDatasetException('Action unsupported by backend')
 
     return wrapper
 
@@ -173,6 +176,10 @@ class NexusTileService:
     def _get_backend(dataset_s) -> AbstractTileService:
         if dataset_s is not None:
             dataset_s = dataset_s
+        else:
+            logger.warning('_get_backend called with dataset_s=None')
+
+        logger.debug(f'Getting backend for {dataset_s}')
 
         with NexusTileService.DS_LOCK:
             if dataset_s not in NexusTileService.backends:
@@ -257,6 +264,32 @@ class NexusTileService:
                         }
                     except NexusTileServiceException:
                         added_datasets -= 1
+                elif store_type.lower() in ['cog', 'cloud_optimized_geotiff']:
+                        update_logger.info(f'Detected new CoG dataset {d_id}, opening new CoG backend')
+
+                        ds_config = json.loads(dataset['config'][0])
+
+                        solr_config_str = io.StringIO()
+
+                        NexusTileService.ds_config.write(solr_config_str)
+
+                        solr_config_str.seek(0)
+                        solr_config = configparser.ConfigParser()
+                        solr_config.read_file(solr_config_str)
+
+                        solr_config.set('solr', 'core', 'nexusgranules')
+
+                        try:
+                            NexusTileService.backends[d_id] = {
+                                'backend': CoGBackend(
+                                    dataset_name=dataset['dataset_s'],
+                                    solr_config=solr_config,
+                                    **ds_config
+                                ),
+                                'up': True
+                            }
+                        except NexusTileServiceException:
+                            added_datasets -= 1
                 else:
                     update_logger.warning(f'Unsupported backend {store_type} for dataset {d_id}')
                     added_datasets -= 1
@@ -407,7 +440,7 @@ class NexusTileService:
     def find_tile_by_id(self, tile_id, **kwargs):
         tile = URL(tile_id)
 
-        if tile.scheme == 'nts':
+        if tile.scheme != '':
             return NexusTileService._get_backend(tile.path).find_tile_by_id(tile_id)
         else:
             return NexusTileService._get_backend('__nexusproto__').find_tile_by_id(tile_id)
@@ -613,6 +646,7 @@ class NexusTileService:
             min_lat, max_lat, min_lon, max_lon, dataset, time, **kwargs
         )
 
+    @catch_not_implemented
     def get_bounding_box(self, tile_ids, ds=None):
         """
         Retrieve a bounding box that encompasses all of the tiles represented by the given tile ids.
@@ -621,6 +655,7 @@ class NexusTileService:
         """
         return NexusTileService._get_backend(ds).get_bounding_box(tile_ids)
 
+    @catch_not_implemented
     def get_min_time(self, tile_ids, ds=None):
         """
         Get the minimum tile date from the list of tile ids
@@ -628,8 +663,9 @@ class NexusTileService:
         :param ds: Filter by a specific dataset. Defaults to None (queries all datasets)
         :return: long time in seconds since epoch
         """
-        return NexusTileService._get_backend(ds).get_min_time(tile_ids, ds)
+        return int(NexusTileService._get_backend(ds).get_min_time(tile_ids, ds))
 
+    @catch_not_implemented
     def get_max_time(self, tile_ids, ds=None):
         """
         Get the maximum tile date from the list of tile ids
@@ -639,6 +675,7 @@ class NexusTileService:
         """
         return int(NexusTileService._get_backend(ds).get_max_time(tile_ids))
 
+    @catch_not_implemented
     def get_distinct_bounding_boxes_in_polygon(self, bounding_polygon, ds, start_time, end_time):
         """
         Get a list of distinct tile bounding boxes from all tiles within the given polygon and time range.
@@ -651,6 +688,7 @@ class NexusTileService:
         bounds = self._metadatastore.find_distinct_bounding_boxes_in_polygon(bounding_polygon, ds, start_time, end_time)
         return [box(*b) for b in bounds]
 
+    @catch_not_implemented
     def get_tile_count(self, ds, bounding_polygon=None, start_time=0, end_time=-1, metadata=None, **kwargs):
         """
         Return number of tiles that match search criteria.
@@ -823,6 +861,51 @@ class NexusTileService:
         tiles[:] = [tile for tile in tiles if not tile.data.mask.all()]
 
         return tiles
+
+    def mask_tiles_to_elevation(self, min_e, max_e, tiles):
+        """
+        Masks data in tiles to specified time range.
+        :param start_time: The start time to search for tiles
+        :param end_time: The end time to search for tiles
+        :param tiles: List of tiles
+        :return: A list tiles with data masked to specified time range
+        """
+        for tile in tiles:
+            tile.elevation = ma.masked_outside(tile.elevation, min_e, max_e)
+
+            # Or together the masks of the individual arrays to create the new mask
+            data_mask = ma.getmaskarray(tile.times)[:, np.newaxis, np.newaxis] \
+                        | ma.getmaskarray(tile.elevation)[np.newaxis, :, :] \
+
+            # If this is multi-var, need to mask each variable separately.
+            if tile.is_multi:
+                # Combine space/time mask with existing mask on data
+                data_mask = reduce(np.logical_or, [tile.data[0].mask, data_mask])
+
+                num_vars = len(tile.data)
+                multi_data_mask = np.repeat(data_mask[np.newaxis, ...], num_vars, axis=0)
+                multi_data_mask = np.broadcast_to(multi_data_mask, tile.data.shape)
+
+                tile.data = ma.masked_where(multi_data_mask, tile.data)
+            else:
+                data_mask = np.broadcast_to(data_mask, tile.data.shape)
+                tile.data = ma.masked_where(data_mask, tile.data)
+
+        tiles[:] = [tile for tile in tiles if not tile.data.mask.all()]
+
+        return tiles
+
+    def get_tile_count(self, ds, bounding_polygon=None, start_time=0, end_time=-1, metadata=None, **kwargs):
+        """
+        Return number of tiles that match search criteria.
+        :param ds: The dataset name to search
+        :param bounding_polygon: The polygon to search for tiles
+        :param start_time: The start time to search for tiles
+        :param end_time: The end time to search for tiles
+        :param metadata: List of metadata values to search for tiles e.g ["river_id_i:1", "granule_s:granule_name"]
+        :return: number of tiles that match search criteria
+        """
+        return self._metadatastore.get_tile_count(ds, bounding_polygon, start_time, end_time, metadata, **kwargs)
 
     def fetch_data_for_tiles(self, *tiles):
         dataset = tiles[0].dataset
