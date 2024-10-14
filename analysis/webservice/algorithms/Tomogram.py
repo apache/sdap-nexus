@@ -318,6 +318,8 @@ class TomogramBaseClass(NexusCalcHandler):
                     name=var
                 )
 
+            tomo_ds[var].attrs.update(variables[var].attrs)
+
     @staticmethod
     def _get_elevation_step_size(data):
         tries = 5
@@ -489,15 +491,17 @@ class LongitudeTomogramImpl(TomogramBaseClass):
         },
         "canopy_ds": {
             "name": "Canopy height dataset name",
-            "type": "string",
-            "description": "Dataset containing canopy heights (RH98). This is used to trim out tomogram voxels that "
-                           "return over the measured or predicted canopy"
+            "type": "string, comma-separated pair of strings",
+            "description": "Dataset(s) containing canopy heights (RH98). This is used to trim out tomogram voxels that "
+                           "return over the measured or predicted canopy. If 2 are provided, the first is considered "
+                           "more accurate and will be favored for masking."
         },
         "ground_ds": {
             "name": "Ground height dataset name",
-            "type": "string",
+            "type": "string, comma-separated pair of strings",
             "description": "Dataset containing ground height (DEM). This is used to trim out tomogram voxels that "
-                           "return below the measured or predicted ground"
+                           "return below the measured or predicted ground. If 2 are provided, the first is considered "
+                           "more accurate and will be favored for masking."
         },
         "elevPercentiles": {
             "name": "Elevation percentiles",
@@ -611,6 +615,26 @@ class LongitudeTomogramImpl(TomogramBaseClass):
         ch_ds = compute_options.get_argument('canopy_ds', None)
         g_ds = compute_options.get_argument('ground_ds', None)
 
+        if ch_ds is not None:
+            ch_ds = [v.strip() for v in ch_ds.split(',')]
+        else:
+            ch_ds = []
+
+        if len(ch_ds) > 2:
+            raise NexusProcessingException(
+                reason='Too many datasets provided for canopy_ds', code=400
+            )
+
+        if g_ds is not None:
+            g_ds = [v.strip() for v in g_ds.split(',')]
+        else:
+            g_ds = []
+
+        if len(g_ds) > 2:
+            raise NexusProcessingException(
+                reason='Too many datasets provided for ground_ds', code=400
+            )
+
         percentiles = compute_options.get_boolean_arg('elevPercentiles')
 
         if percentiles and (ch_ds is None or g_ds is None):
@@ -659,11 +683,29 @@ class LongitudeTomogramImpl(TomogramBaseClass):
         slices['elevation'] = slice(None, None)
         elev_vars = {}
 
-        if ch_ds is not None:
-            elev_vars['ch'] = TomogramBaseClass.data_subset_to_ds(self.do_subset(ch_ds, parameter, slices, 0))[3]
+        if len(ch_ds) > 0:
+            elev_vars['ch'] = TomogramBaseClass.data_subset_to_ds(
+                self.do_subset(ch_ds[0], parameter, slices, 0)
+            )[3]
+            elev_vars['ch'].attrs['_source'] = ch_ds[0]
 
-        if g_ds is not None:
-            elev_vars['gh'] = TomogramBaseClass.data_subset_to_ds(self.do_subset(g_ds, parameter, slices, 0))[3]
+            if len(ch_ds) == 2:
+                elev_vars['ch_secondary'] = TomogramBaseClass.data_subset_to_ds(
+                    self.do_subset(ch_ds[1], parameter, slices, 0)
+                )[3]
+                elev_vars['ch_secondary'].attrs['_source'] = ch_ds[1]
+
+        if len(g_ds) > 0:
+            elev_vars['gh'] = TomogramBaseClass.data_subset_to_ds(
+                self.do_subset(g_ds[0], parameter, slices, 0)
+            )[3]
+            elev_vars['gh'].attrs['_source'] = g_ds[0]
+
+            if len(g_ds) == 2:
+                elev_vars['gh_secondary'] = TomogramBaseClass.data_subset_to_ds(
+                    self.do_subset(g_ds[1], parameter, slices, 0)
+                )[3]
+                elev_vars['gh_secondary'].attrs['_source'] = g_ds[1]
 
         if elev_vars:
             TomogramBaseClass.add_variables_to_tomo(ds, **elev_vars)
@@ -675,9 +717,20 @@ class LongitudeTomogramImpl(TomogramBaseClass):
             ds = ds.sel(longitude=longitude)
 
         if 'ch' in ds.data_vars:
-            ds['tomo'] = ds['tomo'].where(ds.tomo.elevation <= ds.ch)
+            if 'ch_secondary' in ds.data_vars:
+                ds['ch_filter'] = xr.where(np.isnan(ds.ch), ds.ch_secondary, ds.ch)
+            else:
+                ds['ch_filter'] = ds.ch
+
+            ds['tomo'] = ds['tomo'].where(ds.tomo.elevation <= ds.ch_filter)
+
         if 'gh' in ds.data_vars:
-            ds['tomo'] = ds['tomo'].where(ds.tomo.elevation >= ds.gh)
+            if 'gh_secondary' in ds.data_vars:
+                ds['gh_filter'] = xr.where(np.isnan(ds.gh), ds.gh_secondary, ds.gh)
+            else:
+                ds['gh_filter'] = ds.gh
+
+            ds['tomo'] = ds['tomo'].where(ds.tomo.elevation >= ds.gh_filter)
 
         if percentiles:
             tomo = ds['tomo'].cumsum(dim='elevation', skipna=True).where(ds['tomo'].notnull())
@@ -698,7 +751,7 @@ class LongitudeTomogramImpl(TomogramBaseClass):
                     lat = col.latitude.item()
 
                     try:
-                        idx = col.argmax(dim='elevation').tomo.item()
+                        idx = col.tomo.argmax(dim='elevation').item()
 
                         lon_peaks.append((lat, col.isel(elevation=idx).elevation.item()))
 
@@ -781,15 +834,17 @@ class LatitudeTomogramImpl(TomogramBaseClass):
         },
         "canopy_ds": {
             "name": "Canopy height dataset name",
-            "type": "string",
-            "description": "Dataset containing canopy heights (RH98). This is used to trim out tomogram voxels that "
-                           "return over the measured or predicted canopy"
+            "type": "string, comma-separated pair of strings",
+            "description": "Dataset(s) containing canopy heights (RH98). This is used to trim out tomogram voxels that "
+                           "return over the measured or predicted canopy. If 2 are provided, the first is considered "
+                           "more accurate and will be favored for masking."
         },
         "ground_ds": {
             "name": "Ground height dataset name",
-            "type": "string",
+            "type": "string, comma-separated pair of strings",
             "description": "Dataset containing ground height (DEM). This is used to trim out tomogram voxels that "
-                           "return below the measured or predicted ground"
+                           "return below the measured or predicted ground. If 2 are provided, the first is considered "
+                           "more accurate and will be favored for masking."
         },
         "elevPercentiles": {
             "name": "Elevation percentiles",
@@ -903,6 +958,26 @@ class LatitudeTomogramImpl(TomogramBaseClass):
         ch_ds = compute_options.get_argument('canopy_ds', None)
         g_ds = compute_options.get_argument('ground_ds', None)
 
+        if ch_ds is not None:
+            ch_ds = [v.strip() for v in ch_ds.split(',')]
+        else:
+            ch_ds = []
+
+        if len(ch_ds) > 2:
+            raise NexusProcessingException(
+                reason='Too many datasets provided for canopy_ds', code=400
+            )
+
+        if g_ds is not None:
+            g_ds = [v.strip() for v in g_ds.split(',')]
+        else:
+            g_ds = []
+
+        if len(g_ds) > 2:
+            raise NexusProcessingException(
+                reason='Too many datasets provided for ground_ds', code=400
+            )
+
         percentiles = compute_options.get_boolean_arg('elevPercentiles')
 
         if percentiles and (ch_ds is None or g_ds is None):
@@ -951,11 +1026,29 @@ class LatitudeTomogramImpl(TomogramBaseClass):
         slices['elevation'] = slice(None, None)
         elev_vars = {}
 
-        if ch_ds is not None:
-            elev_vars['ch'] = TomogramBaseClass.data_subset_to_ds(self.do_subset(ch_ds, parameter, slices, 0))[3]
+        if len(ch_ds) > 0:
+            elev_vars['ch'] = TomogramBaseClass.data_subset_to_ds(
+                self.do_subset(ch_ds[0], parameter, slices, 0)
+            )[3]
+            elev_vars['ch'].attrs['_source'] = ch_ds[0]
 
-        if g_ds is not None:
-            elev_vars['gh'] = TomogramBaseClass.data_subset_to_ds(self.do_subset(g_ds, parameter, slices, 0))[3]
+            if len(ch_ds) == 2:
+                elev_vars['ch_secondary'] = TomogramBaseClass.data_subset_to_ds(
+                    self.do_subset(ch_ds[1], parameter, slices, 0)
+                )[3]
+                elev_vars['ch_secondary'].attrs['_source'] = ch_ds[1]
+
+        if len(g_ds) > 0:
+            elev_vars['gh'] = TomogramBaseClass.data_subset_to_ds(
+                self.do_subset(g_ds[0], parameter, slices, 0)
+            )[3]
+            elev_vars['gh'].attrs['_source'] = g_ds[0]
+
+            if len(g_ds) == 2:
+                elev_vars['gh_secondary'] = TomogramBaseClass.data_subset_to_ds(
+                    self.do_subset(g_ds[1], parameter, slices, 0)
+                )[3]
+                elev_vars['gh_secondary'].attrs['_source'] = g_ds[1]
 
         if elev_vars:
             TomogramBaseClass.add_variables_to_tomo(ds, **elev_vars)
@@ -967,9 +1060,20 @@ class LatitudeTomogramImpl(TomogramBaseClass):
             ds = ds.sel(latitude=latitude)
 
         if 'ch' in ds.data_vars:
-            ds['tomo'] = ds['tomo'].where(ds.tomo.elevation <= ds.ch)
+            if 'ch_secondary' in ds.data_vars:
+                ds['ch_filter'] = xr.where(np.isnan(ds.ch), ds.ch_secondary, ds.ch)
+            else:
+                ds['ch_filter'] = ds.ch
+
+            ds['tomo'] = ds['tomo'].where(ds.tomo.elevation <= ds.ch_filter)
+
         if 'gh' in ds.data_vars:
-            ds['tomo'] = ds['tomo'].where(ds.tomo.elevation >= ds.gh)
+            if 'gh_secondary' in ds.data_vars:
+                ds['gh_filter'] = xr.where(np.isnan(ds.gh), ds.gh_secondary, ds.gh)
+            else:
+                ds['gh_filter'] = ds.gh
+
+            ds['tomo'] = ds['tomo'].where(ds.tomo.elevation >= ds.gh_filter)
 
         if percentiles:
             tomo = ds['tomo'].cumsum(dim='elevation', skipna=True).where(ds['tomo'].notnull())
@@ -990,7 +1094,7 @@ class LatitudeTomogramImpl(TomogramBaseClass):
                     lon = col.longitude.item()
 
                     try:
-                        idx = col.argmax(dim='elevation').tomo.item()
+                        idx = col.tomo.argmax(dim='elevation').item()
 
                         lat_peaks.append((lon, col.isel(elevation=idx).elevation.item()))
 
@@ -1062,15 +1166,17 @@ class CustomProfileTomogramImpl(TomogramBaseClass):
         },
         "canopy_ds": {
             "name": "Canopy height dataset name",
-            "type": "string",
-            "description": "Dataset containing canopy heights (RH98). This is used to trim out tomogram voxels that "
-                           "return over the measured or predicted canopy"
+            "type": "string, comma-separated pair of strings",
+            "description": "Dataset(s) containing canopy heights (RH98). This is used to trim out tomogram voxels that "
+                           "return over the measured or predicted canopy. If 2 are provided, the first is considered "
+                           "more accurate and will be favored for masking."
         },
         "ground_ds": {
             "name": "Ground height dataset name",
-            "type": "string",
+            "type": "string, comma-separated pair of strings",
             "description": "Dataset containing ground height (DEM). This is used to trim out tomogram voxels that "
-                           "return below the measured or predicted ground"
+                           "return below the measured or predicted ground. If 2 are provided, the first is considered "
+                           "more accurate and will be favored for masking."
         },
         "elevPercentiles": {
             "name": "Elevation percentiles",
@@ -1162,6 +1268,26 @@ class CustomProfileTomogramImpl(TomogramBaseClass):
 
         ch_ds = compute_options.get_argument('canopy_ds', None)
         g_ds = compute_options.get_argument('ground_ds', None)
+
+        if ch_ds is not None:
+            ch_ds = [v.strip() for v in ch_ds.split(',')]
+        else:
+            ch_ds = []
+
+        if len(ch_ds) > 2:
+            raise NexusProcessingException(
+                reason='Too many datasets provided for canopy_ds', code=400
+            )
+
+        if g_ds is not None:
+            g_ds = [v.strip() for v in g_ds.split(',')]
+        else:
+            g_ds = []
+
+        if len(g_ds) > 2:
+            raise NexusProcessingException(
+                reason='Too many datasets provided for ground_ds', code=400
+            )
 
         output = compute_options.get_content_type().lower()
 
@@ -1295,19 +1421,48 @@ class CustomProfileTomogramImpl(TomogramBaseClass):
         slices['elevation'] = slice(None, None)
         elev_vars = {}
 
-        if ch_ds is not None:
-            elev_vars['ch'] = TomogramBaseClass.data_subset_to_ds(self.do_subset(ch_ds, parameter, slices, 0))[3]
+        if len(ch_ds) > 0:
+            elev_vars['ch'] = TomogramBaseClass.data_subset_to_ds(
+                self.do_subset(ch_ds[0], parameter, slices, 0)
+            )[3]
+            elev_vars['ch'].attrs['_source'] = ch_ds[0]
 
-        if g_ds is not None:
-            elev_vars['gh'] = TomogramBaseClass.data_subset_to_ds(self.do_subset(g_ds, parameter, slices, 0))[3]
+            if len(ch_ds) == 2:
+                elev_vars['ch_secondary'] = TomogramBaseClass.data_subset_to_ds(
+                    self.do_subset(ch_ds[1], parameter, slices, 0)
+                )[3]
+                elev_vars['ch_secondary'].attrs['_source'] = ch_ds[1]
+
+        if len(g_ds) > 0:
+            elev_vars['gh'] = TomogramBaseClass.data_subset_to_ds(
+                self.do_subset(g_ds[0], parameter, slices, 0)
+            )[3]
+            elev_vars['gh'].attrs['_source'] = g_ds[0]
+
+            if len(g_ds) == 2:
+                elev_vars['gh_secondary'] = TomogramBaseClass.data_subset_to_ds(
+                    self.do_subset(g_ds[1], parameter, slices, 0)
+                )[3]
+                elev_vars['gh_secondary'].attrs['_source'] = g_ds[1]
 
         if elev_vars:
             TomogramBaseClass.add_variables_to_tomo(ds, **elev_vars)
 
         if 'ch' in ds.data_vars:
-            ds['tomo'] = ds['tomo'].where(ds.tomo.elevation <= ds.ch)
+            if 'ch_secondary' in ds.data_vars:
+                ds['ch_filter'] = xr.where(np.isnan(ds.ch), ds.ch_secondary, ds.ch)
+            else:
+                ds['ch_filter'] = ds.ch
+
+            ds['tomo'] = ds['tomo'].where(ds.tomo.elevation <= ds.ch_filter)
+
         if 'gh' in ds.data_vars:
-            ds['tomo'] = ds['tomo'].where(ds.tomo.elevation >= ds.gh)
+            if 'gh_secondary' in ds.data_vars:
+                ds['gh_filter'] = xr.where(np.isnan(ds.gh), ds.gh_secondary, ds.gh)
+            else:
+                ds['gh_filter'] = ds.gh
+
+            ds['tomo'] = ds['tomo'].where(ds.tomo.elevation >= ds.gh_filter)
 
         if percentiles:
             tomo = ds['tomo'].cumsum(dim='elevation', skipna=True).where(ds['tomo'].notnull())
@@ -1360,7 +1515,7 @@ class CustomProfileTomogramImpl(TomogramBaseClass):
                     distance = col.distance.item()
 
                     try:
-                        idx = col.argmax(dim='elevation').tomo.item()
+                        idx = col.tomo.argmax(dim='elevation').item()
 
                         slice_peaks.append((distance, col.isel(elevation=idx).elevation.item()))
 
@@ -1498,12 +1653,54 @@ class ProfileTomoResults(NexusResults):
         plt.xlabel(xlabel)
         plt.ylabel(f'Elevation w.r.t. {self.meta()["dataset"]} reference (m)')
 
-        if peaks is not None:
-            plt.plot(
-                peaks[0], peaks[1], color='red', alpha=0.75
+        legend_handles = []
+
+        if 'ch' in ds.data_vars and 'ch_secondary' in ds.data_vars:
+            x_dim = ds['ch'].dims[0]
+
+            # Plot secondary first so primary covers it
+            second_ch = plt.plot(
+                ds[x_dim].to_numpy(),
+                ds.ch_secondary.to_numpy(),
+                label=f'Secondary canopy height: {ds.ch_secondary.attrs["_source"]}'
             )
 
-            plt.legend(['Peak value'])
+            prim_ch = plt.plot(
+                ds[x_dim].to_numpy(),
+                ds.ch.to_numpy(),
+                label=f'Primary canopy height: {ds.ch.attrs["_source"]}'
+            )
+
+            legend_handles.extend(prim_ch)
+            legend_handles.extend(second_ch)
+
+        if 'gh' in ds.data_vars and 'gh_secondary' in ds.data_vars:
+            x_dim = ds['gh'].dims[0]
+
+            # Plot secondary first so primary covers it
+            second_ch = plt.plot(
+                ds[x_dim].to_numpy(),
+                ds.gh_secondary.to_numpy(),
+                label=f'Secondary ground height: {ds.gh_secondary.attrs["_source"]}'
+            )
+
+            prim_ch = plt.plot(
+                ds[x_dim].to_numpy(),
+                ds.gh.to_numpy(),
+                label=f'Primary ground height: {ds.gh.attrs["_source"]}'
+            )
+
+            legend_handles.extend(prim_ch)
+            legend_handles.extend(second_ch)
+
+        if peaks is not None:
+            peak_plot = plt.plot(
+                peaks[0], peaks[1], color='red', alpha=0.75, label='Peak value', linestyle='--'
+            )
+
+            legend_handles.extend(peak_plot)
+
+        plt.legend(handles=legend_handles)
 
         plt.ticklabel_format(useOffset=False)
 
@@ -1604,12 +1801,54 @@ class ProfileTomoResults(NexusResults):
             plt.xlabel(xlabel)
             plt.ylabel(f'Elevation w.r.t. {self.meta()["dataset"]} reference (m)')
 
-            if peaks_sub is not None:
-                plt.plot(
-                    peaks_sub[0], peaks_sub[1], color='red', alpha=0.75
+            legend_handles = []
+
+            if 'ch' in ds_sub.data_vars and 'ch_secondary' in ds_sub.data_vars:
+                x_dim = ds_sub['ch'].dims[0]
+
+                # Plot secondary first so primary covers it
+                second_ch = plt.plot(
+                    ds_sub[x_dim].to_numpy(),
+                    ds_sub.ch_secondary.to_numpy(),
+                    label=f'Secondary canopy height: {ds_sub.ch_secondary.attrs["_source"]}'
                 )
 
-                plt.legend(['Peak value'])
+                prim_ch = plt.plot(
+                    ds_sub[x_dim].to_numpy(),
+                    ds_sub.ch.to_numpy(),
+                    label=f'Primary canopy height: {ds_sub.ch.attrs["_source"]}'
+                )
+
+                legend_handles.extend(prim_ch)
+                legend_handles.extend(second_ch)
+
+            if 'gh' in ds_sub.data_vars and 'gh_secondary' in ds_sub.data_vars:
+                x_dim = ds_sub['gh'].dims[0]
+
+                # Plot secondary first so primary covers it
+                second_ch = plt.plot(
+                    ds_sub[x_dim].to_numpy(),
+                    ds_sub.gh_secondary.to_numpy(),
+                    label=f'Secondary ground height: {ds_sub.gh_secondary.attrs["_source"]}'
+                )
+
+                prim_ch = plt.plot(
+                    ds_sub[x_dim].to_numpy(),
+                    ds_sub.gh.to_numpy(),
+                    label=f'Primary ground height: {ds_sub.gh.attrs["_source"]}'
+                )
+
+                legend_handles.extend(prim_ch)
+                legend_handles.extend(second_ch)
+
+            if peaks_sub is not None:
+                peak_plot = plt.plot(
+                    peaks_sub[0], peaks_sub[1], color='red', alpha=0.75, linestyle='--'
+                )
+
+                legend_handles.extend(peak_plot)
+
+            plt.legend(handles=legend_handles, loc='lower right')
 
             plt.ticklabel_format(useOffset=False)
 
