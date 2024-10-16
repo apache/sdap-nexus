@@ -3,7 +3,7 @@
 ### To run:
 
 ```shell
-pytest test_cdms.py --with-integration [--force-subset]
+pytest test_sdap.py --with-integration [--force-subset]
 ```
 
 ### Options
