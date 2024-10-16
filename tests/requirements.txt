@@ -1,0 +1,9 @@
+pandas
+pytest
+pytest-integration
+requests
+beautifulsoup4
+python-dateutil
+pytz
+shapely
+geopy
