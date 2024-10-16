@@ -17,6 +17,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Removed
 ### Fixed
 - SDAP-525: Fixed expired AWS creds for Zarr datasets breaking list endpoint
+- SDAP-527: Fixed incorrect initialization of `doms.doms_executions` Cassandra table, which broke `/matchup` endpoint for new installations.
 ### Security
 
 ## [1.3.0] - 2024-06-10

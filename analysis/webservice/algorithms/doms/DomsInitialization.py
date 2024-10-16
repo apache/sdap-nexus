@@ -120,7 +120,8 @@ class DomsInitializer:
               time_started timestamp,
               time_completed timestamp,
               user_email text,
-              status text
+              status text,
+              message text
             );
                 """
         session.execute(cql)
