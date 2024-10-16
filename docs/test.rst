@@ -43,7 +43,7 @@ If you have not started the Collection Manager, start it now:
 
 .. code-block:: bash
 
-  docker run --name collection-manager --network sdap-net -v ${DATA_DIRECTORY}:/data/granules/ -v $(pwd):/home/ingester/config/ -e COLLECTIONS_PATH="/home/ingester/config/test_collections.yaml" -e HISTORY_URL="http://host.docker.internal:8983/" -e RABBITMQ_HOST="host.docker.internal:5672" -e RABBITMQ_USERNAME="user" -e RABBITMQ_PASSWORD="bitnami" -d ${REPO}/sdap-collection-manager:${COLLECTION_MANAGER_VERSION}
+  docker run --name collection-manager --network sdap-net -v ${DATA_DIRECTORY}:/data/granules/ -v ${CONFIG_DIR}:/home/ingester/config/ -e COLLECTIONS_PATH="/home/ingester/config/collectionConfig.yml" -e HISTORY_URL="http://host.docker.internal:8983/" -e RABBITMQ_HOST="host.docker.internal:5672" -e RABBITMQ_USERNAME="user" -e RABBITMQ_PASSWORD="bitnami" -d ${REPO}/sdap-collection-manager:${COLLECTION_MANAGER_VERSION}
 
 Refer to the :ref:`Quickstart Guide<quickstart>` to see how many files are enqueued for ingest, there should be 207 total.
 (This may appear to be less if you have ingesters running. We recommend not starting the ingesters until all data is queued.

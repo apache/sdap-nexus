@@ -143,7 +143,7 @@ To start Solr using a volume mount and expose the admin webapp on port 8983:
 
   export SOLR_DATA=~/nexus-quickstart/solr
   mkdir -p ${SOLR_DATA}
-  docker run --name solr --network sdap-net -v ${SOLR_DATA}/:/bitnami -p 8983:8983 -e SDAP_ZK_SERVICE_HOST="host.docker.internal" -d ${REPO}/sdap-solr-cloud:${SOLR_VERSION}
+  docker run --name solr --network sdap-net -v ${SOLR_DATA}/:/bitnami -p 8983:8983 -e SOLR_ZK_HOSTS="host.docker.internal:2181" -e SOLR_ENABLE_CLOUD_MODE="yes" -d ${REPO}/sdap-solr-cloud:${SOLR_VERSION}
 
 This will start an instance of Solr. To initialize it, we need to run the ``solr-cloud-init`` image.
 
@@ -215,7 +215,7 @@ Choose a location that is mountable by Docker (typically needs to be under the u
 
 .. code-block:: bash
 
-    export DATA_DIRECTORY=~/nexus-quickstart/data/avhrr-granules
+    export DATA_DIRECTORY=~/nexus-quickstart/data/
     mkdir -p ${DATA_DIRECTORY}
 
 .. _quickstart-step7:
@@ -290,7 +290,8 @@ Then go ahead and download 1 month worth of AVHRR netCDF files.
 
 .. code-block:: bash
 
-  cd $DATA_DIRECTORY
+  mkdir -p ${DATA_DIRECTORY}/avhrr-granules
+  cd $DATA_DIRECTORY/avhrr-granules
 
   curl -O https://raw.githubusercontent.com/apache/incubator-sdap-nexus/master/docs/granule-download.sh
   chmod 700 granule-download.sh
@@ -314,7 +315,7 @@ The collection configuration is a ``.yml`` file that tells the collection manage
   cat << EOF >> ${CONFIG_DIR}/collectionConfig.yml
   collections:
     - id: AVHRR_OI_L4_GHRSST_NCEI
-      path: /data/granules/*AVHRR_OI-GLOB-v02.0-fv02.0.nc
+      path: /data/granules/avhrr-granules/*AVHRR_OI-GLOB-v02.0-fv02.0.nc
       priority: 1
       forward-processing-priority: 5
       projection: Grid
