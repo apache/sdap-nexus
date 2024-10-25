@@ -64,6 +64,9 @@ ingestion:
     ## memory refers to both request and limit
     memory: 0.5Gi
 
+    ## Enable verbose logging
+    verbose: false
+
   configOperator:
     image: nexusjpl/config-operator:0.0.1
 
