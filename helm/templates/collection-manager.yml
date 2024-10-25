@@ -64,6 +64,10 @@ spec:
               value: {{ $value }}
             {{- end }}
             {{- end }}
+            {{- if .Values.ingestion.collectionManager.verbose }}
+            - name: LOG_LEVEL
+              value: DEBUG
+            {{- end }}
           resources:
             requests:
               cpu: {{ .Values.ingestion.collectionManager.cpu }}

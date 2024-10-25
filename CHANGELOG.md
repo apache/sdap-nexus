@@ -11,6 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - SDAP-526: Upgrade 2D tomography endpoint canopy and ground masking feature to allow for primary and backup datasets
 - SDAP-497: Added tool to ease building of releases. Can build from ASF distributions, git repos, and local
 - SDAP-520: (Documentation) Added guide to docs for evaluating official release candidates.
+- SDAP-529: Added configuration for verbose logging for collection manager in the Helm chart
 ### Changed
 - SDAP-470: Modified `cdms-reader` tool to support primary to secondary matchups
 ### Deprecated
