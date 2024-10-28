@@ -38,9 +38,9 @@ copyright = '2017-2024, Apache SDAP'
 author = 'Apache SDAP'
 
 # The short X.Y version
-version = '1.0'
+version = '1.4'
 # The full version, including alpha/beta/rc tags
-release = '1.0.0-SNAPSHOT'
+release = '1.4.0'
 
 
 # -- General configuration ---------------------------------------------------
