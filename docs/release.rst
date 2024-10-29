@@ -63,7 +63,7 @@ Check the Images
 It's a requirement that ASF releases be free of code that is under `certain 3rd-party licenses <https://www.apache.org/legal/resolved.html>`_,
 so the images should be inspected to ensure they are free of any such dependencies.
 
-We specifically check for Python packages in the sdap-solr-init, sdap-collection-manager, sdap-granule-ingester and sdap-nexus-webapp
+We specifically check for Python packages in the sdap-solr-cloud-init, sdap-collection-manager, sdap-granule-ingester and sdap-nexus-webapp
 images:
 
 .. code-block:: bash
