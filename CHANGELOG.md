@@ -19,6 +19,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 - SDAP-525: Fixed expired AWS creds for Zarr datasets breaking list endpoint
 - SDAP-527: Fixed incorrect initialization of `doms.doms_executions` Cassandra table, which broke `/matchup` endpoint for new installations.
+- SDAP-522: Fixed several broken endpoints discovered by SDAP-521 work
+  - Fixed `/version` by updating to correct NEXUS package name
+  - Fixed `/heartbeat` by moving heartbeat evaluations to all backends
+  - Fixed CDMS STAC catalog pagination
 ### Security
 
 ## [1.3.0] - 2024-06-10
@@ -51,10 +55,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 - SDAP-515:
   - Improved error handling with connections to remote SDAP deployments
-- SDAP-522: Fixed several broken endpoints discovered by SDAP-521 work
-  - Fixed `/version` by updating to correct NEXUS package name
-  - Fixed `/heartbeat` by moving heartbeat evaluations to all backends
-  - Fixed CDMS STAC catalog pagination
 - Updated quickstart docs with corrected command for running Solr via Docker
 ### Security
 
