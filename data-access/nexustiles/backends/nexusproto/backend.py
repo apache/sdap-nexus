@@ -255,6 +255,10 @@ class NexusprotoTileService(AbstractTileService):
 
         return tiles
 
+    def find_tiles_along_line(self, start_point, end_point, ds=None, start_time=0, end_time=-1, **kwargs):
+        return self._metadatastore.find_tiles_along_line(start_point, end_point, ds, start_time,
+                                                                     end_time, **kwargs)
+
     def get_stats_within_box_at_time(self, min_lat, max_lat, min_lon, max_lon, dataset, time, **kwargs):
         tiles = self._metadatastore.find_all_tiles_within_box_at_time(min_lat, max_lat, min_lon, max_lon, dataset, time,
                                                                       **kwargs)
@@ -428,6 +432,11 @@ class NexusprotoTileService(AbstractTileService):
             a_tile.meta_data = meta
             a_tile.is_multi = is_multi_var
 
+            elevation = tile_data_by_id[a_tile.tile_id].get_elevation_array()
+
+            if elevation is not None:
+                a_tile.elevation = np.broadcast_arrays(elevation, data)[0]
+
             del (tile_data_by_id[a_tile.tile_id])
 
         return tiles
@@ -543,6 +552,14 @@ class NexusprotoTileService(AbstractTileService):
             tiles.append(tile)
 
         return tiles
+
+    def heartbeat(self) -> bool:
+        solrOnline = self.pingSolr()
+
+        # Not sure how to best check cassandra cluster status so just return True for now
+        cassOnline = True
+
+        return solrOnline and cassOnline
 
     def pingSolr(self):
         status = self._metadatastore.ping()

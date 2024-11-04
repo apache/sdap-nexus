@@ -385,6 +385,22 @@ class NexusTileService:
 
         return datasets
 
+    def heartbeat(self) -> Dict[str, bool]:
+        heartbeats = {'nexusproto': NexusTileService.backends[None]['backend'].heartbeat()}
+
+        for backend_name in NexusTileService.backends:
+            if backend_name in [None, '__nexusproto__']:
+                continue
+
+            backend = NexusTileService.backends[backend_name]['backend']
+
+            if backend == NexusTileService.backends[None]['backend']:
+                continue
+
+            heartbeats[backend_name] = backend.heartbeat()
+
+        return heartbeats
+
 
     @tile_data()
     @catch_not_implemented
@@ -499,12 +515,30 @@ class NexusTileService:
             min_lat, max_lat, min_lon, max_lon, dataset, time, **kwargs
         )
 
+    @tile_data()
+    @catch_not_implemented
+    def find_tiles_along_line(self, start_point, end_point, ds=None, start_time=0, end_time=-1, **kwargs):
+        # Find tiles that fall in the given box in the Solr index
+        if type(start_time) is datetime:
+            start_time = (start_time - EPOCH).total_seconds()
+        if type(end_time) is datetime:
+            end_time = (end_time - EPOCH).total_seconds()
+
+        return NexusTileService._get_backend(ds).find_tiles_along_line(start_point, end_point, ds, start_time, end_time, **kwargs)
+
     def get_tiles_bounded_by_box(self, min_lat, max_lat, min_lon, max_lon, ds=None, start_time=0, end_time=-1,
                                  **kwargs):
         tiles = self.find_tiles_in_box(min_lat, max_lat, min_lon, max_lon, ds, start_time, end_time, **kwargs)
         tiles = self.mask_tiles_to_bbox(min_lat, max_lat, min_lon, max_lon, tiles)
         if 0 <= start_time <= end_time:
             tiles = self.mask_tiles_to_time_range(start_time, end_time, tiles)
+
+        if 'min_elevation' in kwargs or 'max_elevation' in kwargs:
+            tiles = self.mask_tiles_to_elevation(
+                kwargs.get('min_elevation'),
+                kwargs.get('max_elevation'),
+                tiles
+            )
 
         return tiles
 
@@ -514,6 +548,13 @@ class NexusTileService:
         tiles = self.mask_tiles_to_polygon(polygon, tiles)
         if 0 <= start_time <= end_time:
             tiles = self.mask_tiles_to_time_range(start_time, end_time, tiles)
+
+        if 'min_elevation' in kwargs or 'max_elevation' in kwargs:
+            tiles = self.mask_tiles_to_elevation(
+                kwargs.get('min_elevation'),
+                kwargs.get('max_elevation'),
+                tiles
+            )
 
         return tiles
 
@@ -531,17 +572,38 @@ class NexusTileService:
         tiles = self.find_all_tiles_in_box_at_time(min_lat, max_lat, min_lon, max_lon, dataset, time, **kwargs)
         tiles = self.mask_tiles_to_bbox_and_time(min_lat, max_lat, min_lon, max_lon, time, time, tiles)
 
+        if 'min_elevation' in kwargs or 'max_elevation' in kwargs:
+            tiles = self.mask_tiles_to_elevation(
+                kwargs.get('min_elevation'),
+                kwargs.get('max_elevation'),
+                tiles
+            )
+
         return tiles
 
     def get_tiles_bounded_by_polygon_at_time(self, polygon, dataset, time, **kwargs):
         tiles = self.find_all_tiles_in_polygon_at_time(polygon, dataset, time, **kwargs)
         tiles = self.mask_tiles_to_polygon_and_time(polygon, time, time, tiles)
 
+        if 'min_elevation' in kwargs or 'max_elevation' in kwargs:
+            tiles = self.mask_tiles_to_elevation(
+                kwargs.get('min_elevation'),
+                kwargs.get('max_elevation'),
+                tiles
+            )
+
         return tiles
 
     def get_boundary_tiles_at_time(self, min_lat, max_lat, min_lon, max_lon, dataset, time, **kwargs):
         tiles = self.find_all_boundary_tiles_at_time(min_lat, max_lat, min_lon, max_lon, dataset, time, **kwargs)
         tiles = self.mask_tiles_to_bbox_and_time(min_lat, max_lat, min_lon, max_lon, time, time, tiles)
+
+        if 'min_elevation' in kwargs or 'max_elevation' in kwargs:
+            tiles = self.mask_tiles_to_elevation(
+                kwargs.get('min_elevation'),
+                kwargs.get('max_elevation'),
+                tiles
+            )
 
         return tiles
 
@@ -683,6 +745,82 @@ class NexusTileService:
                     tile.data = ma.masked_where(data_mask, tile.data)
 
             tiles[:] = [tile for tile in tiles if not tile.data.mask.all()]
+
+        return tiles
+
+    def mask_tiles_to_elevation(self, min_e, max_e, tiles):
+        """
+        Masks data in tiles to specified time range.
+        :param start_time: The start time to search for tiles
+        :param end_time: The end time to search for tiles
+        :param tiles: List of tiles
+        :return: A list tiles with data masked to specified time range
+        """
+        if min_e is None:
+            min_e = -float('inf')
+
+        if max_e is None:
+            max_e = float('inf')
+
+        for tile in tiles:
+            if tile.elevation is None:
+                continue
+
+            tile.elevation = ma.masked_outside(tile.elevation, min_e, max_e)
+
+            data_mask = ma.getmaskarray(tile.elevation)
+
+            # If this is multi-var, need to mask each variable separately.
+            if tile.is_multi:
+                # Combine space/time mask with existing mask on data
+                data_mask = reduce(np.logical_or, [tile.data[0].mask, data_mask])
+
+                num_vars = len(tile.data)
+                multi_data_mask = np.repeat(data_mask[np.newaxis, ...], num_vars, axis=0)
+                tile.data = ma.masked_where(multi_data_mask, tile.data)
+            else:
+                tile.data = ma.masked_where(data_mask, tile.data)
+
+            tiles[:] = [tile for tile in tiles if not tile.data.mask.all()]
+
+        return tiles
+
+    def mask_tiles_to_elevation(self, min_e, max_e, tiles):
+        """
+        Masks data in tiles to specified time range.
+        :param start_time: The start time to search for tiles
+        :param end_time: The end time to search for tiles
+        :param tiles: List of tiles
+        :return: A list tiles with data masked to specified time range
+        """
+        if min_e is None:
+            min_e = -float('inf')
+
+        if max_e is None:
+            max_e = float('inf')
+
+        for tile in tiles:
+            if tile.elevation is None:
+                continue
+
+            tile.elevation = ma.masked_outside(tile.elevation, min_e, max_e)
+
+            data_mask = ma.getmaskarray(tile.elevation)
+
+            # If this is multi-var, need to mask each variable separately.
+            if tile.is_multi:
+                # Combine space/time mask with existing mask on data
+                data_mask = reduce(np.logical_or, [tile.data[0].mask, data_mask])
+
+                num_vars = len(tile.data)
+                multi_data_mask = np.repeat(data_mask[np.newaxis, ...], num_vars, axis=0)
+                multi_data_mask = np.broadcast_arrays(multi_data_mask, tile.data)[0]
+                tile.data = ma.masked_where(multi_data_mask, tile.data)
+            else:
+                data_mask = np.broadcast_arrays(data_mask, tile.data)[0]
+                tile.data = ma.masked_where(data_mask, tile.data)
+
+        tiles[:] = [tile for tile in tiles if not tile.data.mask.all()]
 
         return tiles
 

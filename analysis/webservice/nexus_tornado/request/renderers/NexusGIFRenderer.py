@@ -13,29 +13,20 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-
-import json
-
-from webservice.NexusHandler import nexus_handler
-from webservice.algorithms.NexusCalcHandler import NexusCalcHandler
+import sys
+import traceback
+from webservice.webmodel import NexusProcessingException
 
 
-@nexus_handler
-class HeartbeatCalcHandlerImpl(NexusCalcHandler):
-    name = "Backend Services Status"
-    path = "/heartbeat"
-    description = "Returns health status of Nexus backend services"
-    params = {}
-    singleton = True
+class NexusGIFRenderer(object):
+    def __init__(self, nexus_request):
+        self._request = nexus_request
 
-    def calc(self, computeOptions, **args):
-        status = self._get_tile_service().heartbeat()
-
-        class SimpleResult(object):
-            def __init__(self, result):
-                self.result = result
-
-            def toJson(self):
-                return json.dumps(self.result)
-
-        return SimpleResult(status)
+    def render(self, tornado_handler, result):
+        tornado_handler.set_header("Content-Type", "image/gif")
+        try:
+            tornado_handler.write(result.toGif())
+            tornado_handler.finish()
+        except AttributeError:
+            traceback.print_exc(file=sys.stdout)
+            raise NexusProcessingException(reason="Unable to convert results to a GIF.")

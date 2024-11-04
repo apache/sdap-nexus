@@ -4,6 +4,27 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.4.0] - 2024-11-04
+### Added
+- SDAP-469: Support for three dimensional data. 2D data defaults to a layer at 0m elevation.
+- SDAP-492: Added some demo algorithms for working with and visualizing tomography data. Currently designed for data from airborne SAR campaigns, but can be readily generalized.
+  - SDAP-526: Upgrade 2D tomography endpoint canopy and ground masking feature to allow for primary and backup datasets
+- SDAP-497: Added tool to ease building of releases. Can build from ASF distributions, git repos, and local
+- SDAP-520: (Documentation) Added guide to docs for evaluating official release candidates.
+- SDAP-529: Added configuration for verbose logging for collection manager in the Helm chart
+### Changed
+- SDAP-470: Modified `cdms-reader` tool to support primary to secondary matchups
+### Deprecated
+### Removed
+### Fixed
+- SDAP-525: Fixed expired AWS creds for Zarr datasets breaking list endpoint
+- SDAP-527: Fixed incorrect initialization of `doms.doms_executions` Cassandra table, which broke `/matchup` endpoint for new installations.
+- SDAP-522: Fixed several broken endpoints discovered by SDAP-521 work
+  - Fixed `/version` by updating to correct NEXUS package name
+  - Fixed `/heartbeat` by moving heartbeat evaluations to all backends
+  - Fixed CDMS STAC catalog pagination
+### Security
+
 ## [1.3.0] - 2024-06-10
 ### Added
 - SDAP-506:

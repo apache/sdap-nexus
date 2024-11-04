@@ -22,7 +22,6 @@ import csv
 from collections import OrderedDict
 import logging
 
-
 #TODO: Get rid of numpy errors?
 #TODO: Update big SDAP README
 
@@ -41,7 +40,7 @@ def assemble_matches(filename):
     -------
     matches : list
         List of matches. Each list element is a dictionary.
-        For match m, netCDF group GROUP (PrimaryData or SecondaryData), and
+        For match m, netCDF group GROUP (SatelliteData or InsituData), and
         group variable VARIABLE:
         matches[m][GROUP]['matchID']: MatchedRecords dimension ID for the match
         matches[m][GROUP]['GROUPID']: GROUP dim dimension ID for the record
@@ -50,7 +49,6 @@ def assemble_matches(filename):
    
     try:
         # Open the netCDF file
-
         with Dataset(filename, 'r') as cdms_nc:
             # Check that the number of groups is consistent w/ the MatchedGroups
             # dimension
@@ -59,7 +57,7 @@ def assemble_matches(filename):
             
             matches = []
             matched_records = cdms_nc.dimensions['MatchedRecords'].size
-           
+            
             # Loop through the match IDs to assemble matches
             for match in range(0, matched_records):
                 match_dict = OrderedDict()
@@ -71,7 +69,7 @@ def assemble_matches(filename):
                     match_dict[group][group + 'ID'] = ID
                     for var in cdms_nc.groups[group].variables.keys():
                         match_dict[group][var] = cdms_nc.groups[group][var][ID]
-    
+                    
                     # Create a UTC datetime field from timestamp
                     dt = num2date(match_dict[group]['time'],
                                   cdms_nc.groups[group]['time'].units)
@@ -83,97 +81,7 @@ def assemble_matches(filename):
     except (OSError, IOError) as err:
         LOGGER.exception("Error reading netCDF file " + filename)
         raise err
-
-def assemble_matches_by_primary(filename):
-    """
-    Read a CDMS netCDF file and return a list of matches, in which secondary data
-    points are grouped together by their primary data point match.
-   
-    This function returns matches in a different order than the 'assemble_matches' function.
-    In this function, all secondary data is associated with its primary match without the need
-    to access multiple matches. 
-
-    Parameters
-    ----------
-    filename : str
-        The CDMS netCDF file name.
     
-    Returns
-    -------
-    matches : list
-        List of matches. Each list element is a dictionary that maps a primary record to all of its associated secondary records.
-        For match m, netCDF group GROUP (PrimaryData or SecondaryData), and
-        group variable VARIABLE:
-
-        matches[m][GROUP]['matchID']: MatchedRecords dimension ID for the match
-        matches[m][GROUP]['GROUPID']: GROUP dim dimension ID for the record
-        matches[m][GROUP][VARIABLE]: variable value. Each VARIABLE is returned as a masked array. 
-
-        ex. To access the first secondary time value available for a given match:
-            matches[m]['SecondaryData']['time'][0]
-    """
-   
-    try:
-        # Open the netCDF file
-        with Dataset(filename, 'r') as cdms_nc:
-            # Check that the number of groups is consistent w/ the MatchedGroups
-            # dimension
-            assert len(cdms_nc.groups) == cdms_nc.dimensions['MatchedGroups'].size,\
-                ("Number of groups isn't the same as MatchedGroups dimension.")
-           
-            matched_records = cdms_nc.dimensions['MatchedRecords'].size
-            primary_matches = cdms_nc.groups['PrimaryData'].dimensions['dim'].size
-            matches = [OrderedDict()] * primary_matches
-
-            for match in range(matched_records):
-                PID = int(cdms_nc.variables['matchIDs'][match][0])
-        
-                if len(matches[PID]) == 0: #establishes ordered dictionary for first match[PID]
-                    matches[PID] = OrderedDict()
-
-                for group_num, group in enumerate(cdms_nc.groups):
-                    
-                    if group_num == 0: #primary
-                        
-                        if group not in matches[PID].keys(): #initialization
-                                matches[PID][group] = OrderedDict()
-                                matches[PID][group]['matchID'] = []
-
-                        matches[PID][group]['matchID'].append(match)
-                        ID = cdms_nc.variables['matchIDs'][match][group_num]
-                        matches[PID][group][group + 'ID'] = ID
-
-                        for var in cdms_nc.groups[group].variables.keys():
-                            matches[PID][group][var] = cdms_nc.groups[group][var][ID]
-                        
-                        dt = num2date(matches[PID][group]['time'], cdms_nc.groups[group]['time'].units)
-                        matches[PID][group]['datetime'] = dt
-
-                    elif group_num == 1: #secondary
-
-                        if group not in matches[PID].keys(): #initialization
-                            matches[PID][group] = OrderedDict()
-                            matches[PID][group]['matchID'] = []
-                            matches[PID][group][group + 'ID'] = []
-                            matches[PID][group]['datetime'] = []
-                        
-                        matches[PID][group]['matchID'].append(match)
-                        ID = cdms_nc.variables['matchIDs'][match][group_num]
-                        matches[PID][group][group + 'ID'].append(ID)
-                        
-                        for var in cdms_nc.groups[group].variables.keys():
-                            if var not in matches[PID][group].keys():
-                                matches[PID][group][var] = []
-                            matches[PID][group][var].append(cdms_nc.groups[group][var][ID])
-
-                        dt = num2date(matches[PID][group]['time'], cdms_nc.groups[group]['time'].units)
-                        matches[PID][group]['datetime'].append(dt[0])
-                 
-            return matches
-    except (OSError, IOError) as err:
-        LOGGER.exception("Error reading netCDF file " + filename)
-        raise err
-
 def matches_to_csv(matches, csvfile):
     """
     Write the CDMS matches to a CSV file. Include a header of column names
@@ -223,10 +131,10 @@ def get_globals(filename):
     """
     x0 = "README / cdms_reader.py Program Use and Description:\n"
     x1 = "\nThe cdms_reader.py program reads a CDMS netCDF (a NETCDF file with a matchIDs variable)\n"
-    x2 = "file into memory, assembles a list of matches of primary and secondary data\n"
-    x3 = "and optionally\n"
-    x4 = "output the matches to a CSV file. Each matched pair contains one primary\n"
-    x5 = "data record and one secondary data record.\n"
+    x2 = "file into memory, assembles a list of matches of satellite and in situ data\n"
+    x3 = "(or a primary and secondary dataset), and optionally\n"
+    x4 = "output the matches to a CSV file. Each matched pair contains one satellite\n"
+    x5 = "data record and one in situ data record.\n"
     x6 = "\nBelow, this file wil list the global attributes of the .nc (NETCDF) file.\n"
     x7 = "If you wish to see a full dump of the data from the .nc file,\n"
     x8 = "please utilize the ncdump command from NETCDF (or look at the CSV file).\n"
@@ -286,6 +194,7 @@ def create_logs(user_option, logName):
     
 
 
+
 if __name__ == '__main__':
     """
     Execution:
@@ -332,3 +241,10 @@ if __name__ == '__main__':
     if args.meta == 'Y' :
         get_globals(args.filename)
 
+
+
+
+    
+
+    
+    

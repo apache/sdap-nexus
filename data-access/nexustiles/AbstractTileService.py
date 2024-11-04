@@ -24,6 +24,9 @@ class AbstractTileService(ABC):
     def __init__(self, dataset_name):
         self._name = dataset_name
 
+    def heartbeat(self) -> bool:
+        return True
+
     @abstractmethod
     def get_dataseries_list(self, simple=False):
         raise NotImplementedError()
@@ -115,6 +118,10 @@ class AbstractTileService(ABC):
 
     @abstractmethod
     def find_all_boundary_tiles_at_time(self, min_lat, max_lat, min_lon, max_lon, dataset, time, **kwargs):
+        raise NotImplementedError()
+
+    @abstractmethod
+    def find_tiles_along_line(self, start_point, end_point, ds=None, start_time=0, end_time=-1, **kwargs):
         raise NotImplementedError()
 
     @abstractmethod

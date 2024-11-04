@@ -1,5 +1,5 @@
 Welcome to the Apache SDAP project documentation!
-================================================
+=================================================
 
 .. toctree::
    :maxdepth: 2
@@ -10,6 +10,8 @@ Welcome to the Apache SDAP project documentation!
    quickstart
    build
    dockerimages
+   release
+   test
 
 
 Check out the :ref:`quickstart guide<quickstart>`.
