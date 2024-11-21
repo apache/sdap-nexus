@@ -40,8 +40,6 @@ from .model.nexusmodel import Tile, BBox, TileStats, TileVariable
 
 from .exception import NexusTileServiceException
 
-from requests.structures import CaseInsensitiveDict
-
 EPOCH = timezone('UTC').localize(datetime(1970, 1, 1))
 
 logging.basicConfig(
@@ -186,6 +184,9 @@ class NexusTileService:
 
             return b['backend']
 
+    @staticmethod
+    def dataset_exists(ds):
+        return ds in NexusTileService.backends
 
     @staticmethod
     def _get_datasets_store():
