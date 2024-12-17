@@ -365,7 +365,7 @@ def pull_source(dst_dir: tempfile.TemporaryDirectory, build: dict):
                 print(f'{path} either does not exist or is not a directory')
                 exit(1)
 
-            print(f'Copying Ingester {os.path.abspath(path)} -> {os.path.join(dst_dir.name, "nexus")}')
+            print(f'Copying Ingester {os.path.abspath(path)} -> {os.path.join(dst_dir.name, "ingester")}')
 
             shutil.copytree(
                 path,
