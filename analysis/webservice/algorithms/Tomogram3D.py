@@ -333,9 +333,7 @@ class Tomogram3D(NexusCalcHandler):
 
             tile = tile_service.fetch_data_for_tiles(tile)[0]
             tile = tile_service.mask_tiles_to_bbox(min_lat, max_lat, min_lon, max_lon, [tile])
-
-            if min_elevation and max_elevation:
-                tile = tile_service.mask_tiles_to_elevation(min_elevation, max_elevation, tile)
+            tile = tile_service.mask_tiles_to_elevation(min_elevation, max_elevation, tile)
 
             if len(tile) == 0:
                 logger.info(f'Skipping empty tile {tile_id}')

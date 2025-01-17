@@ -115,9 +115,7 @@ class TomogramBaseClass(NexusCalcHandler):
 
             tile = tile_service.fetch_data_for_tiles(tile)[0]
             tile = tile_service.mask_tiles_to_bbox(min_lat, max_lat, min_lon, max_lon, [tile])
-
-            if min_elevation and max_elevation:
-                tile = tile_service.mask_tiles_to_elevation(min_elevation, max_elevation, tile)
+            tile = tile_service.mask_tiles_to_elevation(min_elevation, max_elevation, tile)
 
             if len(tile) == 0:
                 logger.info(f'Skipping empty tile {tile_id}')
@@ -1344,9 +1342,7 @@ class CustomProfileTomogramImpl(TomogramBaseClass):
 
             tile = tile_service.fetch_data_for_tiles(tile)[0]
             tile = tile_service.mask_tiles_to_bbox(bbox_miny, bbox_maxy, bbox_minx, bbox_maxx, [tile])
-
-            if min_elevation and max_elevation:
-                tile = tile_service.mask_tiles_to_elevation(min_elevation, max_elevation, tile)
+            tile = tile_service.mask_tiles_to_elevation(min_elevation, max_elevation, tile)
 
             if len(tile) == 0:
                 logger.info(f'Skipping empty tile {tile_id}')
@@ -1433,6 +1429,7 @@ class CustomProfileTomogramImpl(TomogramBaseClass):
                 )[3]
                 elev_vars['ch_secondary'].attrs['_source'] = ch_ds[1]
 
+        # TODO: Special checks for NoDataException around these (primary map gets in all Impls) to reraise with better error message
         if len(g_ds) > 0:
             elev_vars['gh'] = TomogramBaseClass.data_subset_to_ds(
                 self.do_subset(g_ds[0], parameter, slices, 0)
