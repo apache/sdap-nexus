@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Deprecated
 ### Removed
 ### Fixed
+- SDAP-531: Tomogram/Tomogram3D: Fix bug for min/max elevation == 0
 ### Security
 
 ## [1.4.0] - 2024-11-04
