@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased] - Unreleased
 ### Added
 ### Changed
+- SDAP-533: Updated Helm chart
+  - Updated ingress dependency chart
+  - Fixed values.yaml for Solr
 ### Deprecated
 ### Removed
 ### Fixed
