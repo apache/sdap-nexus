@@ -151,9 +151,10 @@ solr:
   replicaCount: 1
   authentication:
     enabled: false
-  volumeClaimTemplates:
-    storageClassName: hostpath
-    storageSize: 10Gi
+  persistence:
+    enabled: true
+    storageClass: hostpath
+    size: 10Gi
   resources:
     requests:
       memory: 2Gi
@@ -177,7 +178,7 @@ solr:
 
 ## Configuration values for the nginx-ingress dependency
 ## ref: https://github.com/helm/charts/tree/master/stable/nginx-ingress
-nginx-ingress:
+ingress-nginx:
   enabled: false
   controller:
     scope:
