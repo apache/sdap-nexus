@@ -120,7 +120,7 @@ In order to run Solr in cloud mode, we must first run Zookeeper.
 
 .. code-block:: bash
 
-    docker run --name zookeeper -dp 2181:2181 zookeeper:${ZK_VERSION}
+    docker run --name zookeeper -dp 2181:2181 --network sdap-net zookeeper:${ZK_VERSION}
 
 We then need to ensure the ``/solr`` znode is present.
 
