@@ -143,13 +143,13 @@ To start Solr using a volume mount and expose the admin webapp on port 8983:
 
   export SOLR_DATA=~/nexus-quickstart/solr
   mkdir -p ${SOLR_DATA}
-  docker run --name solr --network sdap-net -v ${SOLR_DATA}/:/bitnami -p 8983:8983 -e SOLR_ZK_HOSTS="host.docker.internal:2181" -e SOLR_ENABLE_CLOUD_MODE="yes" -d ${REPO}/sdap-solr-cloud:${SOLR_VERSION}
+  docker run --name solr --network sdap-net -v ${SOLR_DATA}/:/bitnami -p 8983:8983 -e SOLR_ZK_HOSTS="zookeeper:2181" -e SOLR_ENABLE_CLOUD_MODE="yes" -d ${REPO}/sdap-solr-cloud:${SOLR_VERSION}
 
 This will start an instance of Solr. To initialize it, we need to run the ``solr-cloud-init`` image.
 
 .. code-block:: bash
 
-  docker run -it --rm --name solr-init --network sdap-net -e SDAP_ZK_SOLR="host.docker.internal:2181/solr" -e SDAP_SOLR_URL="http://host.docker.internal:8983/solr/" -e CREATE_COLLECTION_PARAMS="name=nexustiles&numShards=1&waitForFinalState=true" ${REPO}/sdap-solr-cloud-init:${SOLR_CLOUD_INIT_VERSION}
+  docker run -it --rm --name solr-init --network sdap-net -e SDAP_ZK_SOLR="zookeeper:2181/solr" -e SDAP_SOLR_URL="http://solr:8983/solr/" -e CREATE_COLLECTION_PARAMS="name=nexustiles&numShards=1&waitForFinalState=true" ${REPO}/sdap-solr-cloud-init:${SOLR_CLOUD_INIT_VERSION}
 
 When the init script finishes, kill the container by typing ``Ctrl + C``
 
@@ -182,7 +182,7 @@ Now we can start the image and run the initialization script.
 .. code-block:: bash
 
   export CASSANDRA_DATA=~/nexus-quickstart/cassandra
-  mkdir -p ${CASSANDRA_DATA}
+  mkdir -p ${CASSANDRA_DATA}/cassandra
   docker run --name cassandra --network sdap-net -p 9042:9042 -v ${CASSANDRA_DATA}/cassandra/:/bitnami -v "${CASSANDRA_INIT}/initdb.cql:/scripts/initdb.cql" -d bitnami/cassandra:${CASSANDRA_VERSION}
 
 Wait a few moments for the database to start.
@@ -239,13 +239,13 @@ The granule ingester(s) read new granules from the message queue and process the
 .. code-block:: bash
 
   cat << EOF >> granule-ingester.env
-  RABBITMQ_HOST=host.docker.internal:5672
+  RABBITMQ_HOST=rmq:5672
   RABBITMQ_USERNAME=user
   RABBITMQ_PASSWORD=bitnami
-  CASSANDRA_CONTACT_POINTS=host.docker.internal
+  CASSANDRA_CONTACT_POINTS=cassandra
   CASSANDRA_USERNAME=cassandra
   CASSANDRA_PASSWORD=cassandra
-  SOLR_HOST_AND_PORT=http://host.docker.internal:8983
+  SOLR_HOST_AND_PORT=http://solr:8983
   EOF
 
   docker run --name granule-ingester-1 --network sdap-net -d --env-file granule-ingester.env \
@@ -345,7 +345,7 @@ Now we can start the collection manager.
 
 .. code-block:: bash
 
-  docker run --name collection-manager --network sdap-net -v ${DATA_DIRECTORY}:/data/granules/ -v ${CONFIG_DIR}:/home/ingester/config/ -e COLLECTIONS_PATH="/home/ingester/config/collectionConfig.yml" -e HISTORY_URL="http://host.docker.internal:8983/" -e RABBITMQ_HOST="host.docker.internal:5672" -e RABBITMQ_USERNAME="user" -e RABBITMQ_PASSWORD="bitnami" -d ${REPO}/sdap-collection-manager:${COLLECTION_MANAGER_VERSION}
+  docker run --name collection-manager --network sdap-net -v ${DATA_DIRECTORY}:/data/granules/ -v ${CONFIG_DIR}:/home/ingester/config/ -e COLLECTIONS_PATH="/home/ingester/config/collectionConfig.yml" -e HISTORY_URL="http://solr:8983/" -e RABBITMQ_HOST="rmq:5672" -e RABBITMQ_USERNAME="user" -e RABBITMQ_PASSWORD="bitnami" -d ${REPO}/sdap-collection-manager:${COLLECTION_MANAGER_VERSION}
 
 .. _quickstart-step12:
 
@@ -377,7 +377,7 @@ Now that the data is being (has been) ingested, we need to start the webapp that
 
 .. code-block:: bash
 
-  docker run -d --name nexus-webapp --network sdap-net -p 8083:8083 ${REPO}/sdap-nexus-webapp:${WEBAPP_VERSION} python3 /incubator-sdap-nexus/analysis/webservice/webapp.py --solr_host="http://host.docker.internal:8983" --cassandra_host=host.docker.internal --cassandra_username=cassandra --cassandra_password=cassandra
+  docker run -d --name nexus-webapp --network sdap-net -p 8083:8083 ${REPO}/sdap-nexus-webapp:${WEBAPP_VERSION} python3 /incubator-sdap-nexus/analysis/webservice/webapp.py --solr_host="http://solr:8983" --cassandra_host=cassandra --cassandra_username=cassandra --cassandra_password=cassandra
 
 .. note:: If you see a message like ``docker: invalid reference format`` it likely means you need to re-export the ``WEBAPP_VERSION`` environment variable again. This can happen when you open a new terminal window or tab.
 
