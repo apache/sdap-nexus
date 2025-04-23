@@ -31,7 +31,7 @@ spec:
       containers:
       - name: solr-create-collection
         imagePullPolicy: Always
-        image: {{ .Values.solr.initImage | default "apache/sdap-solr-cloud-init:1.1.0" }}
+        image: {{ .Values.solr.initImage | default "apache/sdap-solr-cloud-init:1.4.0" }}
         resources:
           requests:
             memory: "0.5Gi"

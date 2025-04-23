@@ -11,6 +11,7 @@ Welcome to the Apache SDAP project documentation!
    build
    dockerimages
    release
+   test
 
 
 Check out the :ref:`quickstart guide<quickstart>`.

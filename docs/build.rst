@@ -25,8 +25,8 @@ We should also set variables for a consistent tag across all images. These shoul
 
 .. code-block:: bash
 
-  export NEXUS_VERSION=1.2.0
-  export INGESTER_VERSION=1.2.0
+  export NEXUS_VERSION=1.4.0
+  export INGESTER_VERSION=1.4.0
 
 To build the necessary images, we will need to first download the latest releases for SDAP NEXUS and SDAP Ingester ((URL)). We will not need to download the SDAP Nexusproto release directly.
 
