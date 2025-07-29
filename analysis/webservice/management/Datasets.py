@@ -174,7 +174,7 @@ class DatasetAdd(DatasetManagement):
             )
 
         try:
-            NexusTileService.user_ds_add(name, path, config)
+            return Response(NexusTileService.user_ds_add(name, path, config))
         except Exception as e:
             raise NexusProcessingException(
                 reason=repr(e),
