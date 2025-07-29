@@ -216,7 +216,7 @@ class FixedAWSProfileCredentialHandler(CredentialHandler):
             return False
 
 
-class AWSEnvironmentalCredentialHandler(CredentialHandler):
+class AWSEnvironmentCredentialHandler(CredentialHandler):
     def __init__(self, collection, config):
         super().__init__(collection)
 
@@ -227,7 +227,7 @@ class AWSEnvironmentalCredentialHandler(CredentialHandler):
 
     def renew(self) -> bool:
         try:
-            logger.info('Trying to get environmental default credentials')
+            logger.info('Trying to get AWS credentials from environment')
             self.__session = boto3.Session(region_name=self.__region)
         except:
             logger.error('Failed to get credentials from environment')
@@ -474,7 +474,7 @@ def get_handler(collection: str, config) -> CredentialHandler:
         elif 'profile' in config['aws'] and config['aws']['profile'] is not None:
             clazz = FixedAWSProfileCredentialHandler
         else:
-            clazz = AWSEnvironmentalCredentialHandler
+            clazz = AWSEnvironmentCredentialHandler
     elif 'earthdata' in config:
         ed_config = config['earthdata']
         mock = 'mock' in config
