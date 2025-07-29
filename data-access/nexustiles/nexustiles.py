@@ -214,7 +214,7 @@ class NexusTileService:
         present_datasets = {None, '__nexusproto__'}
         next_cursor_mark = '*'
 
-        added_datasets = 0
+        added_datasets = []
 
         while True:
             response = solrcon.search('*:*', cursorMark=next_cursor_mark, sort='id asc')
@@ -241,7 +241,7 @@ class NexusTileService:
                         present_datasets.remove(d_id)
                     continue
 
-                added_datasets += 1
+                added_datasets.append(d_id)
 
                 if store_type == 'nexus_proto' or store_type == 'nexusproto':
                     update_logger.info(f"Detected new nexusproto dataset {d_id}, using default nexusproto backend")
@@ -256,10 +256,10 @@ class NexusTileService:
                             'up': True
                         }
                     except NexusTileServiceException:
-                        added_datasets -= 1
+                        added_datasets.pop()
                 else:
                     update_logger.warning(f'Unsupported backend {store_type} for dataset {d_id}')
-                    added_datasets -= 1
+                    added_datasets.pop()
 
         removed_datasets = set(NexusTileService.backends.keys()).difference(present_datasets)
 
@@ -270,8 +270,10 @@ class NexusTileService:
             update_logger.info(f"Removing dataset {dataset}")
             del NexusTileService.backends[dataset]
 
-        update_logger.info(f'Finished dataset update: {added_datasets} added, {len(removed_datasets)} removed, '
+        update_logger.info(f'Finished dataset update: {len(added_datasets)} added, {len(removed_datasets)} removed, '
                            f'{len(NexusTileService.backends) - 2} total')
+
+        return added_datasets
 
     # Update cfg (ie, creds) of dataset
     @staticmethod
@@ -338,9 +340,15 @@ class NexusTileService:
         logger.info(f'Added dataset {name} to Solr. Updating backends')
 
         with NexusTileService.DS_LOCK:
-            NexusTileService._update_datasets()
+            added_datasets = NexusTileService._update_datasets()
 
-        return {'success': True}
+        response = {'success': name in added_datasets}
+
+        if not response['success']:
+            response['message'] = ('Collection added successfully but could not be opened. Please check configuration '
+                                   'and/or credentials and try again (you will need to remove the collection first)')
+
+        return response
 
     # Delete dataset backend (error if it's a hardcoded one)
     @staticmethod
