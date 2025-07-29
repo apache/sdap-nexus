@@ -42,11 +42,14 @@ CONFIG_SCHEMA = Schema({
         Opt('depth'): str
     },
     Opt('aws'): {
-        Opt('accessKeyID'): str,
-        Opt('secretAccessKey'): str,
-        Opt('profile'): str,
+        Opt('creds'): {
+            'accessKeyID': str,
+            'secretAccessKey': str,
+            Opt('sessionToken'): str,
+        },
+        Opt('profile'): Or(str, None),
+        Opt('region'): str,
         'public': bool,
-        Opt('region'): str
     },
     Opt('earthdata'): {
         Or('endpoint', 'daac'): str,
@@ -67,8 +70,6 @@ def validate_config(d):
 
     if 'aws' in d:
         assert 'earthdata' not in d
-        if not d['aws']['public']:
-            assert ('accessKeyID' in d['aws'] and 'secretAccessKey' in d['aws']) or 'profile' in d['aws']
         if 'mock' in d:
             logger.warning("'mock' present in config with 'aws' credentials config. It will be ignored")
     elif 'mock' in d:

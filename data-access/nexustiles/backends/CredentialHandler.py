@@ -132,8 +132,10 @@ class FixedAWSCredentialHandler(CredentialHandler):
     def __init__(self, collection, config):
         super().__init__(collection)
 
-        access_key_id = config['aws'].get('accessKeyID')
-        secret_access_key = config['aws'].get('secretAccessKey')
+        config_creds = config['aws']['creds']
+
+        access_key_id = config_creds.get('accessKeyID')
+        secret_access_key = config_creds.get('secretAccessKey')
 
         region = config['aws'].get('region')
 
@@ -144,6 +146,9 @@ class FixedAWSCredentialHandler(CredentialHandler):
             access_key_id=access_key_id,
             secret_access_key=secret_access_key,
         )
+
+        if 'sessionToken' in config_creds:
+            self.cred_data['token'] = config_creds['sessionToken']
 
         if region is not None:
             self.cred_data['region_name'] = region
@@ -174,10 +179,17 @@ class FixedAWSProfileCredentialHandler(CredentialHandler):
 
     def renew(self) -> bool:
         try:
-            logger.info(f'Trying to get credentials from profile {self.__profile}')
+            if self.__profile is not None:
+                logger.info(f'Trying to get credentials from profile {self.__profile}')
+            else:
+                logger.info('Trying to get environmental default credentials')
             self.__session = boto3.Session(profile_name=self.__profile, region_name=self.__region)
         except:
-            logger.error(f'AWS profile {self.__profile} not found')
+            if self.__profile is not None:
+                logger.error(f'AWS profile {self.__profile} not found')
+            else:
+                logger.info('Failed to get credentials from environment')
+
             return False
 
         cred: Credentials = self.__session.get_credentials()
@@ -201,6 +213,48 @@ class FixedAWSProfileCredentialHandler(CredentialHandler):
             err_code = err.response['Error']['Code']
             err_msg = err.response['Error']['Message']
             logger.error(f'Credentials in profile {self.__profile} are invalid. Code: {err_code}, Message: {err_msg}')
+            return False
+
+
+class AWSEnvironmentalCredentialHandler(CredentialHandler):
+    def __init__(self, collection, config):
+        super().__init__(collection)
+
+        self.__region = config['aws'].get('region')
+        self.__session = None
+
+        self.renew()
+
+    def renew(self) -> bool:
+        try:
+            logger.info('Trying to get environmental default credentials')
+            self.__session = boto3.Session(region_name=self.__region)
+        except:
+            logger.error('Failed to get credentials from environment')
+
+            return False
+
+        cred: Credentials = self.__session.get_credentials()
+
+        self.cred_data = dict(
+            access_key_id=cred.access_key,
+            secret_access_key=cred.secret_key,
+            token=cred.token
+        )
+
+        if self.__region is not None:
+            self.cred_data['region_name'] = self.__region
+
+        return True
+
+    def is_valid(self) -> bool:
+        try:
+            self.__session.client('sts').get_caller_identity()
+            return True
+        except ClientError as err:
+            err_code = err.response['Error']['Code']
+            err_msg = err.response['Error']['Message']
+            logger.error(f'Environment credentials in are invalid. Code: {err_code}, Message: {err_msg}')
             return False
 
 
@@ -415,7 +469,12 @@ def get_handler(collection: str, config) -> CredentialHandler:
     clazz = None
 
     if 'aws' in config:
-        clazz = FixedAWSCredentialHandler if 'profile' not in config['aws'] else FixedAWSProfileCredentialHandler
+        if 'creds' in config['aws']:
+            clazz = FixedAWSCredentialHandler
+        elif 'profile' in config['aws'] and config['aws']['profile'] is not None:
+            clazz = FixedAWSProfileCredentialHandler
+        else:
+            clazz = AWSEnvironmentalCredentialHandler
     elif 'earthdata' in config:
         ed_config = config['earthdata']
         mock = 'mock' in config
