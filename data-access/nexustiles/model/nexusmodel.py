@@ -167,7 +167,8 @@ class Tile(object):
 
     def get_indices(self, include_nan=False):
         if include_nan:
-            return list(np.ndindex(self.data.shape))
+            shape = self.data.shape if not self.is_multi else self.data.shape[1:]
+            return list(np.ndindex(shape))
         if self.is_multi:
             combined_data_inv_mask = reduce(np.logical_and, [data.mask for data in self.data])
             return np.argwhere(np.logical_not(combined_data_inv_mask))
