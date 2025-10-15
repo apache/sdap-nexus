@@ -6,6 +6,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased] - Unreleased
 ### Added
+- Helm chart option to associate AWS IAM role to the SDAP Spark ServiceAccount (EKS only).
 ### Changed
 - SDAP-533: Updated Helm chart
   - Updated ingress dependency chart
