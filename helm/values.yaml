@@ -38,6 +38,7 @@ webapp:
       cores: 1
       instances: 2
       memory: "512m"
+  iamRoleArn:
 
 ## This section deals with the ingestion components of SDAP
 ingestion:
