@@ -192,18 +192,7 @@ class FixedAWSProfileCredentialHandler(CredentialHandler):
 
             return False
 
-        cred: Credentials = self.__session.get_credentials()
 
-        self.cred_data = dict(
-            access_key_id=cred.access_key,
-            secret_access_key=cred.secret_key,
-            token=cred.token
-        )
-
-        if self.__region is not None:
-            self.cred_data['region_name'] = self.__region
-
-        return True
 
     def is_valid(self) -> bool:
         try:
@@ -229,23 +218,30 @@ class AWSEnvironmentCredentialHandler(CredentialHandler):
         try:
             logger.info('Trying to get AWS credentials from environment')
             self.__session = boto3.Session(region_name=self.__region)
-        except:
-            logger.error('Failed to get credentials from environment')
+
+            cred: Credentials = self.__session.get_credentials()
+
+            self.cred_data = dict(
+                access_key_id=cred.access_key,
+                secret_access_key=cred.secret_key,
+                token=cred.token
+            )
+
+            if self.__region is not None:
+                self.cred_data['region_name'] = self.__region
+
+            return True
+        except Exception as e:
+            logger.error(f'Failed to get credentials from environment: {e}')
+            logger.exception(e)
+
+            try:
+                caller_id_arn = self.__session.client('sts').get_caller_identity()['Arn']
+                logger.error(f'ARN of host identity: {caller_id_arn}')
+            except Exception as e:
+                logger.warning(f'Could not determine caller identity for error debugging: {e}')
 
             return False
-
-        cred: Credentials = self.__session.get_credentials()
-
-        self.cred_data = dict(
-            access_key_id=cred.access_key,
-            secret_access_key=cred.secret_key,
-            token=cred.token
-        )
-
-        if self.__region is not None:
-            self.cred_data['region_name'] = self.__region
-
-        return True
 
     def is_valid(self) -> bool:
         try:
