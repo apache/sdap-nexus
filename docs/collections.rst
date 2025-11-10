@@ -279,4 +279,3 @@ The current list of supported DAACs and their credentials endpoints for the ``co
 | asfdaac           | https://cumulus.asf.alaska.edu/s3credentials                 |
 | asfdaac-sentinel1 | https://sentinel1.asf.alaska.edu/s3credentials               |
 +-------------------+--------------------------------------------------------------+
-
