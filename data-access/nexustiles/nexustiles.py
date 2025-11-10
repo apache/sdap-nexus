@@ -391,6 +391,12 @@ class NexusTileService:
         for backend in set([b['backend'] for b in NexusTileService.backends.values() if b['up']]):
             datasets.extend(backend.get_dataseries_list(simple))
 
+        solr = NexusTileService._get_datasets_store()
+
+        datasets = ZarrBackend.augment_dataseries_list_with_unreachable_collections_from_solr(
+            solr, datasets
+        )
+
         return datasets
 
     def heartbeat(self) -> Dict[str, bool]:

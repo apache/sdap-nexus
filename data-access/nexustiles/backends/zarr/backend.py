@@ -15,6 +15,7 @@
 
 import logging
 import sys
+from copy import deepcopy
 from datetime import datetime
 from urllib.parse import urlparse
 
@@ -215,6 +216,43 @@ class ZarrBackend(AbstractTileService):
                 ds['error_reason'] = str(e)
 
         return [ds]
+
+    @staticmethod
+    def augment_dataseries_list_with_unreachable_collections_from_solr(solr_conn, ds_list):
+        ds_ids = [ds['title'] for ds in ds_list]
+
+        unreachable_solr_datasets = []
+        next_cursor_mark = '*'
+
+        while True:
+            response = solr_conn.search('store_type_s:zarr', cursorMark=next_cursor_mark, sort='id asc')
+
+            try:
+                response_cursor_mark = response.nextCursorMark
+            except AttributeError:
+                break
+
+            if response_cursor_mark == next_cursor_mark:
+                break
+            else:
+                next_cursor_mark = response_cursor_mark
+
+            for ds in response.docs:
+                dataset_id = ds['dataset_s']
+
+                if dataset_id not in ds_ids:
+                    unreachable_solr_datasets.append(ds)
+
+        ds_list = deepcopy(ds_list)
+
+        ds_list.extend([{
+            "shortName": ds['dataset_s'],
+            "title": ds['dataset_s'],
+            "type": "zarr",
+            "reachable": False
+        } for ds in unreachable_solr_datasets])
+
+        return ds_list
 
     def find_tile_by_id(self, tile_id, **kwargs):
         return [tile_id]
