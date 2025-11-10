@@ -155,8 +155,8 @@ Example:
     config:
       aws:
         public: true
-  - id: private_data  # Config for Public Access
-    path: s3://example-bucket/zarr/path/
+  - id: example_1  # Config for Public Access
+    path: s3://example-bucket/zarr/path/1/
     priority: 1
     projection: GridMulti
     storeType: zarr
@@ -164,10 +164,7 @@ Example:
       latitude: lat
       longitude: lon
       time: time
-      variables:
-      - var1
-      - var2
-      - var3
+      variable: var1
     config:
       aws:
         region: us-west-2
@@ -175,8 +172,8 @@ Example:
         creds:
           accessKeyID: <secret>
           secretAccessKey: <secret>
-  - id: private_data  # Config for Profile Credentials
-    path: s3://example-bucket/zarr/path/
+  - id: example_2  # Config for Profile Credentials
+    path: s3://example-bucket/zarr/path/2/
     priority: 1
     projection: GridMulti
     storeType: zarr
@@ -184,17 +181,14 @@ Example:
       latitude: lat
       longitude: lon
       time: time
-      variables:
-      - var1
-      - var2
-      - var3
+      variable: var2
     config:
       aws:
         region: us-west-2
         public: false
         profile: <profile name>
-  - id: private_data  # Config for Host Credentials
-    path: s3://example-bucket/zarr/path/
+  - id: example_3  # Config for Host Credentials
+    path: s3://example-bucket/zarr/path/3/
     priority: 1
     projection: GridMulti
     storeType: zarr
@@ -202,16 +196,13 @@ Example:
       latitude: lat
       longitude: lon
       time: time
-      variables:
-      - var1
-      - var2
-      - var3
+      variable: var3
     config:
       aws:
         region: us-west-2
         public: false
-  - id: private_data  # Config for EDL Credentials
-    path: s3://example-bucket/zarr/path/
+  - id: example_4a  # Config for EDL Credentials
+    path: s3://example-bucket/zarr/path/4a/
     priority: 1
     projection: GridMulti
     storeType: zarr
@@ -219,17 +210,14 @@ Example:
       latitude: lat
       longitude: lon
       time: time
-      variables:
-      - var1
-      - var2
-      - var3
+      variable: var4a
     config:
       earthdata:
         edl_username: <username>  # Can be omitted here in favor of setting the EDL_USERNAME environment variable
         edl_password: <password>  # Can be omitted here in favor of setting the EDL_PASSWORD environment variable
         daac: podaac
-  - id: private_data  # Alternate config for EDL Credentials
-    path: s3://example-bucket/zarr/path/
+  - id: example_4b  # Alternate config for EDL Credentials
+    path: s3://example-bucket/zarr/path/4b/
     priority: 1
     projection: GridMulti
     storeType: zarr
@@ -237,10 +225,7 @@ Example:
       latitude: lat
       longitude: lon
       time: time
-      variables:
-      - var1
-      - var2
-      - var3
+      variable: var4b
     config:
       earthdata:
         edl_username: <username>  # Can be omitted here in favor of setting the EDL_USERNAME environment variable
