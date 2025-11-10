@@ -70,7 +70,6 @@ pandas = "<2.1.0rc0"
 matplotlib = "^3.7"
 psutil = "*"
 geopy = "*"
-requests_mock = "*"  # For Zarr testing, remove before merge
 
 
 [tool.poetry.dev-dependencies]

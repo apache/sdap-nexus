@@ -55,10 +55,6 @@ CONFIG_SCHEMA = Schema({
         Or('endpoint', 'daac'): str,
         Opt('edl_username'): str,
         Opt('edl_password'): str,
-    },
-    Opt('mock'): {
-        'accessKeyID': str,
-        'secretAccessKey': str,
     }
 })
 
@@ -70,10 +66,6 @@ def validate_config(d):
 
     if 'aws' in d:
         assert 'earthdata' not in d
-        if 'mock' in d:
-            logger.warning("'mock' present in config with 'aws' credentials config. It will be ignored")
-    elif 'mock' in d:
-        assert 'earthdata' in d
 
 
 class DatasetManagement:

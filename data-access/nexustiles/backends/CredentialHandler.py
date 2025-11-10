@@ -24,7 +24,6 @@ from typing import Literal
 
 import boto3
 import requests
-import requests_mock
 from botocore.config import Config
 from botocore.credentials import Credentials
 from botocore.exceptions import ClientError
@@ -48,7 +47,6 @@ EOSDIS_DAAC_ENDPOINTS = {
     'laads':             'https://data.laadsdaac.earthdatacloud.nasa.gov/s3credentials',
     'asfdaac':           'https://cumulus.asf.alaska.edu/s3credentials',
     'asfdaac-sentinel1': 'https://sentinel1.asf.alaska.edu/s3credentials',
-    'notadaac':          'mock://data.notadaac.earthdata.nasa.gov/s3credentials'
 }
 
 # Sometimes the flow has the token in a different named cookie. Listing known names here
@@ -257,7 +255,7 @@ class AWSEnvironmentCredentialHandler(CredentialHandler):
 class DAACTemporaryAWSCredentialHandler(CredentialHandler):
     __ip_valid = None
 
-    def __init__(self, endpoint, config, mock_auth=False):
+    def __init__(self, endpoint, config):
         super().__init__(endpoint)
 
         if DAACTemporaryAWSCredentialHandler.__ip_valid is None:
@@ -279,27 +277,23 @@ class DAACTemporaryAWSCredentialHandler(CredentialHandler):
             else:
                 logger.warning('Detected IP is not within the AWS us-west-2 region')
 
-        if not mock_auth and not DAACTemporaryAWSCredentialHandler.__ip_valid:
+        if not DAACTemporaryAWSCredentialHandler.__ip_valid:
             raise RuntimeError('Current runtime IP not identified as one in the AWS us-west-2 region')
 
         self.expiration = None
 
-        user = None
-        password = None
+        if 'edl_username' in config['earthdata']:
+            user = config['earthdata']['edl_username']
+        else:
+            user = os.getenv('EDL_USERNAME')
 
-        if not mock_auth:
-            if 'edl_username' in config['earthdata']:
-                user = config['earthdata']['edl_username']
-            else:
-                user = os.getenv('EDL_USERNAME')
+        if 'edl_password' in config['earthdata']:
+            password = config['earthdata']['edl_password']
+        else:
+            password = os.getenv('EDL_PASSWORD')
 
-            if 'edl_password' in config['earthdata']:
-                password = config['earthdata']['edl_password']
-            else:
-                password = os.getenv('EDL_PASSWORD')
-
-            if user is None or password is None:
-                raise ValueError('Missing EDL username or password!')
+        if user is None or password is None:
+            raise ValueError('Missing EDL username or password!')
 
         self.__auth = f'{user}:{password}'
         self.__region = 'us-west-2'
@@ -396,68 +390,6 @@ class DAACTemporaryAWSCredentialHandler(CredentialHandler):
             return False
 
 
-class FixedAWSMockCredentialHandler(DAACTemporaryAWSCredentialHandler):  # For Zarr testing, remove before merge
-    def __init__(self, mock_endpoint, config):
-        super().__init__(mock_endpoint, config, True)
-
-        access_key_id = config['mock'].get('accessKeyID')
-        secret_access_key = config['mock'].get('secretAccessKey')
-
-        region = config['mock'].get('region')
-        self.__region = region
-
-        if any([v is None for v in [access_key_id, secret_access_key]]):
-            raise ValueError('Missing credential')
-
-        def mock_response(r, c):
-            creds = dict(
-                accessKeyId=access_key_id,
-                secretAccessKey=secret_access_key,
-                sessionToken=None,
-                expiration=(datetime.now(timezone.utc) + timedelta(minutes=30)).strftime(DT_FORMAT)
-            )
-
-            return creds
-
-        session = requests.Session()
-        adapter = requests_mock.Adapter()
-        session.mount('mock://', adapter)
-
-        adapter.register_uri('GET', mock_endpoint, json=mock_response)
-
-        self.__session = session
-        self.expiration = None
-
-    def renew(self) -> bool:
-        logger.info(f'Getting mock credentials from {self.key}')
-
-        try:
-            response = self.__session.get(self.key)
-            logger.debug(f'[{response.status_code}] {response.request.url}')
-            response.raise_for_status()
-        except Exception as e:
-            logger.error('Mock request failed')
-            logger.exception(e)
-            return False
-
-        response = response.json()
-
-        self.cred_data = dict(
-            access_key_id=response['accessKeyId'],
-            secret_access_key=response['secretAccessKey'],
-            token=response['sessionToken']
-        )
-
-        if self.__region:
-            self.cred_data['region_name'] = self.__region
-
-        self.expiration = datetime.strptime(response['expiration'], DT_FORMAT)
-
-        logger.info(f'Retrieved AWS credentials from {self.key}, exp: {response["expiration"]}')
-
-        return True
-
-
 def get_handler(collection: str, config) -> CredentialHandler:
     existing_collections = CredentialHandler.credentials
 
@@ -483,7 +415,7 @@ def get_handler(collection: str, config) -> CredentialHandler:
             raise ValueError('Credential endpoint missing or an unknown DAAC name was provided')
 
         collection = endpoint
-        clazz = DAACTemporaryAWSCredentialHandler if not mock else FixedAWSMockCredentialHandler
+        clazz = DAACTemporaryAWSCredentialHandler
 
         if endpoint in existing_collections:
             handler = existing_collections[endpoint]
