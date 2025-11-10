@@ -405,7 +405,6 @@ def get_handler(collection: str, config) -> CredentialHandler:
             clazz = AWSEnvironmentCredentialHandler
     elif 'earthdata' in config:
         ed_config = config['earthdata']
-        mock = 'mock' in config
 
         if 'endpoint' in ed_config:
             endpoint = ed_config['endpoint']
