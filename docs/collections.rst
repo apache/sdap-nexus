@@ -266,16 +266,18 @@ Example:
 
 The current list of supported DAACs and their credentials endpoints for the ``config.earthdata`` configuration are as follows:
 
-+-------------------+--------------------------------------------------------------+
-| DAAC              | URL                                                          |
-+===================+==============================================================+
-| podaac            | https://archive.podaac.earthdata.nasa.gov/s3credentials      |
-| podaac-swot       | https://archive.swot.podaac.earthdata.nasa.gov/s3credentials |
-| gesdisc           | https://data.gesdisc.earthdatacloud.nasa.gov/s3credentials   |
-| lpdaac            | https://data.lpdaac.earthdatacloud.nasa.gov/s3credentials    |
-| obdaac            | https://obdaac-tea.earthdatacloud.nasa.gov/s3credentials     |
-| nsidc             | https://data.nsidc.earthdatacloud.nasa.gov/s3credentials     |
-| laads             | https://data.laadsdaac.earthdatacloud.nasa.gov/s3credentials |
-| asfdaac           | https://cumulus.asf.alaska.edu/s3credentials                 |
-| asfdaac-sentinel1 | https://sentinel1.asf.alaska.edu/s3credentials               |
-+-------------------+--------------------------------------------------------------+
+ =================== ==============================================================
+  DAAC                URL
+ =================== ==============================================================
+  podaac              https://archive.podaac.earthdata.nasa.gov/s3credentials
+  podaac-swot         https://archive.swot.podaac.earthdata.nasa.gov/s3credentials
+  gesdisc             https://data.gesdisc.earthdatacloud.nasa.gov/s3credentials
+  lpdaac              https://data.lpdaac.earthdatacloud.nasa.gov/s3credentials
+  obdaac              https://obdaac-tea.earthdatacloud.nasa.gov/s3credentials
+  nsidc               https://data.nsidc.earthdatacloud.nasa.gov/s3credentials
+  laads               https://data.laadsdaac.earthdatacloud.nasa.gov/s3credentials
+  asfdaac             https://cumulus.asf.alaska.edu/s3credentials
+  asfdaac-sentinel1   https://sentinel1.asf.alaska.edu/s3credentials
+ =================== ==============================================================
+
+
