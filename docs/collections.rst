@@ -133,7 +133,9 @@ EDL credentials.
 2. Fixed Credentials: The simplest but least recommended option. Provide the AccessKeyId and SecretAccessKey for an IAM identity with sufficient S3 access permissions
 3. Profile Credentials: Use the credentials for a given profile defined in an `AWS credentials file <https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-files.html#cli-configure-files-using-profiles>`_ which can exist on the local filesystem or be mounted in via a Kubernetes Secret or ConfigMap. This would be the preferred method for running SDAP on local/on-premises hardware
 4. Host Credentials: For running on AWS only: use EC2 instance, EKS node or associated EKS pod identifies. Preferred method for running on EKS
-5. EDL Credentials: **ONLY WORKS WHEN RUNNING IN AWS US-WEST-2 REGION** For data in NASA Earthdata DAACs, use temporary credentials furnished by the DAACs' ``/s3Credentials`` endpoints. Only some DAACs are supported. This feature is still experimental.
+5. EDL Credentials: **ONLY WORKS WHEN RUNNING IN AWS US-WEST-2 REGION** For data in NASA Earthdata DAACs, use temporary credentials furnished by the DAACs' ``/s3Credentials`` endpoints. Only some DAACs are supported. This feature is still in beta.
+
+Note for EDL credentials, a valid `Earthdata Login <https://urs.earthdata.nasa.gov/>`_ (username & password) must be provided.
 
 Example:
 
@@ -223,6 +225,8 @@ Example:
       - var3
     config:
       earthdata:
+        edl_username: <username>  # Can be omitted here in favor of setting the EDL_USERNAME environment variable
+        edl_password: <password>  # Can be omitted here in favor of setting the EDL_PASSWORD environment variable
         daac: podaac
   - id: private_data  # Alternate config for EDL Credentials
     path: s3://example-bucket/zarr/path/
@@ -239,6 +243,8 @@ Example:
       - var3
     config:
       earthdata:
+        edl_username: <username>  # Can be omitted here in favor of setting the EDL_USERNAME environment variable
+        edl_password: <password>  # Can be omitted here in favor of setting the EDL_PASSWORD environment variable
         endpoint: </s3Credentials URL>
 
 The ``config.aws`` and ``config.earthdata`` schemas are the same when using the ``datasets/add`` and ``datasets/update`` endpoints.
