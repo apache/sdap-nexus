@@ -190,8 +190,6 @@ class FixedAWSProfileCredentialHandler(CredentialHandler):
 
             return False
 
-
-
     def is_valid(self) -> bool:
         try:
             self.__session.client('sts').get_caller_identity()
@@ -199,7 +197,9 @@ class FixedAWSProfileCredentialHandler(CredentialHandler):
         except ClientError as err:
             err_code = err.response['Error']['Code']
             err_msg = err.response['Error']['Message']
-            logger.error(f'Credentials in profile {self.__profile} are invalid. Code: {err_code}, Message: {err_msg}')
+            logger.warning(f'Credentials in profile {self.__profile} are invalid. '
+                           f'Code: {err_code}, Message: {err_msg}. '
+                           f'Will attempt to renew.')
             return False
 
 
@@ -243,12 +243,19 @@ class AWSEnvironmentCredentialHandler(CredentialHandler):
 
     def is_valid(self) -> bool:
         try:
-            self.__session.client('sts').get_caller_identity()
+            boto3.Session(
+                aws_access_key_id=self.cred_data['access_key_id'],
+                aws_secret_access_key=self.cred_data['secret_access_key'],
+                aws_session_token=self.cred_data['token'],
+                region_name=self.__region
+
+            ).client('sts').get_caller_identity()
             return True
         except ClientError as err:
             err_code = err.response['Error']['Code']
             err_msg = err.response['Error']['Message']
-            logger.error(f'Environment credentials in are invalid. Code: {err_code}, Message: {err_msg}')
+            logger.warning(f'Environment credentials in are invalid. Code: {err_code}, Message: {err_msg}. '
+                           f'Will attempt to renew.')
             return False
 
 
@@ -386,7 +393,8 @@ class DAACTemporaryAWSCredentialHandler(CredentialHandler):
         except ClientError as err:
             err_code = err.response['Error']['Code']
             err_msg = err.response['Error']['Message']
-            logger.error(f'Temp credentials are invalid. Code: {err_code}, Message: {err_msg}')
+            logger.warning(f'Temp credentials are invalid. Code: {err_code}, Message: {err_msg}. '
+                           f'Will attempt to renew')
             return False
 
 
