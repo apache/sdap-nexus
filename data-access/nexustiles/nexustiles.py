@@ -29,18 +29,15 @@ import pkg_resources
 import pysolr
 from pytz import timezone, UTC
 from shapely.geometry import box
-from webservice.webmodel import DatasetNotFoundException, NexusProcessingException
-from webservice.NexusHandler import nexus_initializer
 from yarl import URL
 
+from webservice.NexusHandler import nexus_initializer
+from webservice.webmodel import DatasetNotFoundException
 from .AbstractTileService import AbstractTileService
 from .backends.nexusproto.backend import NexusprotoTileService
 from .backends.zarr.backend import ZarrBackend
-from .model.nexusmodel import Tile, BBox, TileStats, TileVariable
-
 from .exception import NexusTileServiceException
-
-from requests.structures import CaseInsensitiveDict
+from .model.nexusmodel import Tile, BBox, TileStats, TileVariable
 
 EPOCH = timezone('UTC').localize(datetime(1970, 1, 1))
 
@@ -170,10 +167,7 @@ class NexusTileService:
         return NexusTileService.__update_thread is not None and NexusTileService.__update_thread.is_alive()
 
     @staticmethod
-    def _get_backend(dataset_s) -> AbstractTileService:
-        if dataset_s is not None:
-            dataset_s = dataset_s
-
+    def _get_backend(dataset_s, check=True) -> AbstractTileService:
         with NexusTileService.DS_LOCK:
             if dataset_s not in NexusTileService.backends:
                 logger.warning(f'Dataset {dataset_s} not currently loaded. Checking to see if it was recently'
@@ -183,6 +177,9 @@ class NexusTileService:
                     raise DatasetNotFoundException(reason=f'Dataset {dataset_s} is not currently loaded/ingested')
 
             b = NexusTileService.backends[dataset_s]
+
+            if check and not b['backend'].update():
+                raise DatasetNotFoundException(reason=f'Dataset {dataset_s} is currently inaccessible')
 
             return b['backend']
 
@@ -217,7 +214,7 @@ class NexusTileService:
         present_datasets = {None, '__nexusproto__'}
         next_cursor_mark = '*'
 
-        added_datasets = 0
+        added_datasets = []
 
         while True:
             response = solrcon.search('*:*', cursorMark=next_cursor_mark, sort='id asc')
@@ -239,9 +236,12 @@ class NexusTileService:
                 present_datasets.add(d_id)
 
                 if d_id in NexusTileService.backends:
+                    if not NexusTileService.backends[d_id]['backend'].update(True):
+                        logger.info(f'Dataset {d_id} of type {store_type} is no longer accessible and will be removed')
+                        present_datasets.remove(d_id)
                     continue
 
-                added_datasets += 1
+                added_datasets.append(d_id)
 
                 if store_type == 'nexus_proto' or store_type == 'nexusproto':
                     update_logger.info(f"Detected new nexusproto dataset {d_id}, using default nexusproto backend")
@@ -256,10 +256,10 @@ class NexusTileService:
                             'up': True
                         }
                     except NexusTileServiceException:
-                        added_datasets -= 1
+                        added_datasets.pop()
                 else:
                     update_logger.warning(f'Unsupported backend {store_type} for dataset {d_id}')
-                    added_datasets -= 1
+                    added_datasets.pop()
 
         removed_datasets = set(NexusTileService.backends.keys()).difference(present_datasets)
 
@@ -270,8 +270,10 @@ class NexusTileService:
             update_logger.info(f"Removing dataset {dataset}")
             del NexusTileService.backends[dataset]
 
-        update_logger.info(f'Finished dataset update: {added_datasets} added, {len(removed_datasets)} removed, '
+        update_logger.info(f'Finished dataset update: {len(added_datasets)} added, {len(removed_datasets)} removed, '
                            f'{len(NexusTileService.backends) - 2} total')
+
+        return added_datasets
 
     # Update cfg (ie, creds) of dataset
     @staticmethod
@@ -338,9 +340,15 @@ class NexusTileService:
         logger.info(f'Added dataset {name} to Solr. Updating backends')
 
         with NexusTileService.DS_LOCK:
-            NexusTileService._update_datasets()
+            added_datasets = NexusTileService._update_datasets()
 
-        return {'success': True}
+        response = {'success': name in added_datasets}
+
+        if not response['success']:
+            response['message'] = ('Collection added successfully but could not be opened. Please check configuration '
+                                   'and/or credentials and try again (you will need to remove the collection first)')
+
+        return response
 
     # Delete dataset backend (error if it's a hardcoded one)
     @staticmethod
@@ -382,6 +390,12 @@ class NexusTileService:
         datasets = []
         for backend in set([b['backend'] for b in NexusTileService.backends.values() if b['up']]):
             datasets.extend(backend.get_dataseries_list(simple))
+
+        solr = NexusTileService._get_datasets_store()
+
+        datasets = ZarrBackend.augment_dataseries_list_with_unreachable_collections_from_solr(
+            solr, datasets
+        )
 
         return datasets
 

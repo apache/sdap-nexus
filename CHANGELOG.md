@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased] - Unreleased
 ### Added
 - Helm chart option to associate AWS IAM role to the SDAP Spark ServiceAccount (EKS only).
+- SDAP-517: Added new options for AWS credential management for dataset backends relying on data in S3. 
+  - Profile `config.aws.profile` takes creds from named AWS profile
+  - Can omit credentials entirely to source from environment
+  - Dynamic DAAC credentials: Gets dynamic credentials from NASA EOSIDS DAACs (requires Earthdata Login; only works in `us-west-2` AWS region)
 ### Changed
 - SDAP-533: Updated Helm chart
   - Updated ingress dependency chart

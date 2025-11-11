@@ -13,3 +13,4 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from .CredentialHandler import get_handler as get_cred_handler

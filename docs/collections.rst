@@ -124,14 +124,25 @@ this is all you need to do.
 
 For data in S3, you need to provide information on how to access the data. This is currently done with the ``config.aws`` object.
 
-You will need to provide credentials to access the bucket, or specify if it is public:
+You will need to provide credentials to access the bucket, or specify if it is public.
+
+There are 5 ways to configure access to data in S3: public access, fixed credentials, profile credentials, host credentials, and
+EDL credentials.
+
+1. Public Access: The zarr data is in a bucket that is configured to allow unauthenticated data access from where the SDAP application is deployed and thus do not bother with signing any requests
+2. Fixed Credentials: The simplest but least recommended option. Provide the AccessKeyId and SecretAccessKey for an IAM identity with sufficient S3 access permissions
+3. Profile Credentials: Use the credentials for a given profile defined in an `AWS credentials file <https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-files.html#cli-configure-files-using-profiles>`_ which can exist on the local filesystem or be mounted in via a Kubernetes Secret or ConfigMap. This would be the preferred method for running SDAP on local/on-premises hardware
+4. Host Credentials: For running on AWS only: use EC2 instance, EKS node or associated EKS pod identifies. Preferred method for running on EKS
+5. EDL Credentials: **ONLY WORKS WHEN RUNNING IN AWS US-WEST-2 REGION** For data in NASA Earthdata DAACs, use temporary credentials furnished by the DAACs' ``/s3Credentials`` endpoints. Only some DAACs are supported. This feature is still in beta.
+
+Note for EDL credentials, a valid `Earthdata Login <https://urs.earthdata.nasa.gov/>`_ (username & password) must be provided.
 
 Example:
 
 .. code-block:: yaml
 
   collections:
-  - id: MUR_SST
+  - id: MUR_SST  # Config for Public Access
     path: s3://mur-sst/zarr-v1/
     priority: 1
     projection: Grid
@@ -144,8 +155,8 @@ Example:
     config:
       aws:
         public: true
-  - id: private_data
-    path: s3://example-bucket/zarr/path/
+  - id: example_1  # Config for Public Access
+    path: s3://example-bucket/zarr/path/1/
     priority: 1
     projection: GridMulti
     storeType: zarr
@@ -153,12 +164,111 @@ Example:
       latitude: lat
       longitude: lon
       time: time
-      variables:
-      - var1
-      - var2
-      - var3
+      variable: var1
     config:
       aws:
+        region: us-west-2
+        public: false
+        creds:
+          accessKeyID: <secret>
+          secretAccessKey: <secret>
+  - id: example_2  # Config for Profile Credentials
+    path: s3://example-bucket/zarr/path/2/
+    priority: 1
+    projection: GridMulti
+    storeType: zarr
+    dimensionNames:
+      latitude: lat
+      longitude: lon
+      time: time
+      variable: var2
+    config:
+      aws:
+        region: us-west-2
+        public: false
+        profile: <profile name>
+  - id: example_3  # Config for Host Credentials
+    path: s3://example-bucket/zarr/path/3/
+    priority: 1
+    projection: GridMulti
+    storeType: zarr
+    dimensionNames:
+      latitude: lat
+      longitude: lon
+      time: time
+      variable: var3
+    config:
+      aws:
+        region: us-west-2
+        public: false
+  - id: example_4a  # Config for EDL Credentials
+    path: s3://example-bucket/zarr/path/4a/
+    priority: 1
+    projection: GridMulti
+    storeType: zarr
+    dimensionNames:
+      latitude: lat
+      longitude: lon
+      time: time
+      variable: var4a
+    config:
+      earthdata:
+        edl_username: <username>  # Can be omitted here in favor of setting the EDL_USERNAME environment variable
+        edl_password: <password>  # Can be omitted here in favor of setting the EDL_PASSWORD environment variable
+        daac: podaac
+  - id: example_4b  # Alternate config for EDL Credentials
+    path: s3://example-bucket/zarr/path/4b/
+    priority: 1
+    projection: GridMulti
+    storeType: zarr
+    dimensionNames:
+      latitude: lat
+      longitude: lon
+      time: time
+      variable: var4b
+    config:
+      earthdata:
+        edl_username: <username>  # Can be omitted here in favor of setting the EDL_USERNAME environment variable
+        edl_password: <password>  # Can be omitted here in favor of setting the EDL_PASSWORD environment variable
+        endpoint: </s3Credentials URL>
+
+The ``config.aws`` and ``config.earthdata`` schemas are the same when using the ``datasets/add`` and ``datasets/update`` endpoints.
+
+Example:
+
+.. code-block::
+
+    POST /nexus/datasets/add?name=<dataset name>&path=<s3 URL>&= HTTP/1.1
+    Content-Type: application/yaml
+    Host: <SDAP Hostname>
+    Content-Length: <Length>
+
+    variable: <Var name>
+    coords:
+      latitude: latitude
+      longitude: longitude
+      time: time
+    aws:
+      public: false
+      region: us-west-2
+      creds:
         accessKeyID: <secret>
         secretAccessKey: <secret>
-        public: false
+
+The current list of supported DAACs and their credentials endpoints for the ``config.earthdata`` configuration are as follows:
+
+ =================== ==============================================================
+  DAAC                URL
+ =================== ==============================================================
+  podaac              https://archive.podaac.earthdata.nasa.gov/s3credentials
+  podaac-swot         https://archive.swot.podaac.earthdata.nasa.gov/s3credentials
+  gesdisc             https://data.gesdisc.earthdatacloud.nasa.gov/s3credentials
+  lpdaac              https://data.lpdaac.earthdatacloud.nasa.gov/s3credentials
+  obdaac              https://obdaac-tea.earthdatacloud.nasa.gov/s3credentials
+  nsidc               https://data.nsidc.earthdatacloud.nasa.gov/s3credentials
+  laads               https://data.laadsdaac.earthdatacloud.nasa.gov/s3credentials
+  asfdaac             https://cumulus.asf.alaska.edu/s3credentials
+  asfdaac-sentinel1   https://sentinel1.asf.alaska.edu/s3credentials
+ =================== ==============================================================
+
+
