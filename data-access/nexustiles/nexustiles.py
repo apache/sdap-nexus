@@ -49,18 +49,6 @@ logging.basicConfig(
 logger = logging.getLogger("nexus-tile-svc")
 
 
-# TODO: Clean these up & delete accompanying debug log statements when confident SDAP-540 is resolved
-DEBUG_SL_ACQING = 'DEBUG: Acquiring solr lock '
-DEBUG_SL_ACQED = 'DEBUG: Acquired solr lock '
-DEBUG_SL_REL = 'DEBUG: Released solr lock '
-DEBUG_SLC_ACQING = 'DEBUG: Acquiring solr conn lock '
-DEBUG_SLC_ACQED = 'DEBUG: Acquired solr conn lock '
-DEBUG_SLC_REL = 'DEBUG: Released solr conn lock '
-DEBUG_DS_ACQING = 'DEBUG: Acquiring dataset lock '
-DEBUG_DS_ACQED = 'DEBUG: Acquired dataset lock '
-DEBUG_DS_REL = 'DEBUG: Released dataset lock '
-
-
 def tile_data(default_fetch=True):
     def tile_data_decorator(func):
         @wraps(func)
@@ -143,11 +131,8 @@ class NexusTileService:
     @staticmethod
     def __update_datasets_loop():
         while True:
-            logger.info(DEBUG_DS_ACQING + '__update_datasets_loop')
             with NexusTileService.DS_LOCK:
-                logger.debug(DEBUG_DS_ACQED + '__update_datasets_loop')
                 NexusTileService._update_datasets()
-            logger.debug(DEBUG_DS_REL + '__update_datasets_loop')
             sleep(3600)
 
     def __init__(self, config=None):
@@ -185,9 +170,7 @@ class NexusTileService:
 
     @staticmethod
     def _get_backend(dataset_s, check=True) -> AbstractTileService:
-        logger.info(DEBUG_DS_ACQING + '_get_backend')
         with NexusTileService.DS_LOCK:
-            logger.debug(DEBUG_DS_ACQED + '_get_backend')
             if dataset_s not in NexusTileService.backends:
                 logger.warning(f'Dataset {dataset_s} not currently loaded. Checking to see if it was recently'
                                f'added')
@@ -199,7 +182,6 @@ class NexusTileService:
 
             if check and not b['backend'].update():
                 raise DatasetNotFoundException(reason=f'Dataset {dataset_s} is currently inaccessible')
-        logger.info(DEBUG_DS_REL + '_get_backend')
         return b['backend']
 
 
@@ -212,9 +194,7 @@ class NexusTileService:
         if NexusTileService.ds_config.has_option("solr", "time_out"):
             solr_kwargs["timeout"] = NexusTileService.ds_config.get("solr", "time_out")
 
-        logger.info(DEBUG_SLC_ACQING + '_get_datasets_store')
         with SOLR_CONN_LOCK:
-            logger.info(DEBUG_SLC_ACQED + '_get_datasets_store')
             solrcon = getattr(thread_local, 'solrcon', None)
             if solrcon is None:
                 solr_url = '%s/solr/%s' % (solr_url, solr_core)
@@ -223,7 +203,6 @@ class NexusTileService:
 
             solrcon = solrcon
 
-        logger.info(DEBUG_SLC_REL + '_get_datasets_store')
         return solrcon
 
     @staticmethod
@@ -241,15 +220,7 @@ class NexusTileService:
 
         lock_ctx = SOLR_OPS_LOCK if solr_lock else nullcontext()
 
-        if solr_lock:
-            update_logger.info(DEBUG_SL_ACQING + '_update_datasets')
-        else:
-            update_logger.info('DEBUG: Skipping solr lock acq _update_datasets')
         with lock_ctx:
-            if solr_lock:
-                update_logger.info(DEBUG_SL_ACQED + '_update_datasets')
-            else:
-                update_logger.info('DEBUG: Skipped solr lock acq _update_datasets')
             update_logger.info('Scanning solr for datasets')
             while True:
                 response = solrcon.search('*:*', cursorMark=next_cursor_mark, sort='id asc')
@@ -266,11 +237,6 @@ class NexusTileService:
 
                 dataset_docs.extend(response.docs)
             update_logger.info('Finished solr scan')
-
-        if solr_lock:
-            update_logger.info(DEBUG_SL_REL + '_update_datasets')
-        else:
-            update_logger.info('DEBUG: Skipped solr lock release _update_datasets')
 
         for dataset in dataset_docs:
             d_id = dataset['dataset_s']
@@ -345,9 +311,7 @@ class NexusTileService:
 
         config_dict['config'] = config
 
-        logger.info(DEBUG_SL_ACQING + 'user_ds_update')
         with SOLR_OPS_LOCK:
-            logger.info(DEBUG_SL_ACQED + 'user_ds_update')
             solr.delete(id=ds['id'])
             solr.add([{
                 'id': name,
@@ -361,13 +325,8 @@ class NexusTileService:
 
             logger.info(f'Updated dataset {name} in Solr. Updating backends')
 
-            logger.info(DEBUG_DS_ACQING + 'user_ds_update')
             with NexusTileService.DS_LOCK:
-                logger.info(DEBUG_DS_ACQED + 'user_ds_update')
                 NexusTileService._update_datasets(solr_lock=False)
-            logger.info(DEBUG_DS_REL + 'user_ds_update')
-
-        logger.info(DEBUG_SL_REL + 'user_ds_update')
 
         return {'success': True}
 
@@ -386,9 +345,7 @@ class NexusTileService:
             'config': config
         }
 
-        logger.info(DEBUG_SL_ACQING + 'user_ds_add')
         with SOLR_OPS_LOCK:
-            logger.info(DEBUG_SL_ACQED + 'user_ds_add')
             solr.add([{
                 'id': name,
                 'dataset_s': name,
@@ -401,15 +358,8 @@ class NexusTileService:
 
             logger.info(f'Added dataset {name} to Solr. Updating backends')
 
-            logger.info(DEBUG_DS_ACQING + 'user_ds_add')
             with NexusTileService.DS_LOCK:
-                logger.info(DEBUG_DS_ACQED + 'user_ds_add')
                 added_datasets = NexusTileService._update_datasets(solr_lock=False)
-            logger.info(DEBUG_DS_REL + 'user_ds_add')
-
-        logger.info(DEBUG_DS_REL + 'user_ds_add')
-
-        logger.info(f'DEBUG: {name} in {added_datasets}: {name in added_datasets}')
 
         response = {'success': name in added_datasets}
 
@@ -434,21 +384,14 @@ class NexusTileService:
         if 'source_s' not in ds or ds['source_s'] == 'collection_config':
             raise ValueError('Provided dataset is source_s in collection config and cannot be deleted')
 
-        logger.info(DEBUG_SL_ACQING + 'user_ds_delete')
         with SOLR_OPS_LOCK:
-            logger.info(DEBUG_SL_ACQED + 'user_ds_delete')
             solr.delete(id=ds['id'])
             solr.commit()
 
             logger.info(f'Removed dataset {name} from Solr. Updating backends')
 
-            logger.info(DEBUG_DS_ACQING + 'user_ds_delete')
             with NexusTileService.DS_LOCK:
-                logger.info(DEBUG_DS_ACQED + 'user_ds_delete')
                 NexusTileService._update_datasets(solr_lock=False)
-            logger.info(DEBUG_DS_REL + 'user_ds_delete')
-
-        logger.info(DEBUG_SL_REL + 'user_ds_delete')
 
         return {'success': True}
 
