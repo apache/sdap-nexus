@@ -93,6 +93,8 @@ class ZarrBackend(AbstractTileService):
 
         self.__ds: xr.Dataset = self.__open_ds()
 
+        logger.info(f'Created zarr backend for {self._name} at {self.__path}')
+
     def __open_ds(self) -> xr.Dataset:
         if self.__store_type in ['', 'file']:
             store = self.__path
