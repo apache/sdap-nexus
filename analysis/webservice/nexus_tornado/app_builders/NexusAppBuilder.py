@@ -15,8 +15,9 @@
 
 import logging
 import importlib
+import importlib.metadata
+import importlib.resources
 from functools import partial
-import pkg_resources
 import tornado
 from nexustiles.nexustiles import NexusTileService
 from webservice import NexusHandler
@@ -31,14 +32,14 @@ class NexusAppBuilder:
 
         class VersionHandler(tornado.web.RequestHandler):
             def get(self):
-                self.write(pkg_resources.get_distribution("sdap-nexus").version)
+                self.write(importlib.metadata.version("sdap-nexus"))
 
         self.handlers.append((r"/version", VersionHandler))
 
         self.handlers.append(
             (r'/apidocs', tornado.web.RedirectHandler, {"url": "/apidocs/"}))
 
-        apidocs_path = pkg_resources.resource_filename('webservice.apidocs', '')
+        apidocs_path = str(importlib.resources.files('webservice.apidocs'))
         self.handlers.append(
             (
                 r'/apidocs/(.*)', tornado.web.StaticFileHandler,
