@@ -22,7 +22,7 @@ from functools import reduce
 
 import numpy as np
 import numpy.ma as ma
-import pkg_resources
+from pathlib import Path
 from pytz import timezone, UTC
 from shapely.geometry import MultiPolygon, box
 
@@ -575,7 +575,7 @@ class NexusprotoTileService(AbstractTileService):
         extensions = ['.default', '']
         for extension in extensions:
             try:
-                candidate = pkg_resources.resource_filename(__name__, filename + extension)
+                candidate = str(Path(__file__).parent / (filename + extension))
                 log.info('use config file {}'.format(filename + extension))
                 candidates.append(candidate)
             except KeyError as ke:

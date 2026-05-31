@@ -18,7 +18,7 @@ import configparser
 import logging
 import sys
 import os
-import pkg_resources
+from pathlib import Path
 from webservice import nexus_tornado
 from .nexus_tornado.options import define, options, parse_command_line
 from webservice.NexusLivyHandler import LivyHandler
@@ -70,7 +70,7 @@ if __name__ == "__main__":
 
     # Configure tornado.
     webconfig = configparser.RawConfigParser()
-    webconfig.readfp(pkg_resources.resource_stream(__name__, "config/web.ini"), filename='web.ini')
+    webconfig.readfp(open(Path(__file__).parent / "config/web.ini"), filename='web.ini')
     define("debug", default=False, help="run in debug mode")
     define("port", default=webconfig.get("livy", "server.socket_port"), help="run on the given port", type=int)
     define("address", default=webconfig.get("livy", "server.socket_host"), help="Bind to the given address")
