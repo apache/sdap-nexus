@@ -20,7 +20,7 @@ import uuid
 from datetime import datetime
 from time import sleep
 
-import pkg_resources
+from pathlib import Path
 from cassandra.auth import PlainTextAuthProvider
 from cassandra.cluster import Cluster
 from cassandra.concurrent import execute_concurrent_with_args
@@ -97,7 +97,7 @@ class AbstractResultsContainer:
         extensions = ['.default', '']
         for extension in extensions:
             try:
-                candidate = pkg_resources.resource_filename(__name__, filename + extension)
+                candidate = str(Path(__file__).parent / (filename + extension))
                 log.info('use config file {}'.format(filename + extension))
                 candidates.append(candidate)
             except KeyError as ke:
@@ -267,7 +267,7 @@ class ResultsStorage(AbstractResultsContainer):
             result["platform"] if "platform" in result else None,
             result["device"] if "device" in result else None,
             json.dumps(data, cls=DomsEncoder),
-            1 if primaryId is 'PRIMARY' else 0,
+            1 if primaryId == 'PRIMARY' else 0,
             result["depth"],
             result['fileurl']
         )

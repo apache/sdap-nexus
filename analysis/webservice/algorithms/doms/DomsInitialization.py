@@ -17,7 +17,7 @@
 import configparser
 import logging
 
-import pkg_resources
+from pathlib import Path
 
 from cassandra.auth import PlainTextAuthProvider
 from cassandra.cluster import Cluster
@@ -195,7 +195,7 @@ class DomsInitializer:
         extensions = ['.default', '']
         for extension in extensions:
             try:
-                candidate = pkg_resources.resource_filename(__name__, filename + extension)
+                candidate = str(Path(__file__).parent / (filename + extension))
                 candidates.append(candidate)
             except KeyError as ke:
                 log.warning('configuration file {} not found'.format(filename + extension))
