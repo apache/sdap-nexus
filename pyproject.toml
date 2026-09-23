@@ -38,7 +38,7 @@ classifiers=[
 [tool.poetry.dependencies]
 python = "~=3.11"
 netcdf4 = "*"
-scipy = "*"
+scipy = ">=1.11.0"
 pyspark = "3.4.0"
 py4j = "*"
 pytz = "2021.1"
