@@ -15,6 +15,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - SDAP-533: Updated Helm chart
   - Updated ingress dependency chart
   - Fixed values.yaml for Solr
+- SDAP-542: Updated Python version to 3.11
+  - Updated dependencies
+  - Simplified and re-organized Dockerfile
 ### Deprecated
 ### Removed
 ### Fixed

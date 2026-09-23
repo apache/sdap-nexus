@@ -12,7 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-import pkg_resources
+import importlib.resources
 
 
 class SparkContextBuilder:
@@ -26,7 +26,7 @@ class SparkContextBuilder:
         if cls.spark_context is None:
             from pyspark.sql import SparkSession
 
-            scheduler_path = pkg_resources.resource_filename('webservice', "config/scheduler.xml")
+            scheduler_path = str(importlib.resources.files('webservice').joinpath("config/scheduler.xml"))
 
             spark = SparkSession.builder.appName("nexus-analysis").config(
                 "spark.scheduler.allocation.file", scheduler_path

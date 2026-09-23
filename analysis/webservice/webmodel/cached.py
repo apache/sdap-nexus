@@ -21,7 +21,7 @@ __CACHE = {}
 
 def cached(ttl=60000):
     def _hash_function_signature(func):
-        hash_object = hashlib.md5(str(inspect.getargspec(func)).encode("utf8") + str(func).encode("utf8"))
+        hash_object = hashlib.md5(str(inspect.getfullargspec(func)).encode("utf8") + str(func).encode("utf8"))
         return hash_object.hexdigest()
 
     def _now():
