@@ -51,6 +51,12 @@ ENV PYTHONUNBUFFERED=1 \
 # Edit this to rebuild everything from this point
 ARG REBUILD_CODE=0
 
+# Install additional dependencies for image
+RUN apt-get update && \
+    apt-get install --no-install-recommends -y proj-bin tini git libgeos-dev libopenblas-dev gfortran libhdf5-serial-dev hdf5-tools libnetcdf-dev && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
+
 WORKDIR /incubator-sdap-nexus
 COPY poetry.lock pyproject.toml ./
 COPY data-access /incubator-sdap-nexus/data-access
@@ -65,15 +71,15 @@ COPY README.md README LICENSE NOTICE ./
 ENV PATH="$POETRY_HOME/bin:$VENV_PATH/bin:$PATH"
 
 # Install additional dependencies for image
-RUN apt-get update && \
-    apt-get install --no-install-recommends -y proj-bin tini git && \
-    apt-get clean && \
-    rm -rf /var/lib/apt/lists/*
-
-RUN apt-get update && \
-    apt-get install --no-install-recommends -y libgeos-dev libopenblas-dev gfortran && \
-    apt-get clean && \
-    rm -rf /var/lib/apt/lists/*
+#RUN apt-get update && \
+#    apt-get install --no-install-recommends -y proj-bin tini git && \
+#    apt-get clean && \
+#    rm -rf /var/lib/apt/lists/*
+#
+#RUN apt-get update && \
+#    apt-get install --no-install-recommends -y libgeos-dev libopenblas-dev gfortran && \
+#    apt-get clean && \
+#    rm -rf /var/lib/apt/lists/*
 
 
 
