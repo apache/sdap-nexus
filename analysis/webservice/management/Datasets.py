@@ -25,9 +25,9 @@ from schema import Optional as Opt
 
 from urllib.parse import urlparse
 try:
-    from yaml import CLoader as Loader
+    from yaml import CSafeLoader as Loader
 except ImportError:
-    from yaml import Loader
+    from yaml import SafeLoader as Loader
 
 
 logger = logging.getLogger(__name__)
