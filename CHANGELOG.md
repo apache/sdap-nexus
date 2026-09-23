@@ -21,6 +21,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - SDAP-531: Tomogram/Tomogram3D: Fix bug for min/max elevation == 0
 - SDAP-540: Add mutex around Solr operations for dataset add/update/delete to fix possible concurrency issue
 ### Security
+- Fix security issue with yaml parsing allowing execution of commands as SDAP user (usually root)
 
 ## [1.4.0] - 2024-11-04
 ### Added

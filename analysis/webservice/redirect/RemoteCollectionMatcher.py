@@ -33,7 +33,7 @@ class RemoteCollectionMatcher(Matcher):
     def _get_remote_collections(collections_config: str):
         _remote_collections = {}
         with open(collections_config, 'r') as f:
-            collections_yaml = yaml.load(f, Loader=yaml.FullLoader)
+            collections_yaml = yaml.load(f, Loader=yaml.SafeLoader)
             for collection in collections_yaml['collections']:
                 if "path" in collection and collection['path'].startswith('http'):
                     _remote_collections[collection["id"]] = {k.replace('-', '_'): v for k, v in collection.items()}
