@@ -18,6 +18,7 @@ import json
 from webservice.NexusHandler import nexus_handler
 from nexustiles.nexustiles import NexusTileService
 from webservice.webmodel import NexusRequestObject, NexusProcessingException
+import logging
 
 from schema import Schema, Or, SchemaError
 from schema import Optional as Opt
@@ -29,6 +30,9 @@ except ImportError:
     from yaml import Loader
 
 
+logger = logging.getLogger(__name__)
+
+
 CONFIG_SCHEMA = Schema({
     Or('variable', 'variables'): Or(str, [str]),
     'coords': {
@@ -38,12 +42,30 @@ CONFIG_SCHEMA = Schema({
         Opt('depth'): str
     },
     Opt('aws'): {
-        Opt('accessKeyID'): str,
-        Opt('secretAccessKey'): str,
+        Opt('creds'): {
+            'accessKeyID': str,
+            'secretAccessKey': str,
+            Opt('sessionToken'): str,
+        },
+        Opt('profile'): Or(str, None),
+        Opt('region'): str,
         'public': bool,
-        Opt('region'): str
+    },
+    Opt('earthdata'): {
+        Or('endpoint', 'daac'): str,
+        Opt('edl_username'): str,
+        Opt('edl_password'): str,
     }
 })
+
+
+def validate_config(d):
+    CONFIG_SCHEMA.validate(d)
+
+    # TODO: Can any of these xtra validations be done in the Schema object given the limitations of the schema package?
+
+    if 'aws' in d:
+        assert 'earthdata' not in d
 
 
 class DatasetManagement:
@@ -63,16 +85,8 @@ class DatasetManagement:
             raise NexusProcessingException(reason='Invalid Content-Type header', code=400)
 
         try:
-            CONFIG_SCHEMA.validate(config_dict)
-
-            if 'aws' in config_dict:
-                if not config_dict['aws']['public']:
-                    if 'accessKeyID' not in config_dict['aws'] or 'secretAccessKey' not in config_dict['aws']:
-                        raise NexusProcessingException(
-                            reason='Must provide AWS creds for non-public bucket',
-                            code=400
-                        )
-        except SchemaError as e:
+            validate_config(config_dict)
+        except (SchemaError, AssertionError) as e:
             raise NexusProcessingException(
                 reason=str(e),
                 code=400
@@ -152,7 +166,7 @@ class DatasetAdd(DatasetManagement):
             )
 
         try:
-            NexusTileService.user_ds_add(name, path, config)
+            return Response(NexusTileService.user_ds_add(name, path, config))
         except Exception as e:
             raise NexusProcessingException(
                 reason=repr(e),
